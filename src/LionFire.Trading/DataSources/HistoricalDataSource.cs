@@ -56,7 +56,7 @@ namespace LionFire.Trading
             }
             return results;
         }
-        
+
         IMarketSeries IDataSource.GetMarketSeries(string key, DateTime? startDate, DateTime? endDate)
         {
             string symbolCode;
@@ -71,38 +71,39 @@ namespace LionFire.Trading
         }
         public IMarketSeries GetMarketSeries(string symbolCode, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null)
         {
-            var dir = SymbolTimeFrameDir(symbolCode, timeFrame);
-            if (!Directory.Exists(dir))
-            {
-                return null;
-            }
+            string file = null;
 
-            long longestLength = -1;
-            string longestPath = null;
-            foreach (var path in Directory.GetFiles(dir, "*.csv"))
+            file = Path.Combine(RootDir, symbolCode + "_" + timeFrame.Name.ToUpper() + "_UTC+0_00.csv");
+
+            if (!File.Exists(file))
             {
-                var length = new FileInfo(path).Length;
-                if (length > longestLength)
+                file = null;
+
+                var dir = SymbolTimeFrameDir(symbolCode, timeFrame);
+                if (!Directory.Exists(dir))
                 {
-                    longestLength = length;
-                    longestPath = path;
+                    return null;
                 }
+
+                long longestLength = -1;
+                string longestPath = null;
+                foreach (var path in Directory.GetFiles(dir, "*.csv"))
+                {
+                    var length = new FileInfo(path).Length;
+                    if (length > longestLength)
+                    {
+                        longestLength = length;
+                        longestPath = path;
+                    }
+                }
+
+                if (longestPath == null) return null;
+
+                file = longestPath;
             }
 
-            if (longestPath == null) return null;
-
-            var series = MarketSeries.ImportFromFile(symbolCode, timeFrame, longestPath, startDate, endDate);
-            if (series != null && series.OpenTime.Count > 0)
-            {
-                Console.WriteLine($"Imported {timeFrame} {symbolCode} ({series.OpenTime.Count} data points from {series.OpenTime[0]} to {series.OpenTime.LastValue})");
-            }
-            else
-            {
-                Console.WriteLine($"Could not import {timeFrame} {symbolCode}");
-            }
-            return series;
+            return MarketSeries.ImportFromFile(symbolCode, timeFrame, file, startDate, endDate);
         }
-
 
         #endregion
 

@@ -33,7 +33,7 @@ namespace LionFire.Trading
 
         //Dictionary<string, MarketDataSubscriptions> subscriptions = new Dictionary<string, MarketDataSubscriptions>();
 
-        //public void Subscribe(Actor actor, MarketDataSubscriptions sub)
+        //public void Subscribe(MarketParticipant actor, MarketDataSubscriptions sub)
         //{
         //    MarketDataSubscriptions sub;
         //    if (subscriptions.Contains(sub.Key))

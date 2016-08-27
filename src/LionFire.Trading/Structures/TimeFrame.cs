@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 namespace LionFire.Trading
 {
 
+    
+
 
     public class TimeFrame
     {
@@ -69,9 +71,9 @@ namespace LionFire.Trading
         public static TimeFrame TryParse(string v)
         {
             var pi = typeof(TimeFrame).GetProperty(v, BindingFlags.Public | BindingFlags.Static);
-            return pi.GetValue(null) as TimeFrame;
-        }
 
+            return pi?.GetValue(null) as TimeFrame;
+        }
 
         #endregion
 
@@ -170,6 +172,36 @@ namespace LionFire.Trading
                 default:
                     throw new NotImplementedException();
             }
+        }
+
+        // FUTURE: Get factors of a timeframe
+        public TimeFrame MoreGranular(bool factorOfTwo = true)
+        {
+            var val = TimeFrameValue - 1;
+
+            for (TimeFrameUnit unit = TimeFrameUnit; unit != TimeFrameUnit.Unspecified; unit = unit.MoreGranular())
+            {
+                for (; val >= 1;)
+                {
+                    var tf = TimeFrame.TryGet(unit, val);
+                    if (tf != null) return tf;
+                    if (factorOfTwo)
+                    {
+                        val /= 2;
+                    }
+                    else
+                    {
+                        val--;
+                    }
+                }
+                val = Math.Max(1, val);
+            }
+            return null;
+        }
+
+        public static TimeFrame TryGet(TimeFrameUnit unit, int val)
+        {
+            return TryParse(unit.ToLetterCode() + val.ToString());
         }
 
         #endregion

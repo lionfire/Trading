@@ -14,22 +14,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public static class MarketSeriesUtilities
-    {
-        public const char Delimiter = ';';
-
-        public static string GetSeriesKey(this string symbol, TimeFrame timeFrame)
-        {
-            return symbol + Delimiter.ToString() + timeFrame.Name;
-        }
-
-        internal static void DecodeKey(string key, out string symbol, out TimeFrame timeFrame)
-        {
-            var chunks = key.Split(Delimiter);
-            symbol = chunks[0];
-            timeFrame = TimeFrame.TryParse(chunks[1]);
-        }
-    }
+    
 
     public sealed class MarketSeries : IMarketSeries, IMarketSeriesInternal
     {
@@ -59,7 +44,7 @@ namespace LionFire.Trading
 
         #region Configuration
 
-        public static readonly bool FillMissingBars = true; // REVIEW - 
+        public static readonly bool FillMissingBars = false; // REVIEW - 
         // If true, each index represents an increment of the TimeFrame.  
         public static readonly bool UniformBars = false;
 
@@ -268,6 +253,8 @@ namespace LionFire.Trading
             {
                 if (FillMissingBars)
                 {
+                    // REVIEW 
+                    Console.WriteLine("WARN: Bug exists when trying to fill from year 0 to present when FillMissingBars enabled.");
                     for (var nextTime = OpenTime.LastValue + TimeSpanIncrement; nextTime < bar.OpenTime; nextTime += TimeSpanIncrement)
                     {
                         AddDataPointAtTime(nextTime);
@@ -539,7 +526,10 @@ namespace LionFire.Trading
                     using (var sr = new StreamReader(fs))
                     {
                         line = sr.ReadLine(); // Discard first line
-                        bytes += line.Length + 2;
+                        if (line != null)
+                        {
+                            bytes += line.Length + 2;
+                        }
 
                         bool isFirstLine = true;
                         for (string previousLine = null; (line = sr.ReadLine()) != null; previousLine = line)
@@ -640,15 +630,41 @@ namespace LionFire.Trading
 
 
 
-        public static MarketSeries ImportFromFile(string symbol, TimeFrame timeFrame, string path, DateTime? startDate = null, DateTime? endDate = null)
+        public static MarketSeries ImportFromFile(string symbolCode, TimeFrame timeFrame, string path, DateTime? startDate = null, DateTime? endDate = null)
         {
-            var series = new MarketSeries(symbol, timeFrame);
+            var series = new MarketSeries(symbolCode, timeFrame);
             series.ImportFromFile(path, startDate, endDate);
             GC.Collect();
+
+            if (series != null && series.OpenTime.Count > 0)
+            {
+                Console.WriteLine($"Imported {timeFrame} {symbolCode} ({series.OpenTime.Count} data points from {series.OpenTime[0]} to {series.OpenTime.LastValue})");
+            }
+            else
+            {
+                Console.WriteLine($"Could not import {timeFrame} {symbolCode}");
+            }
             return series;
         }
 
         #endregion
 
+    }
+
+    public static class MarketSeriesUtilities
+    {
+        public const char Delimiter = ';';
+
+        public static string GetSeriesKey(this string symbol, TimeFrame timeFrame)
+        {
+            return symbol + Delimiter.ToString() + timeFrame.Name;
+        }
+
+        internal static void DecodeKey(string key, out string symbol, out TimeFrame timeFrame)
+        {
+            var chunks = key.Split(Delimiter);
+            symbol = chunks[0];
+            timeFrame = TimeFrame.TryParse(chunks[1]);
+        }
     }
 }

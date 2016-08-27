@@ -12,6 +12,7 @@ namespace LionFire.Trading.Agent.FrameworkProgram
         {
             var agent = new AgentService();
             agent.Run();
+            Console.ReadKey();
         }
     }
 }

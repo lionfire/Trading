@@ -2,8 +2,14 @@
   "version": "1.0.0-*",
 
   "dependencies": {
-    "LionFire.Trading": "1.0.0-*",
+    "LionFire.Extensions.Logging": "1.0.0-*",
+    "LionFire.Trading": "1.0.1-*",
+    "LionFire.Trading.Proprietary": "1.0.0-*",
+    "Microsoft.Extensions.DependencyInjection": "1.0.0",
+    "Microsoft.Extensions.Logging": "1.0.0",
+    "Microsoft.Extensions.Logging.Console": "1.0.0",
     "NETStandard.Library": "1.6.0",
+    "NLog.Extensions.Logging": "1.0.0-rtm-alpha4",
     "System.IO": "4.1.0",
     "System.Threading.Thread": "4.0.0"
   },
@@ -11,6 +17,7 @@
   "frameworks": {
     "netstandard1.3": {
       "imports": "dnxcore50"
-    }
+    },
+    "net462":  { }
   }
 }

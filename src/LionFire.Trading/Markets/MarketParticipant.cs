@@ -15,7 +15,7 @@ namespace LionFire.Trading
     /// <summary>
     /// Represents an entity that participates in the market, either passively (readonly) or actively (by creating orders)
     /// </summary>
-    public class Actor
+    public class MarketParticipant
     //: IMarketDataSubscriber
     {
 
@@ -60,7 +60,7 @@ namespace LionFire.Trading
                 }
                 market = value;
 
-                if (market != null)
+                if (market != null && DesiredSubscriptions != null)
                 {
                     foreach (var sub in DesiredSubscriptions)
                     {
@@ -84,25 +84,34 @@ namespace LionFire.Trading
                             sub.Series.BarReceived += OnBar;
                         }
                     }
-                    OnAttached();
                 }
+                OnAttached();
             }
         }
         private IMarket market;
 
+        List<IDisposable> marketSubscriptions = new List<IDisposable>();
+
         protected virtual void OnAttached()
         {
+            Market.Started.Subscribe(started => { if (started) { OnStarting(); } });
         }
-
+        
         /// <summary>
         /// Throws NotImplementedException by default.  Override to support detaching.
         /// </summary>
         protected virtual void OnDetaching()
         {
-            throw new NotImplementedException();
+            foreach (var x in marketSubscriptions) x.Dispose();
+            marketSubscriptions.Clear();
         }
 
         #endregion
+
+        protected virtual void OnStarting()
+        {
+        }
+
 
         public void OnBar(MarketSeries series)
         {

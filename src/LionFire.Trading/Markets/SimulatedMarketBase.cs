@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -56,12 +57,14 @@ namespace LionFire.Trading
 
         #endregion
 
-        #region Attached Actors
+        #region Attached MarketParticipants
 
-        public void AddActor(Actor actor)
+        public void Add(MarketParticipant actor)
         {
+            participants.Add(actor);
             actor.Market = this;
         }
+        List<MarketParticipant> participants = new List<MarketParticipant>();
 
         #endregion
 
@@ -69,9 +72,18 @@ namespace LionFire.Trading
 
         #region SimulationTime
 
+        public bool IsStarted { get { return simulationTime != default(DateTime); } }
+
         public DateTime SimulationTime {
             get { return simulationTime; }
             set {
+                if (!IsStarted && value != default(DateTime))
+                {
+                    foreach (var actor in participants)
+                    {
+                        //actor.OnStarting();
+                    }
+                }
                 simulationTime = value;
                 SimulationTimeChanged?.Invoke();
             }
@@ -99,6 +111,9 @@ namespace LionFire.Trading
         #region Events
 
         public event Action ExecutedTime;
+        
+        public IObservable<bool> Started { get { return started; } }
+        BehaviorSubject<bool> started = new BehaviorSubject<bool>(false);
 
         #endregion
 
@@ -160,83 +175,122 @@ namespace LionFire.Trading
 
         protected void Execute(DateTime time)
         {
-
+            if (lastExecutedTime == default(DateTime) && time != default(DateTime))
+            {
+                started.OnNext(true);
+            }
             // OPTIMIZE: Sync up index between live and historical series to make it faster
             foreach (var series in Data.ActiveLiveSeries)
             {
-                if ((series.OpenTime.LastValue + series.TimeFrame.TimeSpan) < time)
+                if ((series.OpenTime.LastValue + series.TimeFrame.TimeSpan) <= time)
                 {
                     HistoricalPlaybackState state = series.HistoricalPlaybackState;
                     if (state == null)
                     {
                         state = series.HistoricalPlaybackState = new Trading.HistoricalPlaybackState();
 
+                        TimeFrame sourceTimeFrame = series.TimeFrame;
+                        // Find a matching historical source, or find a more granular one that can be used.
+                        // FUTURE: Get factors of a timeframe instead of the simple MoreGranular iteration logic.  e.g. from h12 search for h6 h4 h3 h2 h1 m30 m15 m12 m10 m6 m5 m4 m2 m1 t*
+                        // FUTURE: After simulation complete, save downsampled backtest data
+                        for (; state.HistoricalSource == null && sourceTimeFrame != null; sourceTimeFrame = sourceTimeFrame.MoreGranular())
+                        {
+                            state.HistoricalSource = Data.HistoricalDataSources.GetMarketSeries(series.SymbolCode, sourceTimeFrame, this.StartDate, this.EndDate);
+                        }
                         if (state.HistoricalSource == null)
                         {
-                            state.HistoricalSource = Data.HistoricalDataSources.GetMarketSeries(series.Key, this.StartDate, this.EndDate);
+                            Console.WriteLine($"Could not find historical data source for {series}");
+                            continue;
                         }
                     }
-                    if (state.HistoricalSource == null) continue;
-
+                    if (state.HistoricalSource == null)
+                    {
+                        continue;
+                    }
 
                     // TODO: Run coarser timeframes from finer historical data
                     // MAJOR OPTIMIZE - Don't use FindIndex -- it is incredibly slow.
 
-                    TimedBar nextLiveBar = null;
-                    TimedBar peekBar = null;
-
-                    if (state.LastHistoricalIndexExecuted < 0)
+                    
+                    if (state.NextHistoricalIndex < 0)
                     {
-                        state.LastHistoricalIndexExecuted = state.HistoricalSource.FindIndex(time);
-                        if (state.LastHistoricalIndexExecuted < 0)
+                        state.NextHistoricalIndex = state.HistoricalSource.FindIndex(time);
+                        if (state.NextHistoricalIndex < 0)
                         {
                             continue;
                         }
                     }
 
+                    if (state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
+                    {
+                        // FUTURE: Somehow support this?
+                        Console.WriteLine("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
+                        continue;
+                    }
+
                     int mergeCount = 0;
-                    for (state.LastHistoricalIndexExecuted++; ;)
+                    for (; ; state.NextHistoricalIndex++)
                     {
-                        if (state.LastHistoricalIndexExecuted >= state.HistoricalSource.Count)
+                        if (state.NextHistoricalIndex >= state.HistoricalSource.Count)
                         {
-                            state.LastHistoricalIndexExecuted--;
+                            //state.NextHistoricalIndex--;
                             break;
                         }
 
-                        peekBar = state.HistoricalSource[state.LastHistoricalIndexExecuted];
+                        var bar = state.HistoricalSource[state.NextHistoricalIndex];
 
-                        if (peekBar.OpenTime > time)
+                        if (bar.OpenTime == time)
                         {
-                            state.LastHistoricalIndexExecuted--;
+                            if (state.HistoricalSource.TimeFrame == series.TimeFrame)
+                            {
+                                ((IMarketSeriesInternal)series).OnBar(bar, true);
+                                state.NextHistoricalIndex++;
+                                break;
+                            }
+                            else
+                            {
+                                if (state.NextBarInProgress != null && !double.IsNaN(state.NextBarInProgress.High))
+                                {
+                                    ((IMarketSeriesInternal)series).OnBar(state.NextBarInProgress, true);
+                                }
+                                state.NextBarInProgress = bar.Clone();
+                                mergeCount = 0;
+                            }
+                            #region Optimization
+                            state.NextHistoricalIndex++;
                             break;
+                            #endregion
                         }
-
-                        if (nextLiveBar == null)
+                        else if (bar.OpenTime < time)
                         {
-                            nextLiveBar = peekBar.Clone();
+                            if (state.NextBarInProgress == null)
+                            {
+                                state.NextBarInProgress = bar.Clone();
+                                mergeCount = 0;
+                            }
+                            else
+                            {
+                                state.NextBarInProgress.Merge(bar);
+                                mergeCount++;
+                            }
                         }
-                        else
+                        else // bar.OpenTime > time
                         {
-                            nextLiveBar.Merge(peekBar);
-                            mergeCount++;
-                        }
-
-                        if (peekBar.OpenTime == time)
-                        {
+                            if (state.NextBarInProgress == null)
+                            {
+                                state.NextBarInProgress = new TimedBar()
+                                {
+                                    OpenTime = time,
+                                    Open = double.NaN,
+                                    High = double.NaN,
+                                    Low = double.NaN,
+                                    Close = double.NaN,
+                                    Volume = 0
+                                };
+                            }
                             break;
                         }
                     }
-
-                    if (nextLiveBar != null)
-                    {
-                        Console.WriteLine($"mergeCount {mergeCount}");
-                        ((IMarketSeriesInternal)series).OnBar(nextLiveBar, true);
-                    }
-
-                    //TimedBar bar = state.HistoricalSource[time];
-                    //if (bar == null) continue;
-
-                    //((IMarketSeriesInternal)series).OnBar(bar, true);
                 }
             }
 
@@ -252,7 +306,6 @@ namespace LionFire.Trading
             //        //subscription.Symbol
             //        //subscriber.OnBar(new SymbolBar(subscription.Symbol, new Bar())),
             //    }
-
             //}
             lastExecutedTime = time;
         }
@@ -273,7 +326,8 @@ namespace LionFire.Trading
                     Thread.Sleep(delayBetweenSteps);
                 }
             } while (ExecuteNextStep());
-            Console.WriteLine($"Simulation finished in {sw.ElapsedMilliseconds / 100}s");
+            Console.WriteLine();
+            Console.WriteLine($"Simulation finished in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
         }
 
         public const int progressReportInterval = 100;
@@ -309,8 +363,9 @@ namespace LionFire.Trading
             if (i++ > progressReportInterval)
             {
                 i = 0;
-                var progress = (100.0 * (simulationTime - StartDate).TotalMilliseconds / simulationMilliseconds).ToString("N1");
-                Console.Write($"\b\b\b\b\b{progress}%");
+                var progress = (100.0 * (simulationTime - StartDate).TotalMilliseconds / simulationMilliseconds).ToString("N1") ;
+                var date = simulationTime.ToString("yyyy-MM-dd");
+                Console.Write($"\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b{progress}% {date}");
             }
 
             Execute(simulationTime);

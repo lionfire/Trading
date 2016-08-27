@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Subjects;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading
@@ -21,11 +22,11 @@ namespace LionFire.Trading
         #endregion
 
         #region Parameters
-
-        public TradingAccount Account { get; set; }
+        
+        public LiveAccount Account { get; set; }
 
         
-        public Dictionary<string, TradingAccount> Accounts { get; set; }
+        public Dictionary<string, LiveAccount> Accounts { get; set; }
 
         #endregion
 
@@ -40,6 +41,9 @@ namespace LionFire.Trading
                 return TimeZoneInfo.Utc;
             }
         }
+
+        public IObservable<bool> Started { get { return started; } }
+        BehaviorSubject<bool> started = new BehaviorSubject<bool>(false);
 
         #region Derived
 

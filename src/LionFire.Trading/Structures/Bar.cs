@@ -21,8 +21,21 @@ namespace LionFire.Trading
         public override string ToString()
         {
             var chars = 8;
+            var padChar = ' ';
+            //var padChar = '0';
             var vol = Volume > 0 ? $" [v:{Volume.ToString().PadLeft(chars)}]" : "";
-            return $"o:{Open.ToString().PadRight(chars, '0')} h:{High.ToString().PadRight(chars, '0')} l:{Low.ToString().PadRight(chars, '0')} c:{Close.ToString().PadRight(chars, '0')}{vol}";
+            return $"o:{Open.ToString().PadRight(chars, padChar)} h:{High.ToString().PadRight(chars, padChar)} l:{Low.ToString().PadRight(chars, padChar)} c:{Close.ToString().PadRight(chars, padChar)}{vol}";
+        }
+
+
+    }
+    public static class StringExtensions
+    {
+        private static string PadNumberWithDecimal(this string str, int chars)
+        {
+            var padChar = '0';
+            if (!str.Contains(".")) str += ".";
+            return str.PadRight(chars, padChar);
         }
     }
 }

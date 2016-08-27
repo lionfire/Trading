@@ -37,11 +37,19 @@ namespace LionFire.Trading
 
         public void InitHistoricalSources()
         {
+            //{
+            //    var d = new HistoricalDataSource()
+            //    {
+            //        SourceName = "DukasCopy",
+            //        RootDir = @"E:\st\Projects\Investing\Historical Data\dukascopy\",
+            //    };
+            //    Sources.Add(d);
+            //}
             {
                 var d = new HistoricalDataSource()
                 {
-                    SourceName = "DukasCopy",
-                    RootDir = @"E:\st\Projects\Investing\Historical Data\dukascopy\",
+                    SourceName = "DukasCopy (TickDownloader)",
+                    RootDir = @"E:\TickDownloader\tickdata\",
                 };
                 Sources.Add(d);
             }
@@ -66,9 +74,9 @@ namespace LionFire.Trading
 
         #region Accessors
 
-        public IMarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame)
+        public IMarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null)
         {
-            return GetMarketSeries(symbol.GetSeriesKey(timeFrame));
+            return GetMarketSeries(symbol.GetSeriesKey(timeFrame), startDate, endDate);
         }
         public IMarketSeries GetMarketSeries(string key, DateTime? startDate = null, DateTime? endDate = null)
         {

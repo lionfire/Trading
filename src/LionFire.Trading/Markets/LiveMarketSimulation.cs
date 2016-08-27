@@ -13,25 +13,7 @@ namespace LionFire.Trading
 
         public override bool IsBacktesting { get { return false; } }
 
-        
-
-        public bool IsRealMoney {
-            get {
-                return false;
-            }
-        }
-
         #endregion
-
-        public DateTime SimulationTime {
-            get; set;
-        }
-
-        public TimeZoneInfo TimeZone {
-            get {
-                return TimeZoneInfo.Utc;
-            }
-        }
 
         public void SimulateBar(SymbolBar bar)
         {

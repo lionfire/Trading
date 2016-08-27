@@ -9,8 +9,15 @@ namespace LionFire.Trading.Agent.Program
     {
         public static void Main(string[] args)
         {
-            var agent = new AgentService();
-            agent.Run();
+            try
+            {
+                var agent = new AgentService();
+                agent.Run();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
             Console.ReadKey();
         }
     }

@@ -22,5 +22,6 @@ namespace LionFire.Trading
 
         //MarketSeries GetMarketSeries(string symbol, TimeFrame tf);
 
+        IObservable<bool> Started { get; }
     }
 }

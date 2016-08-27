@@ -18,7 +18,7 @@ namespace LionFire.Trading
 
     public interface ISeries<T>
     {
-        T this[int index] { get; }
+        T this[int index] { get; set; }
 
         int Count { get; }
 

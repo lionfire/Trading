@@ -5,6 +5,10 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+    public interface IndicatorDataSeries : IDataSeries
+    {
+    }
+    
     public sealed class BarSeries : DataSeries<TimedBarStruct>, IBarSeries
     {
     }

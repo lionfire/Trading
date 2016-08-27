@@ -11,17 +11,15 @@ namespace LionFire.Trading
 
         public IMarketSeries HistoricalSource {
             get { return historicalSource; }
-            set { historicalSource = value; LastHistoricalIndexExecuted = -1; }
+            set { historicalSource = value; NextHistoricalIndex = -1; }
         }
         private IMarketSeries historicalSource;
 
         #endregion
 
-        public int LastHistoricalIndexExecuted { get; set; } 
+        public int NextHistoricalIndex { get; set; } 
 
         public DateTime NextHistoricalBar { get; set; }
-
-
-
+        public TimedBar NextBarInProgress { get; internal set; }
     }
 }

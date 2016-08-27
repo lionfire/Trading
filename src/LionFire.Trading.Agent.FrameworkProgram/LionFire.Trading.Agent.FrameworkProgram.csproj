@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LionFire.Trading.Agent.FrameworkProgram</RootNamespace>
     <AssemblyName>LionFire.Trading.Agent.FrameworkProgram</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -33,8 +34,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="LionFire.Trading.Agent">
-      <HintPath>..\LionFire.Trading.Agent\bin\Debug\netstandard1.3\LionFire.Trading.Agent.dll</HintPath>
+    <Reference Include="LionFire.Trading.Agent, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Agent.dll</HintPath>
     </Reference>
     <Reference Include="QuickFix, Version=1.5.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\..\packages\QuickFix.Net.1.5.0\lib\QuickFix.dll</HintPath>
