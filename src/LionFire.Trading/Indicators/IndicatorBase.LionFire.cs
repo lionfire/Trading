@@ -42,6 +42,7 @@ namespace LionFire.Trading.Indicators
     }
 
     public abstract partial class IndicatorBase<TConfig> : IndicatorBase
+        where TConfig : IIndicatorConfig, new()
     {
 
         #region Initialization (LionFire specific)
@@ -57,6 +58,14 @@ namespace LionFire.Trading.Indicators
         partial void _InitPartial()
         {
             var subs = new List<MarketDataSubscription>();
+            if (Symbol == null)
+            {
+                throw new ArgumentNullException("Symbol");
+            }
+            if (TimeFrame == null)
+            {
+                throw new ArgumentNullException("TimeFrame");
+            }
             subs.Add(new MarketDataSubscription(Symbol.Code, TimeFrame.Name));
             this.DesiredSubscriptions = subs;
 

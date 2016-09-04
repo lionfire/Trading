@@ -14,7 +14,7 @@ namespace LionFire.Trading.Indicators
 {
 
     public abstract partial class IndicatorBase<TConfig> : IIndicator
-        where TConfig : IIndicatorConfig
+        where TConfig : IIndicatorConfig, new()
     {
         #region Construction and Init
 
@@ -33,14 +33,27 @@ namespace LionFire.Trading.Indicators
 
         protected virtual void OnInitializing()
         {
-            InitLog();
-            _InitPartial();
+            try
+            {
+                InitLog();
+            }
+            catch (Exception)
+            {
+                throw new Exception("InitLog threw");
+            }
+            try
+            {
+                _InitPartial();
+            }
+            catch (Exception)
+            {
+                throw new Exception("_InitPartial threw");
+            }
         }
 
         protected virtual void OnInitialized()
         {
             OnInitialized_();
-
         }
         partial void OnInitialized_();
 
@@ -48,7 +61,6 @@ namespace LionFire.Trading.Indicators
 
         protected void InitializeOutputs()
         {
-
             var type = this.GetType();
 #if cAlgo
             if (type.GetTypeInfo().GetCustomAttribute<IndicatorAttribute>() != null)
@@ -58,9 +70,16 @@ namespace LionFire.Trading.Indicators
 #endif
             foreach (var mi in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).Where(_ => _.PropertyType == typeof(IndicatorDataSeries)))
             {
-                if (mi.GetValue(this) == null)
+                try
                 {
-                    mi.SetValue(this, new CustomIndicatorDataSeries());
+                    if (mi.GetValue(this) == null)
+                    {
+                        mi.SetValue(this, new CustomIndicatorDataSeries());
+                    }
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Failed to initialize IndicatorDataSeries with CustomIndicatorDataSeries", ex);
                 }
             }
         }
@@ -76,17 +95,19 @@ namespace LionFire.Trading.Indicators
 #if !cAlgo
             base.OnStarting();
 #endif
-            l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
-
-            l.LogInformation($"------- START {this} -------");
-            OnInitializing();
+            //l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
+            //if (l != null)
+            //{
+            //    l.LogInformation($"------- START {this} -------");
+            //}
+            //OnInitializing();
         }
 
         public virtual void InitLog()
         {
             try
             {
-                l = this.GetLogger(this.ToString().Replace(' ', '.'), (bool)Config.Log);
+                l = this.GetLogger(this.ToString().Replace(' ', '.'), Config == null ? false : Config.Log);
 
                 l.LogInformation($"....... START {this.ToStringDescription()} .......");
             }
@@ -106,7 +127,6 @@ namespace LionFire.Trading.Indicators
 
         public virtual void CalculateToTime(DateTime openTime)
         {
-            throw new NotImplementedException();
         }
 
 
@@ -120,7 +140,7 @@ namespace LionFire.Trading.Indicators
             get { return config; }
             set { config = value; OnConfigChanged(); }
         }
-        private TConfig config;
+        private TConfig config = new TConfig();
 
         protected virtual void OnConfigChanged()
         {

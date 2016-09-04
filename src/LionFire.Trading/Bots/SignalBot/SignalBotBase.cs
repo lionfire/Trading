@@ -1,4 +1,7 @@
-﻿#if cAlgo
+﻿#if DEBUG
+#define NULLCHECKS
+#endif
+#if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
 #endif
@@ -11,41 +14,41 @@ using LionFire.Trading.Indicators;
 
 namespace LionFire.Trading.Bots
 {
-    public partial class SignalBotBase<TIndicator> : BotBase, IBot
+    public partial class SignalBotBase<TIndicator, TConfig> : BotBase<TConfig>, IBot
         where TIndicator : ISignalIndicator, new()
+        where TConfig : SignalBotConfig, new()
+
     {
 
         #region Relationships
 
         protected ISignalIndicator Indicator { get; set; }
 
-        
-
         #endregion
 
         #region Config
-
-        public SignalBotConfig SignalBotConfig { get; set; } = new SignalBotConfig();
 
         public bool UseTakeProfit = false; // TEMP
 
         #endregion
 
-
         #region Construction
 
         public SignalBotBase()
         {
-            Indicator = new TIndicator();
-            _ctor2();
+            if (Indicator == null)
+            {
+                Indicator = new TIndicator();
+            }
+            SignalBotBase_();
             InitExchangeRates();
         }
 
-        partial void _ctor2();
+        partial void SignalBotBase_();
 
-        protected virtual void ConfigureIndicator(ISignalIndicator indicator)
-        {
-        }
+        //protected virtual void ConfigureIndicator(ISignalIndicator indicator)
+        //{
+        //}
 
         #endregion
 
@@ -60,30 +63,24 @@ namespace LionFire.Trading.Bots
 
         public int barCount = 0;
 
-        //public double Spread {
-        //    get {
-        //        return Symbol.Ask - Symbol.Bid; // FUTURE: use some sort of average?
-        //    }
-        //}
-
         #region Derived
 
         public bool CanOpenLong {
             get {
                 var count = Positions.Where(p => p.TradeType == TradeType.Buy).Count();
-                return count < BotConfig.MaxLongPositions;
+                return count < Config.MaxLongPositions;
             }
         }
         public bool CanOpenShort {
             get {
                 var count = Positions.Where(p => p.TradeType == TradeType.Sell).Count();
-                return count < BotConfig.MaxShortPositions;
+                return count < Config.MaxShortPositions;
             }
         }
         public bool CanOpen {
             get {
                 var count = Positions.Count;
-                return BotConfig.MaxOpenPositions == 0 || count < BotConfig.MaxOpenPositions;
+                return Config.MaxOpenPositions == 0 || count < Config.MaxOpenPositions;
             }
         }
 
@@ -97,14 +94,27 @@ namespace LionFire.Trading.Bots
 
         private void Evaluate()
         {
+
+#if NULLCHECKS
+            if (Indicator == null)
+            {
+                throw new ArgumentNullException("Indicator (Evaluate)");
+            }
+            if (Server == null)
+            {
+                throw new ArgumentNullException("Server (Evaluate)");
+            }
+#endif
+
             try
             {
                 Indicator.CalculateToTime(this.Server.Time);
             }
             catch (Exception ex)
             {
-                throw new Exception("Indicator.Calculate threw " + ex.GetType().Name, ex);
+                throw new Exception("Indicator.CalculateToTime threw " + ex + " stack: " + ex.StackTrace, ex);
             }
+
 #if TRACE_EVALUATE
             var traceThreshold = 0.0;
 
@@ -135,7 +145,7 @@ namespace LionFire.Trading.Bots
             }
 #endif
 
-            if (BotConfig.AllowLong
+            if (Config.AllowLong
                 && Indicator.OpenLongPoints.LastValue >=
                 1.0
                 && Indicator.CloseLongPoints.LastValue <
@@ -145,7 +155,7 @@ namespace LionFire.Trading.Bots
                 _Open(TradeType.Buy, Indicator.LongStopLoss);
             }
 
-            if (BotConfig.AllowShort
+            if (Config.AllowShort
             && -Indicator.OpenShortPoints.LastValue >=
                 1.0
                 && -Indicator.CloseShortPoints.LastValue <
@@ -174,7 +184,6 @@ namespace LionFire.Trading.Bots
                 }
             }
         }
-
 
 
         #region Position Management
@@ -271,21 +280,21 @@ namespace LionFire.Trading.Bots
             var price = (tradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask);
             long volume_MinPositionSize = long.MinValue;
 
-            if (BotConfig.MinPositionSize > 0)
+            if (Config.MinPositionSize > 0)
             {
-                volume_MinPositionSize = Symbol.VolumeMin + (BotConfig.MinPositionSize - 1) * Symbol.VolumeStep;
+                volume_MinPositionSize = Symbol.VolumeMin + (Config.MinPositionSize - 1) * Symbol.VolumeStep;
             }
 
             long volume_MinPositionRiskPercent = long.MinValue;
 
-            if (BotConfig.PositionRiskPercent > 0)
+            if (Config.PositionRiskPercent > 0)
             {
                 var fromCurrency = Symbol.Code.Substring(3);
                 var toCurrency = Account.Currency;
 
                 var stopLossDistanceAccountCurrency = ConvertToCurrency(stopLossDistance, fromCurrency, toCurrency);
 
-                var equityRiskAmount = this.Account.Equity * (BotConfig.PositionRiskPercent / 100.0);
+                var equityRiskAmount = this.Account.Equity * (Config.PositionRiskPercent / 100.0);
 
                 var quantity = (long)(equityRiskAmount / (stopLossDistanceAccountCurrency));
                 quantity = VolumeToStep(quantity);
@@ -342,10 +351,10 @@ namespace LionFire.Trading.Bots
 
             LogOpen(tradeType, volumeInUnits, risk, stopLoss, stopLossDistance);
 
-            if (IsBacktesting && BotConfig.BacktestProfitTPMultiplierOnSL > 0)
+            if (IsBacktesting && Config.BacktestProfitTPMultiplierOnSL > 0)
             {
                 UseTakeProfit = true;
-                TakeProfitInPips = stopLossDistancePips * BotConfig.BacktestProfitTPMultiplierOnSL;
+                TakeProfitInPips = stopLossDistancePips * Config.BacktestProfitTPMultiplierOnSL;
             }
             OpenPosition(tradeType, stopLossDistancePips, UseTakeProfit ? TakeProfitInPips : double.NaN, volumeInUnits);
         }
@@ -403,7 +412,7 @@ p.onBars.Add(new StopLossTrailer(p)
 
         private void LogOpen(TradeType tradeType, long volumeInUnits, double risk, double stopLoss, double stopLossDistance)
         {
-            if (!BotConfig.Log) return;
+            if (!Config.Log) return;
             string stopLossDistanceAccount = "";
             var purchaseCurrency = Symbol.Code.Substring(0, 3);
             if (purchaseCurrency != Account.Currency)
@@ -420,7 +429,7 @@ p.onBars.Add(new StopLossTrailer(p)
 
         #endregion
 
-        protected  override double GetFitness(GetFitnessArgs args)
+        protected override double GetFitness(GetFitnessArgs args)
         {
 
             var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;

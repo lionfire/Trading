@@ -1,4 +1,8 @@
-﻿using System;
+﻿#if DEBUG
+#define NULLCHECKS
+#endif
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -6,7 +10,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries
-            where TConfig : IIndicatorConfig
+            where TConfig : IIndicatorConfig, new()
     {
 
         #region Construction
@@ -15,39 +19,49 @@ namespace LionFire.Trading.Indicators
 
         public SingleSeriesIndicatorBase(TConfig config) : base(config)
         {
-
         }
 
         #endregion
 
-        partial void _InitPartial();
-
-
         protected override void OnInitializing()
         {
             base.OnInitializing();
-
-            _InitPartial();
+            OnInitializing_();
 
         }
+        partial void OnInitializing_();
+
+        protected abstract int CalculatedCount { get;
+        }
+
+        public override void CalculateToTime(DateTime date)
+        {
+#if cAlgo
+            var series = Bot == null ? MarketSeries : Bot.MarketSeries;
+            if (MarketSeries == null && Bot == null)
+            {
+                throw new ArgumentNullException("MarketSeries == null && Bot == null");
+            }
+#else
+            var series = MarketSeries;
+#endif
+#if NULLCHECKS
+            if (series == null)
+            {
+                throw new ArgumentNullException("MarketSeries");
+            }
+#endif
+
+            //l.Debug("Calculating until " + date);
+            
+            for (int index = CalculatedCount; series.OpenTime[index] < date; index++)
+            {
+                var openTime = series.OpenTime[index];
+                //l.Warn($"series.OpenTime[index] {openTime} open: {series.Open[index]}");
+                if (double.IsNaN(series.Open[index])) break;
+                Calculate(index);
+            }
+            //l.Info("Calculated until " + date + " " + OpenLongPoints.LastValue);
+        }
     }
-
-    //[Obsolete("Use SingleSeriesIndicatorBase")]
-    //public abstract partial class SingleSymbolIndicatorBase : IndicatorBase
-    //{
-        
-    //    public IMarketSeries MarketSeries { get; set; }
-
-    //    public string Name {
-    //        get {
-    //            if (name == null)
-    //            {
-    //                name = this.GetType().Name.Replace("Indicator", "");
-    //            }
-    //            return name;
-    //        }
-
-    //    }
-    //    private string name;
-    //}
 }

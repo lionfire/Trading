@@ -9,7 +9,7 @@ namespace LionFire.Trading.Bots
 
 
 
-    public partial class BotBase : MarketParticipant, IBot
+    public partial class BotBase<TConfig> : MarketParticipant, IBot
     {
         public IAccount Account { get; set; }
         public MarketData MarketData { get; set; }

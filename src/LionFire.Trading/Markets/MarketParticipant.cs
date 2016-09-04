@@ -12,7 +12,7 @@ namespace LionFire.Trading
     {
         IMarket Market { get; set; }
 
-        void Init();
+        //void Init();
     }
 
     /// <summary>
@@ -20,7 +20,7 @@ namespace LionFire.Trading
     /// </summary>
     public abstract class MarketParticipant : IMarketParticipant
     {
-        public virtual void Init() { }
+        //public virtual void Init() { }
 
         #region Construction
 

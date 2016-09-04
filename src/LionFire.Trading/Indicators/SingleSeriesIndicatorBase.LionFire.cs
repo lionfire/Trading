@@ -7,12 +7,12 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries
-        where TConfig : IIndicatorConfig
+        where TConfig : IIndicatorConfig, new()
     {
         public MarketSeries MarketSeries { get; protected set; }
 
 
-        partial void _InitPartial()
+        partial void OnInitializing_()
         {
             if (TimeFrame == null)
             {

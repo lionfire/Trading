@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Indicators
 {
-    public partial class SignalIndicatorBase
+    public partial class SignalIndicatorBase<TConfig>
     {
     }
 }

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     public abstract partial class SignalIndicatorBase<TConfig> : SingleSeriesIndicatorBase<TConfig>, ISignalIndicator
-        where TConfig : ISignalIndicatorConfig
+        where TConfig : ISignalIndicatorConfig, new()
     {
         #region Construction
 

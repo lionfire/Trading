@@ -9,12 +9,14 @@ namespace LionFire.Trading.Bots
 {
     // TODO: Rename BotBase to SingleSeriesBotBase  and make a new BotBase that is more generic
 
-    public partial class BotBase
+    public partial class BotBase<TConfig> : IBot
+        where TConfig : BotConfig, new()
     {
         #region Configuration
 
-        public BotConfig BotConfig { get; set; } = new BotConfig();
+        BotConfig IBot.BotConfig { get { return Config; } set { Config =(TConfig) value; } }
 
+        public TConfig Config { get; set; } = new TConfig();
 
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
 
@@ -26,7 +28,7 @@ namespace LionFire.Trading.Bots
         protected override void OnStarting()
 #endif
         {
-            l = this.GetLogger(this.ToString().Replace(' ', '.'), BotConfig.Log);
+            l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
             
             l.LogInformation($"------- START {this} -------");
         }
@@ -35,6 +37,7 @@ namespace LionFire.Trading.Bots
         {
             l.LogInformation($"------- STOP {this} -------");
         }
+
         protected virtual void OnNewBar()
         {
         }

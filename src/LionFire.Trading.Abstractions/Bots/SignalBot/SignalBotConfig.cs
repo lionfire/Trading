@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Bots
 {
-    public class SignalBotConfig
+    public class SignalBotConfig : BotConfig
     {
         public double PointsToLong { get; set; } = 1.0;
         public double PointsToShort { get; set; } = 1.0;

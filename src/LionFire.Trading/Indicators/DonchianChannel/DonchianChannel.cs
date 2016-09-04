@@ -38,6 +38,12 @@ namespace LionFire.Trading.Indicators
 
         #endregion
 
+        protected override int CalculatedCount {
+            get {
+                return Top == null ? 0 : Top.Count;
+            }
+        }
+
         public override void Calculate(int upToIndex)
         {
             for (int index = Top.Count; index <= upToIndex; index++)

@@ -21,7 +21,6 @@ namespace LionFire.Trading.Agent
     public class AgentConfigItem
     {
         List<string> Instruments { get; set; }
-
     }
 
     public class AgentService
@@ -89,7 +88,6 @@ namespace LionFire.Trading.Agent
             int barCount = 0;
             var sim = new LiveMarketSimulation();
             sim.TimeFrame = TimeFrame.h1;
-            //sim.TimeFrame = TimeFrame.m1;
 
             var tf = TimeFrame.h1;
             sim.Subscribe("XAUUSD", this, tf);
@@ -101,7 +99,6 @@ namespace LionFire.Trading.Agent
             var path = Path.Combine(dir, file);
             using (var sr = new StreamReader(new FileStream(path, FileMode.Open)))
             {
-
                 string line;
                 while (!ExitRequested && (line = sr.ReadLine()) != null)
                 {
@@ -164,7 +161,6 @@ namespace LionFire.Trading.Agent
                 PointsToOpenShort = 3.0,
                 PointsToCloseLong = 2.0,
                 PointsToCloseShort = 2.0,
-                //PointsToClose = 2.0,
             });
             sim.Add(lionTrending);
 
