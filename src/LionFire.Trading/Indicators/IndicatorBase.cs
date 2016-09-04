@@ -93,6 +93,7 @@ namespace LionFire.Trading.Indicators
         void OnStarting()
         {
 #if !cAlgo
+            Init();
             base.OnStarting();
 #endif
             //l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
