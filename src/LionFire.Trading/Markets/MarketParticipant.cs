@@ -1,24 +1,35 @@
-﻿using System;
+﻿using LionFire.Extensions.Logging;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    //public interface IMarketDataSubscriber
-    //{
-    //    void OnBar(SymbolBar bar);
-    //    void OnTick(SymbolBar bar); // TODO: Tick
-    //}
 
+    public interface IMarketParticipant
+    {
+        IMarket Market { get; set; }
+
+        void Init();
+    }
 
     /// <summary>
-    /// Represents an entity that participates in the market, either passively (readonly) or actively (by creating orders)
+    /// Represents an entity that participates in the market, either passively (readonly, which will receive events for DesiredSubscriptions via OnBar) and/or actively (by creating orders)
     /// </summary>
-    public class MarketParticipant
-    //: IMarketDataSubscriber
+    public abstract class MarketParticipant : IMarketParticipant
     {
+        public virtual void Init() { }
 
+        #region Construction
+
+        public MarketParticipant()
+        {
+            l = this.GetLogger();
+        }
+
+        #endregion
 
         #region Subscriptions
 
@@ -30,15 +41,51 @@ namespace LionFire.Trading
                 if (desiredSubscriptions == value) return;
                 var oldValue = desiredSubscriptions;
                 desiredSubscriptions = value;
-                DesiredSubscriptionsChangedFrom?.Invoke(oldValue);
+                //DesiredSubscriptionsChangedFrom?.Invoke(oldValue);
+                OnDesiredSubscriptionsChanged(oldValue, value);
             }
         }
         private IEnumerable<MarketDataSubscription> desiredSubscriptions;
 
+        protected virtual void OnDesiredSubscriptionsChanged(IEnumerable<MarketDataSubscription> oldValue, IEnumerable<MarketDataSubscription> newValue)
+        {
+            if (oldValue != null)
+            {
+                foreach (var old in oldValue)
+                {
+                    old.Observable?.Dispose();
+                }
+            }
+            if (market != null && newValue != null)
+            {
+                foreach (var sub in newValue)
+                {
+                    if (sub.Series == null)
+                    {
+                        sub.Series = market.Data.GetMarketSeries(sub.Symbol, sub.TimeFrame);
+                    }
+                    if (sub.Series == null)
+                    {
+                        sub.IsActive = false;
+                        if (!sub.IsOptional)
+                        {
+                            throw new MarketDataUnavailableException("Market data not available: " + sub);
+                        }
+                        else
+                        {
+                            l.LogWarning("Market data not available: " + sub);
+                        }
+                        continue;
+                    }
+
+                    sub.IsActive = true;
+                    //sub.Series.BarReceived += OnBar;
+                    sub.Observable = sub.Series.LatestBar.Subscribe(timedBar => OnBar(sub.Series, timedBar));
+                }
+            }
+        }
+
         #endregion
-
-
-        public event Action<IEnumerable<MarketDataSubscription>> DesiredSubscriptionsChangedFrom;
 
         #region Relationships
 
@@ -62,29 +109,9 @@ namespace LionFire.Trading
 
                 if (market != null && DesiredSubscriptions != null)
                 {
-                    foreach (var sub in DesiredSubscriptions)
-                    {
-                        sub.Series = market.Data.GetMarketSeries(sub.Symbol, sub.TimeFrame);
-                        if (sub.Series == null)
-                        {
-                            sub.IsActive = false;
-                            if (!sub.IsOptional)
-                            {
-                                throw new MarketDataUnavailableException("Market data not available: " + sub);
-                            }
-                            else
-                            {
-                                Console.WriteLine("Market data not available: " + sub); // TOLOG
-                            }
-                            continue;
-                        }
-                        else
-                        {
-                            sub.IsActive = true;
-                            sub.Series.BarReceived += OnBar;
-                        }
-                    }
+                    OnDesiredSubscriptionsChanged(null, DesiredSubscriptions);
                 }
+                OnAttaching();
                 OnAttached();
             }
         }
@@ -92,11 +119,14 @@ namespace LionFire.Trading
 
         List<IDisposable> marketSubscriptions = new List<IDisposable>();
 
+        protected virtual void OnAttaching()
+        {
+        }
         protected virtual void OnAttached()
         {
             Market.Started.Subscribe(started => { if (started) { OnStarting(); } });
         }
-        
+
         /// <summary>
         /// Throws NotImplementedException by default.  Override to support detaching.
         /// </summary>
@@ -113,17 +143,21 @@ namespace LionFire.Trading
         }
 
 
+        public void OnBar(IMarketSeries series, TimedBar bar)
+        {
+            OnBar(series.SymbolCode, series.TimeFrame, bar);
+        }
+
         public void OnBar(MarketSeries series)
         {
             var bar = series.LastBar;
             OnBar(series.SymbolCode, series.TimeFrame, bar);
         }
 
-        #region IMarketDataSubscriber - REVIWE
-        
+        #region IMarketDataSubscriber - REVIEW
+
         public virtual void OnBar(string symbolCode, TimeFrame timeFrame, TimedBar bar)
         {
-
         }
 
         public virtual void OnBarFinished(string symbolCode, TimeFrame timeFrame)
@@ -134,19 +168,19 @@ namespace LionFire.Trading
         {
         }
 
-        public void OnBars(IEnumerable<SymbolBar> bars)
-        {
-            //foreach (var bar in bars)
-            //{
-            //    OnBar(bar);
-            //}
-        }
+        //public void OnBars(IEnumerable<SymbolBar> bars)
+        //{
+        //}
 
         public void OnTick(SymbolBar bar)
         {
         }
 
         #endregion
+
+
+        private ILogger l;
+
 
     }
 

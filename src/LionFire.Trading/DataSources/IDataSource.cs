@@ -8,8 +8,8 @@ namespace LionFire.Trading
     public interface IDataSource
     {
         string SourceName { get; }
-        IMarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null);
-        IMarketSeries GetMarketSeries(string key, DateTime? startDate = null, DateTime? endDate = null);
+        MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null);
+        MarketSeries GetMarketSeries(string key, DateTime? startDate = null, DateTime? endDate = null);
     }
     
 }

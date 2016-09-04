@@ -52,6 +52,7 @@ namespace LionFire.Trading
         #region Bar Accessors
 
         TimedBar LastBar { get; }
+        
 
         int FindIndex(DateTime time);
 
@@ -61,6 +62,11 @@ namespace LionFire.Trading
         #endregion
 
         //IEnumerable<SymbolBar> GetBars(DateTime fromTimeExclusive, DateTime endTimeInclusive);
+
+        IObservable<TimedBar> LatestBar { get; }
+        bool LatestBarHasObservers {
+            get;
+        }
 
         event Action<MarketSeries> BarReceived;
         event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;

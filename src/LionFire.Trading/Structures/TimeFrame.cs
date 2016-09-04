@@ -68,11 +68,16 @@ namespace LionFire.Trading
             TimeFrameValue = Int32.Parse(name.Substring(1));
         }
 
-        public static TimeFrame TryParse(string v)
+        public static TimeFrame TryParse(string timeFrameCode)
         {
-            var pi = typeof(TimeFrame).GetProperty(v, BindingFlags.Public | BindingFlags.Static);
+            var pi = typeof(TimeFrame).GetProperty(timeFrameCode, BindingFlags.Public | BindingFlags.Static);
 
             return pi?.GetValue(null) as TimeFrame;
+        }
+
+        public static implicit operator TimeFrame(string timeFrameCode)
+        {
+            return TryParse(timeFrameCode);
         }
 
         #endregion

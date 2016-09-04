@@ -5,23 +5,49 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Indicators
 {
-    
-
-    public abstract class SingleSymbolIndicatorBase : IndicatorBase<IndicatorConfig>
+    public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries
+            where TConfig : IIndicatorConfig
     {
-        
-        public IMarketSeries MarketSeries { get; set; }
 
-        public string Name {
-            get {
-                if (name == null)
-                {
-                    name = this.GetType().Name.Replace("Indicator", "");
-                }
-                return name;
-            }
+        #region Construction
+
+        public SingleSeriesIndicatorBase() { }
+
+        public SingleSeriesIndicatorBase(TConfig config) : base(config)
+        {
 
         }
-        private string name;
+
+        #endregion
+
+        partial void _InitPartial();
+
+
+        protected override void OnInitializing()
+        {
+            base.OnInitializing();
+
+            _InitPartial();
+
+        }
     }
+
+    //[Obsolete("Use SingleSeriesIndicatorBase")]
+    //public abstract partial class SingleSymbolIndicatorBase : IndicatorBase
+    //{
+        
+    //    public IMarketSeries MarketSeries { get; set; }
+
+    //    public string Name {
+    //        get {
+    //            if (name == null)
+    //            {
+    //                name = this.GetType().Name.Replace("Indicator", "");
+    //            }
+    //            return name;
+    //        }
+
+    //    }
+    //    private string name;
+    //}
 }

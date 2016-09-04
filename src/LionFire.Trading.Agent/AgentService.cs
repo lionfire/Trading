@@ -13,6 +13,7 @@ using System.Threading;
 using LionFire.Extensions.Logging;
 using NLog.Extensions.Logging;
 using LionFire.Trading.Indicators;
+using LionFire.Trading.Bots;
 
 namespace LionFire.Trading.Agent
 {
@@ -153,15 +154,28 @@ namespace LionFire.Trading.Agent
             //sim.Add(account);
 
 #if Proprietary
-            var lionTrending = new LionTrendingBase(new LionTrendingConfig("XAUUSD", "m1") { Log=true });
-            //lionTrending.DesiredSubscriptions
+
+            var lionTrending = new LionTrendingBase(new LionTrendingConfig("XAUUSD", "h1")
+            {
+                Log = true,
+                OpenWindowPeriods = 55,
+                CloseWindowPeriods = 34,
+                PointsToOpenLong = 3.0,
+                PointsToOpenShort = 3.0,
+                PointsToCloseLong = 2.0,
+                PointsToCloseShort = 2.0,
+                //PointsToClose = 2.0,
+            });
             sim.Add(lionTrending);
+
             //sim.Add(new LionTrender() { Account = account });
+            //var lionTrender = new LionTrender();
+            //sim.Add(lionTrender);
 #endif
 
             sim.Run();
 
-            Console.WriteLine($"Backtest completed in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
+            logger.LogInformation($"Backtest completed in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
 
         }
 

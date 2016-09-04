@@ -67,18 +67,18 @@ namespace LionFire.Trading
 
         #region State
 
-        internal Dictionary<string, IMarketSeries> Dict { get { return dict; } }
-        Dictionary<string, IMarketSeries> dict = new Dictionary<string, IMarketSeries>();
+        internal Dictionary<string, MarketSeries> Dict { get { return dict; } }
+        Dictionary<string, MarketSeries> dict = new Dictionary<string, MarketSeries>();
 
         #endregion
 
         #region Accessors
 
-        public IMarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null)
+        public MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null)
         {
             return GetMarketSeries(symbol.GetSeriesKey(timeFrame), startDate, endDate);
         }
-        public IMarketSeries GetMarketSeries(string key, DateTime? startDate = null, DateTime? endDate = null)
+        public MarketSeries GetMarketSeries(string key, DateTime? startDate = null, DateTime? endDate = null)
         {
             if (dict.ContainsKey(key))
             {

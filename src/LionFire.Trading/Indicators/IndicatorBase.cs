@@ -3,8 +3,12 @@ using ILogger = Microsoft.Extensions.Logging.ILogger;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+#if cAlgo
+using cAlgo.API;
+#endif
 using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
+using System.Reflection;
 
 namespace LionFire.Trading.Indicators
 {
@@ -12,47 +16,71 @@ namespace LionFire.Trading.Indicators
     public abstract partial class IndicatorBase<TConfig> : IIndicator
         where TConfig : IIndicatorConfig
     {
+        #region Construction and Init
+
         public IndicatorBase() { }
 
-        public IndicatorBase(TConfig config) { this.Config = config; }
-
-        //public DateTime StartTime { get; set; }
-        //public TimeFrame TimeFrame { get; set; }
-
-        //protected SortedList<KeyValuePair<DateTime, TimeSpan>, int> indexOffsets = new SortedList<KeyValuePair<DateTime, TimeSpan>, int>();
-
-        ////private DateTime
-
-        //private void Initialize()
-        //{
-        //}
-
-        //protected void Calculate(int index, DateTime indexStartTime, TimeSpan indexInterval)
-        //{
-        //}
-
-
-
-        #region Configuration
-
-        public TConfig Config { get; set; }
-
-        IIndicatorConfig IIndicator.Config { get{return this.Config;} set { this.Config = (TConfig)value; } }
-
-        #endregion
-
-        protected virtual void Init()
+        public IndicatorBase(TConfig config)
         {
-            InitLog();            
+            this.Config = config;
         }
 
-        public virtual void OnBotStart()
+        public void Init()
         {
-            _OnBotStart();
+            OnInitializing();
+            OnInitialized();
         }
 
-        partial void _OnBotStart();
+        protected virtual void OnInitializing()
+        {
+            InitLog();
+            _InitPartial();
+        }
 
+        protected virtual void OnInitialized()
+        {
+            OnInitialized_();
+
+        }
+        partial void OnInitialized_();
+
+        partial void _InitPartial();
+
+        protected void InitializeOutputs()
+        {
+
+            var type = this.GetType();
+#if cAlgo
+            if (type.GetTypeInfo().GetCustomAttribute<IndicatorAttribute>() != null)
+            {
+                type = type.BaseType;
+            }
+#endif
+            foreach (var mi in type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance).Where(_ => _.PropertyType == typeof(IndicatorDataSeries)))
+            {
+                if (mi.GetValue(this) == null)
+                {
+                    mi.SetValue(this, new CustomIndicatorDataSeries());
+                }
+            }
+        }
+
+        protected
+#if cAlgo
+         virtual 
+#else
+         override
+#endif
+        void OnStarting()
+        {
+#if !cAlgo
+            base.OnStarting();
+#endif
+            l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
+
+            l.LogInformation($"------- START {this} -------");
+            OnInitializing();
+        }
 
         public virtual void InitLog()
         {
@@ -68,6 +96,45 @@ namespace LionFire.Trading.Indicators
             }
         }
 
+        #endregion
+
+        //protected SortedList<KeyValuePair<DateTime, TimeSpan>, int> indexOffsets = new SortedList<KeyValuePair<DateTime, TimeSpan>, int>();
+
+        //public virtual void Calculate(int index)
+        //{
+        //}
+
+        public virtual void CalculateToTime(DateTime openTime)
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+
+        #region Configuration
+
+        #region Config
+
+        public TConfig Config {
+            get { return config; }
+            set { config = value; OnConfigChanged(); }
+        }
+        private TConfig config;
+
+        protected virtual void OnConfigChanged()
+        {
+        }
+
+        #endregion
+
+
+        IIndicatorConfig IIndicator.Config { get { return this.Config; } set { this.Config = (TConfig)value; } }
+
+        #endregion
+
+
+
         #region Misc
 
         public virtual string ToStringDescription()
@@ -79,11 +146,6 @@ namespace LionFire.Trading.Indicators
 
         #endregion
 
-        public virtual void CalculateToTime(DateTime openTime)
-        {
-            throw new NotImplementedException();
-        }
 
-        
     }
 }

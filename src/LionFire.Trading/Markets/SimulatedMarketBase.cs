@@ -1,4 +1,5 @@
-﻿
+﻿using LionFire.Trading.Backtesting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -45,6 +46,8 @@ namespace LionFire.Trading
 
         #endregion
 
+        public List<IAccount> Accounts { get; set; } = new List<IAccount>();
+
         #endregion
 
         #region Construction
@@ -52,19 +55,19 @@ namespace LionFire.Trading
         public SimulatedMarketBase()
         {
             SimulationTimeStep = TimeFrame.m1;
-
+            MarketData = new MarketData() { Market = this };
         }
 
         #endregion
 
         #region Attached MarketParticipants
 
-        public void Add(MarketParticipant actor)
+        public void Add(IMarketParticipant actor)
         {
             participants.Add(actor);
             actor.Market = this;
         }
-        List<MarketParticipant> participants = new List<MarketParticipant>();
+        List<IMarketParticipant> participants = new List<IMarketParticipant>();
 
         #endregion
 
@@ -111,7 +114,7 @@ namespace LionFire.Trading
         #region Events
 
         public event Action ExecutedTime;
-        
+
         public IObservable<bool> Started { get { return started; } }
         BehaviorSubject<bool> started = new BehaviorSubject<bool>(false);
 
@@ -173,15 +176,31 @@ namespace LionFire.Trading
             }
         }
 
+        private void AddRemoval(ref List<IMarketSeries> list, IMarketSeries series)
+        {
+            if (list == null) list = new List<Trading.IMarketSeries>();
+            list.Add(series);
+        }
+
         protected void Execute(DateTime time)
         {
             if (lastExecutedTime == default(DateTime) && time != default(DateTime))
             {
                 started.OnNext(true);
             }
+
+            List<IMarketSeries> removals=null;
+
             // OPTIMIZE: Sync up index between live and historical series to make it faster
             foreach (var series in Data.ActiveLiveSeries)
             {
+                if (!series.LatestBarHasObservers)
+                {
+                    l.LogTrace("Removing unused MarketSeries: " + series.Key);
+                    AddRemoval(ref removals, series);
+                    continue;
+                }
+                var symbol = (SymbolImpl)this.GetSymbol(series.SymbolCode);
                 if ((series.OpenTime.LastValue + series.TimeFrame.TimeSpan) <= time)
                 {
                     HistoricalPlaybackState state = series.HistoricalPlaybackState;
@@ -199,7 +218,7 @@ namespace LionFire.Trading
                         }
                         if (state.HistoricalSource == null)
                         {
-                            Console.WriteLine($"Could not find historical data source for {series}");
+                            l.LogWarning($"Could not find historical data source for {series}");
                             continue;
                         }
                     }
@@ -211,7 +230,7 @@ namespace LionFire.Trading
                     // TODO: Run coarser timeframes from finer historical data
                     // MAJOR OPTIMIZE - Don't use FindIndex -- it is incredibly slow.
 
-                    
+
                     if (state.NextHistoricalIndex < 0)
                     {
                         state.NextHistoricalIndex = state.HistoricalSource.FindIndex(time);
@@ -224,9 +243,11 @@ namespace LionFire.Trading
                     if (state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
                     {
                         // FUTURE: Somehow support this?
-                        Console.WriteLine("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
+                        l.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
                         continue;
                     }
+
+                    BacktestSymbolSettings backtestSymbolSettings = symbol.BacktestSymbolSettings;
 
                     int mergeCount = 0;
                     for (; ; state.NextHistoricalIndex++)
@@ -245,6 +266,9 @@ namespace LionFire.Trading
                             {
                                 ((IMarketSeriesInternal)series).OnBar(bar, true);
                                 state.NextHistoricalIndex++;
+
+                                symbol.Bid = bar.Close;
+                                symbol.Ask = bar.Close + backtestSymbolSettings.GetSpread();
                                 break;
                             }
                             else
@@ -293,6 +317,14 @@ namespace LionFire.Trading
                     }
                 }
             }
+            if (removals != null)
+            {
+                foreach (var series in removals)
+                {
+                    
+                    Data.LiveDataSources.Dict.Remove(series.Key);
+                }
+            }
 
             //foreach (var kvp in subscriptions)
             //{
@@ -326,8 +358,7 @@ namespace LionFire.Trading
                     Thread.Sleep(delayBetweenSteps);
                 }
             } while (ExecuteNextStep());
-            Console.WriteLine();
-            Console.WriteLine($"Simulation finished in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
+            l.LogInformation($"Simulation finished in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
         }
 
         public const int progressReportInterval = 100;
@@ -363,15 +394,19 @@ namespace LionFire.Trading
             if (i++ > progressReportInterval)
             {
                 i = 0;
-                var progress = (100.0 * (simulationTime - StartDate).TotalMilliseconds / simulationMilliseconds).ToString("N1") ;
+                
+                var progress = (100.0 * (simulationTime - StartDate).TotalMilliseconds / simulationMilliseconds);
                 var date = simulationTime.ToString("yyyy-MM-dd");
-                Console.Write($"\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b{progress}% {date}");
+                Console.Write($"\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b{progress.ToString("N1")}% {date}");
+                BacktestProgress.OnNext(progress);
             }
 
             Execute(simulationTime);
 
             return !IsFinished;
         }
+
+        public BehaviorSubject<double> BacktestProgress { get; private set; } = new BehaviorSubject<double>(double.NaN);
 
         #region Advance
 
@@ -408,5 +443,43 @@ namespace LionFire.Trading
         public abstract bool IsBacktesting { get; }
 
         #endregion
+
+        #region Symbol
+
+        Dictionary<string, Symbol> symbols = new Dictionary<string, Symbol>();
+
+        public Symbol GetSymbol(string symbolCode)
+        {
+            var backtestBroker = BacktestBrokers.ICMarkets;
+
+            Symbol result;
+            if (!symbols.TryGetValue(symbolCode, out result))
+            {
+                result = new SymbolImpl(symbolCode, this)
+                {
+                    BacktestSymbolSettings = new BacktestSymbolSettings
+                    {
+
+                    }
+                };
+                symbols.Add(symbolCode, result);
+            }
+            return result;
+        }
+
+        public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
+        {
+
+            return null;
+        }
+
+        #endregion
+
+
+     
     }
+
+
+
+
 }

@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Reactive.Subjects;
 #if BarStruct
 using BarType = LionFire.Trading.TimedBarStruct;
 #else
@@ -213,6 +214,13 @@ namespace LionFire.Trading
 
         #region Events
 
+        public bool LatestBarHasObservers { get { return barSubject.HasObservers; } }
+        public IObservable<TimedBar> LatestBar { get {
+                
+                return barSubject; } }
+        BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
+        
+
         public event Action<MarketSeries> BarReceived;
         public event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
         //public event Action<TimedBar> BarFinished;
@@ -273,10 +281,12 @@ namespace LionFire.Trading
             close.LastValue = bar.Close;
             tickVolume.LastValue = bar.Volume;
 
-            BarReceived?.Invoke(this);
+            if (finishedBar)
+            {
+                BarReceived?.Invoke(this);
+                this.barSubject.OnNext(bar);
+            }
         }
-
-
 
         private void StartNewBar(DateTime? time = null)
         {

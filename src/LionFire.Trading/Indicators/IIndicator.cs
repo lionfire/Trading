@@ -12,8 +12,6 @@ namespace LionFire.Trading.Indicators
     {
         IIndicatorConfig Config { get; set; }
 
-        //void OnBotStart();
-
         void Calculate(int index);
 
         Symbol Symbol { get; }

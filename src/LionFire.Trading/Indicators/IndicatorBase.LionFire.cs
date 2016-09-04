@@ -6,29 +6,92 @@ using System.Reflection;
 
 namespace LionFire.Trading.Indicators
 {
-    public abstract partial class IndicatorBase<TConfig> : MarketParticipant
+    public abstract partial class IndicatorBase : MarketParticipant
     {
 
+        
+        #region Construction and Init
 
-
-        protected override void OnStarting()
+        public IndicatorBase()
         {
-            base.OnStarting();
-            Init();
+            _effectiveIndicators = new EffectiveIndicators(this);
         }
+
+     
+
+        #endregion
 
         public Symbol Symbol { get; set; }
 
-        // Nothing here yet
-        public abstract void Calculate(int index);
+        public TimeFrame TimeFrame {
+            get;  set;
+        }
 
-        private void InitDataSeries()
-        {
-            foreach (var mi in this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
-            {
-                mi.SetValue(this, new DoubleDataSeries());
+        public MarketData MarketData {
+            get {
+                return Market?.MarketData;
             }
         }
+
+        public EffectiveIndicators EffectiveIndicators {
+            get {
+                return _effectiveIndicators;
+            }
+        }
+        private EffectiveIndicators _effectiveIndicators;
+    }
+
+    public abstract partial class IndicatorBase<TConfig> : IndicatorBase
+    {
+
+        #region Initialization (LionFire specific)
+
+        //private void InitDataSeries()
+        //{
+        //    foreach (var mi in this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public))
+        //    {
+        //        mi.SetValue(this, new DoubleDataSeries());
+        //    }
+        //}
+
+        partial void _InitPartial()
+        {
+            var subs = new List<MarketDataSubscription>();
+            subs.Add(new MarketDataSubscription(Symbol.Code, TimeFrame.Name));
+            this.DesiredSubscriptions = subs;
+
+            InitializeOutputs();
+        }
+
+        partial void OnInitialized_()
+        {
+            AttachChildren();
+        }
+
+        protected virtual void AttachChildren()
+        {
+            foreach (var pi in this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(_pi => typeof(IMarketParticipant).IsAssignableFrom(_pi.PropertyType)))
+            {
+                var indicator = pi.GetValue(this) as IMarketParticipant;
+
+                this.Market.Add(indicator);
+                //indicator.Init();
+            }
+        }
+
+        protected ArgumentNullException ConfigMissingException(string paramName) { return new ArgumentNullException("Config missing and a required parameter was not manually set: " + paramName); }
+
+        #endregion
+
+        #region (Public) Methods
+
+        // Nothing here yet
+        public abstract void Calculate(int index);
+        
+        #endregion
+
+        
+
 
     }
 }

@@ -1,5 +1,6 @@
 ﻿#if cAlgo
 using cAlgo.API;
+using cAlgo.API.Internals;
 #endif
 using System;
 using System.Collections.Generic;
@@ -8,25 +9,6 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Indicators
 {
-    
-    public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries
-    where TConfig : IIndicatorConfig
-    {
-
-        #region Construction
-
-        public SingleSeriesIndicatorBase() { }
-
-        public SingleSeriesIndicatorBase(TConfig config) : base(config)
-        {
-        }
-
-        #endregion
-
-
-
-    }
-
     public abstract partial class SignalIndicatorBase<TConfig> : SingleSeriesIndicatorBase<TConfig>, ISignalIndicator
         where TConfig : ISignalIndicatorConfig
     {

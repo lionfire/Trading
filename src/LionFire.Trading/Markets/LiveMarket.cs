@@ -26,7 +26,8 @@ namespace LionFire.Trading
         public LiveAccount Account { get; set; }
 
         
-        public Dictionary<string, LiveAccount> Accounts { get; set; }
+        public List<IAccount> Accounts { get; set; }
+        //public Dictionary<string, Accounts> LiveAccounts { get; set; }
 
         #endregion
 
@@ -55,6 +56,9 @@ namespace LionFire.Trading
 
         #endregion
 
+        public void Add(IMarketParticipant p)
+        {
+        }
 
         #region Uplink
 
@@ -75,6 +79,15 @@ namespace LionFire.Trading
         }
 
         #endregion
+
+        public Symbol GetSymbol(string symbolCode)
+        {
+            throw new NotImplementedException();
+        }
+        public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
+        {
+            throw new NotImplementedException();
+        }
 
     }
 }

@@ -45,6 +45,7 @@ namespace LionFire.Trading
             get; set;
         }
         public IMarketSeries Series { get; internal set; }
+        public IDisposable Observable { get; internal set; }
 
         // FUTURE: Stats on quality of feed
 

@@ -68,23 +68,19 @@ namespace LionFire.Trading.Agent
 
                 var rule2 = new LoggingRule("*", LogLevel.Debug, fileTarget);
                 config.LoggingRules.Add(rule2);
-
-
-
-
             }
             LogManager.Configuration = config;
 
-            {
-                // Example usage
-                Logger logger = LogManager.GetLogger("Example");
-                logger.Trace("trace log message");
-                logger.Debug("debug log message");
-                logger.Info("info log message");
-                logger.Warn("warn log message");
-                logger.Error("error log message");
-                logger.Fatal("fatal log message");
-            }
+            //{
+            //    // Example usage
+            //    Logger logger = LogManager.GetLogger("Example");
+            //    logger.Trace("trace log message");
+            //    logger.Debug("debug log message");
+            //    logger.Info("info log message");
+            //    logger.Warn("warn log message");
+            //    logger.Error("error log message");
+            //    logger.Fatal("fatal log message");
+            //}
 
         }
     }

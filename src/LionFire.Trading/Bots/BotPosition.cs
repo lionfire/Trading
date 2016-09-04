@@ -1,8 +1,6 @@
 ﻿#if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
-using LionFire.Trading.Bots.cAlgo;
-
 #endif
 using LionFire.Trading.Bots;
 using System;

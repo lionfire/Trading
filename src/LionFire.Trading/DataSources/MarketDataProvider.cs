@@ -15,6 +15,7 @@ namespace LionFire.Trading
         public DataSourceCollection LiveDataSources { get; private set; } = new DataSourceCollection(false);
 
         public List<HistoricalDataSource> HistoricalDataSourcesList { get { return historicalDataSources; } }
+
         List<HistoricalDataSource> historicalDataSources = new List<HistoricalDataSource>();
 
         #endregion
@@ -66,10 +67,14 @@ namespace LionFire.Trading
 
         #region Accessors
 
-        public IMarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, bool historical = false)
+        public MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, bool historical = false)
         {
             if (historical) { return this.HistoricalDataSources.GetMarketSeries(symbol, timeFrame); }
             else { return this.LiveDataSources.GetMarketSeries(symbol, timeFrame); }
+        }
+        public MarketSeries GetMarketSeries(Symbol symbol, TimeFrame timeFrame, bool historical = false)
+        {
+            return GetMarketSeries(symbol.Code, timeFrame.Name, historical);
         }
 
         public IEnumerable<string> HistoricalSymbolsAvailable {

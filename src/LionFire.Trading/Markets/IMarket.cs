@@ -7,6 +7,8 @@ namespace LionFire.Trading
 {
     public interface IMarket
     {
+        List<IAccount> Accounts { get; }
+
         DateTime SimulationTime { get; }
         TimeZoneInfo TimeZone { get; }
 
@@ -15,13 +17,19 @@ namespace LionFire.Trading
         bool IsSimulation { get; }
         bool IsRealMoney { get; }
 
+        Symbol GetSymbol(string symbolCode);
+
+        //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
+
+        //MarketSeries GetMarketSeries(string symbol, TimeFrame tf);
         //IEnumerable<string> SymbolsAvailable { get; }
         //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
 
+        IObservable<bool> Started { get; }
+
+        MarketData MarketData { get; set; }
         MarketDataProvider Data { get; }
 
-        //MarketSeries GetMarketSeries(string symbol, TimeFrame tf);
-
-        IObservable<bool> Started { get; }
+        void Add(IMarketParticipant indicator);
     }
 }

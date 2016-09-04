@@ -13,22 +13,22 @@ namespace LionFire.Trading
         public string Broker { get; set; }
         public bool IsDemo { get; set; }
 
-        public IMarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame)
+        public MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame)
         {
             throw new NotImplementedException();
         }
 
-        public IMarketSeries GetMarketSeries(string key)
+        public MarketSeries GetMarketSeries(string key)
         {
             throw new NotImplementedException();
         }
 
-        public IMarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = default(DateTime?), DateTime? endDate = default(DateTime?))
+        public MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = default(DateTime?), DateTime? endDate = default(DateTime?))
         {
             throw new NotImplementedException();
         }
 
-        public IMarketSeries GetMarketSeries(string key, DateTime? startDate = default(DateTime?), DateTime? endDate = default(DateTime?))
+        public MarketSeries GetMarketSeries(string key, DateTime? startDate = default(DateTime?), DateTime? endDate = default(DateTime?))
         {
             throw new NotImplementedException();
         }

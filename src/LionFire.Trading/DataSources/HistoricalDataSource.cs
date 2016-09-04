@@ -57,7 +57,7 @@ namespace LionFire.Trading
             return results;
         }
 
-        IMarketSeries IDataSource.GetMarketSeries(string key, DateTime? startDate, DateTime? endDate)
+        MarketSeries IDataSource.GetMarketSeries(string key, DateTime? startDate, DateTime? endDate)
         {
             string symbolCode;
             TimeFrame timeFrame;
@@ -65,11 +65,11 @@ namespace LionFire.Trading
             return this.GetMarketSeries(symbolCode, timeFrame, startDate, endDate);
         }
 
-        IMarketSeries IDataSource.GetMarketSeries(string symbolCode, TimeFrame timeFrame, DateTime? startDate, DateTime? endDate)
+        MarketSeries IDataSource.GetMarketSeries(string symbolCode, TimeFrame timeFrame, DateTime? startDate, DateTime? endDate)
         {
             return this.GetMarketSeries(symbolCode, timeFrame, startDate, endDate);
         }
-        public IMarketSeries GetMarketSeries(string symbolCode, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null)
+        public MarketSeries GetMarketSeries(string symbolCode, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null)
         {
             string file = null;
 
