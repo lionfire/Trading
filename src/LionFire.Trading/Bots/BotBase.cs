@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
+using System.Reflection;
+using LionFire.Structures;
 
 namespace LionFire.Trading.Bots
 {
@@ -20,7 +22,8 @@ namespace LionFire.Trading.Bots
 
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
 
-        #endregion
+
+#endregion
 
 #if cAlgo
         protected virtual void OnStarting()
@@ -28,14 +31,17 @@ namespace LionFire.Trading.Bots
         protected override void OnStarting()
 #endif
         {
-            l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
+            logger = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
             
-            l.LogInformation($"------- START {this} -------");
+
+            logger.LogInformation($"------- START {this} -------");
+            
         }
+        partial void OnStarting_();
 
         protected virtual void OnStopping()
         {
-            l.LogInformation($"------- STOP {this} -------");
+            logger.LogInformation($"------- STOP {this} -------");
         }
 
         protected virtual void OnNewBar()
@@ -54,12 +60,12 @@ namespace LionFire.Trading.Bots
         }
         private string label = null;
 
+        public Microsoft.Extensions.Logging.ILogger Logger { get { return logger; } }
+        protected Microsoft.Extensions.Logging.ILogger logger;
+        //public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-        public Microsoft.Extensions.Logging.ILogger Logger { get { return l; } }
-        protected Microsoft.Extensions.Logging.ILogger l;
-
-#endregion
+        #endregion
     }
 
-    
+
 }

@@ -46,7 +46,7 @@ namespace LionFire.Trading.Agent
                 config.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, targ);
             }
 
-
+            
             {
 
 

@@ -11,6 +11,7 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using LionFire.Trading.Indicators;
+using LionFire.Extensions.Logging;
 
 namespace LionFire.Trading.Bots
 {
@@ -170,7 +171,7 @@ namespace LionFire.Trading.Bots
                 foreach (var position in Positions.Where(p => p.TradeType == TradeType.Buy))
                 {
                     string plus = position.NetProfit > 0 ? "+" : "";
-                    l.LogInformation($"{Server.Time} [CLOSE LONG {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Ask}] {plus}{position.NetProfit}");
+                    logger.LogInformation($"{Server.Time} [CLOSE LONG {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Ask}] {plus}{position.NetProfit}");
                     ClosePosition(position);
                 }
             }
@@ -179,7 +180,7 @@ namespace LionFire.Trading.Bots
                 foreach (var position in Positions.Where(p => p.TradeType == TradeType.Sell))
                 {
                     string plus = position.NetProfit > 0 ? "+" : "";
-                    l.LogInformation($"{Server.Time} [CLOSE SHORT {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Bid}] {plus}{position.NetProfit}");
+                    logger.LogInformation($"{Server.Time} [CLOSE SHORT {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Bid}] {plus}{position.NetProfit}");
                     ClosePosition(position);
                 }
             }
@@ -328,7 +329,7 @@ namespace LionFire.Trading.Bots
             var volume = Math.Max(0, Math.Max(Math.Max(volume_MinPositionSize, volume_MinPositionRiskPercent), volume_PositionRiskPricePercent));
             if (volume == 0)
             {
-                l.LogWarning("volume == 0");
+                logger.LogWarning("volume == 0");
             }
             volume = VolumeToStep(volume);
             return volume;
@@ -347,7 +348,7 @@ namespace LionFire.Trading.Bots
             var TakeProfitInPips = 0.0;
             var volumeInUnits = GetPositionVolume(Math.Abs(stopLossDistance));
 
-            l.LogWarning($"Risk calc: Symbol.Ask {Symbol.Ask}, stopLoss {stopLoss} stopLossDist {stopLossDistance.ToString("N3")} SL-Pips: {stopLossDistancePips}");
+            logger.LogWarning($"Risk calc: Symbol.Ask {Symbol.Ask}, stopLoss {stopLoss} stopLossDist {stopLossDistance.ToString("N3")} SL-Pips: {stopLossDistancePips}");
 
             LogOpen(tradeType, volumeInUnits, risk, stopLoss, stopLossDistance);
 
@@ -424,7 +425,7 @@ p.onBars.Add(new StopLossTrailer(p)
             var price = tradeType == TradeType.Buy ? Indicator.Symbol.Ask : Indicator.Symbol.Bid;
 
             var dateStr = MarketSeries.OpenTime.LastValue.ToString("yyyy.MM.dd HH:mm");
-            l.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) Risk: {risk.ToString("N2")}");
+            logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) Risk: {risk.ToString("N2")}");
         }
 
         #endregion
@@ -432,18 +433,41 @@ p.onBars.Add(new StopLossTrailer(p)
         protected override double GetFitness(GetFitnessArgs args)
         {
 
+
             var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
+            //var initialBalance = args.Equity - args.NetProfit;
 
             var invDrawDown = 1 - (Math.Min(100, args.MaxEquityDrawdownPercentages) / 100);
             invDrawDown = Math.Pow(invDrawDown, Math.E / 2.0);
 
-            //lFitness.Fatal("Initial: " + initialBalance + " historyCount: " + args.History.Count + " equity: " + args.Equity + " div: " + args.Equity / initialBalance + " invDrawDown: " + invDrawDown + " score: " + (args.Equity / initialBalance) * invDrawDown);
-            return (args.NetProfit / initialBalance) * invDrawDown;
+            var fitness = (args.NetProfit / initialBalance) * invDrawDown;
+
+            if (Config.LogBacktest && (Config.LogBacktestThreshold == 0 || fitness > Config.LogBacktestThreshold))
+            {
+                BacktestLogger = this.GetLogger(this.ToString().Replace(' ', '.') + ".Backtest");
+
+                try
+                {
+                    string cfg = "";
+#if cAlgo
+                    cfg = Newtonsoft.Json.JsonConvert.SerializeObject(this.Config);
+#endif
+                    this.BacktestLogger.LogInformation($"{fitness.ToString("N2")} eq-dd:{args.MaxEquityDrawdownPercentages.ToString("N2")}% from {initialBalance.ToString("N")} to {args.Equity}, {args.History.Count} trades -- config = {cfg}");
+
+                    //this.Logger.Fatal("Initial: " + initialBalance + " historyCount: " + args.History.Count + " equity: " + args.Equity + " div: " + args.Equity / initialBalance + " invDrawDown: " + invDrawDown + " score: " + (args.Equity / initialBalance) * invDrawDown);
+                }
+                catch (Exception ex)
+                {
+                    this.BacktestLogger.LogError(ex.ToString());
+                }
+            }
+
+            return fitness;
 
         }
 
-        //private static ILogger lFitness = Log.Get();
 
+        public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
     }
 }

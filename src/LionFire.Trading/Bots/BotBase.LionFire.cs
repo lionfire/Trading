@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Bots
@@ -39,5 +40,7 @@ namespace LionFire.Trading.Bots
         {
             return Account?.ExecuteMarketOrder(tradeType, symbol, volumeInUnits, label, stopLossInPips, takeProfitInPips, marketRangePips, comment);
         }
+
+        
     }
 }

@@ -32,8 +32,8 @@ namespace LionFire.Trading.Agent
             var sc = Singleton<ServiceCollection>.Instance;
 
             sc.AddLogging();
-
-            var sp = Singleton<ServiceCollection>.Instance.BuildServiceProvider();
+            
+                var sp = Singleton<ServiceCollection>.Instance.BuildServiceProvider();
             ManualSingleton<IServiceProvider>.Instance = sp;
 
             sp.GetService<ILoggerFactory>()

@@ -6,9 +6,21 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Bots
 {
+
     public class BotConfig
     {
         public bool Log { get; set; } = true;
+
+        public string LogFile { get; set; } = "e:/temp/Trading.cAlgo.log";
+
+        [Parameter("Log Backtest Fitness Min", DefaultValue = 2.0)]
+        public double LogBacktestThreshold { get; set; } 
+
+        [Parameter("Log Backtest", DefaultValue = true)]
+        public bool LogBacktest { get; set; }
+
+        [Parameter("Log Backtest Trades", DefaultValue = false)]
+        public bool LogBacktestTrades { get; set; }
 
         public bool UseTicks { get; set; } = false;
 
