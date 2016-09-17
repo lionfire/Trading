@@ -17,8 +17,6 @@ namespace LionFire.Trading.Indicators
             _effectiveIndicators = new EffectiveIndicators(this);
         }
 
-     
-
         #endregion
 
         public Symbol Symbol { get; set; }
@@ -46,6 +44,7 @@ namespace LionFire.Trading.Indicators
     {
 
         #region Initialization (LionFire specific)
+        
 
         //private void InitDataSeries()
         //{

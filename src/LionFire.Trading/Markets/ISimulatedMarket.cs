@@ -8,5 +8,6 @@ namespace LionFire.Trading
     public interface ISimulatedMarket 
     {
         TimeFrame SimulationTimeStep { get; set; }
+        event Action SimulationTickFinished;
     }
 }

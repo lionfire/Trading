@@ -91,28 +91,35 @@ namespace LionFire.Trading
 
         #region 
 
+        public void LoadSymbolInfo(SymbolInfo info)
+        {
+            this.Digits = info.Digits;
+            this.Leverage = (int)info.Leverage;
+            this.LotSize = info.LotSize;
+            this.PreciseLeverage = info.Leverage;
+            this.PipSize = info.PipSize;
+            this.PointSize = info.PointSize;
+            this.TickSize = info.TickSize;
+            this.VolumeMin = info.VolumeMin;
+            this.VolumeMax = info.VolumeMax;
+            this.VolumeStep = info.VolumeStep;
+
+        }
+
         public int Digits {
-            get {
-                throw new NotImplementedException();
-            }
+            get;private set;
         }
 
         public int Leverage {
-            get {
-                throw new NotImplementedException();
-            }
+            get; private set;
         }
 
         public long LotSize {
-            get {
-                throw new NotImplementedException();
-            }
+            get;set;
         }
 
         public double PipSize {
-            get {
-                throw new NotImplementedException();
-            }
+            get;private set;
         }
 
         public double PipValue {
@@ -122,33 +129,23 @@ namespace LionFire.Trading
         }
 
         public double PointSize {
-            get {
-                throw new NotImplementedException();
-            }
+            get; private set;
         }
 
         public double PreciseLeverage {
-            get {
-                throw new NotImplementedException();
-            }
+            get; private set;
         }
 
         public long VolumeMax {
-            get {
-                throw new NotImplementedException();
-            }
+            get; private set;
         }
 
         public long VolumeMin {
-            get {
-                throw new NotImplementedException();
-            }
+            get; private set;
         }
 
         public long VolumeStep {
-            get {
-                throw new NotImplementedException();
-            }
+            get; private set;
         }
 
         public long NormalizeVolume(double volume, RoundingMode roundingMode = RoundingMode.ToNearest)
@@ -169,9 +166,7 @@ namespace LionFire.Trading
         #endregion
 
         public double TickSize {
-            get {
-                throw new NotImplementedException();
-            }
+            get;private set;
         }
 
         public double TickValue {

@@ -27,18 +27,18 @@ namespace LionFire.Trading.Indicators
         public SignalIndicatorConfig(string symbolCode, string timeFrame) : base(symbolCode, timeFrame)
         {
         }
-        
+
         #endregion
 
         //public MarketSeries MarketSeries { get; set; }
 
-        public double PointsToOpenLong { get; set; }
-        public double PointsToOpenShort { get; set; }
-        public double PointsToCloseLong { get; set; }
-        public double PointsToCloseShort { get; set; }
+        public double PointsToOpenLong { get; set; } = 1.0;
+        public double PointsToOpenShort { get; set; } = 1.0;
+        public double PointsToCloseLong { get; set; } = 1.0;
+        public double PointsToCloseShort { get; set; } = 1.0;
 
         [Obsolete]
-        public double PointsToClose { get; set; }
+        public double PointsToClose { get; set; } = 1.0;
 
     }
 }

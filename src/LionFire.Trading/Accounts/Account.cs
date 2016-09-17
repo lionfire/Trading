@@ -9,6 +9,9 @@ namespace LionFire.Trading
 
     public class LiveAccount : IAccount
     {
+
+        IPositions IAccount.Positions { get { return Positions; } }
+        public Positions Positions { get; set; } = new Positions();
         public double Equity { get; set; }
         public string Currency { get; set; }
 

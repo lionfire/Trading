@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     public interface IIndicator
+#if !cAlgo
+        : IMarketParticipant
+#endif
     {
         IIndicatorConfig Config { get; set; }
 

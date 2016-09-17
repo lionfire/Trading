@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0-*",
+
+  "dependencies": {
+    "LionFire.Applications.Abstractions": "1.0.0-*",
+    "LionFire.Extensions.Logging": "1.0.0-*",
+    "Microsoft.Extensions.Logging.Abstractions": "1.0.0",
+    "NETStandard.Library": "1.6.0",
+    "Newtonsoft.Json": "9.0.1",
+    "StackExchange.Redis": "1.1.605",
+    "System.Collections.Concurrent": "4.0.12"
+  },
+
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    }
+  }
+}

@@ -20,7 +20,6 @@ namespace LionFire.Trading
     /// </summary>
     public abstract class MarketParticipant : IMarketParticipant
     {
-        //public virtual void Init() { }
 
         #region Construction
 
@@ -101,7 +100,7 @@ namespace LionFire.Trading
                     foreach (var sub in DesiredSubscriptions)
                     {
                         sub.IsActive = false;
-                        sub.Series.BarReceived -= OnBar;
+                        //sub.Series.BarReceived -= OnBar;
                         sub.Series = null;
                     }
                 }
@@ -172,7 +171,7 @@ namespace LionFire.Trading
         //{
         //}
 
-        public void OnTick(SymbolBar bar)
+        public virtual void OnTick(SymbolBar bar)
         {
         }
 

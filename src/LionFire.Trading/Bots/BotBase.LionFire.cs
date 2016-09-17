@@ -12,7 +12,7 @@ namespace LionFire.Trading.Bots
 
     public partial class BotBase<TConfig> : MarketParticipant, IBot
     {
-        public IAccount Account { get; set; }
+        public IAccount Account { get { return Market.Account; } }
         public MarketData MarketData { get; set; }
 
         public bool IsBacktesting { get; set; }
@@ -24,7 +24,7 @@ namespace LionFire.Trading.Bots
         protected virtual double GetFitness(GetFitnessArgs args) { return 0.0; }
 
 
-        public List<Position> Positions { get { return null; } }
+        public List<Position> Positions { get; private set; } = new List<Position>();
 
         public TradeResult ClosePosition(Position position)
         {

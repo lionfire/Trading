@@ -11,6 +11,8 @@ namespace LionFire.Trading
     {
         #region IMarket Implementation
 
+        IAccount IMarket.Account { get { return null; } }
+
         public override bool IsBacktesting { get { return false; } }
 
         #endregion

@@ -68,7 +68,7 @@ namespace LionFire.Trading
             get;
         }
 
-        event Action<MarketSeries> BarReceived;
+        //event Action<MarketSeries> BarReceived;
         event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
     }
 

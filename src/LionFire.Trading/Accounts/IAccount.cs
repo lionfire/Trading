@@ -16,8 +16,18 @@ namespace LionFire.Trading
         bool IsDemo { get;  }
 
         TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
+
+        
+        IPositions Positions { get; }
     }
 
+    public interface IPositions : IReadOnlyList<Position>
+    {
+    }
+
+    public class Positions : List<Position>, IPositions
+    {
+    }
 
 
 }

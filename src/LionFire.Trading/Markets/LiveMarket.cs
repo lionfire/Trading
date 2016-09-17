@@ -22,7 +22,8 @@ namespace LionFire.Trading
         #endregion
 
         #region Parameters
-        
+
+        IAccount IMarket.Account { get { return Account; } }
         public LiveAccount Account { get; set; }
 
         
@@ -88,6 +89,8 @@ namespace LionFire.Trading
         {
             throw new NotImplementedException();
         }
+
+        
 
     }
 }

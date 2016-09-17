@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
+using LionFire.ExtensionMethods;
 
 namespace LionFire.Trading
 {
@@ -37,6 +38,8 @@ namespace LionFire.Trading
 
         public TimeFrame TimeFrame { get; set; }
 
+        public string BrokerName { get; set; }
+
         #endregion
 
         public TimeFrame SimulationTimeStep { get; set; }
@@ -45,6 +48,8 @@ namespace LionFire.Trading
         #region Derived
 
         #endregion
+
+        IAccount IMarket.Account { get { throw new NotImplementedException(); } }
 
         public List<IAccount> Accounts { get; set; } = new List<IAccount>();
 
@@ -189,14 +194,23 @@ namespace LionFire.Trading
                 started.OnNext(true);
             }
 
-            List<IMarketSeries> removals=null;
+            List<IMarketSeries> removals = null;
 
+            bool gotBar = false;
             // OPTIMIZE: Sync up index between live and historical series to make it faster
             foreach (var series in Data.ActiveLiveSeries)
             {
+#error NEXT: a common and efficient decoupled architecture combining direct events/subscriber list and a pubsub channel concept: 
+                // "batch.h1" start T  - for multiple symbols being watched
+                //"bar.xauusd.h1" T OHLCV
+                //"bar.eurusd.h1" T OHLCV
+                // "batch.h1" end T
+                // Onsubscribe(channel, subscriber) - bot subscribes to bar.xauusd.h1: ask the bot how many lookback bars it wants, create a ReplaySubject and shove the data thru
+                // for super efficiency in wildcards, see zmq proejct malamute's high speed matching engine: https://github.com/zeromq/malamute/blob/master/MALAMUTE.md
+
                 if (!series.LatestBarHasObservers)
                 {
-                    l.LogTrace("Removing unused MarketSeries: " + series.Key);
+                    logger.LogTrace("Removing unused MarketSeries: " + series.Key);
                     AddRemoval(ref removals, series);
                     continue;
                 }
@@ -218,7 +232,7 @@ namespace LionFire.Trading
                         }
                         if (state.HistoricalSource == null)
                         {
-                            l.LogWarning($"Could not find historical data source for {series}");
+                            logger.LogWarning($"Could not find historical data source for {series}");
                             continue;
                         }
                     }
@@ -243,11 +257,19 @@ namespace LionFire.Trading
                     if (state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
                     {
                         // FUTURE: Somehow support this?
-                        l.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
+                        logger.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
                         continue;
                     }
 
                     BacktestSymbolSettings backtestSymbolSettings = symbol.BacktestSymbolSettings;
+                    if (backtestSymbolSettings == null)
+                    {
+                        backtestSymbolSettings = new BacktestSymbolSettings()
+                        {
+                            SpreadMode = BacktestSpreadMode.Fixed,
+                            FixedSpread = 0,
+                        };
+                    }
 
                     int mergeCount = 0;
                     for (; ; state.NextHistoricalIndex++)
@@ -262,6 +284,7 @@ namespace LionFire.Trading
 
                         if (bar.OpenTime == time)
                         {
+                            gotBar = true;
                             if (state.HistoricalSource.TimeFrame == series.TimeFrame)
                             {
                                 ((IMarketSeriesInternal)series).OnBar(bar, true);
@@ -269,7 +292,7 @@ namespace LionFire.Trading
 
                                 symbol.Bid = bar.Close;
                                 symbol.Ask = bar.Close + backtestSymbolSettings.GetSpread();
-                                break;
+                                break; // Got to desired point, so break
                             }
                             else
                             {
@@ -277,16 +300,18 @@ namespace LionFire.Trading
                                 {
                                     ((IMarketSeriesInternal)series).OnBar(state.NextBarInProgress, true);
                                 }
+                                throw new Exception("REVIEW TODO FIXME - this should set it to null, not a clone?");
                                 state.NextBarInProgress = bar.Clone();
                                 mergeCount = 0;
                             }
                             #region Optimization
                             state.NextHistoricalIndex++;
-                            break;
+                            break;  // Got to desired point, so break
                             #endregion
                         }
                         else if (bar.OpenTime < time)
                         {
+                            gotBar = true;
                             if (state.NextBarInProgress == null)
                             {
                                 state.NextBarInProgress = bar.Clone();
@@ -312,16 +337,17 @@ namespace LionFire.Trading
                                     Volume = 0
                                 };
                             }
-                            break;
+                            break;  // Got past current simulation time
                         }
                     }
                 }
             }
+            if (gotBar) { SimulationTickFinished?.Invoke(); }
             if (removals != null)
             {
                 foreach (var series in removals)
                 {
-                    
+
                     Data.LiveDataSources.Dict.Remove(series.Key);
                 }
             }
@@ -342,6 +368,9 @@ namespace LionFire.Trading
             lastExecutedTime = time;
         }
 
+        public event Action SimulationTickFinished;
+
+
         int delayBetweenSteps = 0;
 
         public void Run(int delayBetweenSteps = 0)
@@ -358,7 +387,7 @@ namespace LionFire.Trading
                     Thread.Sleep(delayBetweenSteps);
                 }
             } while (ExecuteNextStep());
-            l.LogInformation($"Simulation finished in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
+            logger.LogInformation($"Simulation finished in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
         }
 
         public const int progressReportInterval = 100;
@@ -394,7 +423,7 @@ namespace LionFire.Trading
             if (i++ > progressReportInterval)
             {
                 i = 0;
-                
+
                 var progress = (100.0 * (simulationTime - StartDate).TotalMilliseconds / simulationMilliseconds);
                 var date = simulationTime.ToString("yyyy-MM-dd");
                 Console.Write($"\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b{progress.ToString("N1")}% {date}");
@@ -450,20 +479,16 @@ namespace LionFire.Trading
 
         public Symbol GetSymbol(string symbolCode)
         {
-            var backtestBroker = BacktestBrokers.ICMarkets;
+            Symbol symbol;
 
-            Symbol result;
-            if (!symbols.TryGetValue(symbolCode, out result))
-            {
-                result = new SymbolImpl(symbolCode, this)
-                {
-                    BacktestSymbolSettings = new BacktestSymbolSettings
-                    {
+            if (symbols.TryGetValue(symbolCode, out symbol)) return symbol;
 
-                    }
-                };
-                symbols.Add(symbolCode, result);
-            }
+            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(BrokerName, symbolCode);
+
+            SymbolImpl result = new SymbolImpl(symbolCode, this);
+            result.LoadSymbolInfo(symbolInfo);
+            symbols.Add(symbolCode, result);
+
             return result;
         }
 
@@ -476,7 +501,7 @@ namespace LionFire.Trading
         #endregion
 
 
-     
+
     }
 
 

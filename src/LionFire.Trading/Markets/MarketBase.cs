@@ -17,7 +17,7 @@ namespace LionFire.Trading
         public MarketBase()
         {
             Data = new MarketDataProvider((IMarket)this);
-            l = this.GetLogger();
+            logger = this.GetLogger();
         }
 
         public abstract MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
@@ -26,7 +26,7 @@ namespace LionFire.Trading
 
         #region Misc
 
-        protected ILogger l;
+        protected ILogger logger;
 
         #endregion
     }

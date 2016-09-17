@@ -10,7 +10,7 @@ namespace LionFire.Trading.Backtesting
     {
         public string Currency {
             get; set;
-        } = "USD";
+        }
 
         public double Equity {
             get; set;
@@ -19,7 +19,21 @@ namespace LionFire.Trading.Backtesting
             get; set;
         }
 
-        public List<Position> Positions { get; private set; } = new List<Position>();
+        public double MarginUsed { get; set; }
+
+        #region Derived
+
+        public double MarginLevel { get { return Equity / MarginUsed; } }
+        public double MarginLevelPercent { get { return 100.0 * Equity / MarginUsed; } }
+
+        public double FreeMargin { get { return Equity - MarginUsed; } }
+        
+        #endregion
+        
+
+
+        IPositions IAccount.Positions { get { return this.Positions; } }
+        public Positions Positions { get; private set; } = new Positions();
 
         public double StopOutLevel { get { return BacktestSettings.AccountSettings.StopOutLevel; } }
 
@@ -27,7 +41,7 @@ namespace LionFire.Trading.Backtesting
             get { return true; }
         }
 
-        public BacktestSettings BacktestSettings { get; set; }
+        public BacktestConfig BacktestSettings { get; set; }
 
         protected override void OnStarting()
         {
@@ -54,7 +68,7 @@ namespace LionFire.Trading.Backtesting
                 SymbolCode = symbol.Code,
                 TradeType = tradeType,
                 Volume = volume,
-                
+
             };
             Positions.Add(p);
 
@@ -62,14 +76,28 @@ namespace LionFire.Trading.Backtesting
             {
                 Error = ErrorCode.TechnicalError
             };
-            
+
         }
 
         public override void OnBar(string symbolCode, TimeFrame timeFrame, TimedBar bar)
         {
             base.OnBar(symbolCode, timeFrame, bar);
 
+            var equity = Balance;
+
+            foreach (var position in Positions)
+            {
+                equity += position.NetProfit;
+            }
+
+            
 
         }
+
+        public override void OnTick(SymbolBar bar)
+        {
+            base.OnTick(bar);
+        }
+
     }
 }

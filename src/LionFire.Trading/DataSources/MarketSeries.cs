@@ -221,7 +221,7 @@ namespace LionFire.Trading
         BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
         
 
-        public event Action<MarketSeries> BarReceived;
+        //public event Action<MarketSeries> BarReceived;
         public event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
         //public event Action<TimedBar> BarFinished;
         //public event Action<TimedBar> InterimBarReceived;
@@ -283,7 +283,7 @@ namespace LionFire.Trading
 
             if (finishedBar)
             {
-                BarReceived?.Invoke(this);
+                //BarReceived?.Invoke(this);
                 this.barSubject.OnNext(bar);
             }
         }

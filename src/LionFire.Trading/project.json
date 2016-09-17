@@ -16,11 +16,13 @@
   },
 
   "dependencies": {
+    "LionFire.Applications.Abstractions": "1.0.0-*",
     "LionFire.Extensions.Logging": "1.0.0-*",
     "LionFire.Runtime.Extensions": "1.0.*",
     "LionFire.Trading.Abstractions": "1.0.0-*",
     "Microsoft.Extensions.Logging.Abstractions": "1.0.0",
     "NETStandard.Library": "1.6.0",
+    "Newtonsoft.Json": "9.0.1",
     "System.Reactive": "3.0.0",
     "System.Threading.Thread": "4.0.0"
   },
@@ -29,7 +31,7 @@
     "netstandard1.3": {
       "imports": "dnxcore50"
     },
-    "net461": {
+    "net462": {
       "dependencies": {
         "System.Reflection.TypeExtensions": "4.1.0",
         "System.Text.Encoding.Extensions": "4.0.10"

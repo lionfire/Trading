@@ -31,6 +31,7 @@ namespace LionFire.Trading.Bots
         protected override void OnStarting()
 #endif
         {
+            
             logger = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
             
 

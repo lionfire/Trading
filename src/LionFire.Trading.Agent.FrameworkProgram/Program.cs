@@ -10,8 +10,9 @@ namespace LionFire.Trading.Agent.FrameworkProgram
     {
         static void Main(string[] args)
         {
-            var agent = new AgentService();
-            agent.Run();
+            //var agent = new AgentService();
+            //agent.Run();
+            Console.WriteLine("Not implemented");
             Console.ReadKey();
         }
     }
