@@ -12,9 +12,17 @@ using LionFire.ExtensionMethods;
 namespace LionFire.Trading
 {
 
+    
 
-    public abstract class SimulatedMarketBase : MarketBase, ISimulatedMarket, IMarket
+    public class TMarketSim : TMarket
     {
+    }
+
+    public abstract class SimulatedMarketBase<TTemplate> : MarketBase<TTemplate>, ISimulatedMarket, IMarket
+        where TTemplate : TMarketSim
+    {
+        
+
         #region Parameters
 
         #region Simulation Parameters
@@ -38,7 +46,7 @@ namespace LionFire.Trading
 
         public TimeFrame TimeFrame { get; set; }
 
-        public string BrokerName { get; set; }
+        public string BrokerName { get { return Config.BrokerName; } }
 
         #endregion
 
@@ -49,7 +57,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        IAccount IMarket.Account { get { throw new NotImplementedException(); } }
+        public IAccount Account { get { return Accounts?.FirstOrDefault(); } }
 
         public List<IAccount> Accounts { get; set; } = new List<IAccount>();
 
@@ -65,17 +73,6 @@ namespace LionFire.Trading
 
         #endregion
 
-        #region Attached MarketParticipants
-
-        public void Add(IMarketParticipant actor)
-        {
-            participants.Add(actor);
-            actor.Market = this;
-        }
-        List<IMarketParticipant> participants = new List<IMarketParticipant>();
-
-        #endregion
-
         #region State
 
         #region SimulationTime
@@ -87,12 +84,10 @@ namespace LionFire.Trading
             set {
                 if (!IsStarted && value != default(DateTime))
                 {
-                    foreach (var actor in participants)
-                    {
-                        //actor.OnStarting();
-                    }
+                    started.OnNext(true);
                 }
                 simulationTime = value;
+                Server.Time = simulationTime; // REVIEW
                 SimulationTimeChanged?.Invoke();
             }
         }
@@ -102,7 +97,15 @@ namespace LionFire.Trading
 
         #endregion
 
+        public DateTime LastExecutedTime {
+            get { return lastExecutedTime; }
+            set {
+                lastExecutedTime = value;
+                OnLastExecutedTimeChanged();
+            }
+        }
         DateTime lastExecutedTime;
+        protected virtual void OnLastExecutedTimeChanged() { }
 
         #region Derived
 
@@ -118,7 +121,7 @@ namespace LionFire.Trading
 
         #region Events
 
-        public event Action ExecutedTime;
+        //public event Action ExecutedTime;
 
         public IObservable<bool> Started { get { return started; } }
         BehaviorSubject<bool> started = new BehaviorSubject<bool>(false);
@@ -131,20 +134,31 @@ namespace LionFire.Trading
 
         public void Reset()
         {
-            lastExecutedTime = DateTime.MinValue;
-            SimulationTime = StartDate;
+            LastExecutedTime = DateTime.MinValue;
+            SimulationTime = default(DateTime); // IsStarted = false
+           
         }
-        public void Initialize(int? backFillMinutes = null)
+
+        /// <summary>
+        /// Sets SimulationTime to the StartDate
+        /// </summary>
+        public override void Initialize()
         {
+            
+
+            if (SimulationTime != default(DateTime)) return;
+            base.Initialize();
+
             Reset();
-            ExecuteBackfillUpToDate(StartDate, backFillMinutes);
+            ExecuteBackfillUpToDate(StartDate, Config.BackFillMinutes);
         }
+
 
         protected void ExecuteBackfillUpToDate(DateTime time, int? backFillMinutes = null)
         {
             if (!backFillMinutes.HasValue) backFillMinutes = DefaultBackFillMinutes;
 
-            SimulationTime = time;
+            SimulationTime = time - TimeSpan.FromMinutes(backFillMinutes.Value);
             Execute(time);
 
             // TODO: Backfill the symbols that were missed
@@ -169,7 +183,7 @@ namespace LionFire.Trading
                 }
             }
 
-            ExecutedTime?.Invoke();
+            //ExecutedTime?.Invoke();
         }
 
         Dictionary<TimeFrame, MarketSeries> timeFrameMarketSeries = new Dictionary<TimeFrame, MarketSeries>();
@@ -187,20 +201,48 @@ namespace LionFire.Trading
             list.Add(series);
         }
 
+        private HistoricalPlaybackState GetHistoricalPlaybackState(IMarketSeries series)
+        {
+            var state = new Trading.HistoricalPlaybackState();
+
+            // Find a matching historical source, or find a more granular one that can be used.
+            // FUTURE: Get factors of a timeframe instead of the simple MoreGranular iteration logic.  e.g. from h12 search for h6 h4 h3 h2 h1 m30 m15 m12 m10 m6 m5 m4 m2 m1 t*
+            // FUTURE: After simulation complete, save downsampled backtest data
+            for (TimeFrame sourceTimeFrame = series.TimeFrame; state.HistoricalSource == null && sourceTimeFrame != null; sourceTimeFrame = sourceTimeFrame.MoreGranular())
+            {
+                state.HistoricalSource = Data.HistoricalDataSources.GetMarketSeries(series.SymbolCode, sourceTimeFrame, this.StartDate, this.EndDate);
+            }
+
+            return state;
+            
+        }
+
+//#warning TODO?  Implement series as a replaysubject with their own time counter?  With a method AdvanceToTime()
+//#warning NEXT: a common and efficient decoupled architecture combining direct events/subscriber list and a pubsub channel concept: 
+
+
         protected void Execute(DateTime time)
         {
-            if (lastExecutedTime == default(DateTime) && time != default(DateTime))
+            if (!IsStarted)
             {
-                started.OnNext(true);
+                SimulationTime = StartDate;
             }
 
             List<IMarketSeries> removals = null;
 
+            #region Ticks
+
+            // TODO
+
+            #endregion
+
+            #region Bars
+                        
             bool gotBar = false;
             // OPTIMIZE: Sync up index between live and historical series to make it faster
             foreach (var series in Data.ActiveLiveSeries)
             {
-#error NEXT: a common and efficient decoupled architecture combining direct events/subscriber list and a pubsub channel concept: 
+
                 // "batch.h1" start T  - for multiple symbols being watched
                 //"bar.xauusd.h1" T OHLCV
                 //"bar.eurusd.h1" T OHLCV
@@ -208,146 +250,139 @@ namespace LionFire.Trading
                 // Onsubscribe(channel, subscriber) - bot subscribes to bar.xauusd.h1: ask the bot how many lookback bars it wants, create a ReplaySubject and shove the data thru
                 // for super efficiency in wildcards, see zmq proejct malamute's high speed matching engine: https://github.com/zeromq/malamute/blob/master/MALAMUTE.md
 
+                // TEMP
                 if (!series.LatestBarHasObservers)
                 {
                     logger.LogTrace("Removing unused MarketSeries: " + series.Key);
                     AddRemoval(ref removals, series);
                     continue;
                 }
-                var symbol = (SymbolImpl)this.GetSymbol(series.SymbolCode);
-                if ((series.OpenTime.LastValue + series.TimeFrame.TimeSpan) <= time)
-                {
-                    HistoricalPlaybackState state = series.HistoricalPlaybackState;
-                    if (state == null)
-                    {
-                        state = series.HistoricalPlaybackState = new Trading.HistoricalPlaybackState();
 
-                        TimeFrame sourceTimeFrame = series.TimeFrame;
-                        // Find a matching historical source, or find a more granular one that can be used.
-                        // FUTURE: Get factors of a timeframe instead of the simple MoreGranular iteration logic.  e.g. from h12 search for h6 h4 h3 h2 h1 m30 m15 m12 m10 m6 m5 m4 m2 m1 t*
-                        // FUTURE: After simulation complete, save downsampled backtest data
-                        for (; state.HistoricalSource == null && sourceTimeFrame != null; sourceTimeFrame = sourceTimeFrame.MoreGranular())
-                        {
-                            state.HistoricalSource = Data.HistoricalDataSources.GetMarketSeries(series.SymbolCode, sourceTimeFrame, this.StartDate, this.EndDate);
-                        }
-                        if (state.HistoricalSource == null)
-                        {
-                            logger.LogWarning($"Could not find historical data source for {series}");
-                            continue;
-                        }
-                    }
+                if (time < (series.OpenTime.LastValue + series.TimeFrame.TimeSpan)) continue; // No new bar yet
+
+                var symbol = (SymbolImpl)this.GetSymbol(series.SymbolCode);
+                
+                HistoricalPlaybackState state = series.HistoricalPlaybackState;
+                if (state == null)
+                {
+                    state = series.HistoricalPlaybackState = GetHistoricalPlaybackState(series);
+
                     if (state.HistoricalSource == null)
                     {
+                        logger.LogWarning($"Could not find historical data source for {series}");
                         continue;
-                    }
-
-                    // TODO: Run coarser timeframes from finer historical data
-                    // MAJOR OPTIMIZE - Don't use FindIndex -- it is incredibly slow.
-
-
-                    if (state.NextHistoricalIndex < 0)
-                    {
-                        state.NextHistoricalIndex = state.HistoricalSource.FindIndex(time);
-                        if (state.NextHistoricalIndex < 0)
-                        {
-                            continue;
-                        }
-                    }
-
-                    if (state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
-                    {
-                        // FUTURE: Somehow support this?
-                        logger.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
-                        continue;
-                    }
-
-                    BacktestSymbolSettings backtestSymbolSettings = symbol.BacktestSymbolSettings;
-                    if (backtestSymbolSettings == null)
-                    {
-                        backtestSymbolSettings = new BacktestSymbolSettings()
-                        {
-                            SpreadMode = BacktestSpreadMode.Fixed,
-                            FixedSpread = 0,
-                        };
-                    }
-
-                    int mergeCount = 0;
-                    for (; ; state.NextHistoricalIndex++)
-                    {
-                        if (state.NextHistoricalIndex >= state.HistoricalSource.Count)
-                        {
-                            //state.NextHistoricalIndex--;
-                            break;
-                        }
-
-                        var bar = state.HistoricalSource[state.NextHistoricalIndex];
-
-                        if (bar.OpenTime == time)
-                        {
-                            gotBar = true;
-                            if (state.HistoricalSource.TimeFrame == series.TimeFrame)
-                            {
-                                ((IMarketSeriesInternal)series).OnBar(bar, true);
-                                state.NextHistoricalIndex++;
-
-                                symbol.Bid = bar.Close;
-                                symbol.Ask = bar.Close + backtestSymbolSettings.GetSpread();
-                                break; // Got to desired point, so break
-                            }
-                            else
-                            {
-                                if (state.NextBarInProgress != null && !double.IsNaN(state.NextBarInProgress.High))
-                                {
-                                    ((IMarketSeriesInternal)series).OnBar(state.NextBarInProgress, true);
-                                }
-                                throw new Exception("REVIEW TODO FIXME - this should set it to null, not a clone?");
-                                state.NextBarInProgress = bar.Clone();
-                                mergeCount = 0;
-                            }
-                            #region Optimization
-                            state.NextHistoricalIndex++;
-                            break;  // Got to desired point, so break
-                            #endregion
-                        }
-                        else if (bar.OpenTime < time)
-                        {
-                            gotBar = true;
-                            if (state.NextBarInProgress == null)
-                            {
-                                state.NextBarInProgress = bar.Clone();
-                                mergeCount = 0;
-                            }
-                            else
-                            {
-                                state.NextBarInProgress.Merge(bar);
-                                mergeCount++;
-                            }
-                        }
-                        else // bar.OpenTime > time
-                        {
-                            if (state.NextBarInProgress == null)
-                            {
-                                state.NextBarInProgress = new TimedBar()
-                                {
-                                    OpenTime = time,
-                                    Open = double.NaN,
-                                    High = double.NaN,
-                                    Low = double.NaN,
-                                    Close = double.NaN,
-                                    Volume = 0
-                                };
-                            }
-                            break;  // Got past current simulation time
-                        }
                     }
                 }
+                if (state.HistoricalSource == null)
+                {
+                    continue;
+                }
+
+                // TODO: Run coarser timeframes from finer historical data
+                // MAJOR OPTIMIZE - Don't use FindIndex -- it is incredibly slow.
+
+                if (state.NextHistoricalIndex < 0)
+                {
+                    state.NextHistoricalIndex = state.HistoricalSource.FindIndex(time);
+                    if (state.NextHistoricalIndex < 0)
+                    {
+                        continue;
+                    }
+                }
+
+                if (state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
+                {
+                    // FUTURE: Somehow support this?
+                    logger.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
+                    continue;
+                }
+
+                BacktestSymbolSettings backtestSymbolSettings = symbol.BacktestSymbolSettings;
+                if (backtestSymbolSettings == null)
+                {
+                    backtestSymbolSettings = new BacktestSymbolSettings()
+                    {
+                        SpreadMode = BacktestSpreadMode.Fixed,
+                        FixedSpread = 0,
+                    };
+                }
+
+                int mergeCount = 0;
+                for (;state.NextHistoricalIndex < state.HistoricalSource.Count ; state.NextHistoricalIndex++)
+                {
+                    var historicalBar = state.HistoricalSource[state.NextHistoricalIndex];
+
+                    if (historicalBar.OpenTime == time)
+                    {
+                        gotBar = true;
+                        if (state.HistoricalSource.TimeFrame == series.TimeFrame)
+                        {
+
+                            ((IMarketSeriesInternal)series).OnBar(historicalBar, true); // OPTIMIZE - AsParallel
+                            state.NextHistoricalIndex++;
+
+                            symbol.Bid = historicalBar.Close;
+                            symbol.Ask = historicalBar.Close + backtestSymbolSettings.GetSpread();
+                            break; // Got to desired point, so break
+                        }
+                        else
+                        {
+                            if (state.NextBarInProgress != null && !double.IsNaN(state.NextBarInProgress.High))
+                            {
+                                ((IMarketSeriesInternal)series).OnBar(state.NextBarInProgress, true);   // OPTIMIZE - AsParallel
+                            }
+                            state.NextBarInProgress = null;
+                            mergeCount = 0;
+                        }
+                        #region Optimization
+                        state.NextHistoricalIndex++;
+                        break;  // Got to desired point, so break
+                        #endregion
+                    }
+                    else if (historicalBar.OpenTime < time)
+                    {
+                        gotBar = true;
+                        if (state.NextBarInProgress == null)
+                        {
+                            state.NextBarInProgress = historicalBar.Clone();
+                            mergeCount = 0;
+                        }
+                        else
+                        {
+                            state.NextBarInProgress.Merge(historicalBar);
+                            mergeCount++;
+                        }
+                    }
+                    else // historicalBar.OpenTime > time
+                    {
+                        //if (state.NextBarInProgress == null)
+                        //{
+                        //    state.NextBarInProgress = new TimedBar()
+                        //    {
+                        //        OpenTime = time,
+                        //        Open = double.NaN,
+                        //        High = double.NaN,
+                        //        Low = double.NaN,
+                        //        Close = double.NaN,
+                        //        Volume = 0
+                        //    };
+                        //}
+                        state.NextHistoricalIndex--;
+                        break;  // Got past current simulation time
+                    }
+                }
+
             }
+
+            #endregion
+
             if (gotBar) { SimulationTickFinished?.Invoke(); }
+            if (gotBar) { Ticked?.Invoke(); }
+
             if (removals != null)
             {
                 foreach (var series in removals)
                 {
-
                     Data.LiveDataSources.Dict.Remove(series.Key);
                 }
             }
@@ -365,10 +400,12 @@ namespace LionFire.Trading
             //        //subscriber.OnBar(new SymbolBar(subscription.Symbol, new Bar())),
             //    }
             //}
-            lastExecutedTime = time;
+
+            LastExecutedTime = time;
         }
 
         public event Action SimulationTickFinished;
+        public event Action Ticked;
 
 
         int delayBetweenSteps = 0;
@@ -488,20 +525,21 @@ namespace LionFire.Trading
             SymbolImpl result = new SymbolImpl(symbolCode, this);
             result.LoadSymbolInfo(symbolInfo);
             symbols.Add(symbolCode, result);
+            
+            result.Account = this.Accounts.FirstOrDefault();
 
             return result;
         }
 
         public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
         {
-
-            return null;
+            throw new NotImplementedException();
+            //return null;
         }
 
         #endregion
 
-
-
+        
     }
 
 

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries
-            where TConfig : IIndicatorConfig, new()
+            where TConfig : ITIndicator, new()
     {
 
         #region Construction
@@ -56,12 +56,15 @@ namespace LionFire.Trading.Indicators
             
             for (int index = CalculatedCount; series.OpenTime[index] < date; index++)
             {
+                if (index >= series.OpenTime.Count) break;
                 var openTime = series.OpenTime[index];
                 //l.Warn($"series.OpenTime[index] {openTime} open: {series.Open[index]}");
-                if (double.IsNaN(series.Open[index])) break;
+                if (double.IsNaN(series.Open[index])) continue;
                 Calculate(index);
             }
             //l.Info("Calculated until " + date + " " + OpenLongPoints.LastValue);
         }
+
+        
     }
 }

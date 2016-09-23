@@ -35,6 +35,8 @@ namespace LionFire.Trading
 
         public static AccountInfo GetAccountInfo(string brokerName)
         {
+            if (brokerName == null) return null;
+
             var dir = GetBrokerInfoDir(brokerName);
             var path = Path.Combine(dir, AccountInfoFileName + FileSuffix);
 

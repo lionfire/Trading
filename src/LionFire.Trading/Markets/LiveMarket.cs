@@ -7,7 +7,8 @@ using System.Threading.Tasks;
 namespace LionFire.Trading
 {
     
-    public class LiveMarket : MarketBase, IMarket
+    
+    public class LiveMarket : MarketBase<TMarket>, IMarket
     {
         #region IMarket Implementation
 
@@ -90,7 +91,8 @@ namespace LionFire.Trading
             throw new NotImplementedException();
         }
 
-        
+
+        public event Action Ticked;
 
     }
 }

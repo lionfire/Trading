@@ -6,17 +6,25 @@ using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
 using System.Reflection;
 using LionFire.Structures;
+#if cAlgo
+using cAlgo.API;
+#endif
+using LionFire.Templating;
 
 namespace LionFire.Trading.Bots
 {
     // TODO: Rename BotBase to SingleSeriesBotBase  and make a new BotBase that is more generic
 
     public partial class BotBase<TConfig> : IBot
-        where TConfig : BotConfig, new()
+        where TConfig : TBot, new()
     {
+        public string Version { get; set; } = "0.0.0";
+
         #region Configuration
 
-        BotConfig IBot.BotConfig { get { return Config; } set { Config =(TConfig) value; } }
+        object ITemplateInstance.Template { get { return Config; } set { this.Config = (TConfig)value; } }
+
+        TBot IBot.Config { get { return Config; } set { Config =(TConfig) value; } }
 
         public TConfig Config { get; set; } = new TConfig();
 
@@ -30,13 +38,10 @@ namespace LionFire.Trading.Bots
 #else
         protected override void OnStarting()
 #endif
-        {
-            
+        {            
             logger = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
             
-
             logger.LogInformation($"------- START {this} -------");
-            
         }
         partial void OnStarting_();
 
@@ -48,8 +53,45 @@ namespace LionFire.Trading.Bots
         protected virtual void OnNewBar()
         {
         }
+        
+        #region Derived
 
-#region Misc
+        public bool CanOpenLong {
+            get {
+                var count = Positions.Where(p => p.TradeType == TradeType.Buy).Count();
+                return count < Config.MaxLongPositions;
+            }
+        }
+        public bool CanOpenShort {
+            get {
+                var count = Positions.Where(p => p.TradeType == TradeType.Sell).Count();
+                return count < Config.MaxShortPositions;
+            }
+        }
+        public bool CanOpen {
+            get {
+                var count = Positions.Count;
+                return Config.MaxOpenPositions == 0 || count < Config.MaxOpenPositions;
+            }
+        }
+
+        public bool CanOpenType(TradeType tradeType)
+        {
+            if (!CanOpen) return false;
+            switch (tradeType)
+            {
+                case TradeType.Buy:
+                    return CanOpenLong;
+                case TradeType.Sell:
+                    return CanOpenShort;
+                default:
+                    return false;
+            }
+        }
+        
+        #endregion
+        
+        #region Misc
 
         public virtual string Label {
             get {

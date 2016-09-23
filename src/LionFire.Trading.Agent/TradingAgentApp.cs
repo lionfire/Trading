@@ -49,11 +49,11 @@ namespace LionFire.Trading.Agent
 
         #region Construction and Initialization
 
-        public TradingAgentApp()
-        {
-            logger = this.GetLogger();
+        //public TradingAgentApp()
+        //{
+        //    logger = this.GetLogger();
 
-        }
+        //}
 
         #endregion
 
@@ -194,7 +194,6 @@ namespace LionFire.Trading.Agent
                     Thread.Sleep(300);
                 }
             }
-            Console.ReadKey();
         }
 
 

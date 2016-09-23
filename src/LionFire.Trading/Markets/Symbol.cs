@@ -33,7 +33,11 @@ namespace LionFire.Trading
         long NormalizeVolume(double volume, RoundingMode roundingMode = RoundingMode.ToNearest);
         long QuantityToVolume(double quantity);
         double VolumeToQuantity(long volume);
+
+
+
     }
+
 
     public class SymbolImpl : Symbol
     {
@@ -50,7 +54,7 @@ namespace LionFire.Trading
 
         public IMarket Market { get; set; }
 
-        
+        public IAccount Account { get; set; }
 
 
         #endregion
@@ -103,11 +107,16 @@ namespace LionFire.Trading
             this.VolumeMin = info.VolumeMin;
             this.VolumeMax = info.VolumeMax;
             this.VolumeStep = info.VolumeStep;
-
+            this.QuantityPerHundredThousandVolume = info.QuantityPerHundredThousandVolume;
+            this.VolumePerHundredThousandQuantity = info.VolumePerHundredThousandQuantity;
+            this.Currency = info.Currency;
         }
+        private double QuantityPerHundredThousandVolume;
+        private long VolumePerHundredThousandQuantity;
+        public string Currency;
 
         public int Digits {
-            get;private set;
+            get; private set;
         }
 
         public int Leverage {
@@ -115,17 +124,11 @@ namespace LionFire.Trading
         }
 
         public long LotSize {
-            get;set;
+            get; set;
         }
 
         public double PipSize {
-            get;private set;
-        }
-
-        public double PipValue {
-            get {
-                throw new NotImplementedException();
-            }
+            get; private set;
         }
 
         public double PointSize {
@@ -155,24 +158,65 @@ namespace LionFire.Trading
 
         public long QuantityToVolume(double quantity)
         {
-            throw new NotImplementedException();
+            return (long)(quantity * VolumePerHundredThousandQuantity / 100000);
         }
+
 
         public double VolumeToQuantity(long volume)
         {
-            throw new NotImplementedException();
+            return volume * QuantityPerHundredThousandVolume / 100000.0;
         }
 
         #endregion
 
         public double TickSize {
-            get;private set;
+            get; private set;
         }
 
         public double TickValue {
             get {
-                throw new NotImplementedException();
+                if (Account == null) { throw new ArgumentException("Requires Account to be set"); }
+                if (Account.Currency == this.Currency)
+                {
+                    return TickSize;
+                }
+
+                return Convert(TickSize, Account.Currency, this.Currency, null);
             }
+        }
+
+        public double PipValue {
+            get {
+                if (Account == null) { throw new ArgumentException("Requires Account to be set"); }
+                if (Account.Currency == this.Currency)
+                {
+                    return PipSize;
+                }
+
+                return Convert(TickSize, Account.Currency, this.Currency, null);
+            }
+        }
+
+        public double Convert(double amount, string from, string to, TradeType? tradeType)
+        {
+            var symbol = Market.GetSymbol(to + from );
+            bool inverse = false;
+            if (symbol == null)
+            {
+                inverse = true;
+                symbol = Market.GetSymbol(from + to);
+            }
+            if (symbol == null) return double.NaN;
+
+            double result = amount;
+
+            double conversion = !tradeType.HasValue ? ((symbol.Ask + symbol.Bid) / 2.0) : 
+                (!inverse ? tradeType == TradeType.Buy ? symbol.Ask : symbol.Bid 
+                : 1.0 / (tradeType == TradeType.Buy ? symbol.Bid: symbol.Ask)); // REVIEW
+
+            result *= conversion;
+
+            return result;            
         }
 
         #region Account Current Positions

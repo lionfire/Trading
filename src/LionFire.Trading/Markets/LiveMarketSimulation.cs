@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading
 {
 
-    public class LiveMarketSimulation : SimulatedMarketBase, IMarket
+    public class LiveMarketSimulation : SimulatedMarketBase<TMarketSim>, IMarket
     {
         #region IMarket Implementation
 

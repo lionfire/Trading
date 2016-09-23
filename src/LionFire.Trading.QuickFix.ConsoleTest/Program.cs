@@ -25,11 +25,17 @@ namespace LionFire.Trading.QuickFixN.ConsoleTest
             var configFile = "config.demo.price.ini";
 
             SessionSettings settings = new SessionSettings(configFile);
-            IApplication myApp = new MyQuickFixApp();
-            IMessageStoreFactory storeFactory = new FileStoreFactory(settings);
-            ILogFactory logFactory = new FileLogFactory(settings);
 
-            var socketInitiator = new SocketInitiator(myApp, storeFactory, settings);
+            MyQuickFixApp myApp = new MyQuickFixApp();
+            IMessageStoreFactory storeFactory = new FileStoreFactory(settings);
+            ILogFactory fileLogFactory = new FileLogFactory(settings);
+            ILogFactory screenLogFactory = new ScreenLogFactory(settings);
+            var socketInitiator = new SocketInitiator(myApp, storeFactory, settings, screenLogFactory);
+
+            myApp.Initiator = socketInitiator;
+            
+            myApp.Run();
+
             //new Session(myApp, storeFactory, 
             //new SocketInitiatorThread(socketInitiator, 
 
@@ -41,32 +47,7 @@ namespace LionFire.Trading.QuickFixN.ConsoleTest
 
             //acceptor.Start();
 
-            var logon = new Logon();
             
-            logon.Username = new QuickFix.Fields.Username("3235730");
-            logon.Password = new QuickFix.Fields.Password("LYMA4870");
-
-            while (true)
-            {
-                Console.Write("> ");
-                var key = Console.ReadKey(false);
-                Console.WriteLine();
-                switch (key.KeyChar)
-                {
-                    case 'q':
-                        Console.WriteLine("Exiting");
-                        break;
-                    case 'h':
-                        Console.WriteLine("Help: ");
-                        break;
-                    case 't':
-
-                        break;
-                    default:
-                        break;
-                }
-            }
-
             //acceptor.Stop();
 
             l.Info($"----- {typeof(Program).FullName}.Main() end -----");

@@ -34,20 +34,82 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="LionFire.Applications">
+      <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Applications.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Applications.Abstractions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Applications.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Environment">
+      <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Environment.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Extensions.Logging.NLog">
+      <HintPath>..\..\..\Core\src\LionFire.Extensions.Logging.NLog\bin\Debug\net462\LionFire.Extensions.Logging.NLog.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Runtime.Extensions, Version=1.0.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Runtime.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Templating, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Templating.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Trading, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Trading.Abstractions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Abstractions.dll</HintPath>
+    </Reference>
     <Reference Include="LionFire.Trading.Agent, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Agent.dll</HintPath>
     </Reference>
-    <Reference Include="QuickFix, Version=1.5.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\QuickFix.Net.1.5.0\lib\QuickFix.dll</HintPath>
+    <Reference Include="LionFire.Trading.Proprietary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Proprietary.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Microsoft.Extensions.DependencyInjection.Abstractions.1.0.0\lib\netstandard1.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Microsoft.Extensions.Logging.1.0.0\lib\netstandard1.1\Microsoft.Extensions.Logging.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="Microsoft.Extensions.Logging.Abstractions">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Microsoft.Extensions.Logging.Abstractions.1.0.0\lib\netstandard1.1\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="QuickFix, Version=1.7.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\QuickFix.Net.1.7.0\lib\QuickFix.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Console, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\packages\System.Console.4.0.0\lib\net46\System.Console.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System.Core" />
+    <Reference Include="System.Reflection, Version=4.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\System.Reflection.4.1.0\lib\net462\System.Reflection.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime, Version=4.1.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\System.Runtime.4.1.0\lib\net462\System.Runtime.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.Extensions">
+      <HintPath>..\..\..\Trading.Proprietary\packages\System.Runtime.Extensions.4.1.0\lib\net462\System.Runtime.Extensions.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.InteropServices">
+      <HintPath>..\..\..\Trading.Proprietary\packages\System.Runtime.InteropServices.4.1.0\lib\net462\System.Runtime.InteropServices.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="System.Threading.Thread, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\..\packages\System.Threading.Thread.4.0.0\lib\net46\System.Threading.Thread.dll</HintPath>
       <Private>True</Private>
@@ -66,12 +128,6 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.xproj">
-      <Project>{bb75938c-7cac-49de-aeba-502e6340f92b}</Project>
-      <Name>LionFire.Trading</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

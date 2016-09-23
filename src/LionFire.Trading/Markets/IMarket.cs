@@ -1,11 +1,12 @@
-﻿using System;
+﻿using LionFire.Templating;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public interface IMarket
+    public interface IMarket : IHierarchicalTemplateInstance
     {
 #if !cAlgo
         IAccount Account { get;  }
@@ -13,8 +14,12 @@ namespace LionFire.Trading
         Symbol GetSymbol(string symbolCode);
         MarketData MarketData { get; set; }
         MarketDataProvider Data { get; }
+        Server Server { get; }
 
         void Add(IMarketParticipant indicator);
+
+        event Action Ticked;
+
 #endif
 
         DateTime SimulationTime { get; }
@@ -33,6 +38,7 @@ namespace LionFire.Trading
         //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
 
         IObservable<bool> Started { get; }
+
 
     
     }

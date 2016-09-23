@@ -8,66 +8,53 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Templating;
 
 namespace LionFire.Trading.Agent.Program
 {
-    public static class AgentProgramExtensions
+    public static class BacktestAppExtensions
     {
-        public static IAppHost AddBacktest(this IAppHost app, BacktestConfig config = null)
-        {
-            var backtestConfig = config ?? new BacktestConfig()
-            {
-                BrokerName = "IC Markets",
-                StartDate = new DateTime(2016, 1, 1),
-                EndDate = new DateTime(2016, 4, 1),
-                TimeFrame = TimeFrame.h1,
 
-                //Bots = new List<Type> { // UNUSED
-                //    typeof(LionTrender)
-                //},
-                //Symbols = new List<string> { "XAUUSD", "EURUSD" }, // UNUSED
-
-            };
-
-            var backtest = app.Add(new BacktestTask(backtestConfig));
-
-#if Proprietary
-
-#if Indicator
-                var lionTrending = new LionTrendingBase(new LionTrendingConfig("XAUUSD", "h1")
+        public static TBacktestMarket DefaultConfig {
+            get {
+                return new TBacktestMarket()
                 {
-                    Log = true,
-                    OpenWindowPeriods = 55,
-                    CloseWindowPeriods = 34,
-                    PointsToOpenLong = 3.0,
-                    PointsToOpenShort = 3.0,
-                    PointsToCloseLong = 2.0,
-                    PointsToCloseShort = 2.0,
-                });
-                sim.Add(lionTrending);
-#endif
+                    
+                    BrokerName = "IC Markets",
+                    StartDate = new DateTime(2003, 5, 5),
+                    EndDate = new DateTime(2016, 9, 15),
+                    TimeFrame = TimeFrame.h1,
 
-            app.AddInit(_ =>
-            {
-                var lionTrender = new LionTrender();
-                lionTrender.Config = new TLionTrender("XAUUSD", "h1")
+                    //Symbols = new List<string> { "XAUUSD", "EURUSD" }, // UNUSED
+
+                    Children = new List<ITemplate>
                 {
-                    Indicator = new LionTrendingConfig
+#if Proprietary         
+                    new TLionTrender("XAUUSD", "h1")
                     {
-                        OpenWindowPeriods = 15,
-                        CloseWindowPeriods = 15,
-                        PointsToOpenLong = 1,
-                        PointsToOpenShort = 1,
-                        Symbol = "XAUUSD",
-                        TimeFrame = "h1"
+                        Log=false,
+                        LogBacktest = true,
+                        MinPositionSize = 1,
+                        Indicator = new TLionTrending
+                        {
+                            Log = false,
+                            OpenWindowPeriods = 55,
+                            CloseWindowPeriods = 34,
+                            PointsToOpenLong = 3.0,
+                            PointsToOpenShort = 3.0,
+                            PointsToCloseLong = 2.0,
+                            PointsToCloseShort = 2.0,
+                        }
                     }
-                };
-                backtest.Market.Add(lionTrender);
-            });
-#else
-#error No bot for backtest
 #endif
+                }
+                };
+            }
+        }
 
+        public static IAppHost AddBacktest(this IAppHost app, TBacktestMarket config = null)
+        {
+            app.Add(new BacktestTask(config ?? DefaultConfig));
             return app;
         }
     }

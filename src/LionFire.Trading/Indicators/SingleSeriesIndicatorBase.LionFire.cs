@@ -7,10 +7,10 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries
-        where TConfig : IIndicatorConfig, new()
+        where TConfig : ITIndicator, new()
     {
         public MarketSeries MarketSeries { get; protected set; }
-
+        IDisposable marketSeriesSubscription;
 
         partial void OnInitializing_()
         {
@@ -24,8 +24,9 @@ namespace LionFire.Trading.Indicators
             }
             this.MarketSeries = Market.Data.GetMarketSeries(this.Symbol.Code, this.TimeFrame);
 
-
+            marketSeriesSubscription = this.MarketSeries.LatestBar.Subscribe(bar => OnBar(MarketSeries, bar));
         }
+        
 
         protected override void OnConfigChanged()
         {

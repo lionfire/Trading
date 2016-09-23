@@ -16,7 +16,7 @@ namespace LionFire.Trading
 
         public override string ToString()
         {
-            var date = OpenTime.ToString("yyyy.MM.dd HH:mm:ss");
+            var date = OpenTime.ToDefaultString();
             var chars = 8;
             var vol = Volume > 0 ? $" [v:{Volume.ToString().PadLeft(chars)}]" : "";
             return $"{date} o:{Open.ToString().PadRight(chars, '0')} h:{High.ToString().PadRight(chars, '0')} l:{Low.ToString().PadRight(chars, '0')} c:{Close.ToString().PadRight(chars, '0')}{vol}";

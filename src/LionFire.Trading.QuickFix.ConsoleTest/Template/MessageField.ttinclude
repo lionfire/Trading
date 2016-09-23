@@ -1,0 +1,22 @@
+﻿        public <#=nameSpace#>.Fields.<#=f.Name#> <#=f.Name==m.Name ? f.Name + "Field" : f.Name#>
+        {
+            get
+            {
+                var val = new <#=nameSpace#>.Fields.<#=f.Name#>();
+                GetField(val);
+                return val;
+            }
+            set { SetField(value); }
+        }
+
+        public void Set(<#=nameSpace#>.Fields.<#=f.Name#> val) { this.<#=f.Name==m.Name ? f.Name + "Field" : f.Name#> = val; }
+
+        public <#=nameSpace#>.Fields.<#=f.Name#> Get(<#=nameSpace#>.Fields.<#=f.Name#> val)
+        {
+            GetField(val);
+            return val;
+        }
+
+        public bool IsSet(<#=nameSpace#>.Fields.<#=f.Name#> val) { return IsSet<#=f.Name#>(); }
+
+        public bool IsSet<#=f.Name#>() { return IsSetField(Tags.<#=f.Name#>); }

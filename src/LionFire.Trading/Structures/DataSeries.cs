@@ -8,7 +8,7 @@ namespace LionFire.Trading
     public interface IndicatorDataSeries : IDataSeries
     {
     }
-    
+
     public sealed class BarSeries : DataSeries<TimedBarStruct>, IBarSeries
     {
     }
@@ -21,7 +21,7 @@ namespace LionFire.Trading
     {
         public int FindIndex(DateTime time)
         {
-            return list.FindLastIndex(d => d == time);
+            return list.FindLastIndex(d => d <= time);
         }
     }
 
@@ -54,8 +54,8 @@ namespace LionFire.Trading
                     {
                         list.AddRange(Enumerable.Repeat(InvalidValue, padCount));
                     }
-                    list.Add(value);
                 }
+                list.Add(value);
             }
         }
 

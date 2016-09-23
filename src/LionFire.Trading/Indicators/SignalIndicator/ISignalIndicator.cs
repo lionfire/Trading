@@ -31,7 +31,6 @@ namespace LionFire.Trading.Indicators
             get;
         }
 
-
         
     }
 }

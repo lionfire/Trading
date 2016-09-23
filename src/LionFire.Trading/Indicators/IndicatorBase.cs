@@ -14,7 +14,7 @@ namespace LionFire.Trading.Indicators
 {
 
     public abstract partial class IndicatorBase<TConfig> : IIndicator
-        where TConfig : IIndicatorConfig, new()
+        where TConfig : ITIndicator, new()
     {
         #region Construction and Init
 
@@ -150,7 +150,7 @@ namespace LionFire.Trading.Indicators
         #endregion
 
 
-        IIndicatorConfig IIndicator.Config { get { return this.Config; } set { this.Config = (TConfig)value; } }
+        ITIndicator IIndicator.Config { get { return this.Config; } set { this.Config = (TConfig)value; } }
 
         #endregion
 

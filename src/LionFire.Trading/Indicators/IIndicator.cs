@@ -13,7 +13,7 @@ namespace LionFire.Trading.Indicators
         : IMarketParticipant
 #endif
     {
-        IIndicatorConfig Config { get; set; }
+        ITIndicator Config { get; set; }
 
         void Calculate(int index);
 

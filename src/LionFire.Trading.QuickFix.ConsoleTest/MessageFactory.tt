@@ -1,0 +1,56 @@
+﻿<#@ template  debug="true" hostSpecific="true" #>
+<#@ output extension=".cs" #>
+<#@ Assembly Name="System.Core" #>
+<#@ Assembly Name="System.Xml" #>
+<#@ Assembly Name="System.Xml.Linq" #>
+<#@ Assembly Name="System.Windows.Forms" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Xml.Linq" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#
+    var specPath = Host.ResolvePath("DataDictionary.xml");
+    var parser = new Parser();
+    parser.Load(specPath);
+    var nameSpace = Host.ResolveAssemblyReference("$(RootNamespace)");
+#>
+using QuickFix;
+
+namespace <#=nameSpace#>
+{
+    public class MessageFactory : IMessageFactory
+    {
+        public QuickFix.Message Create(string beginString, string msgType)
+        {
+            switch(msgType)
+            {
+<# foreach(var m in parser.Messages)
+   {#>
+                case <#=m.Name#>.MsgType: return new <#=m.Name#>();
+<#}#>
+            }
+
+            return new QuickFix.Message();
+        }
+
+        public Group Create(string beginString, string msgType, int correspondingFieldID)
+        {
+<# foreach(var m in parser.Messages.Where(m => m.Groups.Count > 0))
+   {#>
+          if(<#=m.Name#>.MsgType.Equals(msgType))
+          {
+              switch(correspondingFieldID)
+              {
+              <#=string.Join("\n\t\t\t\t\t", m.GetGroupsByTag().Select(gbt => string.Format("case QuickFix.Fields.Tags.{0}: return new {1}.{2}();", gbt.Item1, nameSpace, gbt.Item2)).ToArray())#>
+              }
+          }
+<# }#>
+            return null;
+        }
+    }
+}
+<#@ include file="Template/SpecParser.ttinclude" #>

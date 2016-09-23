@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
 
-    public class TDonchianChannel : IndicatorConfig
+    public class TDonchianChannel : TIndicator
     {
         public int Periods { get; set; } = 21;
     }

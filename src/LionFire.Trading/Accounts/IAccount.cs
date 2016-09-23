@@ -19,14 +19,11 @@ namespace LionFire.Trading
 
         
         IPositions Positions { get; }
-    }
 
-    public interface IPositions : IReadOnlyList<Position>
-    {
-    }
+        TradeResult ClosePosition(Position position);
+        TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
 
-    public class Positions : List<Position>, IPositions
-    {
+        GetFitnessArgs GetFitnessArgs();
     }
 
 

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    
+
     public class TradeResult
     {
         public ErrorCode? Error { get; set; }
@@ -13,9 +13,21 @@ namespace LionFire.Trading
         public PendingOrder PendingOrder { get; set; }
         public Position Position { get; set; }
 
-        //public override string ToString()
-        //{
-        //    return 
-        //}
+        public string Message { get; set; }
+        public override string ToString()
+        {
+            return Message ?? Error?.ToString() ?? "(no message)";
+        }
+
+        public static TradeResult LimitedByConfig {
+            get {
+                return limitedByConfig;
+            }
+        }
+        private static TradeResult limitedByConfig = new TradeResult
+        {
+            IsSuccessful = false,
+            Message = "Prevented by configuration and the current state",
+        };
     }
 }

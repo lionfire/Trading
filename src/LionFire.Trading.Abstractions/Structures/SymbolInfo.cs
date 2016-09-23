@@ -17,5 +17,13 @@ namespace LionFire.Trading
         public long VolumeMax { get; set;  }
         public long VolumeMin { get; set;  }
         public long VolumeStep { get; set;  }
+
+
+
+
+        public long VolumePerHundredThousandQuantity { get; set; }
+        public double QuantityPerHundredThousandVolume { get; set; }
+        public string Currency { get; set; }
+
     }
 }

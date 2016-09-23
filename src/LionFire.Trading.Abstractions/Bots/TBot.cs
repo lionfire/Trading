@@ -6,15 +6,59 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Bots
 {
-
-    public class BotConfig
+    public static class IdUtils
     {
-        public bool Log { get; set; } = true;
+        public static int DefaultIdLength = 12;
+
+        public static string GenerateId(int length = 0)
+        {
+            if (length == 0) length = DefaultIdLength;
+
+            var r = new Random();
+
+            char[] chars = new char[length];
+            for (int i = 0; i < length; i++)
+            {
+                var n = r.Next(0, 36);
+                if (n <= 25)
+                {
+                    chars[i] = (char)((int)'a' + n);
+                }
+                else
+                {
+                    chars[i] = (char)((int)'0' + n-26);
+                }
+            }
+            return new string(chars);
+        }
+    }
+
+    public class TBot
+    {
+        public string Id { get; set; } = IdUtils.GenerateId();
+
+
+        //[Ignore]
+        public string Symbol {
+            get { return Symbols?.FirstOrDefault(); }
+            set { Symbols = new List<string> { value }; }
+        }
+        public List<string> Symbols { get; set; }
+
+        //[Ignore]
+        public string TimeFrame {
+            get { return TimeFrames?.FirstOrDefault(); }
+            set { TimeFrames = new List<string> { value }; }
+        }
+        public List<string> TimeFrames { get; set; }
+
+
+        public bool Log { get; set; } = false;
 
         public string LogFile { get; set; } = "e:/temp/Trading.cAlgo.log";
 
         [Parameter("Log Backtest Fitness Min", DefaultValue = 2.0)]
-        public double LogBacktestThreshold { get; set; } 
+        public double LogBacktestThreshold { get; set; }
 
         [Parameter("Log Backtest", DefaultValue = true)]
         public bool LogBacktest { get; set; }

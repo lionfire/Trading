@@ -11,7 +11,7 @@ namespace LionFire.Trading
 
         public override string ToString()
         {
-            var date = OpenTime.ToString("yyyy.MM.dd HH:mm:ss");
+            var date = OpenTime.ToDefaultString();
             return $"{date} {base.ToString()}";
         }
 

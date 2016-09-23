@@ -1,6 +1,8 @@
 ﻿#if DEBUG
 #define NULLCHECKS
 #define TRACE_RISK
+#define TRACE_CLOSE
+#define TRACE_OPEN
 #endif
 #if cAlgo
 using cAlgo.API;
@@ -17,21 +19,23 @@ using LionFire.Trading.Indicators;
 using LionFire.Extensions.Logging;
 using LionFire.Trading;
 using LionFire.Trading.Backtesting;
+using System.IO;
+using Newtonsoft.Json;
 
 namespace LionFire.Trading.Bots
 {
 
     public partial class SignalBotBase<TIndicator, TConfig, TIndicatorConfig> : BotBase<TConfig>, IBot
     where TIndicator : class, ISignalIndicator, new()
-    where TConfig : SignalBotConfig<TIndicatorConfig>, new()
-        where TIndicatorConfig : class, new()
+    where TConfig : TSignalBot<TIndicatorConfig>, new()
+        where TIndicatorConfig : class, ITIndicator, new()
     {
     }
 
-    public partial class SingleSeriesSignalBotBase<TIndicator, TConfig, TIndicatorConfig> : SignalBotBase<TIndicator, TConfig, TIndicatorConfig>, IBot
+    public partial class SingleSeriesSignalBotBase<TIndicator, TConfig, TIndicatorConfig> : SignalBotBase<TIndicator, TConfig, TIndicatorConfig>, IBot, IHasCustomFitness
     where TIndicator : class, ISignalIndicator, new()
-    where TConfig : SingleSeriesSignalBotConfig<TIndicatorConfig>, new()
-        where TIndicatorConfig : class, IIndicatorConfig, new()
+    where TConfig : TSingleSeriesSignalBot<TIndicatorConfig>, new()
+        where TIndicatorConfig : class, ITIndicator, new()
     {
 
         #region Relationships
@@ -58,16 +62,14 @@ namespace LionFire.Trading.Bots
             InitExchangeRates();
         }
 
-        public SingleSeriesSignalBotBase(string symbolCode, string timeFrameCode) : this()
+        public SingleSeriesSignalBotBase(string symbol, string timeFrame) : this()
         {
             this.Config = new TConfig()
             {
-                SymbolCode = symbolCode,
-                TimeFrameCode = timeFrameCode,
+                Symbol = symbol,
+                TimeFrame = timeFrame,
                 Indicator = new TIndicatorConfig
                 {
-                    Symbol = symbolCode,
-                    TimeFrame = timeFrameCode
                 },
             };
         }
@@ -76,6 +78,7 @@ namespace LionFire.Trading.Bots
         partial void SignalBotBase_();
 
         #endregion
+
 
         #region Computations by Derived Class
 
@@ -88,29 +91,6 @@ namespace LionFire.Trading.Bots
 
         public int barCount = 0;
 
-        #region Derived
-
-        public bool CanOpenLong {
-            get {
-                var count = Positions.Where(p => p.TradeType == TradeType.Buy).Count();
-                return count < Config.MaxLongPositions;
-            }
-        }
-        public bool CanOpenShort {
-            get {
-                var count = Positions.Where(p => p.TradeType == TradeType.Sell).Count();
-                return count < Config.MaxShortPositions;
-            }
-        }
-        public bool CanOpen {
-            get {
-                var count = Positions.Count;
-                return Config.MaxOpenPositions == 0 || count < Config.MaxOpenPositions;
-            }
-        }
-
-
-        #endregion
 
         #endregion
 
@@ -196,22 +176,41 @@ namespace LionFire.Trading.Bots
                 _Open(TradeType.Sell, Indicator.ShortStopLoss);
             }
 
-            if (Indicator.CloseLongPoints.LastValue >= 1.0 )
+            List<Position> toClose = null;
+            if (Indicator.CloseLongPoints.LastValue >= 1.0)
             {
                 foreach (var position in Positions.Where(p => p.TradeType == TradeType.Buy))
                 {
+
+#if TRACE_CLOSE
                     string plus = position.NetProfit > 0 ? "+" : "";
-                    logger.LogInformation($"{Server.Time} [CLOSE LONG {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Ask}] {plus}{position.NetProfit}");
-                    ClosePosition(position);
+                    logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE LONG {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Ask}] {plus}{position.NetProfit}");
+#endif
+                    if (toClose == null) toClose = new List<Position>();
+                    toClose.Add(position);
                 }
             }
             if (-Indicator.CloseShortPoints.LastValue >= 1.0)
             {
                 foreach (var position in Positions.Where(p => p.TradeType == TradeType.Sell))
                 {
+
+#if TRACE_CLOSE
                     string plus = position.NetProfit > 0 ? "+" : "";
-                    logger.LogInformation($"{Server.Time} [CLOSE SHORT {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Bid}] {plus}{position.NetProfit}");
-                    ClosePosition(position);
+                    logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE SHORT {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Bid}] {plus}{position.NetProfit}");
+#endif
+                    if (toClose == null) toClose = new List<Position>();
+                    toClose.Add(position);
+                }
+            }
+            if (toClose != null)
+            {
+                foreach (var c in toClose)
+                {
+                    var result = ClosePosition(c);
+#if TRACE_CLOSE
+                    logger.LogTrace(result.ToString());
+#endif
                 }
             }
         }
@@ -367,12 +366,13 @@ namespace LionFire.Trading.Bots
 
         private void _Open(TradeType tradeType, IndicatorDataSeries indicatorSL)
         {
+            if (!CanOpenType(tradeType)) return;
+
             var price = tradeType == TradeType.Buy ? Symbol.Ask : Symbol.Bid;
             var stopLoss = indicatorSL.LastValue;
             var spread = Symbol.Ask - Symbol.Bid;
             var stopLossDistance = Math.Abs(price - stopLoss);
             stopLossDistance = Math.Max(spread * MinStopLossTimesSpread, stopLossDistance);
-#warning NEXT: PipSize, VolumeStep
             var stopLossDistancePips = stopLossDistance / Symbol.PipSize;
             var risk = stopLossDistance * Symbol.VolumeStep;
 
@@ -383,7 +383,9 @@ namespace LionFire.Trading.Bots
             logger.LogTrace($"Risk calc: Symbol.Ask {Symbol.Ask}, stopLoss {stopLoss} stopLossDist {stopLossDistance.ToString("N3")} SL-Pips: {stopLossDistancePips}");
 #endif
 
+#if TRACE_OPEN
             LogOpen(tradeType, volumeInUnits, risk, stopLoss, stopLossDistance);
+#endif
 
             if (IsBacktesting && Config.BacktestProfitTPMultiplierOnSL > 0)
             {
@@ -395,6 +397,7 @@ namespace LionFire.Trading.Bots
 
         private void OpenPosition(TradeType tradeType, double stopLossInPips, double takeProfitInPips, long volumeInUnits)
         {
+
             if (volumeInUnits == 0) return;
 
             //if (tradeType == TradeType.Sell) { stopLossInPips = -stopLossInPips; }
@@ -457,16 +460,23 @@ p.onBars.Add(new StopLossTrailer(p)
             var price = tradeType == TradeType.Buy ? Indicator.Symbol.Ask : Indicator.Symbol.Bid;
 
 #if cAlgo
-            var dateStr = this.MarketSeries.OpenTime.LastValue.ToString("yyyy.MM.dd HH:mm");
+            var dateStr = this.MarketSeries.OpenTime.LastValue.ToDefaultString();
             logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
 #else
-            logger.LogInformation($" [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
+            var dateStr = this.Market.Server.Time.ToDefaultString();
+            logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
 #endif
         }
 
-#endregion
+        #endregion
 
-        protected override double GetFitness(GetFitnessArgs args)
+
+#if cAlgo
+        protected
+#else
+        public
+#endif
+            override double GetFitness(GetFitnessArgs args)
         {
             var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
 
@@ -481,9 +491,10 @@ p.onBars.Add(new StopLossTrailer(p)
 
             var fitness = (args.NetProfit / initialBalance) * invDrawDown * tradeCountMultiplier;
 
+
             if (Config.LogBacktest && (Config.LogBacktestThreshold == 0 || fitness > Config.LogBacktestThreshold))
             {
-                var result = new BacktestResult()
+                var backtestResult = new BacktestResult()
                 {
                     BacktestDate = DateTime.UtcNow,
                     BotType = this.GetType().FullName,
@@ -516,11 +527,14 @@ p.onBars.Add(new StopLossTrailer(p)
                 {
                     string resultJson = "";
 #if cAlgo
-                    resultJson = Newtonsoft.Json.JsonConvert.SerializeObject(result);
 #endif
+                    resultJson = Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
+
                     var profit = args.Equity / initialBalance;
 
                     this.BacktestLogger.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
+
+                    SaveResult(resultJson);
                 }
                 catch (Exception ex)
                 {
@@ -531,7 +545,22 @@ p.onBars.Add(new StopLossTrailer(p)
             return fitness;
         }
 
+        private async void SaveResult(string json)
+        {
+            var dir = @"E:\Trading\Results";
+            var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + Symbol.Code + " " + this.GetType().Name + ".json";
+            var path = Path.Combine(dir, filename);
+            using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
+            {
+                await sw.WriteAsync(json);
+            }
+        }
+
+
+
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
+
+
 
     }
 }

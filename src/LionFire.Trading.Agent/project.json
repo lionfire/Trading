@@ -6,6 +6,7 @@
     "LionFire.Trading": "1.0.1-*",
     "LionFire.Trading.Proprietary": "1.0.0-*",
     "Microsoft.Extensions.DependencyInjection": "1.0.0",
+    "Microsoft.Extensions.DependencyInjection.Abstractions": "1.0.0",
     "Microsoft.Extensions.Logging": "1.0.0",
     "Microsoft.Extensions.Logging.Console": "1.0.0",
     "NETStandard.Library": "1.6.0",

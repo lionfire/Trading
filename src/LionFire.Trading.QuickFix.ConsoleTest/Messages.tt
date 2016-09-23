@@ -1,0 +1,133 @@
+﻿<#@ template  debug="true" hostSpecific="true" #>
+<#@ output extension=".cs" #>
+<#@ Assembly Name="System.Core" #>
+<#@ Assembly Name="System.Xml" #>
+<#@ Assembly Name="System.Xml.Linq" #>
+<#@ Assembly Name="System.Windows.Forms" #>
+<#@ import namespace="System" #>
+<#@ import namespace="System.IO" #>
+<#@ import namespace="System.Diagnostics" #>
+<#@ import namespace="System.Linq" #>
+<#@ import namespace="System.Xml" #>
+<#@ import namespace="System.Xml.Linq" #>
+<#@ import namespace="System.Collections" #>
+<#@ import namespace="System.Collections.Generic" #>
+<#
+    var manager = TemplateFileManager.Create(this);    
+    var specPath = Host.ResolvePath("DataDictionary.xml");
+    var p = new Parser();
+    p.Load(specPath);
+    var nameSpace = Host.ResolveAssemblyReference("$(RootNamespace)");
+#>
+using System;
+using System.Linq.Expressions;
+using System.Collections.Generic;
+using QuickFix;
+
+namespace <#=nameSpace#>
+{
+    public static class FieldMapExtensions
+    {
+        public static Func<T, R> GetFieldAccessor<T, R>(string fieldName)
+        {
+            ParameterExpression param =
+            Expression.Parameter(typeof(T), "arg");
+
+            MemberExpression member =
+            Expression.Field(param, fieldName);
+
+            LambdaExpression lambda =
+            Expression.Lambda(typeof(Func<T, R>), member, param);
+
+            Func<T, R> compiled = (Func<T, R>)lambda.Compile();
+            return compiled;
+        }
+
+        /// <summary>Signature for a method which sets a specific member of a reference type</summary>
+        /// <typeparam name="T">Type of the reference-type we're fondling</typeparam>
+        /// <typeparam name="V">Type of the value we're setting</typeparam>
+        /// <param name="this">The object instance to fondle</param>
+        /// <param name="value">The new value to set the member to</param>
+        public delegate void ReferenceTypeMemberSetterDelegate<T, V>(T @this, V value);
+
+        /// <summary>Generate a specific member setter for a specific reference type</summary>
+        /// <typeparam name="T">The type which contains the member</typeparam>
+        /// <typeparam name="V">The member's actual type</typeparam>
+        /// <param name="member_name">The member's name as defined in <typeparamref name="T"/></param>
+        /// <returns>A compiled lambda which can access (set) the member</returns>
+        public static ReferenceTypeMemberSetterDelegate<T, V> GenerateReferenceTypeMemberSetter<T, V>(string member_name)
+            where T : class
+        {
+            var param_this = Expression.Parameter(typeof(T), "this");
+            var param_value = Expression.Parameter(typeof(V), "value");				// the member's new value
+            var member = Expression.PropertyOrField(param_this, member_name);	// i.e., 'this.member_name'
+            var assign = Expression.Assign(member, param_value);				// i.e., 'this.member_name = value'
+            var lambda = Expression.Lambda<ReferenceTypeMemberSetterDelegate<T, V>>(assign, param_this, param_value);
+
+            return lambda.Compile();
+        }
+
+        private static Func<FieldMap, SortedDictionary<int, QuickFix.Fields.IField>> GetFields = GetFieldAccessor<FieldMap, SortedDictionary<int, QuickFix.Fields.IField>>("_fields");
+        private static ReferenceTypeMemberSetterDelegate<FieldMap, SortedDictionary<int, QuickFix.Fields.IField>> SetFields = GenerateReferenceTypeMemberSetter<FieldMap, SortedDictionary<int, QuickFix.Fields.IField>>("_fields");
+
+        private static Func<FieldMap, Dictionary<int, List<Group>>> GetGroups = GetFieldAccessor<FieldMap, Dictionary<int, List<Group>>>("_groups");
+        private static ReferenceTypeMemberSetterDelegate<FieldMap, Dictionary<int, List<Group>>> SetGroups = GenerateReferenceTypeMemberSetter<FieldMap, Dictionary<int, List<Group>>>("_groups");
+
+        private static ReferenceTypeMemberSetterDelegate<FieldMap, List<QuickFix.Fields.IField>> SetRepeatedTags = GenerateReferenceTypeMemberSetter<FieldMap, List<QuickFix.Fields.IField>>("RepeatedTags");
+
+        public static void CopyStateFrom(this FieldMap fmTo, FieldMap src)
+        {
+            Array.Copy(src.FieldOrder, fmTo.FieldOrder, src.FieldOrder.Length);
+            SetFields(fmTo, GetFields(src));
+            var newGroups = new Dictionary<int, List<Group>>();
+            var groups = GetGroups(src);
+            foreach (KeyValuePair<int, List<Group>> g in groups)
+                newGroups.Add(g.Key, new List<Group>(g.Value));
+            SetGroups(fmTo, newGroups);
+            SetRepeatedTags(fmTo, src.RepeatedTags);
+        }
+    }
+}    
+<# foreach(var m in p.Messages)
+   {
+        manager.StartNewFile(m.Name + ".cs");
+    #>
+using QuickFix;
+using <#=nameSpace#>.Fields;
+namespace <#=nameSpace#>
+{
+    public class <#=m.Name#> : Message
+    {
+        public const string MsgType = "<#=m.MessageType#>";
+
+        public <#=m.Name#>():base()
+        {
+            this.Header.SetField(new QuickFix.Fields.MsgType(MsgType));
+        }
+<#if(m.RequiredFields.Count > 0)
+  {#>
+        public <#=m.Name#>(<#=string.Join(",\n\t\t\t\t", m.RequiredFields.Select(f => string.Format("{0}.Fields.{1} a{1}", nameSpace, f.Name)).ToArray())#>)
+               : this()
+        {
+            <#=string.Join(";\n\t\t\t", m.RequiredFields.Select(f => string.Format("this.{0} = a{0}", f.Name)).ToArray())#>;
+        }
+<#}#>
+
+<#foreach(var f in m.Fields)
+  {#>
+<#@ include file="Template\MessageField.ttinclude" #>
+<#}#>
+
+<#foreach(var group in m.Groups)
+{#>
+<#@ include file="Template\Groups.ttinclude" #>
+<#}#>
+    }
+}
+<# 
+}
+    manager.Process();
+#>
+
+<#@ include file="Template/SpecParser.ttinclude" #>
+<#@ include file="Template/TemplateFileManagerV2.1.ttinclude" #>

@@ -37,5 +37,20 @@ namespace LionFire.Trading
         {
             throw new NotImplementedException();
         }
+
+        public TradeResult ClosePosition(Position position)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit)
+        {
+            throw new NotImplementedException();
+        }
+
+        public GetFitnessArgs GetFitnessArgs()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

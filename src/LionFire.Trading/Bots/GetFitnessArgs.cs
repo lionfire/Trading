@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading.Bots
+namespace LionFire.Trading
 {
     public interface GetFitnessArgs
     {
@@ -25,5 +25,63 @@ namespace LionFire.Trading.Bots
         double WinningTrades { get; }
     }
 
-    
+    public class _GetFitnessArgs : GetFitnessArgs
+    {
+        public double AverageTrade {
+            get;set;
+        }
+
+        public double Equity {
+            get; set;
+        }
+
+        public History History {
+            get; set;
+        }
+
+        public double LosingTrades {
+            get; set;
+        }
+
+        public double MaxBalanceDrawdown {
+            get; set;
+        }
+
+        public double MaxBalanceDrawdownPercentages {
+            get; set;
+        }
+
+        public double MaxEquityDrawdown {
+            get; set;
+        }
+
+        public double MaxEquityDrawdownPercentages {
+            get; set;
+        }
+
+        public double NetProfit {
+            get; set;
+        }
+
+        public double ProfitFactor {
+            get; set;
+        }
+
+        public double SharpeRatio {
+            get; set;
+        }
+
+        public double SortinoRatio {
+            get; set;
+        }
+
+        public double TotalTrades {
+            get; set;
+        }
+
+        public double WinningTrades {
+            get; set;
+        }
+    }
+
 }

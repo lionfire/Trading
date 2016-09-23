@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LionFire.Trading.QuickFix.ConsoleTest</RootNamespace>
     <AssemblyName>LionFire.Trading.QuickFix.ConsoleTest</AssemblyName>
-    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -36,8 +37,12 @@
     <Reference Include="LionFire.Utility">
       <HintPath>..\..\..\Bin\LionFire.Utility.dll</HintPath>
     </Reference>
-    <Reference Include="QuickFix, Version=1.5.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\QuickFix.Net.1.5.0\lib\QuickFix.dll</HintPath>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="QuickFix, Version=1.7.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\QuickFix.Net.1.7.0\lib\QuickFix.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -50,6 +55,26 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Fields.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Fields.tt</DependentUpon>
+    </Compile>
+    <Compile Include="FieldTags.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>FieldTags.tt</DependentUpon>
+    </Compile>
+    <Compile Include="MessageFactory.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>MessageFactory.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Messages.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Messages.tt</DependentUpon>
+    </Compile>
     <Compile Include="MyQuickFixApp.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -63,11 +88,37 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
+    <None Include="Template\Groups.ttinclude" />
+    <None Include="Template\Message.ttinclude" />
+    <None Include="Template\MessageField.ttinclude" />
+    <None Include="Template\SpecParser.ttinclude" />
+    <None Include="Template\TemplateFileManagerV2.1.ttinclude" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="DataDictionary.xml" />
+    <Content Include="Fields.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Fields.cs</LastGenOutput>
+    </Content>
+    <Content Include="FieldTags.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FieldTags.cs</LastGenOutput>
+    </Content>
+    <None Include="LICENSE" />
+    <Content Include="MessageFactory.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>MessageFactory.cs</LastGenOutput>
+    </Content>
+    <Content Include="Messages.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Messages.cs</LastGenOutput>
+    </Content>
     <Content Include="spec\fix\FIX44.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

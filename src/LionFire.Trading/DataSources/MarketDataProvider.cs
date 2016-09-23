@@ -1,5 +1,4 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,6 +22,15 @@ namespace LionFire.Trading
         internal IEnumerable<IMarketSeries> ActiveLiveSeries {
             get {
                 foreach (var series in LiveDataSources.Dict)
+                {
+                    // TODO OPTIMIZE UNLOAD: Allow deactivate
+                    yield return series.Value;
+                }
+            }
+        }
+        internal IEnumerable<IMarketSeries> ActiveHistoricalSeries {
+            get {
+                foreach (var series in HistoricalDataSources.Dict)
                 {
                     // TODO OPTIMIZE UNLOAD: Allow deactivate
                     yield return series.Value;

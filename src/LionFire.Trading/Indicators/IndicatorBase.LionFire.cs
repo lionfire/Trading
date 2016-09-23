@@ -40,7 +40,7 @@ namespace LionFire.Trading.Indicators
     }
 
     public abstract partial class IndicatorBase<TConfig> : IndicatorBase
-        where TConfig : IIndicatorConfig, new()
+        where TConfig : ITIndicator, new()
     {
 
         #region Initialization (LionFire specific)

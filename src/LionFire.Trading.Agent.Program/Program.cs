@@ -29,10 +29,11 @@ namespace LionFire.Trading.Agent.Program
                         )
                     .AddInit(app => app.ServiceProvider.GetService<ILoggerFactory>()
                         .AddNLog()
-                        .AddConsole()
+                        //.AddConsole()
                     )
                     //.AddBrokerAccount()
                     .AddBacktest()
+                    //.AddScanner()
                     .AddShutdownOnConsoleExitCommand()
                     .Run();
 

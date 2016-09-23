@@ -1,19 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using LionFire.Applications;
+using LionFire.Applications.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using LionFire.Trading.Proprietary.Indicators;
+using LionFire.Trading.Proprietary.Bots;
+using LionFire.Trading.Backtesting;
+using Microsoft.Extensions.Logging;
+using LionFire.Extensions.Logging;
 
-namespace LionFire.Trading.Agent.FrameworkProgram
+namespace LionFire.Trading.Agent.Program
 {
     class Program
     {
         static void Main(string[] args)
         {
-            //var agent = new AgentService();
-            //agent.Run();
-            Console.WriteLine("Not implemented");
-            Console.ReadKey();
+            try
+            {
+                
+                LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
+
+                new ApplicationHost()
+                    .AddConfig(app =>
+                        app.ServiceCollection
+                            .AddLogging()
+                        )
+                    .AddInit(app => app.ServiceProvider.GetService<ILoggerFactory>()
+                        .AddNLog()
+                    //.AddConsole()
+                    )
+                    //.AddBrokerAccount()
+                    .AddBacktest()
+                    //.AddScanner()
+                    .AddShutdownOnConsoleExitCommand()
+                    .Run();
+
+                //Console.WriteLine();
+                //Console.WriteLine("Press any key to exit");
+                //Console.ReadKey();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
         }
     }
 }

@@ -4,14 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading.Indicators
+namespace LionFire.Trading
 {
     
 
-    public class IndicatorConfig : IIndicatorConfig
+    public class TIndicator : ITIndicator
     {
-        public IndicatorConfig() { }
-        public IndicatorConfig(string symbolCode, string timeFrame)
+        public TIndicator() { }
+        public TIndicator(string symbolCode, string timeFrame)
         {
             this.Symbol = symbolCode;
             this.TimeFrame = timeFrame;

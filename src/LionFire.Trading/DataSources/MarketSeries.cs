@@ -216,7 +216,6 @@ namespace LionFire.Trading
 
         public bool LatestBarHasObservers { get { return barSubject.HasObservers; } }
         public IObservable<TimedBar> LatestBar { get {
-                
                 return barSubject; } }
         BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
         
