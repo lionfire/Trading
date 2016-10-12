@@ -5,11 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading
+namespace LionFire.Applications.Hosting
 {
     public static class cTraderRedisApplicationHostExtensions
     {
-        public static void AddBrokerAccount(this IAppHost app)
+        public static IAppHost AddCAlgoRedisAccount(this IAppHost app)
         {
             var brokerAccount = new CAlgoRedisBot();
             brokerAccount.Config = new TCAlgoRedisBot
@@ -19,6 +19,7 @@ namespace LionFire.Trading
                 BrokerName = "IC Markets",
             };
             app.Add(brokerAccount);
+            return app;
         }
     }
 }

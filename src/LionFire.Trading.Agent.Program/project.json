@@ -6,11 +6,13 @@
 
   "dependencies": {
     "LionFire.Applications": "1.0.*",
+    "LionFire.Applications.CommandLine": "1.0.0-*",
     "LionFire.Extensions.Logging.NLog": "1.0.0-*",
     "LionFire.Trading": "1.0.1-*",
     "LionFire.Trading.Agent": "1.0.0-*",
     "LionFire.Trading.cTrader.Redis": "1.0.0-*",
     "LionFire.Trading.Proprietary": "1.0.0-*",
+    "LionFire.Trading.Spotware.Connect": "1.0.0-*",
     "Microsoft.Extensions.Logging": "1.0.0",
     "Microsoft.Extensions.Logging.Console": "1.0.0",
     "Microsoft.NETCore.App": {

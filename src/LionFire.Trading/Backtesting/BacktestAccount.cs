@@ -40,6 +40,7 @@ namespace LionFire.Trading.Backtesting
         public BacktestAccount()
         {
             logger = this.GetLogger();
+            PositionStats = new PositionStats(this);
         }
         public BacktestAccount(string brokerName) : this()
         {
@@ -116,6 +117,11 @@ namespace LionFire.Trading.Backtesting
 
         IPositions IAccount.Positions { get { return this.Positions; } }
         public Positions Positions { get; private set; } = new Positions();
+
+        IPendingOrders IAccount.PendingOrders { get { return this.PendingOrders; } }
+        public PendingOrders PendingOrders { get; private set; } = new PendingOrders();
+       
+        public PositionStats PositionStats { get; protected set; } 
 
         public double StopOutLevel { get { return BacktestMarket.Config.StopOutLevel; } }
 

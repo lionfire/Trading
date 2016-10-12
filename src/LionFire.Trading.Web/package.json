@@ -1,0 +1,23 @@
+{
+  "name": "lionfire-trading-web",
+  "version": "1.0.0",
+  "description": "Website for LionFire Trading",
+  "main": "gulpfile.js",
+  "dependencies": {
+    "gulp": "^3.9.1"
+  },
+  "devDependencies": {
+    "gulp-webserver": "^0.9.1"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "forex",
+    "trading",
+    "investing",
+    "algo"
+  ],
+  "author": "Jared Thirsk",
+  "license": "MIT"
+}

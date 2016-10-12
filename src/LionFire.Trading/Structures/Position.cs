@@ -26,10 +26,15 @@ namespace LionFire.Trading
         public double? TakeProfit { get; set;  }
         public TradeType TradeType { get; set;  }
         public long Volume { get; set;  }
-        public double ClosingPrice {
+
+        #region Derived
+
+        public double CurrentExitPrice {
             get {
                 return TradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask;
             }
         }
+        
+        #endregion
     }
 }

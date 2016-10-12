@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+    
     public interface IAccount
     {
         double Equity { get;  }
@@ -20,10 +21,14 @@ namespace LionFire.Trading
         
         IPositions Positions { get; }
 
+        IPendingOrders PendingOrders { get; }
+
         TradeResult ClosePosition(Position position);
         TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
 
         GetFitnessArgs GetFitnessArgs();
+
+        PositionStats PositionStats { get; }
     }
 
 

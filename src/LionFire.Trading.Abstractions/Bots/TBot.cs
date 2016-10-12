@@ -38,6 +38,8 @@ namespace LionFire.Trading.Bots
         public string Id { get; set; } = IdUtils.GenerateId();
 
 
+        public string Account { get; set; }
+
         //[Ignore]
         public string Symbol {
             get { return Symbols?.FirstOrDefault(); }

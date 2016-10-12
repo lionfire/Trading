@@ -17,6 +17,7 @@
 
   "dependencies": {
     "LionFire.Applications.Abstractions": "1.0.0-*",
+    "LionFire.Assets.Abstractions": "1.0.0-*",
     "LionFire.Extensions.Logging": "1.0.0-*",
     "LionFire.Runtime.Extensions": "1.0.*",
     "LionFire.Templating": "1.0.0-*",
@@ -34,6 +35,7 @@
     },
     "net462": {
       "dependencies": {
+        "LionFire.Execution.Abstractions": "0.1.0-*",
         "System.Reflection.TypeExtensions": "4.1.0",
         "System.Text.Encoding.Extensions": "4.0.10"
       }

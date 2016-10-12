@@ -5,13 +5,21 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    
 
-    public class LiveAccount : IAccount
+    public class AccountBase
+    {
+        public PositionStats PositionStats { get; protected set; }
+    }
+
+    public class LiveAccount : AccountBase, IAccount
     {
 
         IPositions IAccount.Positions { get { return Positions; } }
         public Positions Positions { get; set; } = new Positions();
+
+        IPendingOrders IAccount.PendingOrders { get { return PendingOrders; } }
+        public PendingOrders PendingOrders { get; set; } = new PendingOrders();
+
         public double Equity { get; set; }
         public string Currency { get; set; }
 

@@ -8,8 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading
 {
-    public class TMarket : IHierarchicalTemplate
+    public class TMarket : IHierarchicalTemplate, ITemplate<LiveMarket>
     {
+        public string ConfigName { get; set; }
         public string BrokerName { get; set; }
 
         //public List<ITemplate> Participants { get; set; } TODO

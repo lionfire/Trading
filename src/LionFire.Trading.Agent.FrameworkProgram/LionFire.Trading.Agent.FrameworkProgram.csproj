@@ -13,6 +13,21 @@
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -33,6 +48,9 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject>LionFire.Trading.Agent.Program.FrameworkProgram</StartupObject>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="LionFire.Applications">
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Applications.dll</HintPath>
@@ -40,6 +58,13 @@
     <Reference Include="LionFire.Applications.Abstractions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Applications.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Assets, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Core\src\LionFire.Assets\bin\Debug\net462\LionFire.Assets.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Assets.Abstractions">
+      <HintPath>..\..\..\Core\src\LionFire.Assets.Abstractions\bin\Debug\net462\LionFire.Assets.Abstractions.dll</HintPath>
     </Reference>
     <Reference Include="LionFire.Environment">
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Environment.dll</HintPath>
@@ -57,7 +82,7 @@
     </Reference>
     <Reference Include="LionFire.Trading, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.dll</HintPath>
+      <HintPath>..\LionFire.Trading\bin\Debug\net462\LionFire.Trading.dll</HintPath>
     </Reference>
     <Reference Include="LionFire.Trading.Abstractions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -70,6 +95,9 @@
     <Reference Include="LionFire.Trading.Proprietary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Proprietary.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Trading.Spotware.Connect">
+      <HintPath>..\Spotware\LionFire.Trading.Spotware.Connect\bin\Debug\net462\LionFire.Trading.Spotware.Connect.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.DependencyInjection.Abstractions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\..\..\Trading.Proprietary\packages\Microsoft.Extensions.DependencyInjection.Abstractions.1.0.0\lib\netstandard1.0\Microsoft.Extensions.DependencyInjection.Abstractions.dll</HintPath>
@@ -122,12 +150,19 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Program.cs" />
+    <Compile Include="FrameworkProgram.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

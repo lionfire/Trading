@@ -13,15 +13,11 @@ using LionFire.Trading.Bots;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using System.IO;
+using LionFire.Trading;
 
-namespace LionFire.Trading.Agent
+namespace LionFire.Applications.Trading
 {
-
-    public interface IMarketTask
-    {
-        IMarket Market { get; }
-    }
-
+    
     public class BacktestTask : AppTask, IMarketTask
     {
         #region Identity
@@ -42,7 +38,7 @@ namespace LionFire.Trading.Agent
         public TBacktestMarket Config {
             get { return Market?.Config; }
             set {
-                Market = LionFire.Templating.ITemplateExtensions.Create(value);
+                Market = LionFire.Templating.ITemplateExtensions.Create<BacktestMarket>(value);
             }
         }
 

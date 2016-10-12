@@ -62,6 +62,11 @@ namespace LionFire.Trading
         {
         }
 
+        internal void Start()
+        {
+            throw new NotImplementedException();
+        }
+
         #region Uplink
 
         public IEnumerable<string> SymbolsAvailable {
