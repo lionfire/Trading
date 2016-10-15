@@ -143,7 +143,7 @@ namespace LionFire.Trading
                 return executionState;
             }
         }
-        protected BehaviorObservable<ExecutionState> executionState = new BehaviorObservable<ExecutionState>(ExecutionState.Unspecified);
+        protected BehaviorObservable<ExecutionState> executionState = new BehaviorObservable<ExecutionState>();
 
         #endregion
 

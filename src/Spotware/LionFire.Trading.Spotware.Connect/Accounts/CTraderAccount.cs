@@ -83,7 +83,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Relationships
 
-        IServiceProvider IRequiresServices.ServiceProvider { set { this.ServiceProvider = value; } }
+        IServiceProvider IRequiresServices.ServiceProvider { get { return ServiceProvider; } set { this.ServiceProvider = value; } }
         protected IServiceProvider ServiceProvider { get; private set; }
 
         #endregion

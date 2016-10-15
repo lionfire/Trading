@@ -45,7 +45,7 @@ namespace LionFire.Applications.Trading
         #region Init
 
         bool isInitialized = false;
-        public override bool TryInitialize()
+        public override async Task<bool> Initialize()
         {
             if (isInitialized) return true;
             isInitialized = true;
@@ -53,7 +53,7 @@ namespace LionFire.Applications.Trading
 
             Market.Initialize();
 
-            return base.TryInitialize();
+            return await base.Initialize();
         }
 
         #endregion

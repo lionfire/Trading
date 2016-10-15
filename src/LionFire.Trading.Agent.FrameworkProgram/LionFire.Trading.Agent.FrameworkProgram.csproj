@@ -69,6 +69,10 @@
     <Reference Include="LionFire.Environment">
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Environment.dll</HintPath>
     </Reference>
+    <Reference Include="LionFire.Execution.Abstractions, Version=0.1.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Core\src\LionFire.Execution.Abstractions\bin\Debug\net462\LionFire.Execution.Abstractions.dll</HintPath>
+    </Reference>
     <Reference Include="LionFire.Extensions.Logging.NLog">
       <HintPath>..\..\..\Core\src\LionFire.Extensions.Logging.NLog\bin\Debug\net462\LionFire.Extensions.Logging.NLog.dll</HintPath>
     </Reference>
