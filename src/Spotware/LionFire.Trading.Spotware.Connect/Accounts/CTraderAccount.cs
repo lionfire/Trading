@@ -44,7 +44,7 @@ namespace LionFire.Trading.Spotware.Connect
         public static int DefaultApiPort = 5032;
     }
 
-    public class CTraderAccount : LiveMarket, IRequiresServices, ITemplateInstance, IAppTask, IStartable, IHasExecutionFlags
+    public class CTraderAccount : LiveMarket, IRequiresServices, ITemplateInstance, IAppTask, IStartable, IHasExecutionFlags, IHasRunTask
     //, IHasExecutionState, IChangesExecutionState
     {
 
@@ -286,7 +286,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         public Task Start()
         {
-            Run();
+            Task.Factory.StartNew(Run);
             return Task.CompletedTask;
         }
 
