@@ -55,12 +55,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OpenApiCSharpNewLibrary\OpenApiCSharpProtoNewLibrary.csproj">
-      <Project>{A53A96E0-CF0E-4EDD-8155-8BD849BC92F9}</Project>
-      <Name>OpenApiCSharpProtoNewLibrary</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

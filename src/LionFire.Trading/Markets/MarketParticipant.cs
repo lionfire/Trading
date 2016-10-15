@@ -4,28 +4,24 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Execution;
+using LionFire.Execution.Executables;
+using LionFire.Reactive;
+using LionFire.Reactive.Subjects;
 
 namespace LionFire.Trading
 {
-
-    public interface IMarketParticipant
-    {
-        IMarket Market { get; set; }
-
-        //void Init();
-    }
-
     /// <summary>
     /// Represents an entity that participates in the market, either passively (readonly, which will receive events for DesiredSubscriptions via OnBar) and/or actively (by creating orders)
     /// </summary>
-    public abstract class MarketParticipant : IMarketParticipant
+    public abstract class MarketParticipant : IMarketParticipant, IExecutable
     {
 
         #region Construction
 
         public MarketParticipant()
         {
-            l = this.GetLogger();
+            logger = this.GetLogger();
         }
 
         #endregion
@@ -72,7 +68,7 @@ namespace LionFire.Trading
                         }
                         else
                         {
-                            l.LogWarning("Market data not available: " + sub);
+                            logger.LogWarning("Market data not available: " + sub);
                         }
                         continue;
                     }
@@ -88,6 +84,7 @@ namespace LionFire.Trading
 
         #region Relationships
 
+        [Dependency]
         public IMarket Market {
             get {
                 return market;
@@ -137,10 +134,42 @@ namespace LionFire.Trading
 
         #endregion
 
+        #region State
+
+        #region ExecutionState
+
+        public IBehaviorObservable<ExecutionState> ExecutionState {
+            get {
+                return executionState;
+            }
+        }
+        protected BehaviorObservable<ExecutionState> executionState = new BehaviorObservable<ExecutionState>(ExecutionState.Unspecified);
+
+        #endregion
+
+        //public Task<bool> Initialize()
+        //{
+        //    //unsatisfiedDependencies.Clear();
+        //    //if (Market == null)
+        //    //{
+        //    //    unsatisfiedDependencies.Add("Market");
+        //    //    return Task.FromResult(false);
+        //    //}
+        //    //return Task.FromResult(true);
+        //}
+
+        //public Task Start()
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        #endregion
+
         protected virtual void OnStarting()
         {
         }
 
+        #region Market Event Handling
 
         public void OnBar(IMarketSeries series, TimedBar bar)
         {
@@ -152,6 +181,9 @@ namespace LionFire.Trading
             var bar = series.LastBar;
             OnBar(series.SymbolCode, series.TimeFrame, bar);
         }
+
+        #endregion
+
 
         #region IMarketDataSubscriber - REVIEW
 
@@ -176,13 +208,12 @@ namespace LionFire.Trading
         }
 
         #endregion
+        
+        #region Misc
 
+        private ILogger logger;
 
-        private ILogger l;
-
+        #endregion
 
     }
-
-
-
 }

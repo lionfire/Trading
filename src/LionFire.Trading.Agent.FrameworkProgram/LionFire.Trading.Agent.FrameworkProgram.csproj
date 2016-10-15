@@ -84,9 +84,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\LionFire.Trading\bin\Debug\net462\LionFire.Trading.dll</HintPath>
     </Reference>
-    <Reference Include="LionFire.Trading.Abstractions, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Abstractions.dll</HintPath>
+    <Reference Include="LionFire.Trading.Abstractions">
+      <HintPath>..\LionFire.Trading.Abstractions\bin\Debug\net462\LionFire.Trading.Abstractions.dll</HintPath>
     </Reference>
     <Reference Include="LionFire.Trading.Agent, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -109,10 +108,6 @@
     </Reference>
     <Reference Include="Microsoft.Extensions.Logging.Abstractions">
       <HintPath>..\..\..\Trading.Proprietary\packages\Microsoft.Extensions.Logging.Abstractions.1.0.0\lib\netstandard1.1\Microsoft.Extensions.Logging.Abstractions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="QuickFix, Version=1.7.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Trading.Proprietary\packages\QuickFix.Net.1.7.0\lib\QuickFix.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

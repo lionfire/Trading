@@ -4,15 +4,31 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using LionFire.Execution;
+using LionFire.Dependencies;
 
 namespace LionFire.Trading.Bots
 {
 
 
-
-    public partial class BotBase<TConfig> : MarketParticipant, IBot
+    public partial class BotBase<TConfig> : MarketParticipant, IBot, IStartable
+        //, IInitializable
     {
+        #region Relationships
+
         public IAccount Account { get { return Market.Account; } }
+
+        #endregion
+
+        #region Execution State
+
+        //public Task<bool> Initialize()
+        //{
+            
+        //}
+
+        #endregion
+
         public MarketData MarketData { get; set; }
 
         public bool IsBacktesting { get; set; }
@@ -60,6 +76,11 @@ namespace LionFire.Trading.Bots
             }
 
             return Account?.ExecuteMarketOrder(tradeType, symbol, volumeInUnits, label, stopLossInPips, takeProfitInPips, marketRangePips, comment);
+        }
+
+        public async Task Start()
+        {
+            if (Market == null) throw new HasUnresolvedDependenciesException();
         }
 
 

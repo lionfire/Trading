@@ -12,14 +12,7 @@ using LionFire.Applications;
 
 namespace LionFire.Trading.cTrader.Redis
 {
-    [Flags]
-    public enum AccountMode
-    {
-        Unspecified = 0,
-        Demo = 1 << 0,
-        Live = 1 << 1,
-        Any = Demo | Live,
-    }
+    
 
     public class BrokerAccountConfig
     {

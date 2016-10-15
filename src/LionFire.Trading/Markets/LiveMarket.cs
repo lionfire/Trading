@@ -58,9 +58,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        public void Add(IMarketParticipant p)
-        {
-        }
+        
 
         internal void Start()
         {

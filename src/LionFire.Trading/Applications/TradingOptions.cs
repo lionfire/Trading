@@ -21,6 +21,8 @@ namespace LionFire.Trading
         /// </summary>
         public bool AllowAutoMultipleAccounts { get; set; } = false;
 
+        public AccountMode AccountModes { get; set; } = AccountMode.Demo;
+
         #region Static (Defaults)
 
         public static TradingOptions Auto {

@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#define Backtest
+#define Live
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,24 +17,12 @@ using LionFire.Trading.Applications;
 
 namespace LionFire.Trading.Agent.Program
 {
-    public class TSymbol
-    {
-        public string Code { get; set; }
-        public TSymbol(string code) { this.Code = code; }
-    }
-    
-
-    class FrameworkProgram
+    public class FrameworkProgram
     {
         static void Main(string[] args)
         {
-#if truex
-            //LionFire.Trading.Spotware.Connect
-            TradingApiTest.Main(args);
-#else
             try
             {
-
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
 
                 new AppHost()
@@ -54,10 +44,13 @@ namespace LionFire.Trading.Agent.Program
                         )
                 #endregion
 
-                    .AddTrading(TradingOptions.Auto)
-                    //.AddSpotwareConnectClient("lionprowl") // TODO
+                    .AddTrading(TradingOptions.Auto, AccountMode.Live)
+#if Live
+                    .AddSpotwareConnectClient("lionprowl")
                     .Add<TCTraderAccount>("spotware-lionprowl") // TODO: Change to "IC Markets.Demo1";
-                    //.Add<TLionTrender>()
+                                                                //.Add<TLionTrender>()
+                    .Add<TLionTrender>("4bx2")
+#endif
 
                     //.Add(TimeFrame.m1)
                     //.Add(TimeFrame.h1)
@@ -66,15 +59,17 @@ namespace LionFire.Trading.Agent.Program
                     //.Add(new TSymbol("USDJPY"))
                     //.Add(new TSymbol("USDCHF"))
 
-
                     //"spotware-lfdev";
                     //"spotware-lionprowl";
-                    //.AddBot<LionTrender>()
+
+                    //.AddScanner<TLionTrender>("zt9f")
 
 
                     //.AddSpotwareConnectAccount()
                     //.AddBrokerAccount()
-                    //.AddBacktest()
+#if Backtest
+                    .AddBacktest()
+#endif
                     //.AddScanner()
                     //.AddShutdownOnConsoleExitCommand()
                     .Run().Wait();
@@ -87,11 +82,30 @@ namespace LionFire.Trading.Agent.Program
             {
                 Console.WriteLine(ex.ToString());
             }
-#endif
+
         }
     }
 
+    public class TSymbol
+    {
+        public string Code { get; set; }
+        public TSymbol(string code) { this.Code = code; }
+    }
 
+
+
+    public static class TradingContextExtensions
+    {
+
+        public static IAppHost AddBot<TBot>(this IAppHost app, string configName, AccountMode mode = AccountMode.Unspecified)
+        {
+            throw new NotImplementedException();
+
+            //return app;
+        }
+
+
+    }
 
 
 }

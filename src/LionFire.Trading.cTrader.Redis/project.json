@@ -4,6 +4,7 @@
   "dependencies": {
     "LionFire.Applications.Abstractions": "1.0.0-*",
     "LionFire.Extensions.Logging": "1.0.0-*",
+    "LionFire.Trading.Abstractions": "1.0.0-*",
     "Microsoft.Extensions.Logging.Abstractions": "1.0.0",
     "NETStandard.Library": "1.6.0",
     "Newtonsoft.Json": "9.0.1",
@@ -12,7 +13,7 @@
   },
 
   "frameworks": {
-    "netstandard1.6": {
+    "netstandard1.4": {
       "imports": "dnxcore50"
     }
   }
