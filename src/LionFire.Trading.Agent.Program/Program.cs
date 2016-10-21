@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LionFire.Trading.cTrader.Redis;
 using LionFire.Applications;
 using LionFire.Applications.Hosting;
 using Microsoft.Extensions.DependencyInjection;

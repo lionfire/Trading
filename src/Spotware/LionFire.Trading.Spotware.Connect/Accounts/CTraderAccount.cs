@@ -1,8 +1,8 @@
 ﻿#if NET462
-//#define TRACE_DATA_RECEIVED
+#define TRACE_DATA_RECEIVED
 //#define TRACE_DATA_SENT
 //#define TRACE_HEARTBEAT
-//#define TRACE_DATA_INCOMING
+#define TRACE_DATA_INCOMING
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -251,15 +251,7 @@ namespace LionFire.Trading.Spotware.Connect
                 do
                 {
                     Thread.Sleep(0);
-                    try
-                    {
-                        readBytes += sslStream.Read(_length, readBytes, _length.Length - readBytes);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine("Listener threw exception: " + ex.GetType().Name);
-                        isShutdown = true;
-                    }
+                    readBytes += sslStream.Read(_length, readBytes, _length.Length - readBytes);
                 } while (readBytes < _length.Length);
 
                 int length = BitConverter.ToInt32(_length.Reverse().ToArray(), 0);
@@ -427,14 +419,13 @@ namespace LionFire.Trading.Spotware.Connect
 
             #endregion
 
-            //SendAuthorizationRequest();
+            SendAuthorizationRequest();
 
-            
-            //for(int retries = 5; retries > 0 &&  !isAuthorized; retries--)
-            //{
-            //    logger.LogInformation("Waiting for authorization response...");
-            //    Thread.Sleep(1000);
-            //}
+            for (int retries = 5; retries > 0 && !isAuthorized; retries--)
+            {
+                logger.LogInformation("Waiting for authorization response...");
+                Thread.Sleep(1000);
+            }
             var not = isAuthorized ? "" : " not ";
             logger.LogInformation($"Connected and {not} authorized");
             return true;
@@ -817,7 +808,7 @@ namespace LionFire.Trading.Spotware.Connect
         protected void RequestSubscribeForSymbol(string symbol)
         {
             var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, new List<long> { 1, 2 });
-            
+
             if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }

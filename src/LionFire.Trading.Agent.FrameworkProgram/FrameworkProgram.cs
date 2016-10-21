@@ -47,9 +47,10 @@ namespace LionFire.Trading.Agent.Program
                     .AddTrading(TradingOptions.Auto, AccountMode.Live)
 #if Live
                     .AddSpotwareConnectClient("lionprowl")
-                    .Add<TCTraderAccount>("spotware-lionprowl") // TODO: Change to "IC Markets.Demo1";
-                                                                //.Add<TLionTrender>()
-                                                                //.Add<TLionTrender>("4bx2")
+                                                                //.Add<TCTraderAccount>("spotware-lionprowl") // TODO: Change to "IC Markets.Demo1";
+                                                                .Add<TCTraderAccount>("spotware-lfdev") // TODO: Change to "IC Markets.Demo1";
+                                                                                                        //.Add<TLionTrender>()
+                                                                                                        //.Add<TLionTrender>("4bx2")
 #if Proprietary
                     .Add(new TLionTrender("XAUUSD", "m1")
                     {

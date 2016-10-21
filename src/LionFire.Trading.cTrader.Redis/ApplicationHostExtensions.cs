@@ -1,4 +1,5 @@
 ﻿using LionFire.Applications.Hosting;
+using LionFire.Trading;
 using LionFire.Trading.cTrader.Redis;
 using System;
 using System.Collections.Generic;
