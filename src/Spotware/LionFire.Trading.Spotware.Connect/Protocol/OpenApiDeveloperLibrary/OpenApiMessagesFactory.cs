@@ -352,12 +352,19 @@ namespace OpenApiDeveloperLibrary
             _msg.SetStopPrice(stopPrice);
             return CreateMessage((uint)_msg.PayloadType, _msg.Build().ToByteString(), clientMsgId);
         }
-        public ProtoMessage CreateSubscribeForSpotsRequest(long accountId, string accessToken, string symbolName, string clientMsgId = null)
+        public ProtoMessage CreateSubscribeForSpotsRequest(long accountId, string accessToken, string symbolName, string clientMsgId = null, List<long> periods = null)
         {
             var _msg = ProtoOASubscribeForSpotsReq.CreateBuilder();
             _msg.SetAccountId(accountId);
             _msg.SetAccessToken(accessToken);
             _msg.SetSymblolName(symbolName);
+            if (periods != null)
+            {
+                foreach (var period in periods)
+                {
+                    _msg.result.AddPeriod(period);
+                }
+            }
             return CreateMessage((uint)_msg.PayloadType, _msg.Build().ToByteString(), clientMsgId);
         }
         public ProtoMessage CreateSubscribeForSpotsResponse(uint subscriptionId, string clientMsgId = null)
