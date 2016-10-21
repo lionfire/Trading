@@ -1,6 +1,6 @@
 ﻿#if NET462
 #define TRACE_DATA_RECEIVED
-//#define TRACE_DATA_SENT
+#define TRACE_DATA_SENT
 //#define TRACE_HEARTBEAT
 #define TRACE_DATA_INCOMING
 using System;
@@ -30,6 +30,7 @@ using LionFire.MultiTyping;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reactive.Linq;
 using LionFire.Structures;
+using OpenApiLib;
 
 namespace LionFire.Trading.Spotware.Connect
 {
@@ -426,7 +427,7 @@ namespace LionFire.Trading.Spotware.Connect
                 logger.LogInformation("Waiting for authorization response...");
                 Thread.Sleep(1000);
             }
-            var not = isAuthorized ? "" : " not ";
+            var not = isAuthorized ? "" : " NOT ";
             logger.LogInformation($"Connected and {not} authorized");
             return true;
         }
@@ -514,7 +515,9 @@ namespace LionFire.Trading.Spotware.Connect
 
                 if (!Connect()) return;
 
-                //RequestSubscribeForSymbol("XAUUSD");
+                RequestSubscribeForSymbol("EURUSD");
+                RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
+                RequestSubscribeForSymbol("XAUUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H4, ProtoOATrendbarPeriod.MN1);
 
                 while (listenerThread.IsAlive || timerThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
                 {
@@ -591,15 +594,30 @@ namespace LionFire.Trading.Spotware.Connect
                     {
                         var payload = msgFactory.GetSpotEvent(rawData);
 
-                        var timestampField = payload.UnknownFields[7];
-                        var timestamp = timestampField.VarintList[0];
-                        var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(timestamp);
-
+                        var u = payload.UnknownFields.FieldDictionary;
+                        if (u != null)
+                        {
+                            foreach (var kvp in u)
+                            {
+                                Console.WriteLine(kvp.Key);
+                            }
+                        }
+                        //var timestamp = timestampField.VarintList[0];
+                        //var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(timestamp);
+                        var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(payload.Timestamp);
+                        
+                        if (payload.TrendbarCount > 0 || payload.TrendbarList.Count > 0)
+                        {
+                            foreach (var bar in payload.TrendbarList)
+                            {
+                                Console.WriteLine($"{bar.Period} o:{bar.Open} h:{bar.High} l:{bar.Low} c:{bar.Close} [v:{bar.Volume}]");
+                            }
+                        }
                         var tick = new TimedTick
                         {
                             Ask = payload.HasAskPrice ? payload.AskPrice : double.NaN,
                             Bid = payload.HasBidPrice ? payload.BidPrice : double.NaN,
-                            Time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(timestamp)
+                            Time = time
                         };
 
                         var symbol = GetSymbol(payload.SymbolName);
@@ -619,6 +637,7 @@ namespace LionFire.Trading.Spotware.Connect
                         break;
                     }
                 default:
+                    Console.WriteLine("Unknown message type: " + _msg.PayloadType);
                     break;
             };
         }
@@ -690,7 +709,7 @@ namespace LionFire.Trading.Spotware.Connect
         {
             var _msg = msgFactory.CreatePingRequest((ulong)DateTime.Now.Ticks);
 #if TRACE_PING
-            if (isDebugIsOn) Console.WriteLine("SendPingRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendPingRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
 #endif
             writeQueue.Enqueue(_msg.ToByteArray());
         }
@@ -698,26 +717,26 @@ namespace LionFire.Trading.Spotware.Connect
         {
             var _msg = msgFactory.CreateHeartbeatEvent();
 #if TRACE_HEARTBEAT
-            if (isDebugIsOn) Console.WriteLine("SendHeartbeatEvent() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendHeartbeatEvent() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
 #endif
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendAuthorizationRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateAuthorizationRequest(clientPublicId, clientSecret);
-            if (isDebugIsOn) Console.WriteLine("SendAuthorizationRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendAuthorizationRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendAuthorizationRequest()
         {
             var _msg = outgoingMsgFactory.CreateAuthorizationRequest(clientPublicId, clientSecret);
-            if (isDebugIsOn) Console.WriteLine("SendAuthorizationRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendAuthorizationRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
         void SendSubscribeForTradingEventsRequest(long accountId, OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateSubscribeForTradingEventsRequest(accountId, AccessToken);
-            if (isDebugIsOn) Console.WriteLine("SendSubscribeForTradingEventsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendSubscribeForTradingEventsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendSubscribeForTradingEventsRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
@@ -727,19 +746,19 @@ namespace LionFire.Trading.Spotware.Connect
         void SendUnsubscribeForTradingEventsRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateUnsubscribeForTradingEventsRequest(AccountId);
-            if (isDebugIsOn) Console.WriteLine("SendUnsubscribeForTradingEventsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendUnsubscribeForTradingEventsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendGetAllSubscriptionsForTradingEventsRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateAllSubscriptionsForTradingEventsRequest();
-            if (isDebugIsOn) Console.WriteLine("SendGetAllSubscriptionsForTradingEventsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendGetAllSubscriptionsForTradingEventsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendGetAllSubscriptionsForSpotEventsRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateGetAllSpotSubscriptionsRequest();
-            if (isDebugIsOn) Console.WriteLine("SendGetAllSubscriptionsForSpotEventsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendGetAllSubscriptionsForSpotEventsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SetClientMessageId(OpenApiMessagesFactory msgFactory, Queue writeQueue)
@@ -758,43 +777,43 @@ namespace LionFire.Trading.Spotware.Connect
         void SendMarketOrderRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateMarketOrderRequest(AccountId, AccessToken, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, testVolume, clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendMarketOrderRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendMarketOrderRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendMarketRangeOrderRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateMarketRangeOrderRequest(AccountId, AccessToken, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, testVolume, 1.09, 10, clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendMarketRangeOrderRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendMarketRangeOrderRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendLimitOrderRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateLimitOrderRequest(AccountId, AccessToken, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 1000000, 1.11, clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendLimitOrderRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendLimitOrderRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendAmendLimitOrderRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateAmendLimitOrderRequest(AccountId, AccessToken, orderId, 1.10, clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendLimitOrderRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendLimitOrderRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendStopOrderRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateStopOrderRequest(AccountId, AccessToken, "EURUSD", OpenApiLib.ProtoTradeSide.BUY, 1000000, 0.2, clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendStopOrderRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendStopOrderRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendClosePositionRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateClosePositionRequest(AccountId, AccessToken, positionId, testVolume, clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendClosePositionRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendClosePositionRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendSubscribeForSpotsRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, "EURUSD", clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
 
@@ -805,18 +824,18 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Request Messages
 
-        protected void RequestSubscribeForSymbol(string symbol)
+        protected void RequestSubscribeForSymbol(string symbol, params ProtoOATrendbarPeriod[] periods)
         {
-            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, new List<long> { 1, 2 });
+            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, new List<ProtoOATrendbarPeriod> (periods));
 
-            if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
         protected void RequestUnsubscribeForSymbol(string symbol)
         {
             throw new NotImplementedException();
             //var _msg = outgoingMsgFactory.CreateUnsubscribeAccountFromSpotsRequest(AccountId, AccessToken, symbol, clientMsgId);
-            //if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            //if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             //writeQueueSync.Enqueue(_msg.ToByteArray());
         }
 

@@ -17,10 +17,10 @@ namespace OpenApiDeveloperLibrary
             var _str = "ProtoMessage{";
             switch ((ProtoPayloadType)msg.PayloadType)
             {
-                case ProtoPayloadType.PROTO_MESSAGE:
-                    var _msg = ProtoMessage.CreateBuilder().MergeFrom(msg.Payload).Build();
-                    _str += ProtoMessageToString(_msg);
-                    break;
+                //case ProtoPayloadType.PROTO_MESSAGE: // FIXME - was this working?
+                //    var _msg = ProtoMessage.CreateBuilder().MergeFrom(msg.Payload).Build();
+                //    _str += ProtoMessageToString(_msg);
+                //    break;
                 case ProtoPayloadType.PING_REQ:
                     var _ping_req = ProtoPingReq.CreateBuilder().MergeFrom(msg.Payload).Build();
                     _str += "PingRequest{timestamp:" + _ping_req.Timestamp.ToString() + "}";
@@ -41,7 +41,9 @@ namespace OpenApiDeveloperLibrary
                     _str += OpenApiMessageToString(msg);
                     break;
             }
-            _str += (msg.HasClientMsgId ? ", clientMsgId:" + msg.ClientMsgId : "") + (msg.HasPayloadString ? ", payloadString:" + msg.PayloadString : "") + "}";
+            _str += (msg.HasClientMsgId ? ", clientMsgId:" + msg.ClientMsgId : "")
+                //+ (msg.HasPayloadString ? ", payloadString:" + msg.PayloadString : "")  // FIXME - was this working?
+                + "}";
 
             return _str;
         }
@@ -114,7 +116,7 @@ namespace OpenApiDeveloperLibrary
                     return _all_str;
                 case ProtoOAPayloadType.OA_SPOT_EVENT:
                     var _spot_event = ProtoOASpotEvent.CreateBuilder().MergeFrom(msg.Payload).Build();
-                    return "SpotEvent{subscriptionId:" + _spot_event.SubscriptionId + ", symbolName:" + _spot_event.SymbolName + ", bidPrice:" + (_spot_event.HasBidPrice ? _spot_event.BidPrice.ToString() : "       ") + ", askPrice:" + (_spot_event.HasAskPrice ? _spot_event.AskPrice.ToString() : "       ") + "}";
+                    return "SpotEvent{subscriptionId:" + _spot_event.SubscriptionId + ", symbolName:" + _spot_event.SymbolName + ", bidPrice:" + (_spot_event.HasBidPrice ? _spot_event.BidPrice.ToString() : "       ") + ", askPrice:" + (_spot_event.HasAskPrice ? _spot_event.AskPrice.ToString() : "       ") + " "+ (new DateTime(1970,1,1)+TimeSpan.FromMilliseconds(_spot_event.Timestamp)) + "}";
                 default:
                     return "unknown";
             }
