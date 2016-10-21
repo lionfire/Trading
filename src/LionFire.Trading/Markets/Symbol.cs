@@ -6,10 +6,15 @@ using LionFire.Trading.Backtesting;
 
 namespace LionFire.Trading
 {
-    public interface Symbol
+    public interface IBacktestSymbol
+    {
+        BacktestSymbolSettings BacktestSymbolSettings { get; set; }
+    }
+
+    public interface Symbol : IBacktestSymbol
     {
         double Ask { get; }
-        BacktestSymbolSettings BacktestSymbolSettings { get; set; }
+        
         double Bid { get; }
         string Code { get; }
         int Digits { get; }
@@ -38,9 +43,20 @@ namespace LionFire.Trading
 
     }
 
-
-    public class SymbolImpl : Symbol
+    public class SymbolImpl : SymbolImplBase, IBacktestSymbol
     {
+        public SymbolImpl(string symbolCode, IMarket market) : base(symbolCode, market) { }
+    }
+
+    public class SymbolImplBase : Symbol
+    {
+        #region Config
+
+        // MOVE to BacktestSymbol
+
+        public BacktestSymbolSettings BacktestSymbolSettings { get; set; }
+
+        #endregion
 
         #region Identity
 
@@ -56,18 +72,11 @@ namespace LionFire.Trading
 
         public IAccount Account { get; set; }
 
-
-        #endregion
-
-        #region Config
-
-        public BacktestSymbolSettings BacktestSymbolSettings { get; set; }
-
         #endregion
 
         #region Construction
 
-        public SymbolImpl(string symbolCode, IMarket market)
+        public SymbolImplBase(string symbolCode, IMarket market)
         {
             this.Code = symbolCode;
             this.Market = market;
@@ -77,7 +86,7 @@ namespace LionFire.Trading
 
         #region Current Market State
 
-        public double Ask {
+        public  double Ask {
             get; set;
         } = double.NaN;
 
@@ -221,13 +230,13 @@ namespace LionFire.Trading
 
         #region Account Current Positions
 
-        public double UnrealizedGrossProfit {
+        public virtual double UnrealizedGrossProfit {
             get {
                 throw new NotImplementedException();
             }
         }
 
-        public double UnrealizedNetProfit {
+        public virtual double UnrealizedNetProfit {
             get {
                 throw new NotImplementedException();
             }

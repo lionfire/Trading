@@ -1,5 +1,6 @@
 ﻿using LionFire.Applications;
 using LionFire.Applications.Hosting;
+using LionFire.Execution;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
@@ -19,14 +20,14 @@ namespace LionFire.Trading.Applications
         /// <returns></returns>
         public static IAppHost AddTrading(this IAppHost host, TradingOptions options, AccountMode accountModes = AccountMode.Unspecified)
         {
-            host.AddConfig(app =>
+            host.ConfigureServices(serviceCollection =>
             {
                 if (accountModes != AccountMode.Unspecified)
                 {
                     options.AccountModes = accountModes;
                 }
                 //app.ServiceCollection.AddSingleton<IAccountProvider, AccountProvider>(); FUTURE
-                app.ServiceCollection.AddSingleton<ITradingContext>(new TradingContext(options));
+                serviceCollection.AddSingleton<ITradingContext>(new TradingContext(options));
             });
 
             return host;

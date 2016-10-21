@@ -8,7 +8,7 @@ namespace LionFire.Trading
 {
     
     
-    public class LiveMarket : MarketBase<TMarket>, IMarket
+    public abstract class LiveMarket : MarketBase<TMarket>, IMarket
     {
         #region IMarket Implementation
 
@@ -84,18 +84,8 @@ namespace LionFire.Trading
         }
 
         #endregion
-
-        public Symbol GetSymbol(string symbolCode)
-        {
-            throw new NotImplementedException();
-        }
-        public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
-        {
-            throw new NotImplementedException();
-        }
-
-
-        public event Action Ticked;
+        
+        
 
     }
 }

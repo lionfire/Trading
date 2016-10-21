@@ -8,6 +8,12 @@ namespace LionFire.Trading
 
     public class MarketDataProvider
     {
+        #region Relationships
+
+        IMarket market;
+
+        #endregion
+
         #region Configuration
 
         public DataSourceCollection HistoricalDataSources { get; private set; } = new DataSourceCollection(true);
@@ -57,12 +63,9 @@ namespace LionFire.Trading
         //        };
         //        subscriptions.Add(sub.Key, sub);
         //    }
-
         //}
 
         #endregion
-
-        IMarket market;
 
         #region Construction
 

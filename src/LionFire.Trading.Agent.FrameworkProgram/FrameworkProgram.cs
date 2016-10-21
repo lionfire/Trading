@@ -1,5 +1,6 @@
 ﻿//#define Backtest
 #define Live
+#define Proprietary
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,8 @@ using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
 using LionFire.Trading.Spotware.Connect;
 using LionFire.Trading.Applications;
+using LionFire.Execution;
+using LionFire.Templating;
 
 namespace LionFire.Trading.Agent.Program
 {
@@ -33,10 +36,7 @@ namespace LionFire.Trading.Agent.Program
                 #endregion
 
                 #region Logging
-                    .AddConfig(app =>
-                        app.ServiceCollection
-                            .AddLogging()
-                        )
+                    .ConfigureServices(sc => sc.AddLogging())
                     .AddInit(app =>
                         app.ServiceProvider.GetService<ILoggerFactory>()
                             .AddNLog()
@@ -49,7 +49,25 @@ namespace LionFire.Trading.Agent.Program
                     .AddSpotwareConnectClient("lionprowl")
                     .Add<TCTraderAccount>("spotware-lionprowl") // TODO: Change to "IC Markets.Demo1";
                                                                 //.Add<TLionTrender>()
-                    .Add<TLionTrender>("4bx2")
+                                                                //.Add<TLionTrender>("4bx2")
+#if Proprietary
+                    .Add(new TLionTrender("XAUUSD", "m1")
+                    {
+                        Log = true,
+                        LogBacktest = true,
+                        MinPositionSize = 1,
+                        Indicator = new TLionTrending
+                        {
+                            Log = true,
+                            OpenWindowPeriods = 55,
+                            CloseWindowPeriods = 34,
+                            PointsToOpenLong = 3.0,
+                            PointsToOpenShort = 3.0,
+                            PointsToCloseLong = 2.0,
+                            PointsToCloseShort = 2.0,
+                        }
+                    }.Create())
+#endif
 #endif
 
                     //.Add(TimeFrame.m1)

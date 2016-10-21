@@ -53,11 +53,11 @@ namespace LionFire.Trading
 
         #region Market Depth
 
-        public MarketDepth GetMarketDepth(string symbolCode) { return new MarketDepth(); }
-        public MarketDepth GetMarketDepth(Symbol symbol) { return new MarketDepth(); }
+        public MarketDepth GetMarketDepth(string symbolCode) { return new MarketDepth(); } // NOTIMPLEMENTED
+        public MarketDepth GetMarketDepth(Symbol symbol) { return new MarketDepth(); } // NOTIMPLEMENTED
 
         #endregion
-    
+
     }
 
 }

@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
 using System.Reflection;
 using LionFire.Structures;
+using LionFire.Execution;
 #if cAlgo
 using cAlgo.API;
 #endif
@@ -15,7 +16,7 @@ namespace LionFire.Trading.Bots
 {
     // TODO: Rename BotBase to SingleSeriesBotBase  and make a new BotBase that is more generic
 
-    public partial class BotBase<TConfig> : IBot
+    public partial class BotBase<TConfig> : IBot, IInitializable
         where TConfig : TBot, new()
     {
         public string Version { get; set; } = "0.0.0";
@@ -24,23 +25,31 @@ namespace LionFire.Trading.Bots
 
         object ITemplateInstance.Template { get { return Config; } set { this.Config = (TConfig)value; } }
 
-        TBot IBot.Config { get { return Config; } set { Config =(TConfig) value; } }
+        TBot IBot.Config { get { return Config; } set { Config = (TConfig)value; } }
 
         public TConfig Config { get; set; } = new TConfig();
 
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
 
 
-#endregion
+        #endregion
+
+        public Task<bool> Initialize()
+        {
+            logger = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
+            return Task.FromResult(true);
+        }
 
 #if cAlgo
-        protected virtual void OnStarting()
+        protected virtual void OnStarting() // This is the main initialization point for cAlgo
 #else
         protected override void OnStarting()
 #endif
-        {            
-            logger = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
-            
+        {
+#if cAlgo
+            Initialize().Wait();
+#endif
+
             logger.LogInformation($"------- START {this} -------");
         }
         partial void OnStarting_();
@@ -53,7 +62,7 @@ namespace LionFire.Trading.Bots
         protected virtual void OnNewBar()
         {
         }
-        
+
         #region Derived
 
         public bool CanOpenLong {
@@ -88,9 +97,9 @@ namespace LionFire.Trading.Bots
                     return false;
             }
         }
-        
+
         #endregion
-        
+
         #region Misc
 
         public virtual string Label {

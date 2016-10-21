@@ -11,7 +11,7 @@ namespace LionFire.Trading.Bots
 {
 
 
-    public partial class BotBase<TConfig> : MarketParticipant, IBot, IStartable, IInitializable
+    public partial class BotBase<TConfig> : MarketParticipant, IBot, IStartable
         //, IInitializable
     {
         #region Relationships
@@ -76,16 +76,6 @@ namespace LionFire.Trading.Bots
             }
 
             return Account?.ExecuteMarketOrder(tradeType, symbol, volumeInUnits, label, stopLossInPips, takeProfitInPips, marketRangePips, comment);
-        }
-
-        public async Task Start()
-        {
-            if (Market == null) throw new HasUnresolvedDependenciesException();
-        }
-
-        public Task<bool> Initialize()
-        {
-            throw new NotImplementedException();
         }
     }
 }

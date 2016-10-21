@@ -8,6 +8,9 @@ using LionFire.Execution;
 using LionFire.Execution.Executables;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
+using System.Threading;
+using System.Collections.Concurrent;
+using LionFire.Dependencies;
 
 namespace LionFire.Trading
 {
@@ -120,7 +123,7 @@ namespace LionFire.Trading
         }
         protected virtual void OnAttached()
         {
-            Market.Started.Subscribe(started => { if (started) { OnStarting(); } });
+            Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
         }
 
         /// <summary>
@@ -146,27 +149,24 @@ namespace LionFire.Trading
         protected BehaviorObservable<ExecutionState> executionState = new BehaviorObservable<ExecutionState>();
 
         #endregion
-
-        //public Task<bool> Initialize()
-        //{
-        //    //unsatisfiedDependencies.Clear();
-        //    //if (Market == null)
-        //    //{
-        //    //    unsatisfiedDependencies.Add("Market");
-        //    //    return Task.FromResult(false);
-        //    //}
-        //    //return Task.FromResult(true);
-        //}
-
-        //public Task Start()
-        //{
-        //    throw new NotImplementedException();
-        //}
-
+        
         #endregion
 
-        protected virtual void OnStarting()
+        public async Task Start()
         {
+            this.ValidateDependencies();
+
+            await Task.Run(() => this.OnStarting());
+        }
+
+        protected async virtual Task OnMarketStarted()
+        {
+            await Start();
+        }
+
+        protected virtual void OnStarting() 
+        {
+            this.OnEnteringState(LionFire.Execution.ExecutionState.Starting);
         }
 
         #region Market Event Handling
@@ -216,4 +216,8 @@ namespace LionFire.Trading
         #endregion
 
     }
+
+
+
 }
+

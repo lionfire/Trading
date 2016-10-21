@@ -9,11 +9,11 @@ namespace LionFire.Trading
     {
         #region HistoricalSource
 
-        public IMarketSeries HistoricalSource {
-            get { return historicalSource; }
-            set { historicalSource = value; NextHistoricalIndex = -1; }
+        public IMarketSeries HistoricalSeries {
+            get { return historicalSeries; }
+            set { historicalSeries = value; NextHistoricalIndex = -1; }
         }
-        private IMarketSeries historicalSource;
+        private IMarketSeries historicalSeries;
 
         #endregion
 

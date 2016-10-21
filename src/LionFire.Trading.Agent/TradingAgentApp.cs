@@ -141,16 +141,16 @@ namespace LionFire.Trading.Agent
 
 
 
-        private void RunLive()
-        {
-            var liveMarket = new LiveMarket();
+        //private void RunLive()
+        //{
+        //    var liveMarket = new LiveMarket();
 
-            // TODO: Subscribe to prices of interest
-            //while (!ExitRequested)
-            //{
-            //}
+        //    // TODO: Subscribe to prices of interest
+        //    //while (!ExitRequested)
+        //    //{
+        //    //}
 
-        }
+        //}
 
         private void RunLiveSimulation()
         {

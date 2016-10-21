@@ -14,7 +14,7 @@ namespace OpenApiDeveloperLibrary
         uint lastMessagePayloadType = 0;
         ByteString lastMessagePayload = null;
 
-        #region Building Proto messages from Byte array methods
+#region Building Proto messages from Byte array methods
         public ProtoMessage GetMessage(byte[] msg)
         {
             var _msg = ProtoMessage.CreateBuilder().MergeFrom(msg).Build();
@@ -142,9 +142,9 @@ namespace OpenApiDeveloperLibrary
         {
             return ProtoOASpotEvent.CreateBuilder().MergeFrom(GetPayload(msg)).Build();
         }
-        #endregion
+#endregion
 
-        #region Creating new Proto messages with parameters specified
+#region Creating new Proto messages with parameters specified
         public ProtoMessage CreateMessage(uint payloadType, ByteString payload = null, string clientMsgId = null)
         {
             var protoMsg = ProtoMessage.CreateBuilder();
@@ -352,12 +352,19 @@ namespace OpenApiDeveloperLibrary
             _msg.SetStopPrice(stopPrice);
             return CreateMessage((uint)_msg.PayloadType, _msg.Build().ToByteString(), clientMsgId);
         }
-        public ProtoMessage CreateSubscribeForSpotsRequest(long accountId, string accessToken, string symbolName, string clientMsgId = null)
+        public ProtoMessage CreateSubscribeForSpotsRequest(long accountId, string accessToken, string symbolName, string clientMsgId = null, List<long> periods = null)
         {
             var _msg = ProtoOASubscribeForSpotsReq.CreateBuilder();
             _msg.SetAccountId(accountId);
             _msg.SetAccessToken(accessToken);
             _msg.SetSymblolName(symbolName);
+            if (periods != null)
+            {
+                foreach (var period in periods)
+                {
+                    _msg.result.AddPeriod(period);
+                }
+            }
             return CreateMessage((uint)_msg.PayloadType, _msg.Build().ToByteString(), clientMsgId);
         }
         public ProtoMessage CreateSubscribeForSpotsResponse(uint subscriptionId, string clientMsgId = null)
@@ -412,9 +419,9 @@ namespace OpenApiDeveloperLibrary
             var _msg = ProtoOAGetAllSpotSubscriptionsReq.CreateBuilder();
             return CreateMessage((uint)_msg.PayloadType, _msg.Build().ToByteString(), clientMsgId);
         }
-        #endregion
+#endregion
 
-        #region Creating new Proto messages Builders
+#region Creating new Proto messages Builders
         public ProtoOAGetAllSpotSubscriptionsRes.Builder CreateGetAllSpotSubscriptionsResponseBuilder(string clientMsgId = null)
         {
             return ProtoOAGetAllSpotSubscriptionsRes.CreateBuilder();
@@ -423,7 +430,7 @@ namespace OpenApiDeveloperLibrary
         {
             return ProtoOASpotEvent.CreateBuilder();
         }
-        #endregion
+#endregion
     }
 }
 #endif

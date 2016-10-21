@@ -26,6 +26,10 @@ using LionFire.Execution;
 using LionFire.Extensions.Logging;
 using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
+using LionFire.MultiTyping;
+using Microsoft.Extensions.DependencyInjection;
+using System.Reactive.Linq;
+using LionFire.Structures;
 
 namespace LionFire.Trading.Spotware.Connect
 {
@@ -44,7 +48,9 @@ namespace LionFire.Trading.Spotware.Connect
         public static int DefaultApiPort = 5032;
     }
 
-    public class CTraderAccount : LiveMarket, IRequiresServices, ITemplateInstance, IAppTask, IStartable, IHasExecutionFlags, IHasRunTask
+    public class CTraderAccount : LiveMarket, IRequiresServices, ITemplateInstance, IStartable, IHasExecutionFlags, IHasRunTask, IConfigures<IServiceCollection>
+    //, IHandler<SymbolTick>
+    //, IDataSource
     //, IHasExecutionState, IChangesExecutionState
     {
 
@@ -81,6 +87,8 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
+        public Positions Positions { get; set; } = new Positions();
+
         #region Relationships
 
         IServiceProvider IRequiresServices.ServiceProvider { get { return ServiceProvider; } set { this.ServiceProvider = value; } }
@@ -114,10 +122,28 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        #region State
+        #region Configuration
+
+        void IConfigures<IServiceCollection>.Configure(IServiceCollection sc)
+        {
+            sc.AddSingleton(typeof(IMarket), this);
+        }
+
+        #endregion
+
+        #region Initialization
+
+        public bool TryInitialize()
+        {
+            return Template != null;
+        }
+
+        #endregion
+
+        #region Execution
 
         public ExecutionFlags ExecutionFlags { get { return executionFlags; } set { executionFlags = value; } }
-        private volatile ExecutionFlags executionFlags;
+        private volatile ExecutionFlags executionFlags = ExecutionFlags.WaitForRunCompletion;
 
         //volatile bool isRestart;
         bool isRestart {
@@ -134,15 +160,38 @@ namespace LionFire.Trading.Spotware.Connect
         //}
         //public BehaviorSubject<ExecutionState> ExecutionStates = new BehaviorSubject<ExecutionState>(ExecutionState.Unspecified);
 
-        #endregion
-
-
-        #region Initialization
-
-        public bool TryInitialize()
+        public Task Start()
         {
-            return Template != null;
+            RunTask = Task.Factory.StartNew(Run);
+            return Task.CompletedTask;
         }
+
+        //CancellationToken? cancellationToken;
+
+        //public void Start(CancellationToken? cancellationToken = default(CancellationToken?))
+        //{
+        //    this.cancellationToken = cancellationToken;
+
+        //    if (cancellationToken.HasValue)
+        //    {
+        //        this.RunTask = Task.Factory.StartNew(Run, cancellationToken.Value);
+        //    }
+        //    else
+        //    {
+        //        this.RunTask = Task.Factory.StartNew(Run);
+        //    }
+        //}
+
+        //public bool WaitForCompletion {
+        //    get {
+        //        return false;
+        //    }
+        //}
+
+        public Task RunTask {
+            get; private set;
+        }
+
 
         #endregion
 
@@ -168,6 +217,11 @@ namespace LionFire.Trading.Spotware.Connect
         #endregion
 
         #region Threads
+
+        Thread processingThread;
+        Thread listenerThread;
+        Thread senderThread;
+        Thread timerThread;
 
         // timer thread
         void Timer(OpenApiMessagesFactory msgFactory, Queue messagesQueue)
@@ -197,7 +251,15 @@ namespace LionFire.Trading.Spotware.Connect
                 do
                 {
                     Thread.Sleep(0);
-                    readBytes += sslStream.Read(_length, readBytes, _length.Length - readBytes);
+                    try
+                    {
+                        readBytes += sslStream.Read(_length, readBytes, _length.Length - readBytes);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Listener threw exception: " + ex.GetType().Name);
+                        isShutdown = true;
+                    }
                 } while (readBytes < _length.Length);
 
                 int length = BitConverter.ToInt32(_length.Reverse().ToArray(), 0);
@@ -272,29 +334,6 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        #region Handlers
-
-        bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
-        {
-            if (sslPolicyErrors == SslPolicyErrors.None)
-                return true;
-            Console.WriteLine("Certificate error: {0}", sslPolicyErrors);
-            return false;
-        }
-
-        #endregion Handlers
-
-        public Task Start()
-        {
-            Task.Factory.StartNew(Run);
-            return Task.CompletedTask;
-        }
-
-        Thread p;
-        Thread tl;
-        Thread ts;
-        Thread t;
-
         private bool Connect()
         {
             #region open ssl connection
@@ -318,7 +357,7 @@ namespace LionFire.Trading.Spotware.Connect
 
             #region start incoming data processing thread
 
-            p = new Thread(() =>
+            processingThread = new Thread(() =>
             {
                 Thread.CurrentThread.IsBackground = true;
                 try
@@ -330,13 +369,13 @@ namespace LionFire.Trading.Spotware.Connect
                     logger.LogError("DataProcessor throws exception: {0}", e);
                 }
             });
-            p.Start();
+            processingThread.Start();
 
             #endregion
 
             #region start listener
 
-            tl = new Thread(() =>
+            listenerThread = new Thread(() =>
             {
                 Thread.CurrentThread.IsBackground = true;
                 try
@@ -348,13 +387,13 @@ namespace LionFire.Trading.Spotware.Connect
                     logger.LogError("Listener throws exception: {0}", e);
                 }
             });
-            tl.Start();
+            listenerThread.Start();
 
             #endregion
 
             #region start sender
 
-            ts = new Thread(() =>
+            senderThread = new Thread(() =>
             {
                 Thread.CurrentThread.IsBackground = true;
                 try
@@ -366,13 +405,13 @@ namespace LionFire.Trading.Spotware.Connect
                     logger.LogError("Transmitter throws exception: {0}", e);
                 }
             });
-            ts.Start();
+            senderThread.Start();
 
             #endregion
 
             #region start timer
 
-            t = new Thread(() =>
+            timerThread = new Thread(() =>
             {
                 Thread.CurrentThread.IsBackground = true;
                 try
@@ -384,22 +423,36 @@ namespace LionFire.Trading.Spotware.Connect
                     logger.LogError("Listener throws exception: {0}", e);
                 }
             });
-            t.Start();
+            timerThread.Start();
 
             #endregion
 
-            SendAuthorizationRequest();
+            //SendAuthorizationRequest();
 
-            while (!isAuthorized)
-            {
-                logger.LogInformation("Waiting for authorization response...");
-                Thread.Sleep(1000);
-            }
-            logger.LogInformation("Connected and authorized");
+            
+            //for(int retries = 5; retries > 0 &&  !isAuthorized; retries--)
+            //{
+            //    logger.LogInformation("Waiting for authorization response...");
+            //    Thread.Sleep(1000);
+            //}
+            var not = isAuthorized ? "" : " not ";
+            logger.LogInformation($"Connected and {not} authorized");
             return true;
         }
-        private bool isAuthorized;
 
+        #region Handlers
+
+        bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (sslPolicyErrors == SslPolicyErrors.None)
+                return true;
+            Console.WriteLine("Certificate error: {0}", sslPolicyErrors);
+            return false;
+        }
+
+        #endregion Handlers
+
+        private bool isAuthorized;
 
         private void CloseConnection()
         {
@@ -413,12 +466,12 @@ namespace LionFire.Trading.Spotware.Connect
             #region wait for shutting down threads
 
             Console.WriteLine("Shutting down connection...");
-            while (tl.IsAlive || t.IsAlive || p.IsAlive || ts.IsAlive)
+            while (listenerThread.IsAlive || timerThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
             {
                 Thread.Sleep(100);
             }
 
-            #endregion 
+            #endregion
         }
 
         private void DisplayMenu()
@@ -470,9 +523,9 @@ namespace LionFire.Trading.Spotware.Connect
 
                 if (!Connect()) return;
 
-                RequestSubscribeForSymbol("XAUUSD");
+                //RequestSubscribeForSymbol("XAUUSD");
 
-                while (tl.IsAlive || t.IsAlive || p.IsAlive || ts.IsAlive)
+                while (listenerThread.IsAlive || timerThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
                 {
                     //DisplayMenu();
 
@@ -514,7 +567,19 @@ namespace LionFire.Trading.Spotware.Connect
 
             switch (_msg.PayloadType)
             {
+                case (int)OpenApiLib.ProtoPayloadType.PING_RES:
+                    {
+                        var payload = msgFactory.GetPingResponse(rawData);
+                        if (payload.HasTimestamp)
+                        {
+                            Server.Time = new DateTime((long)payload.Timestamp);
+                            //Server.Time = DateTime.FromFileTimeUtc();
+                        }
+                        break;
+                    }
                 case (int)OpenApiLib.ProtoPayloadType.HEARTBEAT_EVENT:
+                    //var _payload_msg = msgFactory.GetHeartbeatEvent(rawData);
+
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_EXECUTION_EVENT:
                     var _payload_msg = msgFactory.GetExecutionEvent(rawData);
@@ -534,16 +599,42 @@ namespace LionFire.Trading.Spotware.Connect
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SPOT_EVENT:
                     {
                         var payload = msgFactory.GetSpotEvent(rawData);
-                        var str = payload.SymbolName;
-                        if (payload.HasAskPrice) str += " Ask: " + payload.AskPrice;
-                        if (payload.HasBidPrice) str += " Bid: " + payload.BidPrice;
-                        Console.WriteLine(str);
+
+                        var timestampField = payload.UnknownFields[7];
+                        var timestamp = timestampField.VarintList[0];
+                        var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(timestamp);
+
+                        var tick = new TimedTick
+                        {
+                            Ask = payload.HasAskPrice ? payload.AskPrice : double.NaN,
+                            Bid = payload.HasBidPrice ? payload.BidPrice : double.NaN,
+                            Time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(timestamp)
+                        };
+
+                        var symbol = GetSymbol(payload.SymbolName);
+                        symbol.Handle(tick);
+
+                        break;
+                    }
+                case (int)OpenApiLib.ProtoOAPayloadType.OA_SUBSCRIBE_FOR_SPOTS_RES:
+                    {
+                        var payload = msgFactory.GetSubscribeForSpotsResponse(rawData);
+                        //payload.SubscriptionId;
+
+                        break;
+                    }
+                case (int)OpenApiLib.ProtoOAPayloadType.OA_UNSUBSCRIBE_FROM_SPOTS_RES:
+                    {
                         break;
                     }
                 default:
                     break;
             };
         }
+
+        #endregion
+
+        #region Event Handling
 
         #endregion
 
@@ -725,47 +816,178 @@ namespace LionFire.Trading.Spotware.Connect
 
         protected void RequestSubscribeForSymbol(string symbol)
         {
-            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId);
+            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, new List<long> { 1, 2 });
+            
             if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
+        protected void RequestUnsubscribeForSymbol(string symbol)
+        {
+            throw new NotImplementedException();
+            //var _msg = outgoingMsgFactory.CreateUnsubscribeAccountFromSpotsRequest(AccountId, AccessToken, symbol, clientMsgId);
+            //if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be send:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            //writeQueueSync.Enqueue(_msg.ToByteArray());
+        }
+
 
         #endregion
 
 
         #endregion Outgoing ProtoBuffer objects to Raw data...
 
+        #region Symbol Subscriptions
 
-        #region IAppTask
+        ConcurrentDictionary<string, DateTime> subscriptionActive = new ConcurrentDictionary<string, DateTime>();
+        ConcurrentDictionary<string, DateTime> subscriptionRequested = new ConcurrentDictionary<string, DateTime>();
+        ConcurrentDictionary<string, DateTime> unsubscriptionRequested = new ConcurrentDictionary<string, DateTime>();
 
-        CancellationToken? cancellationToken;
-
-        public void Start(CancellationToken? cancellationToken = default(CancellationToken?))
+        protected override void Subscribe(string symbolCode, string timeFrame)
         {
-            this.cancellationToken = cancellationToken;
-
-            if (cancellationToken.HasValue)
+            var key = symbolCode + ";" + timeFrame;
+            if (subscriptionActive.ContainsKey(key))
             {
-                this.RunTask = Task.Factory.StartNew(Run, cancellationToken.Value);
+                return;
+            }
+
+            if (timeFrame == "t1")
+            {
+                var date = DateTime.UtcNow;
+                var existing = subscriptionRequested.GetOrAdd(symbolCode, date);
+                if (date == existing)
+                {
+                    RequestSubscribeForSymbol(symbolCode);
+                }
+            }
+            else if (timeFrame == "m1")
+            {
+            }
+            else if (timeFrame == "h1")
+            {
             }
             else
             {
-                this.RunTask = Task.Factory.StartNew(Run);
+                throw new NotImplementedException();
             }
-        }
 
-        public bool WaitForCompletion {
-            get {
-                return false;
+        }
+        protected override void Unsubscribe(string symbolCode, string timeFrame)
+        {
+            var key = symbolCode + ";" + timeFrame;
+
+            if (!subscriptionActive.ContainsKey(key))
+            {
+                return;
             }
-        }
 
-        public Task RunTask {
-            get; private set;
+            if (timeFrame == "t1")
+            {
+                var date = DateTime.UtcNow;
+                var existing = unsubscriptionRequested.GetOrAdd(symbolCode, date);
+                if (date == existing)
+                {
+                    RequestSubscribeForSymbol(symbolCode);
+                }
+            }
+            else if (timeFrame == "m1")
+            {
+            }
+            else if (timeFrame == "h1")
+            {
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
         }
 
         #endregion
+
+        #region Symbols
+
+        public new CTraderSymbol GetSymbol(string symbolCode)
+        {
+            return (CTraderSymbol)base.GetSymbol(symbolCode);
+        }
+
+        protected override Symbol CreateSymbol(string symbolCode)
+        {
+            return new CTraderSymbol(symbolCode, this);
+        }
+
+        public Subject<TimedTick> GetTickSubject(string symbolCode, bool createIfMissing = true)
+        {
+            if (tickSubjects.ContainsKey(symbolCode)) return tickSubjects[symbolCode];
+            if (!createIfMissing) return null;
+            var subject = new Subject<TimedTick>();
+            tickSubjects.Add(symbolCode, subject);
+            return subject;
+        }
+        Dictionary<string, Subject<TimedTick>> tickSubjects = new Dictionary<string, Subject<TimedTick>>();
+
+        #endregion
+
+        #region Series
+
+        public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
+        {
+            var kvp = new KeyValuePair<string, string>(symbol.Code, timeFrame.ToString());
+            return marketSeries.GetOrAdd(kvp, _ =>
+            {
+                var result = new MarketSeries(kvp.Key, timeFrame);
+                //var source = new MixedDataSource();
+                //result.Source = source;
+
+                //source.Live = new LiveDataSource()
+                //{
+                //    Account = this,
+                //};
+                return result;
+            });
+        }
+
+        #endregion
+
+        #region IDataSource
+
+        //public string SourceName {
+        //    get {
+        //        return "CTrader";
+        //    }
+        //}
+
+        //public MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, DateTime? startDate = default(DateTime?), DateTime? endDate = default(DateTime?))
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        //public MarketSeries GetMarketSeries(string key, DateTime? startDate = default(DateTime?), DateTime? endDate = default(DateTime?))
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        #endregion
+
+        internal ILogger Logger { get { return logger; } }
+
     }
+
+    ///// <summary>
+    ///// Live ticks
+    ///// </summary>
+    //public class MixedDataSource : IDataSource
+    //{
+    //    public LiveDataSource Live { get; set; }
+    //    public HistoricalDataSource Historical { get; set; }
+
+    //    public string SourceName {
+    //        get {
+    //            throw new NotImplementedException();
+    //        }
+    //    }
+
+
+    //}
+
 }
 
 #endif

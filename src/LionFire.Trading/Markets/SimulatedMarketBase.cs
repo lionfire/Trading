@@ -8,11 +8,12 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 using LionFire.ExtensionMethods;
+using System.Collections.Concurrent;
 
 namespace LionFire.Trading
 {
 
-    
+
 
     public class TMarketSim : TMarket
     {
@@ -21,7 +22,7 @@ namespace LionFire.Trading
     public abstract class SimulatedMarketBase<TTemplate> : MarketBase<TTemplate>, ISimulatedMarket, IMarket
         where TTemplate : TMarketSim
     {
-        
+
 
         #region Parameters
 
@@ -68,7 +69,7 @@ namespace LionFire.Trading
         public SimulatedMarketBase()
         {
             SimulationTimeStep = TimeFrame.m1;
-            MarketData = new MarketData() { Market = this };
+            
         }
 
         #endregion
@@ -136,7 +137,7 @@ namespace LionFire.Trading
         {
             LastExecutedTime = DateTime.MinValue;
             SimulationTime = default(DateTime); // IsStarted = false
-           
+
         }
 
         /// <summary>
@@ -144,7 +145,7 @@ namespace LionFire.Trading
         /// </summary>
         public override void Initialize()
         {
-            
+
 
             if (SimulationTime != default(DateTime)) return;
             base.Initialize();
@@ -208,18 +209,17 @@ namespace LionFire.Trading
             // Find a matching historical source, or find a more granular one that can be used.
             // FUTURE: Get factors of a timeframe instead of the simple MoreGranular iteration logic.  e.g. from h12 search for h6 h4 h3 h2 h1 m30 m15 m12 m10 m6 m5 m4 m2 m1 t*
             // FUTURE: After simulation complete, save downsampled backtest data
-            for (TimeFrame sourceTimeFrame = series.TimeFrame; state.HistoricalSource == null && sourceTimeFrame != null; sourceTimeFrame = sourceTimeFrame.MoreGranular())
+            for (TimeFrame sourceTimeFrame = series.TimeFrame; state.HistoricalSeries == null && sourceTimeFrame != null; sourceTimeFrame = sourceTimeFrame.MoreGranular())
             {
-                state.HistoricalSource = Data.HistoricalDataSources.GetMarketSeries(series.SymbolCode, sourceTimeFrame, this.StartDate, this.EndDate);
+                state.HistoricalSeries = Data.HistoricalDataSources.GetMarketSeries(series.SymbolCode, sourceTimeFrame, this.StartDate, this.EndDate);
             }
 
             return state;
-            
+
         }
 
-//#warning TODO?  Implement series as a replaysubject with their own time counter?  With a method AdvanceToTime()
-//#warning NEXT: a common and efficient decoupled architecture combining direct events/subscriber list and a pubsub channel concept: 
-
+        //#warning TODO?  Implement series as a replaysubject with their own time counter?  With a method AdvanceToTime()
+        //#warning NEXT: a common and efficient decoupled architecture combining direct events/subscriber list and a pubsub channel concept: 
 
         protected void Execute(DateTime time)
         {
@@ -237,7 +237,7 @@ namespace LionFire.Trading
             #endregion
 
             #region Bars
-                        
+
             bool gotBar = false;
             // OPTIMIZE: Sync up index between live and historical series to make it faster
             foreach (var series in Data.ActiveLiveSeries)
@@ -261,19 +261,19 @@ namespace LionFire.Trading
                 if (time < (series.OpenTime.LastValue + series.TimeFrame.TimeSpan)) continue; // No new bar yet
 
                 var symbol = (SymbolImpl)this.GetSymbol(series.SymbolCode);
-                
+
                 HistoricalPlaybackState state = series.HistoricalPlaybackState;
                 if (state == null)
                 {
                     state = series.HistoricalPlaybackState = GetHistoricalPlaybackState(series);
 
-                    if (state.HistoricalSource == null)
+                    if (state.HistoricalSeries == null)
                     {
                         logger.LogWarning($"Could not find historical data source for {series}");
                         continue;
                     }
                 }
-                if (state.HistoricalSource == null)
+                if (state.HistoricalSeries == null)
                 {
                     continue;
                 }
@@ -283,14 +283,14 @@ namespace LionFire.Trading
 
                 if (state.NextHistoricalIndex < 0)
                 {
-                    state.NextHistoricalIndex = state.HistoricalSource.FindIndex(time);
+                    state.NextHistoricalIndex = state.HistoricalSeries.FindIndex(time);
                     if (state.NextHistoricalIndex < 0)
                     {
                         continue;
                     }
                 }
 
-                if (state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
+                if (state.HistoricalSeries.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
                 {
                     // FUTURE: Somehow support this?
                     logger.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
@@ -308,14 +308,14 @@ namespace LionFire.Trading
                 }
 
                 int mergeCount = 0;
-                for (;state.NextHistoricalIndex < state.HistoricalSource.Count ; state.NextHistoricalIndex++)
+                for (; state.NextHistoricalIndex < state.HistoricalSeries.Count; state.NextHistoricalIndex++)
                 {
-                    var historicalBar = state.HistoricalSource[state.NextHistoricalIndex];
+                    var historicalBar = state.HistoricalSeries[state.NextHistoricalIndex];
 
                     if (historicalBar.OpenTime == time)
                     {
                         gotBar = true;
-                        if (state.HistoricalSource.TimeFrame == series.TimeFrame)
+                        if (state.HistoricalSeries.TimeFrame == series.TimeFrame)
                         {
 
                             ((IMarketSeriesInternal)series).OnBar(historicalBar, true); // OPTIMIZE - AsParallel
@@ -377,7 +377,7 @@ namespace LionFire.Trading
             #endregion
 
             if (gotBar) { SimulationTickFinished?.Invoke(); }
-            if (gotBar) { Ticked?.Invoke(); }
+            if (gotBar) { RaiseTicked(); }
 
             if (removals != null)
             {
@@ -405,8 +405,6 @@ namespace LionFire.Trading
         }
 
         public event Action SimulationTickFinished;
-        public event Action Ticked;
-
 
         int delayBetweenSteps = 0;
 
@@ -512,9 +510,7 @@ namespace LionFire.Trading
 
         #region Symbol
 
-        Dictionary<string, Symbol> symbols = new Dictionary<string, Symbol>();
-
-        public Symbol GetSymbol(string symbolCode)
+        protected override Symbol CreateSymbol(string symbolCode)
         {
             Symbol symbol;
 
@@ -524,12 +520,12 @@ namespace LionFire.Trading
 
             SymbolImpl result = new SymbolImpl(symbolCode, this);
             result.LoadSymbolInfo(symbolInfo);
-            symbols.Add(symbolCode, result);
-            
             result.Account = this.Accounts.FirstOrDefault();
 
             return result;
         }
+
+
 
         public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
         {
@@ -539,7 +535,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        
+
     }
 
 

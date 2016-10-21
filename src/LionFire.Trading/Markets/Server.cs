@@ -7,6 +7,28 @@ namespace LionFire.Trading
 {
     public class Server
     {
-        public DateTime Time { get; set; }
+        #region Time
+
+        public DateTime Time {
+            get { return time; }
+            set {
+                time = value;
+                LocalDelta = DateTime.UtcNow - value;
+            }
+        }
+        private DateTime time;
+
+        #endregion
+
+        public DateTime ExtrapolatedTime {
+            get {
+                return DateTime.UtcNow - LocalDelta;
+            }
+        }
+
+        public TimeSpan LocalDelta {
+            get; set;
+        }
+
     }
 }
