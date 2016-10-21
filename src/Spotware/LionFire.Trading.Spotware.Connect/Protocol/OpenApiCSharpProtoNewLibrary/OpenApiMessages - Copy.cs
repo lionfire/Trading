@@ -2930,8 +2930,8 @@ namespace OpenApiLib
             }
             UnknownFields.WriteTo(output);
         }
-
-        private int memoizedSerializedSize = -1;
+        
+    private int memoizedSerializedSize = -1;
         public override int SerializedSize {
             get {
                 int size = memoizedSerializedSize;
@@ -7782,7 +7782,7 @@ namespace OpenApiLib
         {
             object.ReferenceEquals(global::OpenApiLib.OpenApiMessages.Descriptor, null);
         }
-
+        
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
