@@ -1,0 +1,200 @@
+option java_multiple_files = true;
+option java_generate_equals_and_hash = true;
+option java_package = "com.xtrader.protocol.proto.openapi";
+option java_outer_classname = "ContainerOpenApiMessages";
+
+import "OpenApiModelMessages.proto";
+import "CommonModelMessages.proto";
+
+//+------------------------------------------------------------------+
+//|                  Open Trading API Messages                       |
+//+------------------------------------------------------------------+
+
+
+/** Authentication request */
+message ProtoOAAuthReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_AUTH_REQ];
+
+    required string clientId = 2;
+    required string clientSecret = 3;
+}
+
+/** Authentication response */
+message ProtoOAAuthRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_AUTH_RES];
+}
+
+/** Request which subscribes for trading events for specified account */
+message ProtoOASubscribeForTradingEventsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_SUBSCRIBE_FOR_TRADING_EVENTS_REQ];
+    required int64 accountId = 2;
+    required string accessToken = 3;
+}
+
+/** Trading event subscription response */
+message ProtoOASubscribeForTradingEventsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_SUBSCRIBE_FOR_TRADING_EVENTS_RES];
+}
+
+/** Request which unsubscribes from trading events for specified account */
+message ProtoOAUnsubscribeFromTradingEventsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_UNSUBSCRIBE_FROM_TRADING_EVENTS_REQ];
+    required int64 accountId = 2;
+}
+
+/** Trading event unsubscription response */
+message ProtoOAUnsubscribeFromTradingEventsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_UNSUBSCRIBE_FROM_TRADING_EVENTS_RES];
+}
+
+/** Request for a list of accounts trading events from which are received */
+message ProtoOAGetSubscribedAccountsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_GET_SUBSCRIBED_ACCOUNTS_REQ];
+}
+
+/** Response with a list of accounts trading events from which are received */
+message ProtoOAGetSubscribedAccountsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_GET_SUBSCRIBED_ACCOUNTS_RES];
+    repeated int64 accountId = 2;
+}
+
+/** Open Api Execution event */
+message ProtoOAExecutionEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_EXECUTION_EVENT];
+    required ProtoOAExecutionType executionType = 2;
+
+    required ProtoOAOrder order = 3;
+    optional ProtoOAPosition position = 4;
+    optional string reasonCode = 5;
+}
+
+/** A request for a new order */
+message ProtoOACreateOrderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_CREATE_ORDER_REQ];
+    required string accessToken = 2;
+    required int64 accountId = 3;
+    required string symbolName = 4;
+    required ProtoOAOrderType orderType = 5;
+    required ProtoTradeSide tradeSide = 6;
+    required int64 volume = 7;
+
+    optional int32 relativeStopLossInPips = 8;
+    optional int32 relativeTakeProfitInPips = 9;
+    optional double baseSlippagePrice = 10;
+    optional int64 slippageInPips = 11;
+
+    optional double limitPrice = 12;
+    optional double stopPrice = 13;
+    optional int64 expirationTimestamp = 14;
+    optional double stopLossPrice = 15;
+    optional double takeProfitPrice = 16;
+
+    optional string comment = 17;
+    optional int64 positionId = 18;
+    optional ProtoTimeInForce timeInForce = 19;
+    optional string clientOrderId = 20;
+}
+
+/** Cancel pending order request*/
+message ProtoOACancelOrderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_CANCEL_ORDER_REQ];
+    required string accessToken = 2;
+    required int64 accountId = 3;
+    required int64 orderId = 4;
+}
+
+/** Closing existing position request */
+message ProtoOAClosePositionReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_CLOSE_POSITION_REQ];
+    required string accessToken = 2;
+    required int64 accountId = 3;
+    required int64 positionId = 4;
+    required int64 volume = 5;
+    optional ProtoTimeInForce timeInForce = 6; //not supported yet
+}
+
+/** Amending existing position's stop loss and take profit */
+message ProtoOAAmendPositionStopLossTakeProfitReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_AMEND_POSITION_SL_TP_REQ];
+    required string accessToken = 2;
+    required int64 accountId = 3;
+    required int64 positionId = 4;
+    optional double stopLossPrice = 5; // absolute stop loss price (1.23456 for example).
+    optional double takeProfitPrice = 6; // absolute take profit price (1.26543 for example).
+}
+
+/** Amending existing pending order request*/
+message ProtoOAAmendOrderReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_AMEND_ORDER_REQ];
+    required string accessToken = 2;
+    required int64 accountId = 3;
+    required int64 orderId = 4;
+    optional ProtoTimeInForce timeInForce = 5 [default = GOOD_TILL_CANCEL]; // available GTD and GTC only. not supported yet
+    optional double limitPrice = 6;
+    optional double stopPrice = 7;
+    optional int64 expirationTimestamp = 8; // should be set in case GTD.
+    optional int64 minVolume = 9; // min volume to fill. If minVolume equals to volume this means partial fills is disabled not supported yet
+    optional double stopLossPrice = 10; // absolute stop loss price (1.23456 for example). Excludes takeProfitInPips field. Unsupported for MARKER orders.
+    optional double takeProfitPrice = 11; // absolute take profit price (1.23456 for example). Excludes takeProfitInPips field. Unsupported for MARKER orders.
+    optional int32 relativeStopLossInPips = 12; // relative stop loss price for Market order with relative SL/TP set in pips
+    optional int32 relativeTakeProfitInPips = 14; // relative take profit price for Market order with relative SL/TP set in pips
+    optional string comment = 15; // not supported yet
+}
+
+/** Request subscribes for spots for specified account and symbol*/
+message ProtoOASubscribeForSpotsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_SUBSCRIBE_FOR_SPOTS_REQ];
+    required int64 accountId = 2;
+    required string accessToken = 3;
+    required string symblolName = 4;
+}
+
+/** Spot subscription response */
+message ProtoOASubscribeForSpotsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_SUBSCRIBE_FOR_SPOTS_RES];
+    required uint32 subscriptionId = 2; // this ID is assigned per trading account, same account has the same subscription ID for all its symbols subscribed, each connection can have up to 100 subscriptions max, but numebr of connections established from the same IP is not limited
+}
+
+/** Unsubscribes from spots for specified subscriptionId and accountId*/
+message ProtoOAUnsubscribeFromSpotsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_UNSUBSCRIBE_FROM_SPOTS_REQ];
+    optional uint32 subscriptionId = 2;
+    optional string symblolName = 3;
+}
+
+/** Spot unsubscription response */
+message ProtoOAUnsubscribeFromSpotsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_UNSUBSCRIBE_FROM_SPOTS_RES];
+}
+
+/** Request for subscription by its id*/
+message ProtoOAGetSpotSubscriptionReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_GET_SPOT_SUBSCRIPTION_REQ];
+    required uint32 subscriptionId = 2;
+}
+
+/** SpotSubscription Response*/
+message ProtoOAGetSpotSubscriptionRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_GET_SPOT_SUBSCRIPTION_RES];
+    required ProtoOASpotSubscription spotSubscription = 2;
+}
+
+/** Request for all subscriptions of specified account */
+message ProtoOAGetAllSpotSubscriptionsReq {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_GET_ALL_SPOT_SUBSCRIPTIONS_REQ];
+}
+
+/** Response with all account's spotSubscriptions */
+message ProtoOAGetAllSpotSubscriptionsRes {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_GET_ALL_SPOT_SUBSCRIPTIONS_RES];
+    repeated ProtoOASpotSubscription spotSubscriptions = 2;
+}
+
+/** Spot event */
+message ProtoOASpotEvent {
+    optional ProtoOAPayloadType payloadType = 1 [default = OA_SPOT_EVENT];
+    required uint32 subscriptionId = 2;
+    required string symbolName = 3;
+    optional double bidPrice = 4;
+    optional double askPrice = 5;
+}

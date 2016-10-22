@@ -1,0 +1,141 @@
+option java_multiple_files = true;
+option java_generate_equals_and_hash = true;
+option java_package = "com.xtrader.protocol.proto.openapi.model";
+option java_outer_classname = "ContainerOpenApiModelMessages";
+
+import "CommonModelMessages.proto";
+
+//+------------------------------------------------------------------+
+//|               Open Trading API Enumerates                        |
+//+------------------------------------------------------------------+
+/** OPEN API 2000 - 2999 */
+enum ProtoOAPayloadType {
+    OA_AUTH_REQ = 2000;
+    OA_AUTH_RES = 2001;
+    OA_SUBSCRIBE_FOR_TRADING_EVENTS_REQ = 2002;
+    OA_SUBSCRIBE_FOR_TRADING_EVENTS_RES = 2003;
+    OA_UNSUBSCRIBE_FROM_TRADING_EVENTS_REQ = 2004;
+    OA_UNSUBSCRIBE_FROM_TRADING_EVENTS_RES = 2005;
+    OA_GET_SUBSCRIBED_ACCOUNTS_REQ = 2006;
+    OA_GET_SUBSCRIBED_ACCOUNTS_RES = 2007;
+    //gap: OA_EVENTS were there
+    OA_CREATE_ORDER_REQ = 2013;
+    OA_EXECUTION_EVENT = 2016;
+    OA_CANCEL_ORDER_REQ = 2017;
+    OA_CLOSE_POSITION_REQ = 2018;
+    OA_AMEND_POSITION_SL_TP_REQ = 2019;
+    OA_AMEND_ORDER_REQ = 2020;
+    OA_SUBSCRIBE_FOR_SPOTS_REQ = 2021;
+    OA_SUBSCRIBE_FOR_SPOTS_RES = 2022;
+    OA_UNSUBSCRIBE_FROM_SPOTS_REQ = 2023;
+    OA_UNSUBSCRIBE_FROM_SPOTS_RES = 2024;
+    OA_GET_SPOT_SUBSCRIPTION_REQ = 2025;
+    OA_GET_SPOT_SUBSCRIPTION_RES = 2026;
+    OA_GET_ALL_SPOT_SUBSCRIPTIONS_REQ = 2027;
+    OA_GET_ALL_SPOT_SUBSCRIPTIONS_RES = 2028;
+    OA_SPOT_EVENT = 2029;
+}
+
+/** Supported order types*/
+enum ProtoOAOrderType {
+    OA_MARKET = 1;
+    OA_LIMIT = 2;
+    OA_STOP = 3;
+    OA_PROTECTION = 4;
+    OA_MARKET_RANGE = 5;
+}
+
+/** Open Api Execution Type*/
+enum ProtoOAExecutionType {
+    OA_ORDER_ACCEPTED = 1;
+    OA_ORDER_FILLED = 2;
+    OA_ORDER_CANCELLED = 3;
+    OA_ORDER_EXPIRED = 4;
+    OA_ORDER_AMENDED = 5;
+    OA_ORDER_REJECTED = 6;
+    OA_ORDER_CANCEL_REJECTED = 7;
+}
+
+enum ProtoOAPositionStatus {
+    OA_POSITION_STATUS_OPEN = 1;
+    OA_POSITION_STATUS_CLOSED = 2;
+    OA_POSITION_STATUS_CREATED = 3;
+    OA_POSITION_STATUS_ERROR = 4;
+}
+
+message ProtoOAPartnerDetails {
+    required string partnerName = 1;
+}
+
+//+------------------------------------------------------------------+
+//|              Open Trading API Model Messages                     |
+//+------------------------------------------------------------------+
+
+/** Represents an information about an order from execution event received from server */
+message ProtoOAOrder {
+    required int64 orderId = 1; //trading API does NOT guarantee the uniqueness of this field. It is unique only within one account (accountId)
+    required int64 accountId = 2;
+    required ProtoOAOrderType orderType = 3;
+    required ProtoTradeSide tradeSide = 4;
+    required string symbolName = 5;
+    required bool closingOrder = 6;
+    required int64 requestedVolume = 7; // in cents
+    optional int64 executedVolume = 8; // in cents
+    optional double executionPrice = 9;
+    optional double limitPrice = 10;
+    optional double stopPrice = 11;
+    optional double stopLossPrice = 12;
+    optional double takeProfitPrice = 13;
+    optional double baseSlippagePrice = 14;
+    optional int64 slippageInPips = 15;
+    optional int32 relativeStopLossInPips = 16;
+    optional int32 relativeTakeProfitInPips = 17;
+    optional int64 commission = 18;
+    optional int64 openTimestamp = 19;
+    optional int64 closeTimestamp = 20;
+    optional int64 expirationTimestamp = 21;
+    optional string channel = 22;
+    optional string comment = 23;
+    optional ProtoOAClosePositionDetails closePositionDetails = 24;
+    optional string clientOrderId = 25;
+}
+
+/** Represents an information about a position from execution event received from server */
+message ProtoOAPosition {
+    required int64 positionId = 1; //trading API does NOT guarantee the uniqueness of this field. It is unique only within one account (accountId)
+    required int64 accountId = 2;
+    required ProtoOAPositionStatus positionStatus = 3;
+    required ProtoTradeSide tradeSide = 4;
+    required string symbolName = 5;
+    required int64 volume = 6;
+    required double entryPrice = 7;
+    optional int64 swap = 8;
+    optional int64 commission = 9;
+    required int64 openTimestamp = 10;
+    optional int64 closeTimestamp = 11;
+    optional double stopLossPrice = 12;
+    optional double takeProfitPrice = 13;
+    optional string channel = 14;
+    optional string comment = 15;
+}
+
+/** Represents additional details for the position which has been closed */
+message ProtoOAClosePositionDetails {
+    required double entryPrice = 1;
+    required int64 profit = 2; // in cents
+    required int64 swap = 3; // in cents
+    required int64 commission = 4; // in cents
+    required int64 balance = 5; // in cents
+    optional string comment = 6;
+    optional double stopLossPrice = 7;
+    optional double takeProfitPrice = 8;
+    optional double quoteToDepositConversionRate = 9;
+    required int64 closedVolume = 10;
+    required bool closedByStopOut = 11;
+}
+
+message ProtoOASpotSubscription {
+    required int64 accountId = 1;
+    required uint32 subscriptionId = 2;
+    repeated string symbolNames = 3;
+}
