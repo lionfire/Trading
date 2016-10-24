@@ -149,7 +149,7 @@ namespace LionFire.Trading
         protected BehaviorObservable<ExecutionState> executionState = new BehaviorObservable<ExecutionState>();
 
         #endregion
-        
+
         #endregion
 
         public async Task Start()
@@ -164,7 +164,7 @@ namespace LionFire.Trading
             await Start();
         }
 
-        protected virtual void OnStarting() 
+        protected virtual void OnStarting()
         {
             this.OnEnteringState(LionFire.Execution.ExecutionState.Starting);
         }
@@ -208,10 +208,11 @@ namespace LionFire.Trading
         }
 
         #endregion
-        
+
         #region Misc
 
-        private ILogger logger;
+        public ILogger Logger { get { return logger; } }
+        protected ILogger logger;
 
         #endregion
 

@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+    // REVIEW: Move these to account
+
     public interface IMarket : IHierarchicalTemplateInstance
     {
 #if !cAlgo

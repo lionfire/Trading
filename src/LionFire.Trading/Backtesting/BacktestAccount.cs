@@ -383,10 +383,6 @@ namespace LionFire.Trading.Backtesting
 
         #endregion
 
-        #region Misc
-
-        private static ILogger logger;
-
-        #endregion
+        
     }
 }

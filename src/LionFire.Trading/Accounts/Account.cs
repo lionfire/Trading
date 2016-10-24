@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +10,18 @@ namespace LionFire.Trading
     public class AccountBase
     {
         public PositionStats PositionStats { get; protected set; }
+
+
+        #region Logger
+
+        public ILogger  Logger {
+            get { return logger; }
+        }
+        protected ILogger logger;
+
+        #endregion
+
+
     }
 
     public class LiveAccount : AccountBase, IAccount

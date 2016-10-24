@@ -68,7 +68,7 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        public IMarket Market { get; set; }
+        public IMarket Market { get; protected set; }
 
         public IAccount Account { get; set; }
 

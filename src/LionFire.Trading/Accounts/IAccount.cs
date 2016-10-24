@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -29,7 +30,12 @@ namespace LionFire.Trading
         GetFitnessArgs GetFitnessArgs();
 
         PositionStats PositionStats { get; }
+
+        // TODO: Move to internal interface and use friend assemblies
+        ILogger Logger { get; }
     }
 
-
+    //internal interface IAccountInternal
+    //{
+    //}
 }

@@ -169,6 +169,7 @@ namespace LionFire.Trading
 
         #region Misc
 
+        public ILogger Logger { get { return logger; } }
         protected ILogger logger;
 
         #endregion

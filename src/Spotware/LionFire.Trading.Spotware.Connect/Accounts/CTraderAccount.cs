@@ -49,7 +49,7 @@ namespace LionFire.Trading.Spotware.Connect
         public static int DefaultApiPort = 5032;
     }
 
-    public class CTraderAccount : LiveMarket, IRequiresServices, ITemplateInstance, IStartable, IHasExecutionFlags, IHasRunTask, IConfigures<IServiceCollection>
+    public class CTraderAccount : LiveMarket, IRequiresServices, ITemplateInstance, IStartable, IHasExecutionFlags, IHasRunTask, IConfigures<IServiceCollection>, IAccount
     //, IHandler<SymbolTick>
     //, IDataSource
     //, IHasExecutionState, IChangesExecutionState
@@ -955,6 +955,26 @@ namespace LionFire.Trading.Spotware.Connect
             });
         }
 
+        public TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TradeResult ClosePosition(Position position)
+        {
+            throw new NotImplementedException();
+        }
+
+        public TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit)
+        {
+            throw new NotImplementedException();
+        }
+
+        public GetFitnessArgs GetFitnessArgs()
+        {
+            throw new NotImplementedException();
+        }
+
         #endregion
 
         #region IDataSource
@@ -977,7 +997,59 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        internal ILogger Logger { get { return logger; } }
+        
+
+        #region IAccount
+
+        public double Equity {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        public double Balance {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        public string Currency {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        public double StopOutLevel {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        public bool IsDemo {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        IPositions IAccount.Positions {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        public IPendingOrders PendingOrders {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        public PositionStats PositionStats {
+            get {
+                throw new NotImplementedException();
+            }
+        }
+
+        #endregion
 
     }
 
