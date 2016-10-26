@@ -27,6 +27,8 @@ namespace OpenApiLib {
     internal static pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOAClosePositionDetails, global::OpenApiLib.ProtoOAClosePositionDetails.Builder> internal__static_ProtoOAClosePositionDetails__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_ProtoOASpotSubscription__Descriptor;
     internal static pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOASpotSubscription, global::OpenApiLib.ProtoOASpotSubscription.Builder> internal__static_ProtoOASpotSubscription__FieldAccessorTable;
+    internal static pbd::MessageDescriptor internal__static_ProtoOASubscribedSpotSymbol__Descriptor;
+    internal static pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOASubscribedSpotSymbol, global::OpenApiLib.ProtoOASubscribedSpotSymbol.Builder> internal__static_ProtoOASubscribedSpotSymbol__FieldAccessorTable;
     internal static pbd::MessageDescriptor internal__static_ProtoOATrendbar__Descriptor;
     internal static pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOATrendbar, global::OpenApiLib.ProtoOATrendbar.Builder> internal__static_ProtoOATrendbar__FieldAccessorTable;
     #endregion
@@ -41,7 +43,7 @@ namespace OpenApiLib {
           string.Concat(
             "ChpPcGVuQXBpTW9kZWxNZXNzYWdlcy5wcm90bxoZQ29tbW9uTW9kZWxNZXNz", 
             "YWdlcy5wcm90byIsChVQcm90b09BUGFydG5lckRldGFpbHMSEwoLcGFydG5l", 
-            "ck5hbWUYASACKAkikAUKDFByb3RvT0FPcmRlchIPCgdvcmRlcklkGAEgAigD", 
+            "ck5hbWUYASACKAkioQUKDFByb3RvT0FPcmRlchIPCgdvcmRlcklkGAEgAigD", 
             "EhEKCWFjY291bnRJZBgCIAIoAxIkCglvcmRlclR5cGUYAyACKA4yES5Qcm90", 
             "b09BT3JkZXJUeXBlEiIKCXRyYWRlU2lkZRgEIAIoDjIPLlByb3RvVHJhZGVT", 
             "aWRlEhIKCnN5bWJvbE5hbWUYBSACKAkSFAoMY2xvc2luZ09yZGVyGAYgAigI", 
@@ -55,59 +57,63 @@ namespace OpenApiLib {
             "EyABKAMSFgoOY2xvc2VUaW1lc3RhbXAYFCABKAMSGwoTZXhwaXJhdGlvblRp", 
             "bWVzdGFtcBgVIAEoAxIPCgdjaGFubmVsGBYgASgJEg8KB2NvbW1lbnQYFyAB", 
             "KAkSOgoUY2xvc2VQb3NpdGlvbkRldGFpbHMYGCABKAsyHC5Qcm90b09BQ2xv", 
-            "c2VQb3NpdGlvbkRldGFpbHMSFQoNY2xpZW50T3JkZXJJZBgZIAEoCSLnAgoP", 
-            "UHJvdG9PQVBvc2l0aW9uEhIKCnBvc2l0aW9uSWQYASACKAMSEQoJYWNjb3Vu", 
-            "dElkGAIgAigDEi4KDnBvc2l0aW9uU3RhdHVzGAMgAigOMhYuUHJvdG9PQVBv", 
-            "c2l0aW9uU3RhdHVzEiIKCXRyYWRlU2lkZRgEIAIoDjIPLlByb3RvVHJhZGVT", 
-            "aWRlEhIKCnN5bWJvbE5hbWUYBSACKAkSDgoGdm9sdW1lGAYgAigDEhIKCmVu", 
-            "dHJ5UHJpY2UYByACKAESDAoEc3dhcBgIIAEoAxISCgpjb21taXNzaW9uGAkg", 
-            "ASgDEhUKDW9wZW5UaW1lc3RhbXAYCiACKAMSFgoOY2xvc2VUaW1lc3RhbXAY", 
-            "CyABKAMSFQoNc3RvcExvc3NQcmljZRgMIAEoARIXCg90YWtlUHJvZml0UHJp", 
-            "Y2UYDSABKAESDwoHY2hhbm5lbBgOIAEoCRIPCgdjb21tZW50GA8gASgJIooC", 
-            "ChtQcm90b09BQ2xvc2VQb3NpdGlvbkRldGFpbHMSEgoKZW50cnlQcmljZRgB", 
-            "IAIoARIOCgZwcm9maXQYAiACKAMSDAoEc3dhcBgDIAIoAxISCgpjb21taXNz", 
-            "aW9uGAQgAigDEg8KB2JhbGFuY2UYBSACKAMSDwoHY29tbWVudBgGIAEoCRIV", 
-            "Cg1zdG9wTG9zc1ByaWNlGAcgASgBEhcKD3Rha2VQcm9maXRQcmljZRgIIAEo", 
-            "ARIkChxxdW90ZVRvRGVwb3NpdENvbnZlcnNpb25SYXRlGAkgASgBEhQKDGNs", 
-            "b3NlZFZvbHVtZRgKIAIoAxIXCg9jbG9zZWRCeVN0b3BPdXQYCyACKAgiWQoX", 
-            "UHJvdG9PQVNwb3RTdWJzY3JpcHRpb24SEQoJYWNjb3VudElkGAEgAigDEhYK", 
-            "DnN1YnNjcmlwdGlvbklkGAIgAigNEhMKC3N5bWJvbE5hbWVzGAMgAygJIpcB", 
-            "Cg9Qcm90b09BVHJlbmRiYXISDAoEb3BlbhgBIAEoARINCgVjbG9zZRgCIAEo", 
-            "ARIMCgRoaWdoGAMgASgBEgsKA2xvdxgEIAEoARIOCgZ2b2x1bWUYBSACKAMS", 
-            "FAoMdXRjVGltZXN0YW1wGAYgASgDEiYKBnBlcmlvZBgHIAEoDjIWLlByb3Rv", 
-            "T0FUcmVuZGJhclBlcmlvZCqIBgoSUHJvdG9PQVBheWxvYWRUeXBlEhAKC09B", 
-            "X0FVVEhfUkVRENAPEhAKC09BX0FVVEhfUkVTENEPEigKI09BX1NVQlNDUklC", 
-            "RV9GT1JfVFJBRElOR19FVkVOVFNfUkVRENIPEigKI09BX1NVQlNDUklCRV9G", 
-            "T1JfVFJBRElOR19FVkVOVFNfUkVTENMPEisKJk9BX1VOU1VCU0NSSUJFX0ZS", 
-            "T01fVFJBRElOR19FVkVOVFNfUkVRENQPEisKJk9BX1VOU1VCU0NSSUJFX0ZS", 
-            "T01fVFJBRElOR19FVkVOVFNfUkVTENUPEiMKHk9BX0dFVF9TVUJTQ1JJQkVE", 
-            "X0FDQ09VTlRTX1JFURDWDxIjCh5PQV9HRVRfU1VCU0NSSUJFRF9BQ0NPVU5U", 
-            "U19SRVMQ1w8SGAoTT0FfQ1JFQVRFX09SREVSX1JFURDdDxIXChJPQV9FWEVD", 
-            "VVRJT05fRVZFTlQQ4A8SGAoTT0FfQ0FOQ0VMX09SREVSX1JFURDhDxIaChVP", 
-            "QV9DTE9TRV9QT1NJVElPTl9SRVEQ4g8SIAobT0FfQU1FTkRfUE9TSVRJT05f", 
-            "U0xfVFBfUkVREOMPEhcKEk9BX0FNRU5EX09SREVSX1JFURDkDxIfChpPQV9T", 
-            "VUJTQ1JJQkVfRk9SX1NQT1RTX1JFURDlDxIfChpPQV9TVUJTQ1JJQkVfRk9S", 
-            "X1NQT1RTX1JFUxDmDxIiCh1PQV9VTlNVQlNDUklCRV9GUk9NX1NQT1RTX1JF", 
-            "URDnDxIiCh1PQV9VTlNVQlNDUklCRV9GUk9NX1NQT1RTX1JFUxDoDxIhChxP", 
-            "QV9HRVRfU1BPVF9TVUJTQ1JJUFRJT05fUkVREOkPEiEKHE9BX0dFVF9TUE9U", 
-            "X1NVQlNDUklQVElPTl9SRVMQ6g8SJgohT0FfR0VUX0FMTF9TUE9UX1NVQlND", 
-            "UklQVElPTlNfUkVREOsPEiYKIU9BX0dFVF9BTExfU1BPVF9TVUJTQ1JJUFRJ", 
-            "T05TX1JFUxDsDxISCg1PQV9TUE9UX0VWRU5UEO0PKmQKEFByb3RvT0FPcmRl", 
-            "clR5cGUSDQoJT0FfTUFSS0VUEAESDAoIT0FfTElNSVQQAhILCgdPQV9TVE9Q", 
-            "EAMSEQoNT0FfUFJPVEVDVElPThAEEhMKD09BX01BUktFVF9SQU5HRRAFKrsB", 
-            "ChRQcm90b09BRXhlY3V0aW9uVHlwZRIVChFPQV9PUkRFUl9BQ0NFUFRFRBAB", 
-            "EhMKD09BX09SREVSX0ZJTExFRBACEhYKEk9BX09SREVSX0NBTkNFTExFRBAD", 
-            "EhQKEE9BX09SREVSX0VYUElSRUQQBBIUChBPQV9PUkRFUl9BTUVOREVEEAUS", 
-            "FQoRT0FfT1JERVJfUkVKRUNURUQQBhIcChhPQV9PUkRFUl9DQU5DRUxfUkVK", 
-            "RUNURUQQByqRAQoVUHJvdG9PQVBvc2l0aW9uU3RhdHVzEhsKF09BX1BPU0lU", 
-            "SU9OX1NUQVRVU19PUEVOEAESHQoZT0FfUE9TSVRJT05fU1RBVFVTX0NMT1NF", 
-            "RBACEh4KGk9BX1BPU0lUSU9OX1NUQVRVU19DUkVBVEVEEAMSHAoYT0FfUE9T", 
-            "SVRJT05fU1RBVFVTX0VSUk9SEAQqjAEKFVByb3RvT0FUcmVuZGJhclBlcmlv", 
-            "ZBIGCgJtMRABEgYKAm0yEAISBgoCTTMQAxIGCgJNNBAEEgYKAk01EAUSBwoD", 
-            "TTEwEAYSBwoDTTE1EAcSBwoDTTMwEAgSBgoCSDEQCRIGCgJINBAKEgcKA0gx", 
-            "MhALEgYKAkQxEAwSBgoCVzEQDRIHCgNNTjEQDkJOCihjb20ueHRyYWRlci5w", 
-            "cm90b2NvbC5wcm90by5vcGVuYXBpLm1vZGVsQh1Db250YWluZXJPcGVuQXBp", 
-          "TW9kZWxNZXNzYWdlc1ABoAEB"));
+            "c2VQb3NpdGlvbkRldGFpbHMSFQoNY2xpZW50T3JkZXJJZBgZIAEoCRIPCgdz", 
+            "dG9wT3V0GBogASgIIucCCg9Qcm90b09BUG9zaXRpb24SEgoKcG9zaXRpb25J", 
+            "ZBgBIAIoAxIRCglhY2NvdW50SWQYAiACKAMSLgoOcG9zaXRpb25TdGF0dXMY", 
+            "AyACKA4yFi5Qcm90b09BUG9zaXRpb25TdGF0dXMSIgoJdHJhZGVTaWRlGAQg", 
+            "AigOMg8uUHJvdG9UcmFkZVNpZGUSEgoKc3ltYm9sTmFtZRgFIAIoCRIOCgZ2", 
+            "b2x1bWUYBiACKAMSEgoKZW50cnlQcmljZRgHIAIoARIMCgRzd2FwGAggASgD", 
+            "EhIKCmNvbW1pc3Npb24YCSABKAMSFQoNb3BlblRpbWVzdGFtcBgKIAIoAxIW", 
+            "Cg5jbG9zZVRpbWVzdGFtcBgLIAEoAxIVCg1zdG9wTG9zc1ByaWNlGAwgASgB", 
+            "EhcKD3Rha2VQcm9maXRQcmljZRgNIAEoARIPCgdjaGFubmVsGA4gASgJEg8K", 
+            "B2NvbW1lbnQYDyABKAkijgIKG1Byb3RvT0FDbG9zZVBvc2l0aW9uRGV0YWls", 
+            "cxISCgplbnRyeVByaWNlGAEgAigBEg4KBnByb2ZpdBgCIAIoAxIMCgRzd2Fw", 
+            "GAMgAigDEhIKCmNvbW1pc3Npb24YBCACKAMSDwoHYmFsYW5jZRgFIAIoAxIP", 
+            "Cgdjb21tZW50GAYgASgJEhUKDXN0b3BMb3NzUHJpY2UYByABKAESFwoPdGFr", 
+            "ZVByb2ZpdFByaWNlGAggASgBEiQKHHF1b3RlVG9EZXBvc2l0Q29udmVyc2lv", 
+            "blJhdGUYCSABKAESFAoMY2xvc2VkVm9sdW1lGAogAigDEhsKD2Nsb3NlZEJ5", 
+            "U3RvcE91dBgLIAEoCEICGAEilgEKF1Byb3RvT0FTcG90U3Vic2NyaXB0aW9u", 
+            "EhEKCWFjY291bnRJZBgBIAIoAxIWCg5zdWJzY3JpcHRpb25JZBgCIAIoDRIX", 
+            "CgtzeW1ib2xOYW1lcxgDIAMoCUICGAESNwoRc3Vic2NyaWJlZFN5bWJvbHMY", 
+            "BCADKAsyHC5Qcm90b09BU3Vic2NyaWJlZFNwb3RTeW1ib2wiWQobUHJvdG9P", 
+            "QVN1YnNjcmliZWRTcG90U3ltYm9sEhIKCnN5bWJvbE5hbWUYASACKAkSJgoG", 
+            "cGVyaW9kGAIgAygOMhYuUHJvdG9PQVRyZW5kYmFyUGVyaW9kIpsBCg9Qcm90", 
+            "b09BVHJlbmRiYXISDAoEb3BlbhgBIAEoARINCgVjbG9zZRgCIAEoARIMCgRo", 
+            "aWdoGAMgASgBEgsKA2xvdxgEIAEoARIOCgZ2b2x1bWUYBSACKAMSFAoMdXRj", 
+            "VGltZXN0YW1wGAYgASgDEioKBnBlcmlvZBgHIAEoDjIWLlByb3RvT0FUcmVu", 
+            "ZGJhclBlcmlvZDoCTTEqiAYKElByb3RvT0FQYXlsb2FkVHlwZRIQCgtPQV9B", 
+            "VVRIX1JFURDQDxIQCgtPQV9BVVRIX1JFUxDRDxIoCiNPQV9TVUJTQ1JJQkVf", 
+            "Rk9SX1RSQURJTkdfRVZFTlRTX1JFURDSDxIoCiNPQV9TVUJTQ1JJQkVfRk9S", 
+            "X1RSQURJTkdfRVZFTlRTX1JFUxDTDxIrCiZPQV9VTlNVQlNDUklCRV9GUk9N", 
+            "X1RSQURJTkdfRVZFTlRTX1JFURDUDxIrCiZPQV9VTlNVQlNDUklCRV9GUk9N", 
+            "X1RSQURJTkdfRVZFTlRTX1JFUxDVDxIjCh5PQV9HRVRfU1VCU0NSSUJFRF9B", 
+            "Q0NPVU5UU19SRVEQ1g8SIwoeT0FfR0VUX1NVQlNDUklCRURfQUNDT1VOVFNf", 
+            "UkVTENcPEhgKE09BX0NSRUFURV9PUkRFUl9SRVEQ3Q8SFwoST0FfRVhFQ1VU", 
+            "SU9OX0VWRU5UEOAPEhgKE09BX0NBTkNFTF9PUkRFUl9SRVEQ4Q8SGgoVT0Ff", 
+            "Q0xPU0VfUE9TSVRJT05fUkVREOIPEiAKG09BX0FNRU5EX1BPU0lUSU9OX1NM", 
+            "X1RQX1JFURDjDxIXChJPQV9BTUVORF9PUkRFUl9SRVEQ5A8SHwoaT0FfU1VC", 
+            "U0NSSUJFX0ZPUl9TUE9UU19SRVEQ5Q8SHwoaT0FfU1VCU0NSSUJFX0ZPUl9T", 
+            "UE9UU19SRVMQ5g8SIgodT0FfVU5TVUJTQ1JJQkVfRlJPTV9TUE9UU19SRVEQ", 
+            "5w8SIgodT0FfVU5TVUJTQ1JJQkVfRlJPTV9TUE9UU19SRVMQ6A8SIQocT0Ff", 
+            "R0VUX1NQT1RfU1VCU0NSSVBUSU9OX1JFURDpDxIhChxPQV9HRVRfU1BPVF9T", 
+            "VUJTQ1JJUFRJT05fUkVTEOoPEiYKIU9BX0dFVF9BTExfU1BPVF9TVUJTQ1JJ", 
+            "UFRJT05TX1JFURDrDxImCiFPQV9HRVRfQUxMX1NQT1RfU1VCU0NSSVBUSU9O", 
+            "U19SRVMQ7A8SEgoNT0FfU1BPVF9FVkVOVBDtDypkChBQcm90b09BT3JkZXJU", 
+            "eXBlEg0KCU9BX01BUktFVBABEgwKCE9BX0xJTUlUEAISCwoHT0FfU1RPUBAD", 
+            "EhEKDU9BX1BST1RFQ1RJT04QBBITCg9PQV9NQVJLRVRfUkFOR0UQBSq7AQoU", 
+            "UHJvdG9PQUV4ZWN1dGlvblR5cGUSFQoRT0FfT1JERVJfQUNDRVBURUQQARIT", 
+            "Cg9PQV9PUkRFUl9GSUxMRUQQAhIWChJPQV9PUkRFUl9DQU5DRUxMRUQQAxIU", 
+            "ChBPQV9PUkRFUl9FWFBJUkVEEAQSFAoQT0FfT1JERVJfQU1FTkRFRBAFEhUK", 
+            "EU9BX09SREVSX1JFSkVDVEVEEAYSHAoYT0FfT1JERVJfQ0FOQ0VMX1JFSkVD", 
+            "VEVEEAcqkQEKFVByb3RvT0FQb3NpdGlvblN0YXR1cxIbChdPQV9QT1NJVElP", 
+            "Tl9TVEFUVVNfT1BFThABEh0KGU9BX1BPU0lUSU9OX1NUQVRVU19DTE9TRUQQ", 
+            "AhIeChpPQV9QT1NJVElPTl9TVEFUVVNfQ1JFQVRFRBADEhwKGE9BX1BPU0lU", 
+            "SU9OX1NUQVRVU19FUlJPUhAEKowBChVQcm90b09BVHJlbmRiYXJQZXJpb2QS", 
+            "BgoCTTEQARIGCgJNMhACEgYKAk0zEAMSBgoCTTQQBBIGCgJNNRAFEgcKA00x", 
+            "MBAGEgcKA00xNRAHEgcKA00zMBAIEgYKAkgxEAkSBgoCSDQQChIHCgNIMTIQ", 
+            "CxIGCgJEMRAMEgYKAlcxEA0SBwoDTU4xEA5CTgooY29tLnh0cmFkZXIucHJv", 
+            "dG9jb2wucHJvdG8ub3BlbmFwaS5tb2RlbEIdQ29udGFpbmVyT3BlbkFwaU1v", 
+          "ZGVsTWVzc2FnZXNQAaABAQ=="));
       pbd::FileDescriptor.InternalDescriptorAssigner assigner = delegate(pbd::FileDescriptor root) {
         descriptor = root;
         internal__static_ProtoOAPartnerDetails__Descriptor = Descriptor.MessageTypes[0];
@@ -117,7 +123,7 @@ namespace OpenApiLib {
         internal__static_ProtoOAOrder__Descriptor = Descriptor.MessageTypes[1];
         internal__static_ProtoOAOrder__FieldAccessorTable = 
             new pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOAOrder, global::OpenApiLib.ProtoOAOrder.Builder>(internal__static_ProtoOAOrder__Descriptor,
-                new string[] { "OrderId", "AccountId", "OrderType", "TradeSide", "SymbolName", "ClosingOrder", "RequestedVolume", "ExecutedVolume", "ExecutionPrice", "LimitPrice", "StopPrice", "StopLossPrice", "TakeProfitPrice", "BaseSlippagePrice", "SlippageInPips", "RelativeStopLossInPips", "RelativeTakeProfitInPips", "Commission", "OpenTimestamp", "CloseTimestamp", "ExpirationTimestamp", "Channel", "Comment", "ClosePositionDetails", "ClientOrderId", });
+                new string[] { "OrderId", "AccountId", "OrderType", "TradeSide", "SymbolName", "ClosingOrder", "RequestedVolume", "ExecutedVolume", "ExecutionPrice", "LimitPrice", "StopPrice", "StopLossPrice", "TakeProfitPrice", "BaseSlippagePrice", "SlippageInPips", "RelativeStopLossInPips", "RelativeTakeProfitInPips", "Commission", "OpenTimestamp", "CloseTimestamp", "ExpirationTimestamp", "Channel", "Comment", "ClosePositionDetails", "ClientOrderId", "StopOut", });
         internal__static_ProtoOAPosition__Descriptor = Descriptor.MessageTypes[2];
         internal__static_ProtoOAPosition__FieldAccessorTable = 
             new pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOAPosition, global::OpenApiLib.ProtoOAPosition.Builder>(internal__static_ProtoOAPosition__Descriptor,
@@ -129,8 +135,12 @@ namespace OpenApiLib {
         internal__static_ProtoOASpotSubscription__Descriptor = Descriptor.MessageTypes[4];
         internal__static_ProtoOASpotSubscription__FieldAccessorTable = 
             new pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOASpotSubscription, global::OpenApiLib.ProtoOASpotSubscription.Builder>(internal__static_ProtoOASpotSubscription__Descriptor,
-                new string[] { "AccountId", "SubscriptionId", "SymbolNames", });
-        internal__static_ProtoOATrendbar__Descriptor = Descriptor.MessageTypes[5];
+                new string[] { "AccountId", "SubscriptionId", "SymbolNames", "SubscribedSymbols", });
+        internal__static_ProtoOASubscribedSpotSymbol__Descriptor = Descriptor.MessageTypes[5];
+        internal__static_ProtoOASubscribedSpotSymbol__FieldAccessorTable = 
+            new pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOASubscribedSpotSymbol, global::OpenApiLib.ProtoOASubscribedSpotSymbol.Builder>(internal__static_ProtoOASubscribedSpotSymbol__Descriptor,
+                new string[] { "SymbolName", "Period", });
+        internal__static_ProtoOATrendbar__Descriptor = Descriptor.MessageTypes[6];
         internal__static_ProtoOATrendbar__FieldAccessorTable = 
             new pb::FieldAccess.FieldAccessorTable<global::OpenApiLib.ProtoOATrendbar, global::OpenApiLib.ProtoOATrendbar.Builder>(internal__static_ProtoOATrendbar__Descriptor,
                 new string[] { "Open", "Close", "High", "Low", "Volume", "UtcTimestamp", "Period", });
@@ -497,8 +507,8 @@ namespace OpenApiLib {
   public sealed partial class ProtoOAOrder : pb::GeneratedMessage<ProtoOAOrder, ProtoOAOrder.Builder> {
     private ProtoOAOrder() { }
     private static readonly ProtoOAOrder defaultInstance = new ProtoOAOrder().MakeReadOnly();
-    private static readonly string[] _protoOAOrderFieldNames = new string[] { "accountId", "baseSlippagePrice", "channel", "clientOrderId", "closePositionDetails", "closeTimestamp", "closingOrder", "comment", "commission", "executedVolume", "executionPrice", "expirationTimestamp", "limitPrice", "openTimestamp", "orderId", "orderType", "relativeStopLossInPips", "relativeTakeProfitInPips", "requestedVolume", "slippageInPips", "stopLossPrice", "stopPrice", "symbolName", "takeProfitPrice", "tradeSide" };
-    private static readonly uint[] _protoOAOrderFieldTags = new uint[] { 16, 113, 178, 202, 194, 160, 48, 186, 144, 64, 73, 168, 81, 152, 8, 24, 128, 136, 56, 120, 97, 89, 42, 105, 32 };
+    private static readonly string[] _protoOAOrderFieldNames = new string[] { "accountId", "baseSlippagePrice", "channel", "clientOrderId", "closePositionDetails", "closeTimestamp", "closingOrder", "comment", "commission", "executedVolume", "executionPrice", "expirationTimestamp", "limitPrice", "openTimestamp", "orderId", "orderType", "relativeStopLossInPips", "relativeTakeProfitInPips", "requestedVolume", "slippageInPips", "stopLossPrice", "stopOut", "stopPrice", "symbolName", "takeProfitPrice", "tradeSide" };
+    private static readonly uint[] _protoOAOrderFieldTags = new uint[] { 16, 113, 178, 202, 194, 160, 48, 186, 144, 64, 73, 168, 81, 152, 8, 24, 128, 136, 56, 120, 97, 208, 89, 42, 105, 32 };
     public static ProtoOAOrder DefaultInstance {
       get { return defaultInstance; }
     }
@@ -769,6 +779,16 @@ namespace OpenApiLib {
       get { return clientOrderId_; }
     }
     
+    public const int StopOutFieldNumber = 26;
+    private bool hasStopOut;
+    private bool stopOut_;
+    public bool HasStopOut {
+      get { return hasStopOut; }
+    }
+    public bool StopOut {
+      get { return stopOut_; }
+    }
+    
     public override bool IsInitialized {
       get {
         if (!hasOrderId) return false;
@@ -798,10 +818,10 @@ namespace OpenApiLib {
         output.WriteEnum(3, field_names[15], (int) OrderType, OrderType);
       }
       if (hasTradeSide) {
-        output.WriteEnum(4, field_names[24], (int) TradeSide, TradeSide);
+        output.WriteEnum(4, field_names[25], (int) TradeSide, TradeSide);
       }
       if (hasSymbolName) {
-        output.WriteString(5, field_names[22], SymbolName);
+        output.WriteString(5, field_names[23], SymbolName);
       }
       if (hasClosingOrder) {
         output.WriteBool(6, field_names[6], ClosingOrder);
@@ -819,13 +839,13 @@ namespace OpenApiLib {
         output.WriteDouble(10, field_names[12], LimitPrice);
       }
       if (hasStopPrice) {
-        output.WriteDouble(11, field_names[21], StopPrice);
+        output.WriteDouble(11, field_names[22], StopPrice);
       }
       if (hasStopLossPrice) {
         output.WriteDouble(12, field_names[20], StopLossPrice);
       }
       if (hasTakeProfitPrice) {
-        output.WriteDouble(13, field_names[23], TakeProfitPrice);
+        output.WriteDouble(13, field_names[24], TakeProfitPrice);
       }
       if (hasBaseSlippagePrice) {
         output.WriteDouble(14, field_names[1], BaseSlippagePrice);
@@ -862,6 +882,9 @@ namespace OpenApiLib {
       }
       if (hasClientOrderId) {
         output.WriteString(25, field_names[3], ClientOrderId);
+      }
+      if (hasStopOut) {
+        output.WriteBool(26, field_names[21], StopOut);
       }
       UnknownFields.WriteTo(output);
     }
@@ -954,6 +977,9 @@ namespace OpenApiLib {
       }
       if (hasClientOrderId) {
         size += pb::CodedOutputStream.ComputeStringSize(25, ClientOrderId);
+      }
+      if (hasStopOut) {
+        size += pb::CodedOutputStream.ComputeBoolSize(26, StopOut);
       }
       size += UnknownFields.SerializedSize;
       memoizedSerializedSize = size;
@@ -1152,6 +1178,9 @@ namespace OpenApiLib {
         if (other.HasClientOrderId) {
           ClientOrderId = other.ClientOrderId;
         }
+        if (other.HasStopOut) {
+          StopOut = other.StopOut;
+        }
         this.MergeUnknownFields(other.UnknownFields);
         return this;
       }
@@ -1314,6 +1343,10 @@ namespace OpenApiLib {
             }
             case 202: {
               result.hasClientOrderId = input.ReadString(ref result.clientOrderId_);
+              break;
+            }
+            case 208: {
+              result.hasStopOut = input.ReadBool(ref result.stopOut_);
               break;
             }
           }
@@ -1847,6 +1880,26 @@ namespace OpenApiLib {
         PrepareBuilder();
         result.hasClientOrderId = false;
         result.clientOrderId_ = "";
+        return this;
+      }
+      
+      public bool HasStopOut {
+        get { return result.hasStopOut; }
+      }
+      public bool StopOut {
+        get { return result.StopOut; }
+        set { SetStopOut(value); }
+      }
+      public Builder SetStopOut(bool value) {
+        PrepareBuilder();
+        result.hasStopOut = true;
+        result.stopOut_ = value;
+        return this;
+      }
+      public Builder ClearStopOut() {
+        PrepareBuilder();
+        result.hasStopOut = false;
+        result.stopOut_ = false;
         return this;
       }
     }
@@ -2888,9 +2941,11 @@ namespace OpenApiLib {
     public const int ClosedByStopOutFieldNumber = 11;
     private bool hasClosedByStopOut;
     private bool closedByStopOut_;
+    [global::System.ObsoleteAttribute()]
     public bool HasClosedByStopOut {
       get { return hasClosedByStopOut; }
     }
+    [global::System.ObsoleteAttribute()]
     public bool ClosedByStopOut {
       get { return closedByStopOut_; }
     }
@@ -2903,7 +2958,6 @@ namespace OpenApiLib {
         if (!hasCommission) return false;
         if (!hasBalance) return false;
         if (!hasClosedVolume) return false;
-        if (!hasClosedByStopOut) return false;
         return true;
       }
     }
@@ -3447,19 +3501,23 @@ namespace OpenApiLib {
         return this;
       }
       
+      [global::System.ObsoleteAttribute()]
       public bool HasClosedByStopOut {
         get { return result.hasClosedByStopOut; }
       }
+      [global::System.ObsoleteAttribute()]
       public bool ClosedByStopOut {
         get { return result.ClosedByStopOut; }
         set { SetClosedByStopOut(value); }
       }
+      [global::System.ObsoleteAttribute()]
       public Builder SetClosedByStopOut(bool value) {
         PrepareBuilder();
         result.hasClosedByStopOut = true;
         result.closedByStopOut_ = value;
         return this;
       }
+      [global::System.ObsoleteAttribute()]
       public Builder ClearClosedByStopOut() {
         PrepareBuilder();
         result.hasClosedByStopOut = false;
@@ -3476,8 +3534,8 @@ namespace OpenApiLib {
   public sealed partial class ProtoOASpotSubscription : pb::GeneratedMessage<ProtoOASpotSubscription, ProtoOASpotSubscription.Builder> {
     private ProtoOASpotSubscription() { }
     private static readonly ProtoOASpotSubscription defaultInstance = new ProtoOASpotSubscription().MakeReadOnly();
-    private static readonly string[] _protoOASpotSubscriptionFieldNames = new string[] { "accountId", "subscriptionId", "symbolNames" };
-    private static readonly uint[] _protoOASpotSubscriptionFieldTags = new uint[] { 8, 16, 26 };
+    private static readonly string[] _protoOASpotSubscriptionFieldNames = new string[] { "accountId", "subscribedSymbols", "subscriptionId", "symbolNames" };
+    private static readonly uint[] _protoOASpotSubscriptionFieldTags = new uint[] { 8, 34, 16, 26 };
     public static ProtoOASpotSubscription DefaultInstance {
       get { return defaultInstance; }
     }
@@ -3521,20 +3579,38 @@ namespace OpenApiLib {
     
     public const int SymbolNamesFieldNumber = 3;
     private pbc::PopsicleList<string> symbolNames_ = new pbc::PopsicleList<string>();
+    [global::System.ObsoleteAttribute()]
     public scg::IList<string> SymbolNamesList {
       get { return pbc::Lists.AsReadOnly(symbolNames_); }
     }
+    [global::System.ObsoleteAttribute()]
     public int SymbolNamesCount {
       get { return symbolNames_.Count; }
     }
+    [global::System.ObsoleteAttribute()]
     public string GetSymbolNames(int index) {
       return symbolNames_[index];
+    }
+    
+    public const int SubscribedSymbolsFieldNumber = 4;
+    private pbc::PopsicleList<global::OpenApiLib.ProtoOASubscribedSpotSymbol> subscribedSymbols_ = new pbc::PopsicleList<global::OpenApiLib.ProtoOASubscribedSpotSymbol>();
+    public scg::IList<global::OpenApiLib.ProtoOASubscribedSpotSymbol> SubscribedSymbolsList {
+      get { return subscribedSymbols_; }
+    }
+    public int SubscribedSymbolsCount {
+      get { return subscribedSymbols_.Count; }
+    }
+    public global::OpenApiLib.ProtoOASubscribedSpotSymbol GetSubscribedSymbols(int index) {
+      return subscribedSymbols_[index];
     }
     
     public override bool IsInitialized {
       get {
         if (!hasAccountId) return false;
         if (!hasSubscriptionId) return false;
+        foreach (global::OpenApiLib.ProtoOASubscribedSpotSymbol element in SubscribedSymbolsList) {
+          if (!element.IsInitialized) return false;
+        }
         return true;
       }
     }
@@ -3546,10 +3622,13 @@ namespace OpenApiLib {
         output.WriteInt64(1, field_names[0], AccountId);
       }
       if (hasSubscriptionId) {
-        output.WriteUInt32(2, field_names[1], SubscriptionId);
+        output.WriteUInt32(2, field_names[2], SubscriptionId);
       }
       if (symbolNames_.Count > 0) {
-        output.WriteStringArray(3, field_names[2], symbolNames_);
+        output.WriteStringArray(3, field_names[3], symbolNames_);
+      }
+      if (subscribedSymbols_.Count > 0) {
+        output.WriteMessageArray(4, field_names[1], subscribedSymbols_);
       }
       UnknownFields.WriteTo(output);
     }
@@ -3581,6 +3660,9 @@ namespace OpenApiLib {
         }
         size += dataSize;
         size += 1 * symbolNames_.Count;
+      }
+      foreach (global::OpenApiLib.ProtoOASubscribedSpotSymbol element in SubscribedSymbolsList) {
+        size += pb::CodedOutputStream.ComputeMessageSize(4, element);
       }
       size += UnknownFields.SerializedSize;
       memoizedSerializedSize = size;
@@ -3618,6 +3700,7 @@ namespace OpenApiLib {
     }
     private ProtoOASpotSubscription MakeReadOnly() {
       symbolNames_.MakeReadOnly();
+      subscribedSymbols_.MakeReadOnly();
       return this;
     }
     
@@ -3714,6 +3797,9 @@ namespace OpenApiLib {
         if (other.symbolNames_.Count != 0) {
           result.symbolNames_.Add(other.symbolNames_);
         }
+        if (other.subscribedSymbols_.Count != 0) {
+          result.subscribedSymbols_.Add(other.subscribedSymbols_);
+        }
         this.MergeUnknownFields(other.UnknownFields);
         return this;
       }
@@ -3769,6 +3855,10 @@ namespace OpenApiLib {
               input.ReadStringArray(tag, field_name, result.symbolNames_);
               break;
             }
+            case 34: {
+              input.ReadMessageArray(tag, field_name, result.subscribedSymbols_, global::OpenApiLib.ProtoOASubscribedSpotSymbol.DefaultInstance, extensionRegistry);
+              break;
+            }
           }
         }
         
@@ -3821,39 +3911,440 @@ namespace OpenApiLib {
         return this;
       }
       
+      [global::System.ObsoleteAttribute()]
       public pbc::IPopsicleList<string> SymbolNamesList {
         get { return PrepareBuilder().symbolNames_; }
       }
+      [global::System.ObsoleteAttribute()]
       public int SymbolNamesCount {
         get { return result.SymbolNamesCount; }
       }
+      [global::System.ObsoleteAttribute()]
       public string GetSymbolNames(int index) {
         return result.GetSymbolNames(index);
       }
+      [global::System.ObsoleteAttribute()]
       public Builder SetSymbolNames(int index, string value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.symbolNames_[index] = value;
         return this;
       }
+      [global::System.ObsoleteAttribute()]
       public Builder AddSymbolNames(string value) {
         pb::ThrowHelper.ThrowIfNull(value, "value");
         PrepareBuilder();
         result.symbolNames_.Add(value);
         return this;
       }
+      [global::System.ObsoleteAttribute()]
       public Builder AddRangeSymbolNames(scg::IEnumerable<string> values) {
         PrepareBuilder();
         result.symbolNames_.Add(values);
         return this;
       }
+      [global::System.ObsoleteAttribute()]
       public Builder ClearSymbolNames() {
         PrepareBuilder();
         result.symbolNames_.Clear();
         return this;
       }
+      
+      public pbc::IPopsicleList<global::OpenApiLib.ProtoOASubscribedSpotSymbol> SubscribedSymbolsList {
+        get { return PrepareBuilder().subscribedSymbols_; }
+      }
+      public int SubscribedSymbolsCount {
+        get { return result.SubscribedSymbolsCount; }
+      }
+      public global::OpenApiLib.ProtoOASubscribedSpotSymbol GetSubscribedSymbols(int index) {
+        return result.GetSubscribedSymbols(index);
+      }
+      public Builder SetSubscribedSymbols(int index, global::OpenApiLib.ProtoOASubscribedSpotSymbol value) {
+        pb::ThrowHelper.ThrowIfNull(value, "value");
+        PrepareBuilder();
+        result.subscribedSymbols_[index] = value;
+        return this;
+      }
+      public Builder SetSubscribedSymbols(int index, global::OpenApiLib.ProtoOASubscribedSpotSymbol.Builder builderForValue) {
+        pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
+        PrepareBuilder();
+        result.subscribedSymbols_[index] = builderForValue.Build();
+        return this;
+      }
+      public Builder AddSubscribedSymbols(global::OpenApiLib.ProtoOASubscribedSpotSymbol value) {
+        pb::ThrowHelper.ThrowIfNull(value, "value");
+        PrepareBuilder();
+        result.subscribedSymbols_.Add(value);
+        return this;
+      }
+      public Builder AddSubscribedSymbols(global::OpenApiLib.ProtoOASubscribedSpotSymbol.Builder builderForValue) {
+        pb::ThrowHelper.ThrowIfNull(builderForValue, "builderForValue");
+        PrepareBuilder();
+        result.subscribedSymbols_.Add(builderForValue.Build());
+        return this;
+      }
+      public Builder AddRangeSubscribedSymbols(scg::IEnumerable<global::OpenApiLib.ProtoOASubscribedSpotSymbol> values) {
+        PrepareBuilder();
+        result.subscribedSymbols_.Add(values);
+        return this;
+      }
+      public Builder ClearSubscribedSymbols() {
+        PrepareBuilder();
+        result.subscribedSymbols_.Clear();
+        return this;
+      }
     }
     static ProtoOASpotSubscription() {
+      object.ReferenceEquals(global::OpenApiLib.OpenApiModelMessages.Descriptor, null);
+    }
+  }
+  
+  [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+  public sealed partial class ProtoOASubscribedSpotSymbol : pb::GeneratedMessage<ProtoOASubscribedSpotSymbol, ProtoOASubscribedSpotSymbol.Builder> {
+    private ProtoOASubscribedSpotSymbol() { }
+    private static readonly ProtoOASubscribedSpotSymbol defaultInstance = new ProtoOASubscribedSpotSymbol().MakeReadOnly();
+    private static readonly string[] _protoOASubscribedSpotSymbolFieldNames = new string[] { "period", "symbolName" };
+    private static readonly uint[] _protoOASubscribedSpotSymbolFieldTags = new uint[] { 16, 10 };
+    public static ProtoOASubscribedSpotSymbol DefaultInstance {
+      get { return defaultInstance; }
+    }
+    
+    public override ProtoOASubscribedSpotSymbol DefaultInstanceForType {
+      get { return DefaultInstance; }
+    }
+    
+    protected override ProtoOASubscribedSpotSymbol ThisMessage {
+      get { return this; }
+    }
+    
+    public static pbd::MessageDescriptor Descriptor {
+      get { return global::OpenApiLib.OpenApiModelMessages.internal__static_ProtoOASubscribedSpotSymbol__Descriptor; }
+    }
+    
+    protected override pb::FieldAccess.FieldAccessorTable<ProtoOASubscribedSpotSymbol, ProtoOASubscribedSpotSymbol.Builder> InternalFieldAccessors {
+      get { return global::OpenApiLib.OpenApiModelMessages.internal__static_ProtoOASubscribedSpotSymbol__FieldAccessorTable; }
+    }
+    
+    public const int SymbolNameFieldNumber = 1;
+    private bool hasSymbolName;
+    private string symbolName_ = "";
+    public bool HasSymbolName {
+      get { return hasSymbolName; }
+    }
+    public string SymbolName {
+      get { return symbolName_; }
+    }
+    
+    public const int PeriodFieldNumber = 2;
+    private pbc::PopsicleList<global::OpenApiLib.ProtoOATrendbarPeriod> period_ = new pbc::PopsicleList<global::OpenApiLib.ProtoOATrendbarPeriod>();
+    public scg::IList<global::OpenApiLib.ProtoOATrendbarPeriod> PeriodList {
+      get { return pbc::Lists.AsReadOnly(period_); }
+    }
+    public int PeriodCount {
+      get { return period_.Count; }
+    }
+    public global::OpenApiLib.ProtoOATrendbarPeriod GetPeriod(int index) {
+      return period_[index];
+    }
+    
+    public override bool IsInitialized {
+      get {
+        if (!hasSymbolName) return false;
+        return true;
+      }
+    }
+    
+    public override void WriteTo(pb::ICodedOutputStream output) {
+      CalcSerializedSize();
+      string[] field_names = _protoOASubscribedSpotSymbolFieldNames;
+      if (hasSymbolName) {
+        output.WriteString(1, field_names[1], SymbolName);
+      }
+      if (period_.Count > 0) {
+        output.WriteEnumArray(2, field_names[0], period_);
+      }
+      UnknownFields.WriteTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public override int SerializedSize {
+      get {
+        int size = memoizedSerializedSize;
+        if (size != -1) return size;
+        return CalcSerializedSize();
+      }
+    }
+    
+    private int CalcSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+      
+      size = 0;
+      if (hasSymbolName) {
+        size += pb::CodedOutputStream.ComputeStringSize(1, SymbolName);
+      }
+      {
+        int dataSize = 0;
+        if (period_.Count > 0) {
+          foreach (global::OpenApiLib.ProtoOATrendbarPeriod element in period_) {
+            dataSize += pb::CodedOutputStream.ComputeEnumSizeNoTag((int) element);
+          }
+          size += dataSize;
+          size += 1 * period_.Count;
+        }
+      }
+      size += UnknownFields.SerializedSize;
+      memoizedSerializedSize = size;
+      return size;
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(pb::ByteString data) {
+      return ((Builder) CreateBuilder().MergeFrom(data)).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(pb::ByteString data, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(byte[] data) {
+      return ((Builder) CreateBuilder().MergeFrom(data)).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(byte[] data, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(data, extensionRegistry)).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(global::System.IO.Stream input) {
+      return ((Builder) CreateBuilder().MergeFrom(input)).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseDelimitedFrom(global::System.IO.Stream input) {
+      return CreateBuilder().MergeDelimitedFrom(input).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseDelimitedFrom(global::System.IO.Stream input, pb::ExtensionRegistry extensionRegistry) {
+      return CreateBuilder().MergeDelimitedFrom(input, extensionRegistry).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(pb::ICodedInputStream input) {
+      return ((Builder) CreateBuilder().MergeFrom(input)).BuildParsed();
+    }
+    public static ProtoOASubscribedSpotSymbol ParseFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry) {
+      return ((Builder) CreateBuilder().MergeFrom(input, extensionRegistry)).BuildParsed();
+    }
+    private ProtoOASubscribedSpotSymbol MakeReadOnly() {
+      period_.MakeReadOnly();
+      return this;
+    }
+    
+    public static Builder CreateBuilder() { return new Builder(); }
+    public override Builder ToBuilder() { return CreateBuilder(this); }
+    public override Builder CreateBuilderForType() { return new Builder(); }
+    public static Builder CreateBuilder(ProtoOASubscribedSpotSymbol prototype) {
+      return new Builder(prototype);
+    }
+    
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+    public sealed partial class Builder : pb::GeneratedBuilder<ProtoOASubscribedSpotSymbol, Builder> {
+      protected override Builder ThisBuilder {
+        get { return this; }
+      }
+      public Builder() {
+        result = DefaultInstance;
+        resultIsReadOnly = true;
+      }
+      internal Builder(ProtoOASubscribedSpotSymbol cloneFrom) {
+        result = cloneFrom;
+        resultIsReadOnly = true;
+      }
+      
+      private bool resultIsReadOnly;
+      private ProtoOASubscribedSpotSymbol result;
+      
+      private ProtoOASubscribedSpotSymbol PrepareBuilder() {
+        if (resultIsReadOnly) {
+          ProtoOASubscribedSpotSymbol original = result;
+          result = new ProtoOASubscribedSpotSymbol();
+          resultIsReadOnly = false;
+          MergeFrom(original);
+        }
+        return result;
+      }
+      
+      public override bool IsInitialized {
+        get { return result.IsInitialized; }
+      }
+      
+      protected override ProtoOASubscribedSpotSymbol MessageBeingBuilt {
+        get { return PrepareBuilder(); }
+      }
+      
+      public override Builder Clear() {
+        result = DefaultInstance;
+        resultIsReadOnly = true;
+        return this;
+      }
+      
+      public override Builder Clone() {
+        if (resultIsReadOnly) {
+          return new Builder(result);
+        } else {
+          return new Builder().MergeFrom(result);
+        }
+      }
+      
+      public override pbd::MessageDescriptor DescriptorForType {
+        get { return global::OpenApiLib.ProtoOASubscribedSpotSymbol.Descriptor; }
+      }
+      
+      public override ProtoOASubscribedSpotSymbol DefaultInstanceForType {
+        get { return global::OpenApiLib.ProtoOASubscribedSpotSymbol.DefaultInstance; }
+      }
+      
+      public override ProtoOASubscribedSpotSymbol BuildPartial() {
+        if (resultIsReadOnly) {
+          return result;
+        }
+        resultIsReadOnly = true;
+        return result.MakeReadOnly();
+      }
+      
+      public override Builder MergeFrom(pb::IMessage other) {
+        if (other is ProtoOASubscribedSpotSymbol) {
+          return MergeFrom((ProtoOASubscribedSpotSymbol) other);
+        } else {
+          base.MergeFrom(other);
+          return this;
+        }
+      }
+      
+      public override Builder MergeFrom(ProtoOASubscribedSpotSymbol other) {
+        if (other == global::OpenApiLib.ProtoOASubscribedSpotSymbol.DefaultInstance) return this;
+        PrepareBuilder();
+        if (other.HasSymbolName) {
+          SymbolName = other.SymbolName;
+        }
+        if (other.period_.Count != 0) {
+          result.period_.Add(other.period_);
+        }
+        this.MergeUnknownFields(other.UnknownFields);
+        return this;
+      }
+      
+      public override Builder MergeFrom(pb::ICodedInputStream input) {
+        return MergeFrom(input, pb::ExtensionRegistry.Empty);
+      }
+      
+      public override Builder MergeFrom(pb::ICodedInputStream input, pb::ExtensionRegistry extensionRegistry) {
+        PrepareBuilder();
+        pb::UnknownFieldSet.Builder unknownFields = null;
+        uint tag;
+        string field_name;
+        while (input.ReadTag(out tag, out field_name)) {
+          if(tag == 0 && field_name != null) {
+            int field_ordinal = global::System.Array.BinarySearch(_protoOASubscribedSpotSymbolFieldNames, field_name, global::System.StringComparer.Ordinal);
+            if(field_ordinal >= 0)
+              tag = _protoOASubscribedSpotSymbolFieldTags[field_ordinal];
+            else {
+              if (unknownFields == null) {
+                unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
+              }
+              ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
+              continue;
+            }
+          }
+          switch (tag) {
+            case 0: {
+              throw pb::InvalidProtocolBufferException.InvalidTag();
+            }
+            default: {
+              if (pb::WireFormat.IsEndGroupTag(tag)) {
+                if (unknownFields != null) {
+                  this.UnknownFields = unknownFields.Build();
+                }
+                return this;
+              }
+              if (unknownFields == null) {
+                unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
+              }
+              ParseUnknownField(input, unknownFields, extensionRegistry, tag, field_name);
+              break;
+            }
+            case 10: {
+              result.hasSymbolName = input.ReadString(ref result.symbolName_);
+              break;
+            }
+            case 18:
+            case 16: {
+              scg::ICollection<object> unknownItems;
+              input.ReadEnumArray<global::OpenApiLib.ProtoOATrendbarPeriod>(tag, field_name, result.period_, out unknownItems);
+              if (unknownItems != null) {
+                if (unknownFields == null) {
+                  unknownFields = pb::UnknownFieldSet.CreateBuilder(this.UnknownFields);
+                }
+                foreach (object rawValue in unknownItems)
+                  if (rawValue is int)
+                    unknownFields.MergeVarintField(2, (ulong)(int)rawValue);
+              }
+              break;
+            }
+          }
+        }
+        
+        if (unknownFields != null) {
+          this.UnknownFields = unknownFields.Build();
+        }
+        return this;
+      }
+      
+      
+      public bool HasSymbolName {
+        get { return result.hasSymbolName; }
+      }
+      public string SymbolName {
+        get { return result.SymbolName; }
+        set { SetSymbolName(value); }
+      }
+      public Builder SetSymbolName(string value) {
+        pb::ThrowHelper.ThrowIfNull(value, "value");
+        PrepareBuilder();
+        result.hasSymbolName = true;
+        result.symbolName_ = value;
+        return this;
+      }
+      public Builder ClearSymbolName() {
+        PrepareBuilder();
+        result.hasSymbolName = false;
+        result.symbolName_ = "";
+        return this;
+      }
+      
+      public pbc::IPopsicleList<global::OpenApiLib.ProtoOATrendbarPeriod> PeriodList {
+        get { return PrepareBuilder().period_; }
+      }
+      public int PeriodCount {
+        get { return result.PeriodCount; }
+      }
+      public global::OpenApiLib.ProtoOATrendbarPeriod GetPeriod(int index) {
+        return result.GetPeriod(index);
+      }
+      public Builder SetPeriod(int index, global::OpenApiLib.ProtoOATrendbarPeriod value) {
+        PrepareBuilder();
+        result.period_[index] = value;
+        return this;
+      }
+      public Builder AddPeriod(global::OpenApiLib.ProtoOATrendbarPeriod value) {
+        PrepareBuilder();
+        result.period_.Add(value);
+        return this;
+      }
+      public Builder AddRangePeriod(scg::IEnumerable<global::OpenApiLib.ProtoOATrendbarPeriod> values) {
+        PrepareBuilder();
+        result.period_.Add(values);
+        return this;
+      }
+      public Builder ClearPeriod() {
+        PrepareBuilder();
+        result.period_.Clear();
+        return this;
+      }
+    }
+    static ProtoOASubscribedSpotSymbol() {
       object.ReferenceEquals(global::OpenApiLib.OpenApiModelMessages.Descriptor, null);
     }
   }

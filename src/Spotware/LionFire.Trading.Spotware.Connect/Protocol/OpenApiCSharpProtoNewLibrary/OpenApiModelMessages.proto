@@ -98,6 +98,7 @@ message ProtoOAOrder {
     optional string comment = 23;
     optional ProtoOAClosePositionDetails closePositionDetails = 24;
     optional string clientOrderId = 25;
+    optional bool stopOut = 26;
 }
 
 /** Represents an information about a position from execution event received from server */
@@ -131,11 +132,44 @@ message ProtoOAClosePositionDetails {
     optional double takeProfitPrice = 8;
     optional double quoteToDepositConversionRate = 9;
     required int64 closedVolume = 10;
-    required bool closedByStopOut = 11;
+    optional bool closedByStopOut = 11 [deprecated = true]; // use stopOut field from ProtoOAOrder
 }
 
 message ProtoOASpotSubscription {
     required int64 accountId = 1;
     required uint32 subscriptionId = 2;
-    repeated string symbolNames = 3;
+    repeated string symbolNames = 3 [deprecated = true]; // use subscribedSymbols below
+    repeated ProtoOASubscribedSpotSymbol subscribedSymbols = 4;
+}
+
+message ProtoOASubscribedSpotSymbol {
+    required string symbolName = 1;
+    repeated ProtoOATrendbarPeriod period = 2;
+}
+
+message ProtoOATrendbar {
+    optional double open = 1;
+    optional double close = 2;
+    optional double high = 3;
+    optional double low = 4;
+    required int64 volume = 5;
+    optional int64 utcTimestamp = 6;
+    optional ProtoOATrendbarPeriod period = 7 [default = M1]; //default for handle .Net protobuf generator bug
+}
+
+enum ProtoOATrendbarPeriod {
+    M1 = 1;
+    M2 = 2;
+    M3 = 3;
+    M4 = 4;
+    M5 = 5;
+    M10 = 6;
+    M15 = 7;
+    M30 = 8;
+    H1 = 9;
+    H4 = 10;
+    H12 = 11;
+    D1 = 12;
+    W1 = 13;
+    MN1 = 14;
 }
