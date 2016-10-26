@@ -26,7 +26,9 @@ namespace LionFire.Trading
 
         #region Data
 
-        IBarSeries Bars { get; }
+        //IBarSeries Bars { get; }
+
+        
 
         TimeSeries OpenTime { get; }
         IDataSeries Open { get; }

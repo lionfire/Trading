@@ -31,9 +31,11 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Reactive.Linq;
 using LionFire.Structures;
 using OpenApiLib;
+using LionFire.Trading;
 
 namespace LionFire.Trading.Spotware.Connect
 {
+
 
     [AssetPath(@"Accounts/cTrader")]
     public class TCTraderAccount : ITemplate<CTraderAccount>
@@ -147,9 +149,11 @@ namespace LionFire.Trading.Spotware.Connect
         private volatile ExecutionFlags executionFlags = ExecutionFlags.WaitForRunCompletion;
 
         //volatile bool isRestart;
-        bool isRestart {
+        bool isRestart
+        {
             get { return ExecutionFlags.HasFlag(ExecutionFlags.AutoRestart); }
-            set {
+            set
+            {
                 if (value) ExecutionFlags |= ExecutionFlags.AutoRestart;
                 else ExecutionFlags &= ~ExecutionFlags.AutoRestart;
             }
@@ -189,7 +193,8 @@ namespace LionFire.Trading.Spotware.Connect
         //    }
         //}
 
-        public Task RunTask {
+        public Task RunTask
+        {
             get; private set;
         }
 
@@ -515,9 +520,9 @@ namespace LionFire.Trading.Spotware.Connect
 
                 if (!Connect()) return;
 
-                RequestSubscribeForSymbol("EURUSD");
-                RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
-                RequestSubscribeForSymbol("XAUUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H4, ProtoOATrendbarPeriod.MN1);
+                //RequestSubscribeForSymbol("EURUSD");
+                //RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
+                RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
 
                 while (listenerThread.IsAlive || timerThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
                 {
@@ -605,7 +610,7 @@ namespace LionFire.Trading.Spotware.Connect
                         //var timestamp = timestampField.VarintList[0];
                         //var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(timestamp);
                         var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(payload.Timestamp);
-                        
+
                         if (payload.TrendbarCount > 0 || payload.TrendbarList.Count > 0)
                         {
                             foreach (var bar in payload.TrendbarList)
@@ -668,8 +673,10 @@ namespace LionFire.Trading.Spotware.Connect
             }
         };
 
-        List<MenuItem> MenuItems {
-            get {
+        List<MenuItem> MenuItems
+        {
+            get
+            {
                 if (menuItems == null)
                 {
                     menuItems = new List<MenuItem>()
@@ -826,7 +833,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         protected void RequestSubscribeForSymbol(string symbol, params ProtoOATrendbarPeriod[] periods)
         {
-            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, new List<ProtoOATrendbarPeriod> (periods));
+            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, new List<ProtoOATrendbarPeriod>(periods));
 
             if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueueSync.Enqueue(_msg.ToByteArray());
@@ -938,6 +945,52 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Series
 
+        async Task<IMarketSeries> IAccount.CreateMarketSeries(string symbol, TimeFrame timeFrame)
+        {
+            var series = new MarketSeries(symbol, timeFrame);
+
+            var barCount = Context?.Options?.DefaultHistoricalDataBars ?? TradingOptions.DefaultHistoricalDataBarsDefault;
+
+            DateTime startTime;
+
+            if (timeFrame == TimeFrame.m1)
+            {
+                startTime = DateTime.UtcNow - TimeSpan.FromMinutes(barCount);
+            }
+            else if (timeFrame == TimeFrame.h1)
+            {
+                startTime = DateTime.UtcNow - TimeSpan.FromHours(barCount);
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            barCount = 0; // TEMP DISABLE
+            var task = new LoadHistoricalDataTask(symbol, timeFrame)
+            {
+                MinBars = barCount,
+                AccountId = this.AccountId,
+                AccessToken = this.AccessToken,
+            };
+
+            await task.Run();
+
+            series.Add(task.Result.ToArray());
+
+            return series;
+        }
+
+        public List<ProgressiveTask> LoadHistoricalDataTasks { get; set; }
+
+        public static ITradingContext Context
+        {
+            get { return Defaults.Get<TradingContext>(); }
+        }
+
+
+
+
         public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
         {
             var kvp = new KeyValuePair<string, string>(symbol.Code, timeFrame.ToString());
@@ -997,54 +1050,70 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        
+
 
         #region IAccount
 
-        public double Equity {
-            get {
+        public double Equity
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public double Balance {
-            get {
+        public double Balance
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public string Currency {
-            get {
+        public string Currency
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public double StopOutLevel {
-            get {
+        public double StopOutLevel
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public bool IsDemo {
-            get {
+        public bool IsDemo
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        IPositions IAccount.Positions {
-            get {
+        IPositions IAccount.Positions
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public IPendingOrders PendingOrders {
-            get {
+        public IPendingOrders PendingOrders
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public PositionStats PositionStats {
-            get {
+        public PositionStats PositionStats
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }

@@ -5,6 +5,11 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+    public class TimeFrameBar : TimedBar
+    {
+        public string TimeFrame { get; set; }
+    }
+
     public class TimedBar : Bar
     {
         public DateTime OpenTime { get; set; }

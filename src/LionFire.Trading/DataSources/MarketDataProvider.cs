@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 namespace LionFire.Trading
 {
 
-    public class MarketDataProvider
+    public interface IMarketDataProvider
+    {
+        MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, bool historical = false);
+    }
+
+    public class MarketDataProvider : IMarketDataProvider
     {
         #region Relationships
 

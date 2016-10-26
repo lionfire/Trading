@@ -33,6 +33,8 @@ namespace LionFire.Trading
 
         // TODO: Move to internal interface and use friend assemblies
         ILogger Logger { get; }
+
+        Task<IMarketSeries> CreateMarketSeries(string symbol, TimeFrame timeFrame);
     }
 
     //internal interface IAccountInternal

@@ -46,6 +46,7 @@ namespace LionFire.Trading.Bots
 
         #region Config
 
+        public int MinStopLossTimesSpread = 5; // TEMP TODO
         public bool UseTakeProfit = false; // TEMP
 
         #endregion
@@ -74,12 +75,10 @@ namespace LionFire.Trading.Bots
             };
         }
 
-
         partial void SignalBotBase_();
 
         #endregion
-
-
+        
         #region Computations by Derived Class
 
         public virtual double StopLossInPips { get { return 0; } }
@@ -94,9 +93,11 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
-        public int MinStopLossTimesSpread = 5; // TEMP TODO
 
-        private int counter = 0;
+
+        #region Evaluate
+
+        //private int counter = 0;
 
         private void Evaluate()
         {
@@ -215,6 +216,8 @@ namespace LionFire.Trading.Bots
             }
         }
 
+        #endregion
+
 
         #region Position Management
 
@@ -222,7 +225,7 @@ namespace LionFire.Trading.Bots
 
         Dictionary<string, SortedList<int, double>> ExchangeRates = new Dictionary<string, SortedList<int, double>>();
 
-        void InitExchangeRates()
+        void InitExchangeRates() // MOVE
         {
             {
                 var rate = new SortedList<int, double>();
@@ -244,6 +247,7 @@ namespace LionFire.Trading.Bots
             }
         }
 
+        // MOVE
         public double ConvertToCurrency(double amount, string fromCurrency, string toCurrency = null)
         {
 
@@ -292,12 +296,14 @@ namespace LionFire.Trading.Bots
             }
         }
 
+        // MOVE
         public long VolumeToStep(long amount, long step = 0)
         {
             if (step == 0) step = Symbol.VolumeStep;
             return amount - (amount % Symbol.VolumeStep);
         }
 
+        // MOVE
         public long GetPositionVolume(double stopLossDistance, TradeType tradeType = TradeType.Buy)
         {
             if (Symbol.VolumeStep != Symbol.VolumeMin)
@@ -439,36 +445,9 @@ p.onBars.Add(new StopLossTrailer(p)
 
         #endregion
 
-        #region Misc
+        #region Backtesting
 
-        public string TradeString(TradeType tradeType)
-        {
-            return tradeType == TradeType.Buy ? "LONG" : "SHORT";
-        }
-
-        private void LogOpen(TradeType tradeType, long volumeInUnits, double risk, double stopLoss, double stopLossDistance)
-        {
-            if (!Config.Log) return;
-            string stopLossDistanceAccount = "";
-            var purchaseCurrency = Symbol.Code.Substring(0, 3);
-            if (purchaseCurrency != Account.Currency)
-            {
-                stopLossDistanceAccount = " / " + ConvertToCurrency(stopLossDistance, purchaseCurrency, Account.Currency) + " " + Account.Currency;
-            }
-
-            var openPoints = tradeType == TradeType.Buy ? Indicator.OpenLongPoints.LastValue : Indicator.OpenShortPoints.LastValue;
-            var price = tradeType == TradeType.Buy ? Indicator.Symbol.Ask : Indicator.Symbol.Bid;
-
-#if cAlgo
-            var dateStr = this.MarketSeries.OpenTime.LastValue.ToDefaultString();
-            logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
-#else
-            var dateStr = this.Market.Server.Time.ToDefaultString();
-            logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
-#endif
-        }
-
-        #endregion
+        #region Fitness
 
 
 #if cAlgo
@@ -545,9 +524,11 @@ p.onBars.Add(new StopLossTrailer(p)
             return fitness;
         }
 
+        #endregion
+
         private async void SaveResult(string json)
         {
-            var dir = @"E:\Trading\Results";
+            var dir = @"c:\Trading\Results";
             var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + Symbol.Code + " " + this.GetType().Name + ".json";
             var path = Path.Combine(dir, filename);
             using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
@@ -560,7 +541,38 @@ p.onBars.Add(new StopLossTrailer(p)
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
+        #endregion
+        
+        #region Misc
 
+        public string TradeString(TradeType tradeType)
+        {
+            return tradeType == TradeType.Buy ? "LONG" : "SHORT";
+        }
 
+        private void LogOpen(TradeType tradeType, long volumeInUnits, double risk, double stopLoss, double stopLossDistance)
+        {
+            if (!Config.Log) return;
+            string stopLossDistanceAccount = "";
+            var purchaseCurrency = Symbol.Code.Substring(0, 3);
+            if (purchaseCurrency != Account.Currency)
+            {
+                stopLossDistanceAccount = " / " + ConvertToCurrency(stopLossDistance, purchaseCurrency, Account.Currency) + " " + Account.Currency;
+            }
+
+            var openPoints = tradeType == TradeType.Buy ? Indicator.OpenLongPoints.LastValue : Indicator.OpenShortPoints.LastValue;
+            var price = tradeType == TradeType.Buy ? Indicator.Symbol.Ask : Indicator.Symbol.Bid;
+
+#if cAlgo
+            var dateStr = this.MarketSeries.OpenTime.LastValue.ToDefaultString();
+            logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
+#else
+            var dateStr = this.Market.Server.Time.ToDefaultString();
+            logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
+#endif
+        }
+
+        #endregion
+        
     }
 }

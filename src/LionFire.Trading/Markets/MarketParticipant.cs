@@ -60,7 +60,7 @@ namespace LionFire.Trading
                 {
                     if (sub.Series == null)
                     {
-                        sub.Series = market.Data.GetMarketSeries(sub.Symbol, sub.TimeFrame);
+                        sub.Series = market.GetMarketSeries(sub.Symbol, sub.TimeFrame);
                     }
                     if (sub.Series == null)
                     {

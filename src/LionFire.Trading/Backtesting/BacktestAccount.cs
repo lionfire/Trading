@@ -378,11 +378,12 @@ namespace LionFire.Trading.Backtesting
             UpdatePositions();
         }
 
-
-
-
         #endregion
 
-        
+        public Task<IMarketSeries> CreateMarketSeries(string code, TimeFrame timeFrame)
+        {
+            return Task.FromResult<IMarketSeries>(new MarketSeries(code, timeFrame));
+        }
+
     }
 }

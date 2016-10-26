@@ -39,16 +39,21 @@ namespace LionFire.Trading
         long QuantityToVolume(double quantity);
         double VolumeToQuantity(long volume);
 
-
+        IMarketSeries GetMarketSeries(TimeFrame timeFrame);
 
     }
 
     public class SymbolImpl : SymbolImplBase, IBacktestSymbol
     {
         public SymbolImpl(string symbolCode, IMarket market) : base(symbolCode, market) { }
+
+        public override IMarketSeries GetMarketSeries(TimeFrame timeFrame)
+        {
+            throw new NotImplementedException();
+        }
     }
 
-    public class SymbolImplBase : Symbol
+    public abstract class SymbolImplBase : Symbol
     {
         #region Config
 
@@ -244,6 +249,7 @@ namespace LionFire.Trading
 
         #endregion
 
+        public abstract IMarketSeries GetMarketSeries(TimeFrame timeFrame);
     }
 
 }

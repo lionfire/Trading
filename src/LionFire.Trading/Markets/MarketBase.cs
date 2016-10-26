@@ -84,6 +84,15 @@ namespace LionFire.Trading
         //    }
         //}
 
+        #region MarketSeries
+
+        public IMarketSeries GetMarketSeries(string symbol, TimeFrame tf)
+        {
+            return GetSymbol(symbol).GetMarketSeries(tf);
+        }
+
+        #endregion
+
         #region Symbol Subscriptions
 
         /// <summary>

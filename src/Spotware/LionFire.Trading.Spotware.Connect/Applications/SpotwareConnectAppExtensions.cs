@@ -8,13 +8,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Assets;
 
 namespace LionFire.Applications.Hosting
 {
-
-    
-
-
 
     public static class SpotwareConnectAppExtensions
     {
@@ -38,16 +35,12 @@ namespace LionFire.Applications.Hosting
 
         public static IAppHost AddSpotwareConnectClient(this IAppHost host, string clientConfigName)
         {
-            // TODO
-            //var path = Path.Combine(clientConfigName) + ".json";
 
-            //ISpotwareConnectAppInfo info = JsonConvert.DeserializeObject<SpotwareConnectAppInfo>(File.ReadAllText());
+            var info = clientConfigName.Load<SpotwareConnectAppInfo>();
 
-            //ManualSingleton<IServiceCollection>.Instance.AddSingleton(info);
+            Defaults.Set<ISpotwareConnectAppInfo>(info);
 
             return host;
-
-
         }
     }
 }

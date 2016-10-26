@@ -45,8 +45,8 @@ namespace LionFire.Trading.Spotware.Connect
                 if (connectionSettings == null)
                 {
 #if true
-                    //var path = @"E:\Trading\Accounts\spotware-lfdev.json";
-                    var path = @"E:\Trading\Accounts\spotware-lionprowl.json";
+                    //var path = @"c:\Trading\Accounts\spotware-lfdev.json";
+                    var path = @"c:\Trading\Accounts\spotware-lionprowl.json";
 
                     using (var sr = new StreamReader(new FileStream(path, FileMode.Open)))
                     {

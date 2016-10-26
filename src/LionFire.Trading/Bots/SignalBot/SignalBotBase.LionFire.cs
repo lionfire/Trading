@@ -4,12 +4,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Structures;
 
 namespace LionFire.Trading.Bots
 {
-    public partial class SingleSeriesSignalBotBase<TIndicator, TConfig, TIndicatorConfig> 
+    public partial class SingleSeriesSignalBotBase<TIndicator, TConfig, TIndicatorConfig>  : IHandler<SymbolTick>
     {
-        public MarketSeries MarketSeries { get; set; } 
+        public IMarketSeries MarketSeries { get; set; } 
 
 
         protected override void OnStarting()
@@ -29,9 +30,8 @@ namespace LionFire.Trading.Bots
                 sim.SimulationTickFinished += OnSimulationTickFinished;
             }
 
-            this.MarketSeries = Market.Data.GetMarketSeries(this.Config.Symbol, this.Config.TimeFrame, Market.IsBacktesting);
-
             this.Symbol = Market.GetSymbol(Config.Symbol);
+            this.MarketSeries = Market.GetMarketSeries(this.Config.Symbol, this.Config.TimeFrame /*, Market.IsBacktesting*/);
 
             UpdateDesiredSubscriptions();
         }
@@ -41,6 +41,7 @@ namespace LionFire.Trading.Bots
             this.DesiredSubscriptions = new List<MarketDataSubscription>()
             {
                 new MarketDataSubscription(this.Config.Symbol, Config.TimeFrame)
+                //new MarketDataSubscription(this.Config.Symbol, "t1")
             };
         }
 
@@ -49,5 +50,25 @@ namespace LionFire.Trading.Bots
             //logger.LogInformation("bot OnSimulationTickFinished " + (Market as BacktestMarket).SimulationTime);
             Evaluate();
         }
+
+        void IHandler<SymbolTick>.Handle(SymbolTick tick)
+        {
+            Console.WriteLine("OnTick: " + tick);
+        }
+
+        //long i = 0;
+        public override void OnBar(string symbolCode, TimeFrame timeFrame, TimedBar bar)
+        {
+            if (bar != null)
+            {
+                Console.WriteLine("OnBar: " + bar);
+                Evaluate();
+            }
+            //if (i++ % 48 == 0)
+            //{
+            //    Console.WriteLine($"{this.GetType().Name} [{timeFrame.Name}] {symbolCode} {bar}");
+            //}
+        }
+
     }
 }

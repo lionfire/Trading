@@ -9,19 +9,24 @@ using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
 using LionFire.ExtensionMethods;
 using System.Reactive;
+using System.Collections.Concurrent;
 
 namespace LionFire.Trading.Spotware.Connect
 {
     public class SeriesObservable<T> : SubjectBase<T>
     {
-        public override bool HasObservers {
-            get {
+        public override bool HasObservers
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public override bool IsDisposed {
-            get {
+        public override bool IsDisposed
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
@@ -95,10 +100,29 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
+        #region Series
+
+        ConcurrentDictionary<string, IMarketSeries> seriesByTimeFrame = new ConcurrentDictionary<string, IMarketSeries>();
+
+        public override IMarketSeries GetMarketSeries(TimeFrame timeFrame)
+        {
+            return seriesByTimeFrame.GetOrAdd(timeFrame.Name, timeFrameName =>
+            {
+                var task = account.CreateMarketSeries(Code, timeFrame);
+                task.Wait();
+                return task.Result;
+            });
+        }
+
+
+        #endregion
+
         #region Handle Data from Server
 
-        internal void Handle(TimedBar bar)
+        internal void Handle(TimeFrameBar bar)
         {
+            Console.WriteLine("ToDo: Handle TimeFrameBar: " + bar);
+
         }
 
         internal void Handle(TimedTick tick)
@@ -131,8 +155,10 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Account Current Positions
 
-        public override double UnrealizedGrossProfit {
-            get {
+        public override double UnrealizedGrossProfit
+        {
+            get
+            {
                 double sum = 0.0;
                 foreach (var position in account.Positions.Where(p => p.Symbol.Code == this.Code))
                 {
@@ -142,8 +168,10 @@ namespace LionFire.Trading.Spotware.Connect
             }
         }
 
-        public override double UnrealizedNetProfit {
-            get {
+        public override double UnrealizedNetProfit
+        {
+            get
+            {
                 double sum = 0.0;
                 foreach (var position in account.Positions.Where(p => p.Symbol.Code == this.Code))
                 {
@@ -163,8 +191,10 @@ namespace LionFire.Trading.Spotware.Connect
         public CTraderSymbol(string symbolCode, CTraderAccount account) : base(symbolCode, account)
         {
         }
-        
+
         #endregion
+
+
     }
 }
 

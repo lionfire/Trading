@@ -78,10 +78,7 @@ namespace LionFire.Trading
             return Enumerable.Empty<string>();
         }
 
-        public MarketSeries GetMarketSeries(string symbol, TimeFrame tf)
-        {
-            throw new NotImplementedException();
-        }
+       
 
         #endregion
         

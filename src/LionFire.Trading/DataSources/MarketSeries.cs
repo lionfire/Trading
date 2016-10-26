@@ -15,7 +15,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    
+
 
     public sealed class MarketSeries : IMarketSeries, IMarketSeriesInternal
     {
@@ -28,10 +28,12 @@ namespace LionFire.Trading
 
         #endregion
 
-        public string SymbolCode {
+        public string SymbolCode
+        {
             get; private set;
         }
-        public TimeFrame TimeFrame {
+        public TimeFrame TimeFrame
+        {
             get; private set;
         }
 
@@ -39,6 +41,7 @@ namespace LionFire.Trading
 
         #region Relationships
 
+        // Obsolete?
         public IDataSource Source { get; set; }
 
         #endregion
@@ -51,8 +54,10 @@ namespace LionFire.Trading
 
         #region Derived
 
-        private TimeSpan TimeSpanIncrement {
-            get {
+        private TimeSpan TimeSpanIncrement
+        {
+            get
+            {
                 var timeSpan = TimeFrame.TimeSpan;
                 if (timeSpan != TimeSpan.Zero) return timeSpan;
 
@@ -107,45 +112,54 @@ namespace LionFire.Trading
 
         #region Data
 
-        public IBarSeries Bars {
+        public IBarSeries Bars
+        {
             get { return bars; }
         }
         private BarSeries bars = new BarSeries();
 
-        public TimeSeries OpenTime {
+        public TimeSeries OpenTime
+        {
             get { return openTime; }
         }
         private TimeSeries openTime = new TimeSeries();
 
-        public IDataSeries Open {
+        public IDataSeries Open
+        {
             get { return open; }
         }
         private DoubleDataSeries open = new DoubleDataSeries();
 
-        public IDataSeries High {
+        public IDataSeries High
+        {
             get { return high; }
         }
         private DoubleDataSeries high = new DoubleDataSeries();
 
-        public IDataSeries Low {
+        public IDataSeries Low
+        {
             get { return low; }
         }
         private DoubleDataSeries low = new DoubleDataSeries();
 
-        public IDataSeries Close {
+        public IDataSeries Close
+        {
             get { return close; }
         }
         private DoubleDataSeries close = new DoubleDataSeries();
 
-        public IDataSeries TickVolume {
+        public IDataSeries TickVolume
+        {
             get { return tickVolume; }
         }
         private DoubleDataSeries tickVolume = new DoubleDataSeries();
 
         #region Derived
 
-        public int Count {
-            get {
+        public int Count
+        {
+            get
+            {
 #if BarStruct
                 return bars.Count;
 #else
@@ -154,8 +168,10 @@ namespace LionFire.Trading
             }
         }
 
-        public TimedBar LastBar {
-            get {
+        public TimedBar LastBar
+        {
+            get
+            {
 #if BarStruct
                 return bars.LastValue;
 #else
@@ -172,8 +188,10 @@ namespace LionFire.Trading
             }
         }
 
-        public BarType this[int index] {
-            get {
+        public BarType this[int index]
+        {
+            get
+            {
 #if BarStruct
                 return bars[index];
 #else
@@ -190,8 +208,10 @@ namespace LionFire.Trading
             }
         }
 
-        private IEnumerable<DoubleDataSeries> AllDataSeries {
-            get {
+        private IEnumerable<DoubleDataSeries> AllDataSeries
+        {
+            get
+            {
                 yield return open;
                 yield return high;
                 yield return low;
@@ -215,10 +235,15 @@ namespace LionFire.Trading
         #region Events
 
         public bool LatestBarHasObservers { get { return barSubject.HasObservers; } }
-        public IObservable<TimedBar> LatestBar { get {
-                return barSubject; } }
+        public IObservable<TimedBar> LatestBar
+        {
+            get
+            {
+                return barSubject;
+            }
+        }
         BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
-        
+
 
         //public event Action<MarketSeries> BarReceived;
         public event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
@@ -231,8 +256,10 @@ namespace LionFire.Trading
             return openTime.FindIndex(time);
         }
 
-        public BarType this[DateTime time] {
-            get {
+        public BarType this[DateTime time]
+        {
+            get
+            {
                 var index = FindIndex(time);
                 if (index < 0) return default(BarType);
                 return this[index];
@@ -324,7 +351,14 @@ namespace LionFire.Trading
             }
         }
 
-        internal void Add(DateTime time, double open, double high, double low, double close, double volume)
+        public void Add(IEnumerable<TimedBarStruct> bars)
+        {
+            foreach (var b in bars)
+            {
+                Add(b.OpenTime, b.Open, b.High, b.Low, b.Close, b.Volume);
+            }
+        }
+        public void Add(DateTime time, double open, double high, double low, double close, double volume)
         {
             this.openTime.Add(time);
             this.open.Add(open);
@@ -359,6 +393,8 @@ namespace LionFire.Trading
         #endregion
 
         #region Methods - Import
+
+        // MOVE to file importer
 
         public const char csvSeparator = ',';
 

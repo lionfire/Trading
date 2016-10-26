@@ -110,7 +110,7 @@ namespace LionFire.Trading.QuickFixN.ConsoleTest
         }
         public AccountSettings settings {
             get {
-                using (var sr = new StreamReader(new FileStream(@"E:\Trading\Accounts\icmarkets-demo.json", FileMode.Open)))
+                using (var sr = new StreamReader(new FileStream(@"c:\Trading\Accounts\icmarkets-demo.json", FileMode.Open)))
                 {
                     return JsonConvert.DeserializeObject<AccountSettings>(sr.ReadToEnd());
                 }

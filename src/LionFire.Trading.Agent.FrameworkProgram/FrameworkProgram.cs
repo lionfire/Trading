@@ -31,7 +31,7 @@ namespace LionFire.Trading.Agent.Program
                 new AppHost()
 
                 #region Bootstrap
-                    .AddJsonAssetProvider(@"E:\Trading")
+                    .AddJsonAssetProvider(@"c:\Trading")
                     .Bootstrap()
                 #endregion
 
@@ -46,7 +46,7 @@ namespace LionFire.Trading.Agent.Program
 
                     .AddTrading(TradingOptions.Auto, AccountMode.Live)
 #if Live
-                    .AddSpotwareConnectClient("lionprowl")
+                    .AddSpotwareConnectClient("LionProwl")
                                                                 //.Add<TCTraderAccount>("spotware-lionprowl") // TODO: Change to "IC Markets.Demo1";
                                                                 .Add<TCTraderAccount>("spotware-lfdev") // TODO: Change to "IC Markets.Demo1";
                                                                                                         //.Add<TLionTrender>()

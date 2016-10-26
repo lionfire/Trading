@@ -23,7 +23,8 @@ namespace LionFire.Trading
 
         public AccountMode AccountModes { get; set; } = AccountMode.Demo;
 
-        public int DefaultHistoricalDataBars { get; set; } = 400;
+        public int DefaultHistoricalDataBars { get; set; } = DefaultHistoricalDataBarsDefault;
+        public const int DefaultHistoricalDataBarsDefault = 400;
 
         #region Static (Defaults)
 

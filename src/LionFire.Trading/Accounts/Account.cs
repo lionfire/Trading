@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading
 {
 
-    public class AccountBase
+    public abstract class AccountBase
     {
         public PositionStats PositionStats { get; protected set; }
 
@@ -21,10 +21,11 @@ namespace LionFire.Trading
 
         #endregion
 
+        public abstract Task<IMarketSeries> CreateMarketSeries(string symbol, TimeFrame timeFrame);
 
     }
 
-    public class LiveAccount : AccountBase, IAccount
+    public abstract class LiveAccount : AccountBase, IAccount
     {
 
         IPositions IAccount.Positions { get { return Positions; } }

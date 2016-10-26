@@ -65,20 +65,26 @@ namespace LionFire.Trading.Bots
 
         #region Derived
 
-        public bool CanOpenLong {
-            get {
+        public bool CanOpenLong
+        {
+            get
+            {
                 var count = Positions.Where(p => p.TradeType == TradeType.Buy).Count();
                 return count < Config.MaxLongPositions;
             }
         }
-        public bool CanOpenShort {
-            get {
+        public bool CanOpenShort
+        {
+            get
+            {
                 var count = Positions.Where(p => p.TradeType == TradeType.Sell).Count();
                 return count < Config.MaxShortPositions;
             }
         }
-        public bool CanOpen {
-            get {
+        public bool CanOpen
+        {
+            get
+            {
                 var count = Positions.Count;
                 return Config.MaxOpenPositions == 0 || count < Config.MaxOpenPositions;
             }
@@ -102,19 +108,26 @@ namespace LionFire.Trading.Bots
 
         #region Misc
 
-        public virtual string Label {
-            get {
+        public virtual string Label
+        {
+            get
+            {
                 return label ?? this.GetType().Name;
             }
-            set {
+            set
+            {
                 label = value;
             }
         }
         private string label = null;
 
-        public Microsoft.Extensions.Logging.ILogger Logger { get { return logger; } }
-        protected Microsoft.Extensions.Logging.ILogger logger;
         //public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
+
+        public Microsoft.Extensions.Logging.ILogger Logger
+        {
+            get { return logger; }
+        }
+        protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
         #endregion
     }

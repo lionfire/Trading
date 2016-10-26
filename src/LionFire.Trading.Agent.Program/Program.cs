@@ -26,11 +26,11 @@ namespace LionFire.Trading.Agent.Program
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
 
                 new AppHost()
-                    .AddSpotwareConnectAccount("IC Markets.Demo1")
-                    .AddConfig(app => 
-                        app.ServiceCollection
-                            .AddLogging()
-                        )
+                    //.AddSpotwareConnectAccount("IC Markets.Demo1")
+                    //.AddConfig(app => 
+                    //    app.ServiceCollection
+                    //        .AddLogging()
+                    //    )
                     .AddInit(app => app.ServiceProvider.GetService<ILoggerFactory>()
                         .AddNLog()
                     //.AddConsole()

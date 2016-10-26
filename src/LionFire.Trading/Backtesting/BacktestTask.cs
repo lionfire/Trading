@@ -144,7 +144,7 @@ namespace LionFire.Applications.Trading
 
     public class BotConfigRepository
     {
-        public static string ConfigDir { get { return @"E:\Trading\Configs\"; } }
+        public static string ConfigDir { get { return @"c:\Trading\Configs\"; } }
         public static async Task<string> SaveConfig(IBot bot)
         {
             var dir = ConfigDir;

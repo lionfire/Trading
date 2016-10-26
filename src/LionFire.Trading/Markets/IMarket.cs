@@ -14,6 +14,7 @@ namespace LionFire.Trading
         IAccount Account { get;  }
         //List<IAccount> Accounts { get; }
         Symbol GetSymbol(string symbolCode);
+        IMarketSeries GetMarketSeries(string symbol, TimeFrame tf);
         MarketData MarketData { get; set; }
         MarketDataProvider Data { get; }
         Server Server { get; }
@@ -35,7 +36,7 @@ namespace LionFire.Trading
 
         //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
 
-        //MarketSeries GetMarketSeries(string symbol, TimeFrame tf);
+        
         //IEnumerable<string> SymbolsAvailable { get; }
         //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
 
@@ -43,5 +44,6 @@ namespace LionFire.Trading
 
 
     
+        
     }
 }
