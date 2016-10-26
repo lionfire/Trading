@@ -59,6 +59,12 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Settings
 
+
+        private TimeSpan HeartbeatDelay = TimeSpan.FromSeconds(20);
+        DateTime lastSendTime { set { _nextHeartbeat = value + HeartbeatDelay; } }
+        //DateTime _lastSendTime = DateTime.MinValue;
+        DateTime _nextHeartbeat = DateTime.MinValue;
+
         #region Template
 
         object ITemplateInstance.Template { get { return Template; } set { Template = (TCTraderAccount)value; } }
@@ -227,24 +233,26 @@ namespace LionFire.Trading.Spotware.Connect
         Thread processingThread;
         Thread listenerThread;
         Thread senderThread;
-        Thread timerThread;
+        Thread heartbeatThread;
 
-        // timer thread
-        void Timer(OpenApiMessagesFactory msgFactory, Queue messagesQueue)
+        void HeartbeatTimer(OpenApiMessagesFactory msgFactory, Queue messagesQueue)
         {
             isShutdown = false;
             while (!isShutdown)
             {
                 Thread.Sleep(1000);
 
-                if (DateTime.Now > lastSentMsgTimestamp)
+                if (_nextHeartbeat <= DateTime.UtcNow)
                 {
-                    SendPingRequest(msgFactory, messagesQueue);
+                    SendHeartbeatEvent(outgoingMsgFactory, writeQueueSync);
                 }
+                //if (DateTime.Now > lastSentMsgTimestamp)
+                //{
+                //    SendPingRequest(msgFactory, messagesQueue);
+                //}
             }
         }
 
-        // listener thread
         void Listen(SslStream sslStream, Queue messagesQueue)
         {
             isShutdown = false;
@@ -272,7 +280,8 @@ namespace LionFire.Trading.Spotware.Connect
 
                 byte[] _message = new byte[length];
 #if TRACE_DATA_RECEIVED
-                if (isDebugIsOn) Console.WriteLine("Data received: {0}", GetHexadecimal(_length));
+                //if (isDebugIsOn) Console.WriteLine("Data received: {0}", GetHexadecimal(_length));
+                if (isDebugIsOn) { Console.Write($"[recv] {{len:{length}}} "); }
 #endif
                 readBytes = 0;
                 do
@@ -281,7 +290,7 @@ namespace LionFire.Trading.Spotware.Connect
                     readBytes += sslStream.Read(_message, readBytes, _message.Length - readBytes);
                 } while (readBytes < length);
 #if TRACE_DATA_RECEIVED
-                if (isDebugIsOn) Console.WriteLine("Data received: {0}", GetHexadecimal(_message));
+                if (isDebugIsOn) Console.WriteLine($"{GetHexadecimal(_message)}");
 #endif
 
                 messagesQueue.Enqueue(_message);
@@ -311,6 +320,7 @@ namespace LionFire.Trading.Spotware.Connect
                 if (isDebugIsOn) Console.WriteLine("Data sent: {0}", GetHexadecimal(_message));
 #endif
                 lastSentMsgTimestamp = DateTime.Now.AddSeconds(sendMsgTimeout);
+                lastSendTime = DateTime.UtcNow;
             }
         }
 
@@ -409,19 +419,19 @@ namespace LionFire.Trading.Spotware.Connect
 
             #region start timer
 
-            timerThread = new Thread(() =>
+            heartbeatThread = new Thread(() =>
             {
                 Thread.CurrentThread.IsBackground = true;
                 try
                 {
-                    Timer(outgoingMsgFactory, writeQueueSync);
+                    HeartbeatTimer(outgoingMsgFactory, writeQueueSync);
                 }
                 catch (Exception e)
                 {
-                    logger.LogError("Listener throws exception: {0}", e);
+                    logger.LogError("Timer threw exception: {0}", e);
                 }
             });
-            timerThread.Start();
+            heartbeatThread.Start();
 
             #endregion
 
@@ -463,7 +473,7 @@ namespace LionFire.Trading.Spotware.Connect
             #region wait for shutting down threads
 
             Console.WriteLine("Shutting down connection...");
-            while (listenerThread.IsAlive || timerThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
+            while (listenerThread.IsAlive || heartbeatThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
             {
                 Thread.Sleep(100);
             }
@@ -520,11 +530,26 @@ namespace LionFire.Trading.Spotware.Connect
 
                 if (!Connect()) return;
 
-                //RequestSubscribeForSymbol("EURUSD");
-                //RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
-                RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
+                SendSubscribeForTradingEventsRequest(this.outgoingMsgFactory, writeQueueSync);
 
-                while (listenerThread.IsAlive || timerThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
+                var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1, ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5 };
+                var defaultSymbols = new string[] {
+                    "XAUUSD",
+                    "EURUSD",
+                    "USDJPY",
+                    "DE30",
+                };
+
+                //RequestSubscribeForSymbol("EURUSD");
+                //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1);
+                //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
+                foreach (var s in defaultSymbols)
+                {
+                    RequestSubscribeForSymbol(s, defaultPeriods);
+                }
+                //RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
+
+                while (listenerThread.IsAlive || heartbeatThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
                 {
                     //DisplayMenu();
 
@@ -556,7 +581,7 @@ namespace LionFire.Trading.Spotware.Connect
         {
             var _msg = msgFactory.GetMessage(rawData);
 #if TRACE_DATA_INCOMING
-            if (isDebugIsOn) Console.WriteLine("ProcessIncomingDataStream() Message received:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn) Console.WriteLine("ProcessIncomingDataStream() received: " + OpenApiMessagesPresentation.ToString(_msg));
 #endif
 
             if (!_msg.HasPayload)
@@ -572,41 +597,41 @@ namespace LionFire.Trading.Spotware.Connect
                         if (payload.HasTimestamp)
                         {
                             Server.Time = new DateTime((long)payload.Timestamp);
+                            Console.WriteLine("[time] " + Server.Time.ToShortTimeString());
                             //Server.Time = DateTime.FromFileTimeUtc();
                         }
                         break;
                     }
                 case (int)OpenApiLib.ProtoPayloadType.HEARTBEAT_EVENT:
                     //var _payload_msg = msgFactory.GetHeartbeatEvent(rawData);
-
+                    Console.WriteLine("<3");
+                    //SendHeartbeatEvent(msgFactory, writeQueueSync);
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_EXECUTION_EVENT:
+
                     var _payload_msg = msgFactory.GetExecutionEvent(rawData);
                     if (_payload_msg.HasOrder)
                     {
                         orderId = _payload_msg.Order.OrderId;
+                        Console.WriteLine($"[ORDER {orderId}] ...");
                     }
                     if (_payload_msg.HasPosition)
                     {
                         positionId = _payload_msg.Position.PositionId;
+                        Console.WriteLine($"[POSITION {positionId}] ...");
                     }
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_AUTH_RES:
                     //var payload = msgFactory.GetAuthorizationResponse(rawData);
                     isAuthorized = true;
+                    Console.WriteLine("[AUTHORIZED]");
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SPOT_EVENT:
                     {
                         var payload = msgFactory.GetSpotEvent(rawData);
 
-                        var u = payload.UnknownFields.FieldDictionary;
-                        if (u != null)
-                        {
-                            foreach (var kvp in u)
-                            {
-                                Console.WriteLine(kvp.Key);
-                            }
-                        }
+                        WriteUnknownFields(_msg.PayloadType, payload);
+
                         //var timestamp = timestampField.VarintList[0];
                         //var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(timestamp);
                         var time = new DateTime(1970, 1, 1) + TimeSpan.FromMilliseconds(payload.Timestamp);
@@ -633,18 +658,71 @@ namespace LionFire.Trading.Spotware.Connect
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SUBSCRIBE_FOR_SPOTS_RES:
                     {
                         var payload = msgFactory.GetSubscribeForSpotsResponse(rawData);
-                        //payload.SubscriptionId;
 
+                        uint? subId = payload.HasSubscriptionId ? (uint?)payload.SubscriptionId : null;
+                        Console.WriteLine($"[SUBSCRIBED] {subId}");
+
+                        SendGetSpotSubscriptionReq(subId);
+                        SendGetAllSpotSubscriptionsReq();
+
+                        //payload.SubscriptionId;
+                        WriteUnknownFields(_msg.PayloadType, payload);
                         break;
                     }
-                case (int)OpenApiLib.ProtoOAPayloadType.OA_UNSUBSCRIBE_FROM_SPOTS_RES:
+                //case (int)OpenApiLib.ProtoOAPayloadType.OA_UNSUBSCRIBE_FROM_SPOTS_RES:
+                //    {
+                //        break;
+                //    }
+                case (int)OpenApiLib.ProtoOAPayloadType.OA_GET_ALL_SPOT_SUBSCRIPTIONS_RES:
                     {
-                        break;
+                        var payload = msgFactory.GetGetAllSpotSubscriptionsResponse(rawData);
+                        foreach (var x in payload.SpotSubscriptionsList)
+                        {
+                            foreach (var y in x.SubscribedSymbolsList)
+                            {
+                                foreach (var z in y.PeriodList)
+                                {
+                                    Console.WriteLine($"GET_ALL_SPOT_SUBSCRIPTIONS_RES subscription: {y.SymbolName} {z.ToString()}");
+                                }
+                            }
+                        }
                     }
+                    break;
+                case (int)OpenApiLib.ProtoOAPayloadType.OA_GET_SPOT_SUBSCRIPTION_RES:
+                    {
+                        var payload = msgFactory.GetGetSpotSubscriptionResponse(rawData);
+                        foreach (var y in payload.SpotSubscription.SubscribedSymbolsList)
+                        {
+                            foreach (var z in y.PeriodList)
+                            {
+                                Console.WriteLine($"GET_SPOT_SUBSCRIPTION_RES subscription: {y.SymbolName} {z.ToString()}");
+                            }
+                        }
+                    }
+                    break;
+                case (int)OpenApiLib.ProtoOAPayloadType.OA_SUBSCRIBE_FOR_TRADING_EVENTS_RES:
+                    {
+                        var payload = msgFactory.GetSubscribeForTradingEventsResponse(rawData);
+                        Console.WriteLine("[TRADE EVENTS] SUBSCRIBED");
+                    }
+                    break;
+
                 default:
-                    Console.WriteLine("Unknown message type: " + _msg.PayloadType);
+                    Console.WriteLine("UNHANDLED MESSAGE: " + _msg.PayloadType);
                     break;
             };
+        }
+
+        private void WriteUnknownFields(uint type, Google.ProtocolBuffers.IMessage payload)
+        {
+            var u = payload.UnknownFields.FieldDictionary;
+            if (u != null)
+            {
+                foreach (var kvp in u)
+                {
+                    Console.WriteLine($"[UNKNOWN FIELD] Message type: {type}, Key: {kvp.Key}");
+                }
+            }
         }
 
         #endregion
@@ -846,6 +924,19 @@ namespace LionFire.Trading.Spotware.Connect
             //writeQueueSync.Enqueue(_msg.ToByteArray());
         }
 
+        void SendGetSpotSubscriptionReq(uint? subscriptionId = 0)
+        {
+            if (!subscriptionId.HasValue) { return; }
+            var _msg = outgoingMsgFactory.CreateGetSpotSubscriptionRequest(subscriptionId.Value, clientMsgId);
+            if (isDebugIsOn) Console.WriteLine("SendGetSpotSubscriptionReq() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            writeQueueSync.Enqueue(_msg.ToByteArray());
+        }
+        void SendGetAllSpotSubscriptionsReq()
+        {
+            var _msg = outgoingMsgFactory.CreateGetAllSpotSubscriptionsRequest(clientMsgId);
+            if (isDebugIsOn) Console.WriteLine("SendGetAllSpotSubscriptionsReq() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            writeQueueSync.Enqueue(_msg.ToByteArray());
+        }
 
         #endregion
 

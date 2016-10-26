@@ -9561,7 +9561,8 @@ namespace OpenApiLib {
   }
   
   [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-  public sealed partial class ProtoOASpotEvent : pb::GeneratedMessage<ProtoOASpotEvent, ProtoOASpotEvent.Builder> {
+  public sealed partial class ProtoOASpotEvent : pb::GeneratedMessage<ProtoOASpotEvent, ProtoOASpotEvent.Builder>, pb.IMessage
+    {
     private ProtoOASpotEvent() { }
     private static readonly ProtoOASpotEvent defaultInstance = new ProtoOASpotEvent().MakeReadOnly();
     private static readonly string[] _protoOASpotEventFieldNames = new string[] { "askPrice", "bidPrice", "payloadType", "subscriptionId", "symbolName", "timestamp", "trendbar" };
