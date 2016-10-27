@@ -123,11 +123,13 @@ namespace LionFire.Trading.Bots
 
         //public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
+#if cAlgo
         public Microsoft.Extensions.Logging.ILogger Logger
         {
             get { return logger; }
         }
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
+#endif
 
         #endregion
     }

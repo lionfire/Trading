@@ -37,17 +37,17 @@ namespace LionFire.Trading.Indicators
             {
                 InitLog();
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                throw new Exception("InitLog threw");
+                throw new Exception("InitLog threw", e);
             }
             try
             {
                 _InitPartial();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                throw new Exception("_InitPartial threw");
+                throw new Exception("_InitPartial threw", ex);
             }
         }
 

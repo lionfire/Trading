@@ -8,7 +8,7 @@
 using cAlgo.API;
 using cAlgo.API.Internals;
 #else 
-using LionFire.Trading.Backtesting;
+
 #endif
 using System;
 using System.Collections.Generic;
@@ -18,9 +18,9 @@ using System.Threading.Tasks;
 using LionFire.Trading.Indicators;
 using LionFire.Extensions.Logging;
 using LionFire.Trading;
-using LionFire.Trading.Backtesting;
 using System.IO;
 using Newtonsoft.Json;
+using LionFire.Trading.Backtesting;
 
 namespace LionFire.Trading.Bots
 {
