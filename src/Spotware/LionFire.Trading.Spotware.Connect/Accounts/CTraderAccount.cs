@@ -1,6 +1,6 @@
 ﻿#if NET462
-#define TRACE_DATA_RECEIVED
-#define TRACE_DATA_SENT
+//#define TRACE_DATA_RECEIVED
+//#define TRACE_DATA_SENT
 //#define TRACE_HEARTBEAT
 #define TRACE_DATA_INCOMING
 using System;
@@ -230,7 +230,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Threads
 
-        Thread processingThread;
+        Thread handlerThread;
         Thread listenerThread;
         Thread senderThread;
         Thread heartbeatThread;
@@ -332,8 +332,7 @@ namespace LionFire.Trading.Spotware.Connect
             {
                 Thread.Sleep(0);
 
-                if (messagesQueue.Count <= 0)
-                    continue;
+                if (messagesQueue.Count <= 0) continue;
 
                 byte[] _message = (byte[])messagesQueue.Dequeue();
                 ProcessIncomingDataStream(msgFactory, _message);
@@ -365,7 +364,7 @@ namespace LionFire.Trading.Spotware.Connect
 
             #region start incoming data processing thread
 
-            processingThread = new Thread(() =>
+            handlerThread = new Thread(() =>
             {
                 Thread.CurrentThread.IsBackground = true;
                 try
@@ -374,10 +373,10 @@ namespace LionFire.Trading.Spotware.Connect
                 }
                 catch (Exception e)
                 {
-                    logger.LogError("DataProcessor throws exception: {0}", e);
+                    logger.LogError("Message handler threw exception: {0}", e);
                 }
             });
-            processingThread.Start();
+            handlerThread.Start();
 
             #endregion
 
@@ -473,7 +472,7 @@ namespace LionFire.Trading.Spotware.Connect
             #region wait for shutting down threads
 
             Console.WriteLine("Shutting down connection...");
-            while (listenerThread.IsAlive || heartbeatThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
+            while (listenerThread.IsAlive || heartbeatThread.IsAlive || handlerThread.IsAlive || senderThread.IsAlive)
             {
                 Thread.Sleep(100);
             }
@@ -532,24 +531,49 @@ namespace LionFire.Trading.Spotware.Connect
 
                 SendSubscribeForTradingEventsRequest(this.outgoingMsgFactory, writeQueueSync);
 
-                var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1, ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5 };
-                var defaultSymbols = new string[] {
-                    "XAUUSD",
-                    "EURUSD",
-                    "USDJPY",
-                    "DE30",
-                };
-
                 //RequestSubscribeForSymbol("EURUSD");
                 //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1);
                 //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
-                foreach (var s in defaultSymbols)
+
                 {
-                    RequestSubscribeForSymbol(s, defaultPeriods);
+                    var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1
+                    , ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5,
+                    ProtoOATrendbarPeriod.M10
+                };
+                    var defaultSymbols = new string[] {
+                    "AUDSGD",
+                    "EURUSD",
+                    "DE30",
+                };
+
+
+                    foreach (var s in defaultSymbols)
+                    {
+                        RequestSubscribeForSymbol(s, defaultPeriods);
+                    }
                 }
+
+                {
+                    var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1
+                    //, ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5
+                };
+                    var defaultSymbols = new string[] {
+                    "CHFSGD",
+                    "AUS200",
+                };
+
+                    //RequestSubscribeForSymbol("EURUSD");
+                    //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1);
+                    //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
+                    foreach (var s in defaultSymbols)
+                    {
+                        RequestSubscribeForSymbol(s, defaultPeriods);
+                    }
+                }
+
                 //RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
 
-                while (listenerThread.IsAlive || heartbeatThread.IsAlive || processingThread.IsAlive || senderThread.IsAlive)
+                while (listenerThread.IsAlive || heartbeatThread.IsAlive || handlerThread.IsAlive || senderThread.IsAlive)
                 {
                     //DisplayMenu();
 
@@ -581,10 +605,20 @@ namespace LionFire.Trading.Spotware.Connect
         {
             var _msg = msgFactory.GetMessage(rawData);
 #if TRACE_DATA_INCOMING
-            if (isDebugIsOn) Console.WriteLine("ProcessIncomingDataStream() received: " + OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn)
+            {
+                if (_msg.PayloadType == (int)OpenApiLib.ProtoOAPayloadType.OA_SPOT_EVENT)
+                {
+                    Console.Write(".");
+                }
+                else
+                {
+                    Console.WriteLine("ProcessIncomingDataStream() received: " + OpenApiMessagesPresentation.ToString(_msg));
+                }
+            }
 #endif
 
-            if (!_msg.HasPayload)
+                if (!_msg.HasPayload)
             {
                 return;
             }
@@ -628,6 +662,10 @@ namespace LionFire.Trading.Spotware.Connect
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SPOT_EVENT:
                     {
+                        if (rawData.Length > 40)
+                        {
+                            Console.WriteLine("================= GOT LONG SPOT EVENT: " + rawData.Length + " ===================" );
+                        }
                         var payload = msgFactory.GetSpotEvent(rawData);
 
                         WriteUnknownFields(_msg.PayloadType, payload);
@@ -640,7 +678,7 @@ namespace LionFire.Trading.Spotware.Connect
                         {
                             foreach (var bar in payload.TrendbarList)
                             {
-                                Console.WriteLine($"{bar.Period} o:{bar.Open} h:{bar.High} l:{bar.Low} c:{bar.Close} [v:{bar.Volume}]");
+                                Console.WriteLine($"*********************** TRENDBAR: {bar.Period} o:{bar.Open} h:{bar.High} l:{bar.Low} c:{bar.Close} [v:{bar.Volume}]");
                             }
                         }
                         var tick = new TimedTick

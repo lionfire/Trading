@@ -27,7 +27,7 @@ namespace LionFire.Trading.Agent.Program
             try
             {
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
-
+                 
                 new AppHost()
 
                 #region Bootstrap
