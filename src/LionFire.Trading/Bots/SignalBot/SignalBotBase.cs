@@ -65,7 +65,7 @@ namespace LionFire.Trading.Bots
 
         public SingleSeriesSignalBotBase(string symbol, string timeFrame) : this()
         {
-            this.Config = new TConfig()
+            this.Template = new TConfig()
             {
                 Symbol = symbol,
                 TimeFrame = timeFrame,
@@ -157,7 +157,7 @@ namespace LionFire.Trading.Bots
             }
 #endif
 
-            if (Config.AllowLong
+            if (Template.AllowLong
                 && Indicator.OpenLongPoints.LastValue >=
                 1.0
                 && Indicator.CloseLongPoints.LastValue <
@@ -167,7 +167,7 @@ namespace LionFire.Trading.Bots
                 _Open(TradeType.Buy, Indicator.LongStopLoss);
             }
 
-            if (Config.AllowShort
+            if (Template.AllowShort
             && -Indicator.OpenShortPoints.LastValue >=
                 1.0
                 && -Indicator.CloseShortPoints.LastValue <
@@ -316,21 +316,21 @@ namespace LionFire.Trading.Bots
             var price = (tradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask);
             long volume_MinPositionSize = long.MinValue;
 
-            if (Config.MinPositionSize > 0)
+            if (Template.MinPositionSize > 0)
             {
-                volume_MinPositionSize = Symbol.VolumeMin + (Config.MinPositionSize - 1) * Symbol.VolumeStep;
+                volume_MinPositionSize = Symbol.VolumeMin + (Template.MinPositionSize - 1) * Symbol.VolumeStep;
             }
 
             long volume_MinPositionRiskPercent = long.MinValue;
 
-            if (Config.PositionRiskPercent > 0)
+            if (Template.PositionRiskPercent > 0)
             {
                 var fromCurrency = Symbol.Code.Substring(3);
                 var toCurrency = Account.Currency;
 
                 var stopLossDistanceAccountCurrency = ConvertToCurrency(stopLossDistance, fromCurrency, toCurrency);
 
-                var equityRiskAmount = this.Account.Equity * (Config.PositionRiskPercent / 100.0);
+                var equityRiskAmount = this.Account.Equity * (Template.PositionRiskPercent / 100.0);
 
                 var quantity = (long)(equityRiskAmount / (stopLossDistanceAccountCurrency));
                 quantity = VolumeToStep(quantity);
@@ -393,10 +393,10 @@ namespace LionFire.Trading.Bots
             LogOpen(tradeType, volumeInUnits, risk, stopLoss, stopLossDistance);
 #endif
 
-            if (IsBacktesting && Config.BacktestProfitTPMultiplierOnSL > 0)
+            if (IsBacktesting && Template.BacktestProfitTPMultiplierOnSL > 0)
             {
                 UseTakeProfit = true;
-                TakeProfitInPips = stopLossDistancePips * Config.BacktestProfitTPMultiplierOnSL;
+                TakeProfitInPips = stopLossDistancePips * Template.BacktestProfitTPMultiplierOnSL;
             }
             OpenPosition(tradeType, stopLossDistancePips, UseTakeProfit ? TakeProfitInPips : double.NaN, volumeInUnits);
         }
@@ -471,13 +471,13 @@ p.onBars.Add(new StopLossTrailer(p)
             var fitness = (args.NetProfit / initialBalance) * invDrawDown * tradeCountMultiplier;
 
 
-            if (Config.LogBacktest && (Config.LogBacktestThreshold == 0 || fitness > Config.LogBacktestThreshold))
+            if (Template.LogBacktest && (Template.LogBacktestThreshold == 0 || fitness > Template.LogBacktestThreshold))
             {
                 var backtestResult = new BacktestResult()
                 {
                     BacktestDate = DateTime.UtcNow,
                     BotType = this.GetType().FullName,
-                    Config = this.Config,
+                    Config = this.Template,
 
                     Start = this.MarketSeries?.OpenTime?[0],
                     End = this.MarketSeries?.OpenTime?.LastValue,
@@ -552,7 +552,7 @@ p.onBars.Add(new StopLossTrailer(p)
 
         private void LogOpen(TradeType tradeType, long volumeInUnits, double risk, double stopLoss, double stopLossDistance)
         {
-            if (!Config.Log) return;
+            if (!Template.Log) return;
             string stopLossDistanceAccount = "";
             var purchaseCurrency = Symbol.Code.Substring(0, 3);
             if (purchaseCurrency != Account.Currency)

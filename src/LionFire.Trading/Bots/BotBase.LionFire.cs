@@ -11,7 +11,7 @@ namespace LionFire.Trading.Bots
 {
 
 
-    public partial class BotBase<TConfig> : MarketParticipant, IBot, IStartable
+    public partial class BotBase<_TBot> : MarketParticipant, IBot, IStartable
         //, IInitializable
     {
         #region Relationships

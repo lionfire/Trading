@@ -23,7 +23,8 @@ namespace LionFire.Trading.Bots
 #if !cAlgo
         IAccount Account { get; }
 #endif
-        TBot Config { get; set; }
+
+        new TBot Template { get; set; }
 
         string Version { get; set; }
 

@@ -17,9 +17,11 @@ using LionFire.Trading.Spotware.Connect;
 using LionFire.Trading.Applications;
 using LionFire.Execution;
 using LionFire.Templating;
+using LionFire.Trading.Bots;
 
 namespace LionFire.Trading.Agent.Program
 {
+
     public class FrameworkProgram
     {
         static void Main(string[] args)
@@ -27,7 +29,7 @@ namespace LionFire.Trading.Agent.Program
             try
             {
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
-                 
+
                 new AppHost()
 
                 #region Bootstrap
@@ -46,28 +48,35 @@ namespace LionFire.Trading.Agent.Program
 
                     .AddTrading(TradingOptions.Auto, AccountMode.Live)
 #if Live
-                    .AddSpotwareConnectClient("LionProwl")
-                                                                //.Add<TCTraderAccount>("spotware-lionprowl") // TODO: Change to "IC Markets.Demo1";
-                                                                .Add<TCTraderAccount>("spotware-lfdev") // TODO: Change to "IC Markets.Demo1";
-                                                                                                        //.Add<TLionTrender>()
-                                                                                                        //.Add<TLionTrender>("4bx2")
+                    .AddSpotwareConnectClient("LionFireDev")
+                    .Add<TCTraderAccount>("IC Markets.Demo3") 
+                    
+                    //.Add<TCTraderAccount>("spotware-lionprowl") 
+
+                    .Bootstrap()
 #if Proprietary
-                    .Add(new TLionTrender("XAUUSD", "m1")
-                    {
-                        Log = true,
-                        LogBacktest = true,
-                        MinPositionSize = 1,
-                        Indicator = new TLionTrending
-                        {
-                            Log = true,
-                            OpenWindowPeriods = 55,
-                            CloseWindowPeriods = 34,
-                            PointsToOpenLong = 3.0,
-                            PointsToOpenShort = 3.0,
-                            PointsToCloseLong = 2.0,
-                            PointsToCloseShort = 2.0,
-                        }
-                    }.Create())
+                    //.Add(new TLionTrender("XAUUSD", "m1")
+                    //{
+                    //    Mode = BotModes.Live,
+                    //    Log = true,
+                    //    LogBacktest = true,
+                    //    MinPositionSize = 1,
+                    //    Indicator = new TLionTrending
+                    //    {
+                    //        Log = true,
+                    //        OpenWindowPeriods = 55,
+                    //        CloseWindowPeriods = 34,
+                    //        PointsToOpenLong = 3.0,
+                    //        PointsToOpenShort = 3.0,
+                    //        PointsToCloseLong = 2.0,
+                    //        PointsToCloseShort = 2.0,
+                    //    }
+                    //}.Create())
+                    .Add<TLionTrender>("4bx2")
+
+                    // Future: Add bot types
+                    //.Add<TLionTrender>()
+
 #endif
 #endif
 
@@ -82,7 +91,6 @@ namespace LionFire.Trading.Agent.Program
                     //"spotware-lionprowl";
 
                     //.AddScanner<TLionTrender>("zt9f")
-
 
                     //.AddSpotwareConnectAccount()
                     //.AddBrokerAccount()
@@ -100,6 +108,7 @@ namespace LionFire.Trading.Agent.Program
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+                Console.ReadKey();
             }
 
         }

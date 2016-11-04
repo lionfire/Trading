@@ -14,6 +14,11 @@ namespace LionFire.Trading.Spotware.Connect
         }
         string ClientPublicId { get; }
         string ClientSecret { get; }
+
+         string ApiHost { get; set; }
+
+        string TradeApiHost { get; set; }
+        int? TradeApiPort { get; set; }
     }
 
     [AssetPath("Apis/SpotwareConnect")]
@@ -22,6 +27,15 @@ namespace LionFire.Trading.Spotware.Connect
         public bool IsSandbox { get; set; }
         public string ClientPublicId { get; set; }
         public string ClientSecret { get; set; }
+
+        public string ApiHost { get; set; }
+        public string TradeApiHost { get; set; }
+        public int? TradeApiPort { get; set; }
+
+        public static int DefaultTradeApiPort = 5032;
+        public static string DefaultTradeApiHost = "tradeapi.spotware.com";
+
+        public static string DefaultApiHost = "api.spotware.com";
     }
 
    

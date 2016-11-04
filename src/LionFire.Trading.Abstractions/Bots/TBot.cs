@@ -33,10 +33,21 @@ namespace LionFire.Trading.Bots
         }
     }
 
+    [Flags]
+    public enum BotModes
+    {
+        Live = 1 << 0,
+        Demo = 1 << 1,
+        Paper = 1 << 2,
+        Scanner = 1 << 3,
+    }
+
     public class TBot
     {
         public string Id { get; set; } = IdUtils.GenerateId();
 
+
+        public BotModes Mode { get; set; }
 
         public string Account { get; set; }
 

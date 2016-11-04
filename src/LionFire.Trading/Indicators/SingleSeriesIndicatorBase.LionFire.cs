@@ -55,7 +55,5 @@ namespace LionFire.Trading.Indicators
                 Symbol = Market.GetSymbol(Config.Symbol);
             }
         }
-
     }
-
 }

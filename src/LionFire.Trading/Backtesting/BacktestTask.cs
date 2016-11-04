@@ -157,7 +157,7 @@ namespace LionFire.Applications.Trading
                 Directory.CreateDirectory(dir);
             }
 
-            var config = bot.Config;
+            var config = bot.Template;
             if (config.Id == null)
             {
                 config.Id = IdUtils.GenerateId();
@@ -167,7 +167,7 @@ namespace LionFire.Applications.Trading
 
             var path = Path.Combine(dir, filename);
 
-            var json = JsonConvert.SerializeObject(bot.Config);
+            var json = JsonConvert.SerializeObject(bot.Template);
 
             using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
             {

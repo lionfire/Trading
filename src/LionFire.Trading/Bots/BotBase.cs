@@ -16,27 +16,26 @@ namespace LionFire.Trading.Bots
 {
     // TODO: Rename BotBase to SingleSeriesBotBase  and make a new BotBase that is more generic
 
-    public partial class BotBase<TConfig> : IBot, IInitializable
-        where TConfig : TBot, new()
+    public partial class BotBase<_TBot> : IBot, IInitializable
+        where _TBot : TBot, new()
     {
         public string Version { get; set; } = "0.0.0";
 
         #region Configuration
 
-        object ITemplateInstance.Template { get { return Config; } set { this.Config = (TConfig)value; } }
+        object ITemplateInstance.Template { get { return Template; } set { this.Template = (_TBot)value; } }
 
-        TBot IBot.Config { get { return Config; } set { Config = (TConfig)value; } }
+        TBot IBot.Template { get { return Template; } set { Template = (_TBot)value; } }
 
-        public TConfig Config { get; set; } = new TConfig();
+        public _TBot Template { get; set; } = new _TBot();
 
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
-
 
         #endregion
 
         public Task<bool> Initialize()
         {
-            logger = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
+            logger = this.GetLogger(this.ToString().Replace(' ', '.'), Template.Log);
             return Task.FromResult(true);
         }
 
@@ -70,7 +69,7 @@ namespace LionFire.Trading.Bots
             get
             {
                 var count = Positions.Where(p => p.TradeType == TradeType.Buy).Count();
-                return count < Config.MaxLongPositions;
+                return count < Template.MaxLongPositions;
             }
         }
         public bool CanOpenShort
@@ -78,7 +77,7 @@ namespace LionFire.Trading.Bots
             get
             {
                 var count = Positions.Where(p => p.TradeType == TradeType.Sell).Count();
-                return count < Config.MaxShortPositions;
+                return count < Template.MaxShortPositions;
             }
         }
         public bool CanOpen
@@ -86,7 +85,7 @@ namespace LionFire.Trading.Bots
             get
             {
                 var count = Positions.Count;
-                return Config.MaxOpenPositions == 0 || count < Config.MaxOpenPositions;
+                return Template.MaxOpenPositions == 0 || count < Template.MaxOpenPositions;
             }
         }
 

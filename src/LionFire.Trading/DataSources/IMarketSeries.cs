@@ -28,8 +28,6 @@ namespace LionFire.Trading
 
         //IBarSeries Bars { get; }
 
-        
-
         TimeSeries OpenTime { get; }
         IDataSeries Open { get; }
         IDataSeries High { get; }
@@ -71,12 +69,13 @@ namespace LionFire.Trading
         }
 
         //event Action<MarketSeries> BarReceived;
-        event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
+
     }
 
     internal interface IMarketSeriesInternal : IMarketSeries
     {
         void OnBar(TimedBar bar, bool finishedBar = false);
-        void OnTick(DateTime time, double bid, double ask);
+
+        event Action<IMarketSeries, bool> BarHasObserversChanged;
     }
 }

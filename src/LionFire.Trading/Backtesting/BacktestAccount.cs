@@ -371,9 +371,9 @@ namespace LionFire.Trading.Backtesting
             UpdatePositions();
         }
 
-        public override void OnTick(SymbolBar bar)
+        public override void OnTick(SymbolTick tick)
         {
-            base.OnTick(bar);
+            base.OnTick(tick);
 
             UpdatePositions();
         }

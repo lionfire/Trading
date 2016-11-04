@@ -8,19 +8,22 @@ using LionFire.Structures;
 
 namespace LionFire.Trading.Bots
 {
-    public partial class SingleSeriesSignalBotBase<TIndicator, TConfig, TIndicatorConfig>  : IHandler<SymbolTick>
+    public partial class SingleSeriesSignalBotBase<TIndicator, TConfig, TIndicatorConfig>  
     {
-        public IMarketSeries MarketSeries { get; set; } 
-
+        public IMarketSeries MarketSeries { get; set; }
 
         protected override void OnStarting()
         {
+            if (!Market.Started.Value)
+            {
+                throw new InvalidOperationException("Can't start until Market is started");
+            }
             base.OnStarting();
 
-            if (Config.Indicator.Symbol == null) Config.Indicator.Symbol = this.Config.Symbol;
-            if (Config.Indicator.TimeFrame == null) Config.Indicator.TimeFrame = this.Config.TimeFrame;
+            if (Template.Indicator.Symbol == null) Template.Indicator.Symbol = this.Template.Symbol;
+            if (Template.Indicator.TimeFrame == null) Template.Indicator.TimeFrame = this.Template.TimeFrame;
 
-            this.Indicator.Config = this.Config.Indicator;
+            this.Indicator.Config = this.Template.Indicator;
 
             this.Market.Add(this.Indicator);
 
@@ -30,19 +33,20 @@ namespace LionFire.Trading.Bots
                 sim.SimulationTickFinished += OnSimulationTickFinished;
             }
 
-            this.Symbol = Market.GetSymbol(Config.Symbol);
-            this.MarketSeries = Market.GetMarketSeries(this.Config.Symbol, this.Config.TimeFrame /*, Market.IsBacktesting*/);
+            this.Symbol = Market.GetSymbol(Template.Symbol);
+            this.MarketSeries = Market.GetMarketSeries(this.Template.Symbol, this.Template.TimeFrame /*, Market.IsBacktesting*/);
 
             UpdateDesiredSubscriptions();
         }
 
         protected virtual void UpdateDesiredSubscriptions()
         {
-            this.DesiredSubscriptions = new List<MarketDataSubscription>()
-            {
-                new MarketDataSubscription(this.Config.Symbol, Config.TimeFrame)
-                //new MarketDataSubscription(this.Config.Symbol, "t1")
-            };
+            // Disabled for now
+            //this.DesiredSubscriptions = new List<MarketDataSubscription>()
+            //{
+            //    new MarketDataSubscription(this.Template.Symbol, Template.TimeFrame)
+            //    //new MarketDataSubscription(this.Config.Symbol, "t1")
+            //};
         }
 
         protected void OnSimulationTickFinished()
@@ -50,11 +54,7 @@ namespace LionFire.Trading.Bots
             //logger.LogInformation("bot OnSimulationTickFinished " + (Market as BacktestMarket).SimulationTime);
             Evaluate();
         }
-
-        void IHandler<SymbolTick>.Handle(SymbolTick tick)
-        {
-            Console.WriteLine("OnTick: " + tick);
-        }
+        
 
         //long i = 0;
         public override void OnBar(string symbolCode, TimeFrame timeFrame, TimedBar bar)

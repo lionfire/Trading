@@ -1,4 +1,5 @@
-﻿#if NET462
+﻿//#define LOG_SENSITIVE_INFO
+#if NET462
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +54,11 @@ namespace OpenApiDeveloperLibrary
             {
                 case ProtoOAPayloadType.OA_AUTH_REQ:
                     var _auth_req = ProtoOAAuthReq.CreateBuilder().MergeFrom(msg.Payload).Build();
+#if LOG_SENSITIVE_INFO
                     return "AuthRequest{clientId:" + _auth_req.ClientId + ", clientSecret:" + _auth_req.ClientSecret + "}";
+#else
+                    return "AuthRequest{clientId: *****, clientSecret: *****}";
+#endif
                 case ProtoOAPayloadType.OA_AUTH_RES:
                     return "AuthResponse";
                 case ProtoOAPayloadType.OA_GET_SUBSCRIBED_ACCOUNTS_REQ:
@@ -67,7 +72,11 @@ namespace OpenApiDeveloperLibrary
                     return _subscr_res_str + "}";
                 case ProtoOAPayloadType.OA_SUBSCRIBE_FOR_TRADING_EVENTS_REQ:
                     var _subscr_req = ProtoOASubscribeForTradingEventsReq.CreateBuilder().MergeFrom(msg.Payload).Build();
+#if LOG_SENSITIVE_INFO
                     return "SubscrbeTradingEventsRequest{accountId:" + _subscr_req.AccountId.ToString() + ", accessToken:" + _subscr_req.AccessToken + "}";
+#else
+                    return "SubscrbeTradingEventsRequest{accountId: *****, accessToken: *****}";
+#endif
                 case ProtoOAPayloadType.OA_SUBSCRIBE_FOR_TRADING_EVENTS_RES:
                     return "SubscrbeTradingEventsResponse";
                 case ProtoOAPayloadType.OA_UNSUBSCRIBE_FROM_TRADING_EVENTS_REQ:

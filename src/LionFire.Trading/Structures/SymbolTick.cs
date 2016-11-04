@@ -7,12 +7,16 @@ namespace LionFire.Trading
 {
     public struct SymbolTick
     {
+        public string Symbol;
+
         public DateTime Time;
+
         public double Bid;
         public bool HasBid { get { return !double.IsNaN(Bid); } }
+
         public double Ask;
         public bool HasAsk { get { return !double.IsNaN(Ask); } }
-        public string Symbol;
+       
 
         public override string ToString()
         {

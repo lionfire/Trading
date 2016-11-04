@@ -18,12 +18,14 @@ namespace LionFire.Trading
 
         static TimeFrame()
         {
+            t1 = new TimeFrame("t1");
             m1 = new TimeFrame("m1");
             h1 = new TimeFrame("h1");
             h2 = new TimeFrame("h2");
             h4 = new TimeFrame("h4");
         }
 
+        public static TimeFrame t1 { get; private set; }
         public static TimeFrame m1 { get; private set; }
         public static TimeFrame h1 { get; private set; }
         public static TimeFrame h2 { get; private set; }

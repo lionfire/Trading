@@ -1,4 +1,6 @@
-﻿using System;
+﻿using LionFire.Reactive;
+using LionFire.Reactive.Subjects;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
@@ -45,8 +47,8 @@ namespace LionFire.Trading
             }
         }
 
-        public IObservable<bool> Started { get { return started; } }
-        BehaviorSubject<bool> started = new BehaviorSubject<bool>(false);
+        public IBehaviorObservable<bool> Started { get { return started; } }
+        protected BehaviorObservable<bool> started = new BehaviorObservable<bool>(false);
 
         #region Derived
 

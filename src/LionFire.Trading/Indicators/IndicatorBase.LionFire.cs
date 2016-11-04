@@ -65,8 +65,8 @@ namespace LionFire.Trading.Indicators
             {
                 throw new ArgumentNullException("TimeFrame");
             }
-            subs.Add(new MarketDataSubscription(Symbol.Code, TimeFrame.Name));
-            this.DesiredSubscriptions = subs;
+            //subs.Add(new MarketDataSubscription(Symbol.Code, TimeFrame.Name));
+            //this.DesiredSubscriptions = subs;
 
             InitializeOutputs();
         }

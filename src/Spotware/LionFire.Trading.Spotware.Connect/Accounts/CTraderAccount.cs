@@ -1,8 +1,9 @@
 ﻿#if NET462
-//#define TRACE_DATA_RECEIVED
+#define TRACE_DATA_RECEIVED
 //#define TRACE_DATA_SENT
 //#define TRACE_HEARTBEAT
 #define TRACE_DATA_INCOMING
+//#define LOG_SENTITIVE_INFO
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -40,15 +41,15 @@ namespace LionFire.Trading.Spotware.Connect
     [AssetPath(@"Accounts/cTrader")]
     public class TCTraderAccount : ITemplate<CTraderAccount>
     {
-        public string ClientPublicId { get; set; }
-        public string ClientSecret { get; set; }
-        public string ApiHost { get; set; }
-        public int? ApiPort { get; set; }
+        //public string ClientPublicId { get; set; }
+        //public string ClientSecret { get; set; }
+        //public string ApiHost { get; set; }
+        //public int? ApiPort { get; set; }
+        //public static int DefaultApiPort = 5032;
 
         public string AccessToken { get; set; }
         public long AccountId { get; set; }
 
-        public static int DefaultApiPort = 5032;
     }
 
     public class CTraderAccount : LiveMarket, IRequiresServices, ITemplateInstance, IStartable, IHasExecutionFlags, IHasRunTask, IConfigures<IServiceCollection>, IAccount
@@ -65,6 +66,8 @@ namespace LionFire.Trading.Spotware.Connect
         //DateTime _lastSendTime = DateTime.MinValue;
         DateTime _nextHeartbeat = DateTime.MinValue;
 
+        protected ISpotwareConnectAppInfo ApiInfo { get { return Defaults.Get<ISpotwareConnectAppInfo>(); } }
+
         #region Template
 
         object ITemplateInstance.Template { get { return Template; } set { Template = (TCTraderAccount)value; } }
@@ -74,20 +77,16 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Derived (Convenience)
 
-        //long AccountId = 62002; // login 3000041 pass:123456 on http://sandbox-ct.spotware.com
+        // Test account: test002_access_token,  id: 62002
+        // Account login: login 3000041 pass:123456 on http://sandbox-ct.spotware.com
+
         long AccountId => Template.AccountId;
-        //?? 62002; // login 3000041 pass:123456 on http://sandbox-ct.spotware.com
         string AccessToken => Template.AccessToken;
-        //?? "test002_access_token";
 
-        string apiHost => Template.ApiHost;
-        //?? SandboxApiHost;
-        int apiPort => Template.ApiPort ?? TCTraderAccount.DefaultApiPort;
-
-        string clientPublicId => Template.ClientPublicId;
-        //?? TestClientPublicId;
-        string clientSecret => Template.ClientSecret;
-        //?? TestClientSecret;
+        string TradeApiHost => ApiInfo.TradeApiHost ?? SpotwareConnectAppInfo.DefaultTradeApiHost;
+        int TradeApiPort => ApiInfo.TradeApiPort ?? SpotwareConnectAppInfo.DefaultTradeApiPort;
+        string ClientPublicId => ApiInfo.ClientPublicId;
+        string ClientSecret => ApiInfo.ClientSecret;
 
         #endregion
 
@@ -124,6 +123,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         public CTraderAccount()
         {
+
             writeQueueSync = Queue.Synchronized(__writeQueue);
             readQueueSync = Queue.Synchronized(__readQueue);
             logger = this.GetLogger();
@@ -345,13 +345,13 @@ namespace LionFire.Trading.Spotware.Connect
         {
             #region open ssl connection
 
-            logger.LogInformation("Establishing trading SSL connection to {0}:{1}...", apiHost, apiPort);
+            logger.LogInformation("Establishing trading SSL connection to {0}:{1}...", TradeApiHost, TradeApiPort);
             try
             {
-                TcpClient client = new TcpClient(apiHost, apiPort);
+                TcpClient client = new TcpClient(TradeApiHost, TradeApiPort);
                 apiSocket = new SslStream(client.GetStream(), false,
                     new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
-                apiSocket.AuthenticateAsClient(apiHost);
+                apiSocket.AuthenticateAsClient(TradeApiHost);
             }
             catch (Exception e)
             {
@@ -436,12 +436,12 @@ namespace LionFire.Trading.Spotware.Connect
 
             SendAuthorizationRequest();
 
-            for (int retries = 5; retries > 0 && !isAuthorized; retries--)
+            for (int retries = 5; retries > 0 && !IsAuthorized; retries--)
             {
                 logger.LogInformation("Waiting for authorization response...");
                 Thread.Sleep(1000);
             }
-            var not = isAuthorized ? "" : " NOT ";
+            var not = IsAuthorized ? "" : " NOT ";
             logger.LogInformation($"Connected and {not} authorized");
             return true;
         }
@@ -458,7 +458,20 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion Handlers
 
+        public bool IsAuthorized
+        {
+            get { return isAuthorized; }
+            set
+            {
+                if (isAuthorized == value) return; isAuthorized = value;
+                //IsConnectedChangedTo?.Invoke(IsConnected);
+                started.OnNext(IsConnected);
+            }
+        }
         private bool isAuthorized;
+
+        public bool IsConnected { get { return IsAuthorized; } }
+        //public event Action<bool> IsConnectedChangedTo;
 
         private void CloseConnection()
         {
@@ -521,6 +534,54 @@ namespace LionFire.Trading.Spotware.Connect
             return true;
         }
 
+        private void SubscribeToDefaultSymbols()
+        {
+
+            //RequestSubscribeForSymbol("EURUSD");
+            //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1);
+            //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
+
+            {
+                var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1,
+                         //ProtoOATrendbarPeriod.H1
+                    //, ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5,
+                    //ProtoOATrendbarPeriod.M10
+                };
+                var defaultSymbols = new string[] {
+                    //"AUDSGD",
+                    //"EURUSD",
+                    //"USDCHF",
+                };
+
+
+                foreach (var s in defaultSymbols)
+                {
+                    RequestSubscribeForSymbol(s, defaultPeriods);
+                }
+            }
+
+            //{
+            //    var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1
+            //    //, ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5
+            //};
+            //    var defaultSymbols = new string[] {
+            //    "CHFSGD",
+            //    "AUS200",
+            //};
+
+            //    //RequestSubscribeForSymbol("EURUSD");
+            //    //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1);
+            //    //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
+            //    foreach (var s in defaultSymbols)
+            //    {
+            //        RequestSubscribeForSymbol(s, defaultPeriods);
+            //    }
+            //}
+
+            //RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
+
+        }
+
         public void Run()
         {
             do
@@ -531,47 +592,7 @@ namespace LionFire.Trading.Spotware.Connect
 
                 SendSubscribeForTradingEventsRequest(this.outgoingMsgFactory, writeQueueSync);
 
-                //RequestSubscribeForSymbol("EURUSD");
-                //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1);
-                //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
-
-                {
-                    var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1
-                    , ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5,
-                    ProtoOATrendbarPeriod.M10
-                };
-                    var defaultSymbols = new string[] {
-                    "AUDSGD",
-                    "EURUSD",
-                    "DE30",
-                };
-
-
-                    foreach (var s in defaultSymbols)
-                    {
-                        RequestSubscribeForSymbol(s, defaultPeriods);
-                    }
-                }
-
-                {
-                    var defaultPeriods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1
-                    //, ProtoOATrendbarPeriod.M2, ProtoOATrendbarPeriod.M3, ProtoOATrendbarPeriod.M5
-                };
-                    var defaultSymbols = new string[] {
-                    "CHFSGD",
-                    "AUS200",
-                };
-
-                    //RequestSubscribeForSymbol("EURUSD");
-                    //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1);
-                    //RequestSubscribeForSymbol("EURUSD", ProtoOATrendbarPeriod.M1, ProtoOATrendbarPeriod.H1);
-                    foreach (var s in defaultSymbols)
-                    {
-                        RequestSubscribeForSymbol(s, defaultPeriods);
-                    }
-                }
-
-                //RequestSubscribeForSymbol("USDJPY", ProtoOATrendbarPeriod.M1);
+                SubscribeToDefaultSymbols();
 
                 while (listenerThread.IsAlive || heartbeatThread.IsAlive || handlerThread.IsAlive || senderThread.IsAlive)
                 {
@@ -607,18 +628,18 @@ namespace LionFire.Trading.Spotware.Connect
 #if TRACE_DATA_INCOMING
             if (isDebugIsOn)
             {
-                if (_msg.PayloadType == (int)OpenApiLib.ProtoOAPayloadType.OA_SPOT_EVENT)
-                {
-                    Console.Write(".");
-                }
-                else
+                //if (_msg.PayloadType == (int)OpenApiLib.ProtoOAPayloadType.OA_SPOT_EVENT)
+                //{
+                //    Console.Write(".");
+                //}
+                //else
                 {
                     Console.WriteLine("ProcessIncomingDataStream() received: " + OpenApiMessagesPresentation.ToString(_msg));
                 }
             }
 #endif
 
-                if (!_msg.HasPayload)
+            if (!_msg.HasPayload)
             {
                 return;
             }
@@ -657,14 +678,14 @@ namespace LionFire.Trading.Spotware.Connect
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_AUTH_RES:
                     //var payload = msgFactory.GetAuthorizationResponse(rawData);
-                    isAuthorized = true;
+                    IsAuthorized = true;
                     Console.WriteLine("[AUTHORIZED]");
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SPOT_EVENT:
                     {
                         if (rawData.Length > 40)
                         {
-                            Console.WriteLine("================= GOT LONG SPOT EVENT: " + rawData.Length + " ===================" );
+                            Console.WriteLine("================= GOT LONG SPOT EVENT: " + rawData.Length + " ===================");
                         }
                         var payload = msgFactory.GetSpotEvent(rawData);
 
@@ -679,18 +700,19 @@ namespace LionFire.Trading.Spotware.Connect
                             foreach (var bar in payload.TrendbarList)
                             {
                                 Console.WriteLine($"*********************** TRENDBAR: {bar.Period} o:{bar.Open} h:{bar.High} l:{bar.Low} c:{bar.Close} [v:{bar.Volume}]");
+                                throw new Exception("***** got a trendbar!  Celebrate!");
                             }
                         }
-                        var tick = new TimedTick
+                        var tick = new SymbolTick
                         {
+                            Symbol = payload.SymbolName,
                             Ask = payload.HasAskPrice ? payload.AskPrice : double.NaN,
                             Bid = payload.HasBidPrice ? payload.BidPrice : double.NaN,
                             Time = time
                         };
 
-                        var symbol = GetSymbol(payload.SymbolName);
-                        symbol.Handle(tick);
-
+                        var symbol = (ISymbolInternal)GetSymbol(payload.SymbolName);
+                        symbol.OnTick(tick);
                         break;
                     }
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SUBSCRIBE_FOR_SPOTS_RES:
@@ -703,39 +725,56 @@ namespace LionFire.Trading.Spotware.Connect
                         SendGetSpotSubscriptionReq(subId);
                         SendGetAllSpotSubscriptionsReq();
 
-                        //payload.SubscriptionId;
                         WriteUnknownFields(_msg.PayloadType, payload);
                         break;
                     }
-                //case (int)OpenApiLib.ProtoOAPayloadType.OA_UNSUBSCRIBE_FROM_SPOTS_RES:
-                //    {
-                //        break;
-                //    }
+                case (int)OpenApiLib.ProtoOAPayloadType.OA_UNSUBSCRIBE_FROM_SPOTS_RES:
+                    {
+                        var payload = msgFactory.GetUnsubscribeFromSpotsResponse(rawData);
+
+                        //uint? subId = payload. ? (uint?)payload.SubscriptionId : null;
+                        Console.WriteLine($"[UNSUBSCRIBED]");
+
+                        SendGetAllSpotSubscriptionsReq();
+
+                        WriteUnknownFields(_msg.PayloadType, payload);
+
+                        break;
+                    }
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_GET_ALL_SPOT_SUBSCRIPTIONS_RES:
                     {
+                        Console.WriteLine($"--- GET_ALL_SPOT_SUBSCRIPTIONS_RES: ---");
                         var payload = msgFactory.GetGetAllSpotSubscriptionsResponse(rawData);
                         foreach (var x in payload.SpotSubscriptionsList)
                         {
                             foreach (var y in x.SubscribedSymbolsList)
                             {
+                                Console.Write($" - subscription {x.SubscriptionId}: {y.SymbolName} periods: ");
                                 foreach (var z in y.PeriodList)
                                 {
-                                    Console.WriteLine($"GET_ALL_SPOT_SUBSCRIPTIONS_RES subscription: {y.SymbolName} {z.ToString()}");
+                                    Console.Write($" {z.ToString()}");
                                 }
+                                Console.WriteLine();
                             }
                         }
+                        Console.WriteLine($"--------------------------------------- ");
                     }
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_GET_SPOT_SUBSCRIPTION_RES:
                     {
+
                         var payload = msgFactory.GetGetSpotSubscriptionResponse(rawData);
+                        Console.WriteLine($"--- GET_SPOT_SUBSCRIPTION_RES for subscription {payload.SpotSubscription.SubscriptionId}: --- ");
                         foreach (var y in payload.SpotSubscription.SubscribedSymbolsList)
                         {
+                            Console.Write($" - {y.SymbolName} periods: ");
                             foreach (var z in y.PeriodList)
                             {
-                                Console.WriteLine($"GET_SPOT_SUBSCRIPTION_RES subscription: {y.SymbolName} {z.ToString()}");
+                                Console.Write($"{z.ToString()} ");
                             }
+                            Console.WriteLine();
                         }
+                        Console.WriteLine($"------------------------------------------------------ ");
                     }
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SUBSCRIBE_FOR_TRADING_EVENTS_RES:
@@ -846,14 +885,21 @@ namespace LionFire.Trading.Spotware.Connect
         }
         void SendAuthorizationRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
-            var _msg = msgFactory.CreateAuthorizationRequest(clientPublicId, clientSecret);
+            var _msg = msgFactory.CreateAuthorizationRequest(ClientPublicId, ClientSecret);
             if (isDebugIsOn) Console.WriteLine("SendAuthorizationRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendAuthorizationRequest()
         {
-            var _msg = outgoingMsgFactory.CreateAuthorizationRequest(clientPublicId, clientSecret);
-            if (isDebugIsOn) Console.WriteLine("SendAuthorizationRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            var _msg = outgoingMsgFactory.CreateAuthorizationRequest(ClientPublicId, ClientSecret);
+            if (isDebugIsOn)
+            {
+                //#if LOG_SENTITIVE_INFO
+                Console.WriteLine("SendAuthorizationRequest() Message to be sent:{0}", OpenApiMessagesPresentation.ToString(_msg));
+                //#else
+                //Console.WriteLine("SendAuthorizationRequest() Message to be sent: *********");
+                //#endif
+            }
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
         void SendSubscribeForTradingEventsRequest(long accountId, OpenApiMessagesFactory msgFactory, Queue writeQueue)
@@ -875,7 +921,14 @@ namespace LionFire.Trading.Spotware.Connect
         void SendGetAllSubscriptionsForTradingEventsRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
             var _msg = msgFactory.CreateAllSubscriptionsForTradingEventsRequest();
-            if (isDebugIsOn) Console.WriteLine("SendGetAllSubscriptionsForTradingEventsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (isDebugIsOn)
+            {
+                //#if LOG_SENTITIVE_INFO
+                //                Console.WriteLine("SendGetAllSubscriptionsForTradingEventsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+                //#else
+                //#endif
+                Console.WriteLine("SendGetAllSubscriptionsForTradingEventsRequest() Message to be sent: *********");
+            }
             writeQueue.Enqueue(_msg.ToByteArray());
         }
         void SendGetAllSubscriptionsForSpotEventsRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
@@ -947,16 +1000,66 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Request Messages
 
+        Dictionary<string, HashSet<ProtoOATrendbarPeriod>> subscribedSymbols = new Dictionary<string, HashSet<ProtoOATrendbarPeriod>>();
+
+        private HashSet<ProtoOATrendbarPeriod> GetSubscribed(string symbol)
+        {
+            if (subscribedSymbols.ContainsKey(symbol)) { return subscribedSymbols[symbol]; }
+            var set = new HashSet<ProtoOATrendbarPeriod>();
+            subscribedSymbols.Add(symbol, set);
+            return set;
+        }
+
+        private void ValidateConnected()
+        {
+            if (!IsAuthorized)
+            {
+                throw new InvalidOperationException("Connection is not authorized yet");
+            }
+        }
+
         protected void RequestSubscribeForSymbol(string symbol, params ProtoOATrendbarPeriod[] periods)
         {
-            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, new List<ProtoOATrendbarPeriod>(periods));
+            ValidateConnected();
 
-            if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
+            if (periods.Length == 0) { periods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1 }; } // TEMP TEST - For Spotware troubleshooting missing trendbars
+
+            var subscribed = GetSubscribed(symbol);
+
+            List<ProtoOATrendbarPeriod> list = new List<ProtoOATrendbarPeriod>(periods.Where(p => !subscribed.Contains(p)));
+
+            // TODO: Verify previously subscribed trendbars stay subscribed.  Otherwise, eliminate the where clause above.
+
+            var _msg = outgoingMsgFactory.CreateSubscribeForSpotsRequest(AccountId, AccessToken, symbol, clientMsgId, list);
+            if (isDebugIsOn)
+            {
+                //#if LOG_SENTITIVE_INFO
+                Console.WriteLine("SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
+                //#else
+                //                Console.WriteLine("SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
+                //#endif
+            }
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
-        protected void RequestUnsubscribeForSymbol(string symbol)
+        protected void RequestUnsubscribeForSymbol(string symbol, params ProtoOATrendbarPeriod[] periods)
         {
-            throw new NotImplementedException();
+            var _msg = outgoingMsgFactory.CreateUnsubscribeFromSymbolSpotsRequest(symbol, clientMsgId);
+
+            if (isDebugIsOn) Console.WriteLine("Send UnsubscribeFromSymbolSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
+            writeQueueSync.Enqueue(_msg.ToByteArray());
+
+            var subscribed = GetSubscribed(symbol);
+            foreach (var period in periods)
+            {
+                subscribed.Remove(period);
+            }
+
+            if (subscribed.Count > 0 || periods.Length > 0)
+            {
+                RequestSubscribeForSymbol(symbol, subscribed.ToArray());
+            }
+
+            //throw new NotImplementedException();
             //var _msg = outgoingMsgFactory.CreateUnsubscribeAccountFromSpotsRequest(AccountId, AccessToken, symbol, clientMsgId);
             //if (isDebugIsOn) Console.WriteLine("SendSubscribeForSpotsRequest() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
             //writeQueueSync.Enqueue(_msg.ToByteArray());
@@ -1057,18 +1160,32 @@ namespace LionFire.Trading.Spotware.Connect
 
         protected override Symbol CreateSymbol(string symbolCode)
         {
-            return new CTraderSymbol(symbolCode, this);
+            var result = new CTraderSymbol(symbolCode, this);
+            result.TickHasObserversChanged += Result_TickHasObserversChanged;
+            return result;
         }
 
-        public Subject<TimedTick> GetTickSubject(string symbolCode, bool createIfMissing = true)
+        private void Result_TickHasObserversChanged(Symbol symbol, bool hasSubscribers)
+        {
+            if (hasSubscribers)
+            {
+                RequestSubscribeForSymbol(symbol.Code);
+            }
+            else
+            {
+                RequestUnsubscribeForSymbol(symbol.Code);
+            }
+        }
+
+        public Subject<Tick> GetTickSubject(string symbolCode, bool createIfMissing = true)
         {
             if (tickSubjects.ContainsKey(symbolCode)) return tickSubjects[symbolCode];
             if (!createIfMissing) return null;
-            var subject = new Subject<TimedTick>();
+            var subject = new Subject<Tick>();
             tickSubjects.Add(symbolCode, subject);
             return subject;
         }
-        Dictionary<string, Subject<TimedTick>> tickSubjects = new Dictionary<string, Subject<TimedTick>>();
+        Dictionary<string, Subject<Tick>> tickSubjects = new Dictionary<string, Subject<Tick>>();
 
         #endregion
 
@@ -1089,6 +1206,10 @@ namespace LionFire.Trading.Spotware.Connect
             else if (timeFrame == TimeFrame.h1)
             {
                 startTime = DateTime.UtcNow - TimeSpan.FromHours(barCount);
+            }
+            else if (timeFrame == TimeFrame.t1)
+            {
+                // Uses barCount
             }
             else
             {

@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using LionFire.ExtensionMethods;
 using System.Collections.Concurrent;
+using LionFire.Reactive;
+using LionFire.Reactive.Subjects;
 
 namespace LionFire.Trading
 {
@@ -124,8 +126,8 @@ namespace LionFire.Trading
 
         //public event Action ExecutedTime;
 
-        public IObservable<bool> Started { get { return started; } }
-        BehaviorSubject<bool> started = new BehaviorSubject<bool>(false);
+        public IBehaviorObservable<bool> Started { get { return started; } }
+        BehaviorObservable<bool> started = new BehaviorObservable<bool>(false);
 
         #endregion
 

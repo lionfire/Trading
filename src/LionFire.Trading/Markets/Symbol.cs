@@ -41,6 +41,13 @@ namespace LionFire.Trading
 
         IMarketSeries GetMarketSeries(TimeFrame timeFrame);
 
+        event Action<SymbolTick> Tick;
+    }
+
+    public interface ISymbolInternal : Symbol
+    {
+        event Action<Symbol, bool> TickHasObserversChanged;
+        void OnTick(SymbolTick tick);
     }
 
     public class SymbolImpl : SymbolImplBase, IBacktestSymbol
@@ -53,7 +60,7 @@ namespace LionFire.Trading
         }
     }
 
-    public abstract class SymbolImplBase : Symbol
+    public abstract class SymbolImplBase : Symbol, ISymbolInternal
     {
         #region Config
 
@@ -103,6 +110,45 @@ namespace LionFire.Trading
             get {
                 return Ask - Bid;
             }
+        }
+        
+        #endregion
+
+        #region Tick Events
+
+        public event Action<SymbolTick> Tick
+        {
+            add
+            {
+                lock (eventLock)
+                {
+                    if (tickEvent == null)
+                    {
+                        TickHasObserversChanged?.Invoke(this, true);
+                    }
+                    tickEvent += value;
+                }
+            }
+            remove
+            {
+                lock (eventLock)
+                {
+                    tickEvent -= value;
+                    if (tickEvent == null)
+                    {
+                        TickHasObserversChanged?.Invoke(this, false);
+                    }
+                }
+            }
+        }
+        private event Action<SymbolTick> tickEvent;
+        private object eventLock = new object();
+
+        public event Action<Symbol, bool> TickHasObserversChanged;
+
+        void ISymbolInternal.OnTick(SymbolTick tick)
+        {
+            tickEvent?.Invoke(tick);
         }
 
         #endregion
@@ -180,6 +226,10 @@ namespace LionFire.Trading
         {
             return volume * QuantityPerHundredThousandVolume / 100000.0;
         }
+
+        #endregion
+
+        #region Properties: Info
 
         #endregion
 

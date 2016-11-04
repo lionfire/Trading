@@ -82,8 +82,8 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Observables
 
-        public IObservable<TimedTick> Ticks { get { return tickSubject; } }
-        Subject<TimedTick> tickSubject;
+        public IObservable<Tick> Ticks { get { return tickSubject; } }
+        Subject<Tick> tickSubject;
 
         public IObservable<TimedBar> GetBars(TimeFrame timeFrame)
         {
@@ -125,7 +125,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         }
 
-        internal void Handle(TimedTick tick)
+        internal void Handle(Tick tick)
         {
             var msg = this.Code;
             if (tick.HasAsk)

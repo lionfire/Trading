@@ -11,9 +11,23 @@ using LionFire.Reactive.Subjects;
 using System.Threading;
 using System.Collections.Concurrent;
 using LionFire.Dependencies;
+using System.Reactive.Linq;
 
 namespace LionFire.Trading
 {
+    //public abstract class StateDependency
+    //{
+    //    public abstract ExecutionState State { get; }
+
+
+    //}
+
+    //public class MarketDependency : StateDependency
+    //{
+    //    public override ExecutionState State { get { return ExecutionState.Started; } }
+
+    //}
+
     /// <summary>
     /// Represents an entity that participates in the market, either passively (readonly, which will receive events for DesiredSubscriptions via OnBar) and/or actively (by creating orders)
     /// </summary>
@@ -49,9 +63,16 @@ namespace LionFire.Trading
         {
             if (oldValue != null)
             {
-                foreach (var old in oldValue)
+                foreach (var sub in oldValue)
                 {
-                    old.Observable?.Dispose();
+                    if (sub.TimeFrame.Name == "t1")
+                    {
+                        Market.GetSymbol(sub.Symbol).Tick -= OnTick;
+                    }
+                    else
+                    {
+                        sub.Observable?.Dispose();
+                    }
                 }
             }
             if (market != null && newValue != null)
@@ -78,7 +99,15 @@ namespace LionFire.Trading
 
                     sub.IsActive = true;
                     //sub.Series.BarReceived += OnBar;
-                    sub.Observable = sub.Series.LatestBar.Subscribe(timedBar => OnBar(sub.Series, timedBar));
+                    if (sub.TimeFrame.Name == "t1")
+                    {
+                        //sub.Observable = Observable.FromEvent(add => 
+                        Market.GetSymbol(sub.Symbol).Tick += OnTick;
+                    }
+                    else 
+                    {
+                        sub.Observable = sub.Series.LatestBar.Subscribe(timedBar => OnBar(sub.Series, timedBar));
+                    }
                 }
             }
         }
@@ -156,12 +185,22 @@ namespace LionFire.Trading
         {
             this.ValidateDependencies();
 
-            await Task.Run(() => this.OnStarting());
+            StartOnMarketAvailable = true;
+
+            if (Market.Started.Value)
+            {
+                await Task.Run(() => this.OnStarting());
+            }
         }
+
+        protected bool StartOnMarketAvailable = false;
 
         protected async virtual Task OnMarketStarted()
         {
-            await Start();
+            if (StartOnMarketAvailable)
+            {
+                await Start();
+            }
         }
 
         protected virtual void OnStarting()
@@ -203,8 +242,9 @@ namespace LionFire.Trading
         //{
         //}
 
-        public virtual void OnTick(SymbolBar bar)
+        public virtual void OnTick(SymbolTick tick)
         {
+            Console.WriteLine("MarketParticipant.OnTick: " + tick.ToString());
         }
 
         #endregion

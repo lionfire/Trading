@@ -234,6 +234,8 @@ namespace LionFire.Trading
 
         #region Events
 
+        
+
         public bool LatestBarHasObservers { get { return barSubject.HasObservers; } }
         public IObservable<TimedBar> LatestBar
         {
@@ -244,6 +246,7 @@ namespace LionFire.Trading
         }
         BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
 
+        public event Action<IMarketSeries, bool> BarHasObserversChanged; // TODO
 
         //public event Action<MarketSeries> BarReceived;
         public event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;

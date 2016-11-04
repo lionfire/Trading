@@ -1,4 +1,5 @@
-﻿using LionFire.Templating;
+﻿using LionFire.Reactive;
+using LionFire.Templating;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,11 +37,11 @@ namespace LionFire.Trading
 
         //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
 
-        
+
         //IEnumerable<string> SymbolsAvailable { get; }
         //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
 
-        IObservable<bool> Started { get; }
+        IBehaviorObservable<bool> Started { get; }
 
 
     
