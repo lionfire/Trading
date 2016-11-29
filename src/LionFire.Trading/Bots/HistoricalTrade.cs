@@ -38,7 +38,7 @@ namespace LionFire.Trading
             this.Balance = account.Balance;
             //ClosingDealId = 
             ClosingPrice = position.CurrentExitPrice;
-            ClosingTime = account.Market.Server.Time;
+            ClosingTime = account.Server.Time; // REVIEW - use extrapolated time?
             Comment = position.Comment;
             Commissions = position.Commissions;
             EntryPrice = position.EntryPrice;

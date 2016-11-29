@@ -13,7 +13,7 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        public IMarket Market { get; set; }
+        public IAccount Account { get; set; }
 
         #endregion
 
@@ -26,12 +26,12 @@ namespace LionFire.Trading
 
         public Symbol GetSymbol(string symbolCode)
         {
-            return Market.GetSymbol(symbolCode);
+            return Account.GetSymbol(symbolCode);
         }
 
         public MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
         {
-            return Market.Data.GetMarketSeries(symbol, timeFrame);
+            return Account.Data.GetMarketSeries(symbol, timeFrame);
         }
 
         #region Convenience Accessors

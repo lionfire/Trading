@@ -25,6 +25,7 @@ namespace LionFire.Trading.Indicators
             this.Config = config;
         }
 
+        // Not in cAlgo: called by OnStarting
         public void Init()
         {
             OnInitializing();

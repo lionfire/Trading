@@ -20,7 +20,7 @@ namespace LionFire.Trading.Spotware.Connect
         public DateTime EndTime = DateTime.UtcNow;
         public int MinBars = TradingOptions.DefaultHistoricalDataBarsDefault;
 
-        public long AccountId { get; set; }
+        public string AccountId { get; set; }
         public string AccessToken { get; set; }
 
         #region Derived
@@ -55,20 +55,7 @@ namespace LionFire.Trading.Spotware.Connect
 
             var apiInfo = Defaults.Get<ISpotwareConnectAppInfo>();
 
-            var client = new HttpClient();
-            
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36");
-            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.8,en-CA;q=0.6");
-            client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, sdch, br");
-            client.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
-            client.DefaultRequestHeaders.Add("Connection", "keep-alive");
-            client.DefaultRequestHeaders.Add("Host", "api.spotware.com");
-            client.DefaultRequestHeaders.Add("Cookie", "_ga=GA1.2.1217132727.1477434575");
-            
-
-
-            client.BaseAddress = new Uri(SpotwareAccountApi.GetRoot(apiInfo.IsSandbox));
+            var client = SpotwareAccountApi.NewHttpClient();
 
             #region Calculate req
 
@@ -109,6 +96,11 @@ namespace LionFire.Trading.Spotware.Connect
             #endregion
 
             var timeSpan = EndTime - startTime;
+            if (timeSpan.TotalDays < 0)
+            {
+                throw new ArgumentException("timespan is negative");
+            }
+
             if (timeSpan.TotalDays > daysPageSize)
             {
                 Console.WriteLine("WARNING TODO: download historical trendbars - timeSpan.TotalDays > daysPageSize.  TimeSpan: " + timeSpan);
@@ -124,7 +116,7 @@ namespace LionFire.Trading.Spotware.Connect
                 .Replace("{symbolName}", Symbol)
                 .Replace("{requestTimeFrame}", requestTimeFrame)
                 .Replace("{id}", AccountId.ToString())
-                .Replace("{oauth_token}", AccessToken)
+                .Replace("{oauth_token}", System.Uri.EscapeDataString(AccessToken))
                 .Replace("{from}", from)
                 .Replace("{to}", to)
                 ;
@@ -140,6 +132,12 @@ namespace LionFire.Trading.Spotware.Connect
             var json = readStream.ReadToEnd();
 
             UpdateProgress(0.95, "Deserializing");
+            var error = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareErrorContainer>(json);
+            if (error?.error != null)
+            {
+                throw new Exception($"API returned error: {error.error.errorCode} - '{error.error.description}'");
+            }
+
             var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTrendbarsResult>(json);
 
             UpdateProgress(0.98, "Processing data");
@@ -165,5 +163,5 @@ namespace LionFire.Trading.Spotware.Connect
 
     }
 
-    
+
 }

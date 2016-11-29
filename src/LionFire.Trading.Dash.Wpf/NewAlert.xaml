@@ -1,0 +1,35 @@
+﻿<Window x:Class="LionFire.Trading.Dash.Wpf.NewAlert"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LionFire.Trading.Dash.Wpf"
+        mc:Ignorable="d"
+        Title="NewAlert" Height="300" Width="300">
+    <Grid>
+        <StackPanel>
+            <DockPanel>
+                <TextBlock>Symbol</TextBlock>
+                <TextBox x:Name="SymbolText"></TextBox>
+            </DockPanel>
+
+            <DockPanel>
+                <TextBlock>Operator</TextBlock>
+                <ComboBox>
+                    <ComboBoxItem >&gt;=</ComboBoxItem>
+                    <ComboBoxItem >&lt;=</ComboBoxItem>
+                </ComboBox>
+            </DockPanel>
+
+            <DockPanel>
+                <TextBlock>Price</TextBlock>
+                <TextBox x:Name="PriceText"></TextBox>
+            </DockPanel>
+
+            <DockPanel LastChildFill="False" HorizontalAlignment="Right">
+                <Button>Cancel</Button>
+                <Button>Save</Button>
+            </DockPanel>
+        </StackPanel>
+    </Grid>
+</Window>

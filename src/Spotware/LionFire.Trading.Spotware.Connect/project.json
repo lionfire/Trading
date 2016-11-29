@@ -6,7 +6,7 @@
     "LionFire.Extensions.Logging": "1.0.0-*",
     "LionFire.Trading": "1.0.1-*",
     "Microsoft.Extensions.DependencyInjection.Abstractions": "1.0.0",
-    "NETStandard.Library": "1.6.0",
+    "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
     "System.Reactive.Linq": "3.0.0",
     "System.Threading.Thread": "4.0.0"

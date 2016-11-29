@@ -8,6 +8,6 @@ namespace LionFire.Applications.Trading
 {
     public interface IMarketTask
     {
-        IMarket Market { get; }
+        IAccount Account { get; }
     }
 }

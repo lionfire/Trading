@@ -19,7 +19,7 @@ namespace LionFire.Trading
 
 
         
-        public IMarket Market {
+        public IAccount Market {
             get {
                 return market;
             }
@@ -45,7 +45,7 @@ namespace LionFire.Trading
                 OnAttached();
             }
         }
-        private IMarket market;
+        private IAccount market;
 
         protected virtual void OnAttaching() { }
         protected virtual void OnAttached()

@@ -1,4 +1,4 @@
-﻿#if NET462
+﻿//#if NET462
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +65,7 @@ namespace LionFire.Trading.Spotware.Connect
     }
 
     public class LiveSymbol<TAccount> : SymbolImplBase
-        where TAccount : IAccount, IMarket
+        where TAccount : IAccount
     {
         protected TAccount account;
 
@@ -100,23 +100,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        #region Series
-
-        ConcurrentDictionary<string, IMarketSeries> seriesByTimeFrame = new ConcurrentDictionary<string, IMarketSeries>();
-
-        public override IMarketSeries GetMarketSeries(TimeFrame timeFrame)
-        {
-            return seriesByTimeFrame.GetOrAdd(timeFrame.Name, timeFrameName =>
-            {
-                var task = account.CreateMarketSeries(Code, timeFrame);
-                task.Wait();
-                return task.Result;
-            });
-        }
-
-
-        #endregion
-
+        
         #region Handle Data from Server
 
         internal void Handle(TimeFrameBar bar)
@@ -190,6 +174,8 @@ namespace LionFire.Trading.Spotware.Connect
 
         public CTraderSymbol(string symbolCode, CTraderAccount account) : base(symbolCode, account)
         {
+            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(account.Template.BrokerName, symbolCode);
+            this.LoadSymbolInfo(symbolInfo);
         }
 
         #endregion
@@ -198,4 +184,4 @@ namespace LionFire.Trading.Spotware.Connect
     }
 }
 
-#endif
+//#endif

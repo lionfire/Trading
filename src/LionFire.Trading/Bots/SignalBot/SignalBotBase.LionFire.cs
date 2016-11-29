@@ -14,7 +14,7 @@ namespace LionFire.Trading.Bots
 
         protected override void OnStarting()
         {
-            if (!Market.Started.Value)
+            if (!Account.Started.Value)
             {
                 throw new InvalidOperationException("Can't start until Market is started");
             }
@@ -25,18 +25,34 @@ namespace LionFire.Trading.Bots
 
             this.Indicator.Config = this.Template.Indicator;
 
-            this.Market.Add(this.Indicator);
+            this.Indicator.Account = Account;
 
-            var sim = Market as ISimulatedMarket;
-            if (sim != null)
-            {
-                sim.SimulationTickFinished += OnSimulationTickFinished;
-            }
-
-            this.Symbol = Market.GetSymbol(Template.Symbol);
-            this.MarketSeries = Market.GetMarketSeries(this.Template.Symbol, this.Template.TimeFrame /*, Market.IsBacktesting*/);
+            this.Symbol = Account.GetSymbol(Template.Symbol);
+            this.MarketSeries = Account.GetMarketSeries(this.Template.Symbol, this.Template.TimeFrame /*, Market.IsBacktesting*/);
 
             UpdateDesiredSubscriptions();
+
+            var sim = Account as ISimulatedAccount;
+            if (Account as ISimulatedAccount != null)
+            {
+                Account.Ticked += Market_Ticked;
+            }
+            else
+            {
+                this.MarketSeries.Bar += MarketSeries_Bar;
+            }
+        }
+
+        private void Market_Ticked()
+        {
+            // Unlikely OPTIMIZE: convey which symbols/tf's ticked and only evaluate here if relevant?  Backtests are usually focused on one bot though.
+            Evaluate();
+        }
+
+        private void MarketSeries_Bar(SymbolBar obj)
+        {
+            //Console.WriteLine("[bar] " + obj);
+            Evaluate();
         }
 
         protected virtual void UpdateDesiredSubscriptions()

@@ -15,14 +15,14 @@ namespace LionFire.Trading
     {
         #region Relationships
 
-        IMarket market;
+        IAccount market;
 
         #endregion
 
         #region Configuration
 
-        public DataSourceCollection HistoricalDataSources { get; private set; } = new DataSourceCollection(true);
-        public DataSourceCollection LiveDataSources { get; private set; } = new DataSourceCollection(false);
+        public DataSourceCollection HistoricalDataSources { get; private set; }
+        public DataSourceCollection LiveDataSources { get; private set; }
 
         public List<HistoricalDataSource> HistoricalDataSourcesList { get { return historicalDataSources; } }
 
@@ -30,8 +30,10 @@ namespace LionFire.Trading
 
         #endregion
 
-        internal IEnumerable<IMarketSeries> ActiveLiveSeries {
-            get {
+        internal IEnumerable<IMarketSeries> ActiveLiveSeries
+        {
+            get
+            {
                 foreach (var series in LiveDataSources.Dict)
                 {
                     // TODO OPTIMIZE UNLOAD: Allow deactivate
@@ -39,8 +41,10 @@ namespace LionFire.Trading
                 }
             }
         }
-        internal IEnumerable<IMarketSeries> ActiveHistoricalSeries {
-            get {
+        internal IEnumerable<IMarketSeries> ActiveHistoricalSeries
+        {
+            get
+            {
                 foreach (var series in HistoricalDataSources.Dict)
                 {
                     // TODO OPTIMIZE UNLOAD: Allow deactivate
@@ -74,9 +78,11 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public MarketDataProvider(IMarket market)
+        public MarketDataProvider(IAccount market)
         {
             this.market = market;
+            HistoricalDataSources = new DataSourceCollection(true, market);
+            LiveDataSources = new DataSourceCollection(false, market);
         }
 
         #endregion
@@ -86,15 +92,19 @@ namespace LionFire.Trading
         public MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, bool historical = false)
         {
             if (historical) { return this.HistoricalDataSources.GetMarketSeries(symbol, timeFrame); }
-            else { return this.LiveDataSources.GetMarketSeries(symbol, timeFrame); }
+            else {
+                return this.LiveDataSources.GetMarketSeries(symbol, timeFrame);
+            }
         }
         public MarketSeries GetMarketSeries(Symbol symbol, TimeFrame timeFrame, bool historical = false)
         {
             return GetMarketSeries(symbol.Code, timeFrame.Name, historical);
         }
 
-        public IEnumerable<string> HistoricalSymbolsAvailable {
-            get {
+        public IEnumerable<string> HistoricalSymbolsAvailable
+        {
+            get
+            {
                 var results = new HashSet<string>();
                 foreach (var source in HistoricalDataSourcesList)
                 {

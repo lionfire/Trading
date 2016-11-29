@@ -19,8 +19,10 @@ namespace LionFire.Trading
 
         #region Accessors
 
-        public IEnumerable<string> SymbolsAvailable {
-            get {
+        public IEnumerable<string> SymbolsAvailable
+        {
+            get
+            {
 #if TRACE_SOURCE_SYMBOLS
                 Console.WriteLine(" - Data source: {SourceName}");
 #endif
@@ -72,6 +74,11 @@ namespace LionFire.Trading
         public MarketSeries GetMarketSeries(string symbolCode, TimeFrame timeFrame, DateTime? startDate = null, DateTime? endDate = null)
         {
             string file = null;
+
+            if (!Directory.Exists(RootDir))
+            {
+                throw new ArgumentException($"Historical data source directory missing: {RootDir}");
+            }
 
             file = Path.Combine(RootDir, symbolCode + "_" + timeFrame.Name.ToUpper() + "_UTC+0_00.csv");
 

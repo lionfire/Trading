@@ -152,49 +152,49 @@ namespace LionFire.Trading.Agent
 
         //}
 
-        private void RunLiveSimulation()
-        {
-            int maxBars = 50;
-            int barCount = 0;
-            var sim = new LiveMarketSimulation();
-            sim.TimeFrame = TimeFrame.h1;
+        //private void RunLiveSimulation()
+        //{
+        //    int maxBars = 50;
+        //    int barCount = 0;
+        //    var sim = new LiveMarketSimulation();
+        //    sim.TimeFrame = TimeFrame.h1;
 
-            var tf = TimeFrame.h1;
-            sim.Subscribe("XAUUSD", this, tf);
-            sim.Subscribe("USDJPY", this, tf);
-            sim.SimulationTime = new DateTime(2012, 01, 01);
+        //    var tf = TimeFrame.h1;
+        //    sim.Subscribe("XAUUSD", this, tf);
+        //    sim.Subscribe("USDJPY", this, tf);
+        //    sim.SimulationTime = new DateTime(2012, 01, 01);
 
-            var dir = @"E:\st\Projects\Investing\Historical Data\dukascopy\XAUUSD\m1\";
-            var file = @"2005.01.01-2016.08.10_cAlgo_XAUUSD_m1.csv";
-            var path = Path.Combine(dir, file);
-            using (var sr = new StreamReader(new FileStream(path, FileMode.Open)))
-            {
-                string line;
-                while (!ExitRequested && (line = sr.ReadLine()) != null)
-                {
-                    var cells = line.Split(',');
-                    var bar = new SymbolBar
-                    {
-                        Code = "XAUUSD",
-                        Time = DateTime.Parse(cells[0] + " " + cells[1]),
+        //    var dir = @"E:\st\Projects\Investing\Historical Data\dukascopy\XAUUSD\m1\";
+        //    var file = @"2005.01.01-2016.08.10_cAlgo_XAUUSD_m1.csv";
+        //    var path = Path.Combine(dir, file);
+        //    using (var sr = new StreamReader(new FileStream(path, FileMode.Open)))
+        //    {
+        //        string line;
+        //        while (!ExitRequested && (line = sr.ReadLine()) != null)
+        //        {
+        //            var cells = line.Split(',');
+        //            var bar = new SymbolBar
+        //            {
+        //                Code = "XAUUSD",
+        //                Time = DateTime.Parse(cells[0] + " " + cells[1]),
 
-                        Bar = new Bar
-                        {
-                            Open = Convert.ToDouble(cells[2]),
-                            High = Convert.ToDouble(cells[3]),
-                            Low = Convert.ToDouble(cells[4]),
-                            Close = Convert.ToDouble(cells[5]),
-                            Volume = Convert.ToDouble(cells[6]),
-                        }
-                    };
+        //                Bar = new Bar
+        //                {
+        //                    Open = Convert.ToDouble(cells[2]),
+        //                    High = Convert.ToDouble(cells[3]),
+        //                    Low = Convert.ToDouble(cells[4]),
+        //                    Close = Convert.ToDouble(cells[5]),
+        //                    Volume = Convert.ToDouble(cells[6]),
+        //                }
+        //            };
 
-                    sim.SimulateBar(bar);
+        //            sim.SimulateBar(bar);
 
-                    if (++barCount > maxBars) break;
-                    Thread.Sleep(300);
-                }
-            }
-        }
+        //            if (++barCount > maxBars) break;
+        //            Thread.Sleep(300);
+        //        }
+        //    }
+        //}
 
 
         #region Misc

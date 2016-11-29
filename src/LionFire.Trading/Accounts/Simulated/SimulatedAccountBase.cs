@@ -11,20 +11,15 @@ using LionFire.ExtensionMethods;
 using System.Collections.Concurrent;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
+using LionFire.Trading.Bots;
+using LionFire.Execution;
 
-namespace LionFire.Trading
+namespace LionFire.Trading.Accounts
 {
 
-
-
-    public class TMarketSim : TMarket
+    public abstract class SimulatedAccountBase<TTemplate> : AccountBase<TTemplate>, ISimulatedAccount, IInitializable
+        where TTemplate : TSimulatedAccountBase
     {
-    }
-
-    public abstract class SimulatedMarketBase<TTemplate> : MarketBase<TTemplate>, ISimulatedMarket, IMarket
-        where TTemplate : TMarketSim
-    {
-
 
         #region Parameters
 
@@ -32,29 +27,15 @@ namespace LionFire.Trading
 
         public int StepDelayMilliseconds { get; set; }
 
-        public TimeZoneInfo TimeZone {
-            get {
-                return timeZone;
-            }
-            set {
-                if (value != TimeZoneInfo.Utc) throw new NotSupportedException("Only UTC currently supported.)");
-                timeZone = value;
-            }
-        }
-        private TimeZoneInfo timeZone = TimeZoneInfo.Utc;
-
         public DateTime StartDate { get; set; }
 
         public DateTime EndDate { get; set; }
 
         public TimeFrame TimeFrame { get; set; }
 
-        public string BrokerName { get { return Config.BrokerName; } }
-
         #endregion
 
         public TimeFrame SimulationTimeStep { get; set; }
-
 
         #region Derived
 
@@ -66,12 +47,50 @@ namespace LionFire.Trading
 
         #endregion
 
+        #region Informational Properties
+
+
+        public override bool IsSimulation
+        {
+            get
+            {
+                return true;
+            }
+        }
+
+        public override bool IsRealMoney
+        {
+            get
+            {
+                return false;
+            }
+        }
+
+        #endregion
+
         #region Construction
 
-        public SimulatedMarketBase()
+        public SimulatedAccountBase()
         {
             SimulationTimeStep = TimeFrame.m1;
-            
+
+        }
+
+        #endregion
+
+        #region Initialization
+
+        /// <summary>
+        /// Sets SimulationTime to the StartDate
+        /// </summary>
+        public virtual async Task<bool> Initialize()
+        {
+            if (ServerTime != default(DateTime)) return false;
+            Reset();
+
+            await ExecuteBackfillUpToDate(StartDate, Template.BackFillMinutes);
+
+            return true;
         }
 
         #endregion
@@ -80,17 +99,18 @@ namespace LionFire.Trading
 
         #region SimulationTime
 
-        public bool IsStarted { get { return simulationTime != default(DateTime); } }
 
-        public DateTime SimulationTime {
+
+        public override DateTime ServerTime
+        {
             get { return simulationTime; }
-            set {
+            protected set
+            {
                 if (!IsStarted && value != default(DateTime))
                 {
                     started.OnNext(true);
                 }
                 simulationTime = value;
-                Server.Time = simulationTime; // REVIEW
                 SimulationTimeChanged?.Invoke();
             }
         }
@@ -100,9 +120,13 @@ namespace LionFire.Trading
 
         #endregion
 
-        public DateTime LastExecutedTime {
+        #region Simulation State
+
+        public DateTime LastExecutedTime
+        {
             get { return lastExecutedTime; }
-            set {
+            set
+            {
                 lastExecutedTime = value;
                 OnLastExecutedTimeChanged();
             }
@@ -112,9 +136,13 @@ namespace LionFire.Trading
 
         #region Derived
 
-        public bool IsFinished {
-            get {
-                return SimulationTime >= EndDate;
+        public bool IsStarted { get { return simulationTime != default(DateTime); } }
+
+        public bool IsFinished
+        {
+            get
+            {
+                return ServerTime >= EndDate;
             }
         }
 
@@ -122,47 +150,37 @@ namespace LionFire.Trading
 
         #endregion
 
-        #region Events
-
-        //public event Action ExecutedTime;
-
-        public IBehaviorObservable<bool> Started { get { return started; } }
-        BehaviorObservable<bool> started = new BehaviorObservable<bool>(false);
-
         #endregion
 
         #region Execution Methods
 
         public int DefaultBackFillMinutes = 60 * 24 * 7;
 
+        /// <summary>
+        /// Reset simulation time, set IsStarted = false
+        /// </summary>
         public void Reset()
         {
             LastExecutedTime = DateTime.MinValue;
-            SimulationTime = default(DateTime); // IsStarted = false
-
+            ServerTime = default(DateTime); // IsStarted = false
         }
 
-        /// <summary>
-        /// Sets SimulationTime to the StartDate
-        /// </summary>
-        public override void Initialize()
-        {
+        public DateTime BackFillStartDate { get; protected set; }
 
-
-            if (SimulationTime != default(DateTime)) return;
-            base.Initialize();
-
-            Reset();
-            ExecuteBackfillUpToDate(StartDate, Config.BackFillMinutes);
-        }
-
-
-        protected void ExecuteBackfillUpToDate(DateTime time, int? backFillMinutes = null)
+        protected Task ExecuteBackfillUpToDate(DateTime time, int? backFillMinutes = null)
         {
             if (!backFillMinutes.HasValue) backFillMinutes = DefaultBackFillMinutes;
 
-            SimulationTime = time - TimeSpan.FromMinutes(backFillMinutes.Value);
-            Execute(time);
+            ServerTime = time - TimeSpan.FromMinutes(backFillMinutes.Value);
+
+            BackFillStartDate = ServerTime;
+
+#if PossibleNewApproach
+            while (ServerTime < StartDate && ExecuteNextStep(isBackfill: true)) ;
+#else
+            // REVIEW - previous approach here did Execute, which executes forward until  it catches up to time.
+            return Task.Factory.StartNew(()=>Execute(time));
+#endif
 
             // TODO: Backfill the symbols that were missed
             //var done = HashSet<string>();
@@ -178,15 +196,13 @@ namespace LionFire.Trading
             //    kvp.Value.Symbol
             //}
 
-            foreach (var series in Data.ActiveLiveSeries)
-            {
-                if (series.OpenTime.Count == 0)
-                {
-                    ((MarketSeries)series).AddDataPointAtTime(time);
-                }
-            }
-
-            //ExecutedTime?.Invoke();
+            //foreach (var series in Data.ActiveLiveSeries)
+            //{
+            //    if (series.OpenTime.Count == 0)
+            //    {
+            //        ((MarketSeries)series).AddDataPointAtTime(time);
+            //    }
+            //}            
         }
 
         Dictionary<TimeFrame, MarketSeries> timeFrameMarketSeries = new Dictionary<TimeFrame, MarketSeries>();
@@ -217,7 +233,6 @@ namespace LionFire.Trading
             }
 
             return state;
-
         }
 
         //#warning TODO?  Implement series as a replaysubject with their own time counter?  With a method AdvanceToTime()
@@ -227,12 +242,13 @@ namespace LionFire.Trading
         {
             if (!IsStarted)
             {
-                SimulationTime = StartDate;
+                ServerTime = StartDate;
             }
 
             List<IMarketSeries> removals = null;
 
             #region Ticks
+            bool gotTick = false;
 
             // TODO
 
@@ -241,9 +257,12 @@ namespace LionFire.Trading
             #region Bars
 
             bool gotBar = false;
+
             // OPTIMIZE: Sync up index between live and historical series to make it faster
             foreach (var series in Data.ActiveLiveSeries)
+            //foreach (var kvp in marketSeries)
             {
+                //var series = kvp.Value;
 
                 // "batch.h1" start T  - for multiple symbols being watched
                 //"bar.xauusd.h1" T OHLCV
@@ -253,7 +272,7 @@ namespace LionFire.Trading
                 // for super efficiency in wildcards, see zmq proejct malamute's high speed matching engine: https://github.com/zeromq/malamute/blob/master/MALAMUTE.md
 
                 // TEMP
-                if (!series.LatestBarHasObservers)
+                if (!series.LatestBarHasObservers && !series.BarHasObservers)
                 {
                     logger.LogTrace("Removing unused MarketSeries: " + series.Key);
                     AddRemoval(ref removals, series);
@@ -378,8 +397,8 @@ namespace LionFire.Trading
 
             #endregion
 
-            if (gotBar) { SimulationTickFinished?.Invoke(); }
-            if (gotBar) { RaiseTicked(); }
+            //if (gotTick || gotBar) { SimulationTickFinished?.Invoke(); } // Not needed? Just use Ticked
+            if (gotTick || gotBar) { RaiseTicked(); }
 
             if (removals != null)
             {
@@ -406,14 +425,28 @@ namespace LionFire.Trading
             LastExecutedTime = time;
         }
 
-        public event Action SimulationTickFinished;
+        public Task Start()
+        {
+            RunTask = Task.Factory.StartNew(()=>Run());
+            return Task.CompletedTask;
+        }
+
+        public Task RunTask { get; set; }
 
         int delayBetweenSteps = 0;
 
         public void Run(int delayBetweenSteps = 0)
         {
+            foreach (var p in Participants.OfType<IStartable>().ToArray()) // Indicators may be added during bot start
+            {
+                p.Start().Wait();
+            }
             simulationMilliseconds = (EndDate - StartDate).TotalMilliseconds;
-            Initialize();
+            if (!(simulationMilliseconds > 0))
+            {
+                throw new ArgumentException("simulation time is not greater than zero: " + simulationMilliseconds);
+            }
+            Initialize().Wait(); // Does backfill
 
             var sw = Stopwatch.StartNew();
             this.delayBetweenSteps = delayBetweenSteps;
@@ -433,10 +466,10 @@ namespace LionFire.Trading
 
 
         /// <returns>True if there are still more steps</returns>
-        public bool ExecuteNextStep()
+        public bool ExecuteNextStep(bool isBackfill = false)
         {
 #if SanityChecks
-            if (SimulationTime == default(DateTime))
+            if (ServerTime == default(DateTime))
             {
                 throw new Exception("Cannot call ExecuteNextStep when SimulationTime is not initialized.");
             }
@@ -455,7 +488,7 @@ namespace LionFire.Trading
                         throw new NotImplementedException();
                 }
             }
-            SimulationTime += timeSpan;
+            ServerTime += timeSpan;
 
             if (i++ > progressReportInterval)
             {
@@ -492,23 +525,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        #region IMarket Implementation
-
-        public bool IsSimulation {
-            get {
-                return true;
-            }
-        }
-
-        public bool IsRealMoney {
-            get {
-                return false;
-            }
-        }
-
-        public abstract bool IsBacktesting { get; }
-
-        #endregion
+        public abstract GetFitnessArgs GetFitnessArgs();
 
         #region Symbol
 
@@ -518,21 +535,13 @@ namespace LionFire.Trading
 
             if (symbols.TryGetValue(symbolCode, out symbol)) return symbol;
 
-            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(BrokerName, symbolCode);
 
             SymbolImpl result = new SymbolImpl(symbolCode, this);
+            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(BrokerName, symbolCode);
             result.LoadSymbolInfo(symbolInfo);
             result.Account = this.Accounts.FirstOrDefault();
 
             return result;
-        }
-
-
-
-        public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
-        {
-            throw new NotImplementedException();
-            //return null;
         }
 
         #endregion

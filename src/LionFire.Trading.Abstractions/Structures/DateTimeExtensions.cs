@@ -16,5 +16,9 @@ namespace LionFire.Trading
         {
             return val.ToString("N2");
         }
+        public static string CentsToCurrencyString(this double cents)
+        {
+            return (cents / 100.0).ToCurrencyString();
+        }
     }
 }

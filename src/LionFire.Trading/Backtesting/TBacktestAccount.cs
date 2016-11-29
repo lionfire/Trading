@@ -4,13 +4,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Templating;
+using LionFire.Trading.Backtesting;
+using LionFire.Trading.Accounts;
 
 namespace LionFire.Trading.Backtesting
 {
-
-
-
-    public class TBacktestMarket : TMarketSim, ITemplate<BacktestMarket>
+    public class TBacktestAccount : TSimulatedAccountBase, ITemplate<BacktestAccount>
     {
 
         public Dictionary<string, BacktestSymbolSettings> BacktestSymbolSettings = new Dictionary<string, BacktestSymbolSettings>();
@@ -23,28 +22,22 @@ namespace LionFire.Trading.Backtesting
 
         public TimeFrame TimeFrame { get; set; }
 
-
-        public double StopOutLevel { get; set; } = 0.5;
-
-        public double StartingBalance { get; set; } = 1000.0;
-
-        //public List<string> Symbols { get; set; }
-
-
         public bool ClosePositionsAtEnd { get; set; } = false; // FUTURE
 
-
-        public bool LogBacktest { get; set; } = true;
+        //public bool LogBacktest { get; set; } = true;
 
         public bool SaveBacktestBotConfigs { get; set; } = true;
 
         #region Derived
 
-        public TimeSpan TimeSpan {
+        public TimeSpan TimeSpan
+        {
             get { return EndDate - StartDate; }
         }
 
         public double TotalBars { get { return TimeSpan.TotalDays / TimeFrame.TimeSpan.TotalDays; } }
+
+        public string SimulateAccount { get; set; }
 
         #endregion
 

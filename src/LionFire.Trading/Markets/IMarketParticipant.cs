@@ -8,7 +8,7 @@ namespace LionFire.Trading
 {
     public interface IMarketParticipant 
     {
-        IMarket Market { get; set; }
+        IAccount Account { get; set; }
     }
 
 }

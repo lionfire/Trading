@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace LionFire.Trading.Applications
 {
@@ -22,6 +23,9 @@ namespace LionFire.Trading.Applications
         {
             host.ConfigureServices(serviceCollection =>
             {
+                //var Configuration = LionFire.Structures.ManualSingleton<IConfigurationRoot>.Instance;
+                //serviceCollection.Configure<TradingOptions>(opt => Configuration.GetSection("Trading").Bind(opt));
+
                 if (accountModes != AccountMode.Unspecified)
                 {
                     options.AccountModes = accountModes;

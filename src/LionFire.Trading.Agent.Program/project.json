@@ -12,11 +12,12 @@
     "LionFire.Trading.Agent": "1.0.0-*",
     "LionFire.Trading.Proprietary": "1.0.0-*",
     "LionFire.Trading.Spotware.Connect": "1.0.0-*",
-    "Microsoft.Extensions.Logging": "1.0.0",
-    "Microsoft.Extensions.Logging.Console": "1.0.0",
+    "Microsoft.Extensions.Logging": "1.1.0",
+    "Microsoft.Extensions.Logging.Console": "1.1.0",
+    "Microsoft.Extensions.Options.ConfigurationExtensions": "1.1.0",
     "Microsoft.NETCore.App": {
-      "type": "platform",
-      "version": "1.0.*"
+      "version": "1.1.0",
+      "type": "platform"
     }
   },
 

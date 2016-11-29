@@ -14,6 +14,7 @@ namespace LionFire.Trading
         public double PointSize { get; set;  }
         public double Leverage { get; set;  }
         public double TickSize { get; set;  }
+        //public double TickValue { get; set; }
         public long VolumeMax { get; set;  }
         public long VolumeMin { get; set;  }
         public long VolumeStep { get; set;  }

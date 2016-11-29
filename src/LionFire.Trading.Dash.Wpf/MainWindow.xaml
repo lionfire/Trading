@@ -1,0 +1,166 @@
+﻿<Window x:Class="LionFire.Trading.Dash.Wpf.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:LionFire.Trading.Dash.Wpf"
+        mc:Ignorable="d"
+               xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+                 xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
+        xmlns:xcdg="http://schemas.xceed.com/wpf/xaml/datagrid"
+          xmlns:s="clr-namespace:System;assembly=mscorlib"
+        x:Name="uc"
+        Title="MainWindow" Height="768" Width="1024">
+    <Window.Resources>
+
+        <DataTemplate x:Key="BotItem">
+            <DockPanel>
+                <TextBlock Text="{Binding Type}"/>
+                <TextBlock Text="{Binding Id}"/>
+            </DockPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="AlertItem">
+            <DockPanel>
+                <TextBlock Text="{Binding Symbol}"/>
+                <TextBlock Text="{Binding Price}"/>
+                <Button>X</Button>
+            </DockPanel>
+        </DataTemplate>
+
+    </Window.Resources>
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Bottom">
+            <DockPanel LastChildFill="False">
+                <TextBlock Text="{Binding StatusText, ElementName=uc}" DockPanel.Dock="Right"></TextBlock>
+            </DockPanel>
+        </DockPanel>
+
+        <xcad:DockingManager Grid.Row="1" 
+                           AllowMixedOrientation="True"
+                           BorderBrush="Black"
+                           BorderThickness="1"
+                           Theme="{Binding ElementName=_themeCombo, Path=SelectedItem.Tag}">
+            <xcad:DockingManager.DocumentHeaderTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <!--<Image Source="{Binding IconSource}" Margin="0,0,4,0"/>-->
+                        <TextBlock Text="{Binding Title}" />
+                    </StackPanel>
+                </DataTemplate>
+            </xcad:DockingManager.DocumentHeaderTemplate>
+            <xcad:LayoutRoot x:Name="_layoutRoot">
+                <xcad:LayoutPanel Orientation="Horizontal">
+                    <!--<xcad:LayoutAnchorablePane DockWidth="200">
+                    <xcad:LayoutAnchorable ContentId="properties" Title="Properties" CanHide="True" CanClose="False" AutoHideWidth="240">
+                        <xctk:PropertyGrid NameColumnWidth="90" SelectedObject="{Binding ElementName=_layoutRoot, Path=LastFocusedDocument.Content}"/>
+                    </xcad:LayoutAnchorable>
+                </xcad:LayoutAnchorablePane>-->
+                    <xcad:LayoutDocumentPaneGroup >
+                        <xcad:LayoutDocumentPane>
+                            <xcad:LayoutDocument ContentId="workspace1" Title="Workspace" >
+                                <DockPanel DataContext="{Binding VM, ElementName=uc}">
+                                    <TabControl>
+
+                                        <TabItem Header="Symbols">
+                                            <xcdg:DataGridControl x:Name="SymbolsGrid" ItemsSource="{Binding Symbols}" AutoCreateColumns="True">
+                                                <xcdg:DataGridControl.View>
+                                                    <xcdg:TableflowView FixedColumnCount="2" />
+                                                </xcdg:DataGridControl.View>
+                                                
+                                            </xcdg:DataGridControl>
+                                        </TabItem>
+                                        <TabItem Header="Bots">
+                                            <ListView x:Name="BotsGrid" ItemTemplate="{StaticResource BotItem}" ItemsSource="{Binding Bots}">
+                                            </ListView>
+                                        </TabItem>
+
+                                        <TabItem Header="Scanners">
+                                        </TabItem>
+
+                                        <TabItem Header="Overview">
+                                        </TabItem>
+
+                                        <TabItem Header="Optimization">
+                                        </TabItem>
+
+                                        <TabItem Header="Alerts">
+                                            <DockPanel>
+                                                <Button DockPanel.Dock="Bottom">Add</Button>
+                                                <ListView ItemTemplate="{StaticResource AlertItem}" ItemsSource="{Binding Workspace.Bots, ElementName=uc}">
+                                                </ListView>
+                                            </DockPanel>
+                                        </TabItem>
+
+
+                                        <TabItem Header="Settings">
+                                            <xctk:PropertyGrid NameColumnWidth="140" SelectedObject="{Binding ElementName=uc, Path=Settings}"/>
+                                        </TabItem>
+
+                                        <TabItem Header="Info">
+                                            <DockPanel>
+                                                <xctk:PropertyGrid NameColumnWidth="140" SelectedObject="{Binding ElementName=uc, Path=Info}"/>
+                                            </DockPanel>
+                                        </TabItem>
+
+                                    </TabControl>
+                                </DockPanel>
+
+
+                            </xcad:LayoutDocument>
+                            <!--<xcad:LayoutDocument ContentId="workspace2" Title="Workspace 2">
+
+                        </xcad:LayoutDocument>-->
+                        </xcad:LayoutDocumentPane>
+                    </xcad:LayoutDocumentPaneGroup >
+                    <!--<xcad:LayoutAnchorablePaneGroup DockWidth="125">
+                    <xcad:LayoutAnchorablePane>
+                        <xcad:LayoutAnchorable ContentId="alarms" Title="Alarms" >
+                            <ListBox>
+                                <s:String>Alarm 1</s:String>
+                                <s:String>Alarm 2</s:String>
+                                <s:String>Alarm 3</s:String>
+                            </ListBox>
+                        </xcad:LayoutAnchorable>
+                        <xcad:LayoutAnchorable ContentId="journal" Title="Journal" >
+                            <RichTextBox>
+                                <FlowDocument>
+                                    <Paragraph FontSize="14" FontFamily="Segoe">
+                                        This is the content of the Journal Pane.
+                                        <LineBreak/>
+                                        A
+                                        <Bold>RichTextBox</Bold> has been added here
+                                    </Paragraph>
+                                </FlowDocument>
+                            </RichTextBox>
+                        </xcad:LayoutAnchorable>
+                    </xcad:LayoutAnchorablePane>
+                </xcad:LayoutAnchorablePaneGroup>-->
+                </xcad:LayoutPanel>
+
+                <xcad:LayoutRoot.LeftSide>
+                    <xcad:LayoutAnchorSide>
+                        <xcad:LayoutAnchorGroup>
+                            <xcad:LayoutAnchorable Title="Master Control" ContentId="mastercontrol">
+                                <DockPanel  DockPanel.Dock="Top" LastChildFill="False">
+                                    <DockPanel DockPanel.Dock="Right" >
+                                        <CheckBox >
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding NumberOfLiveBots, ElementName=uc}"></TextBlock>
+                                                <TextBlock> Live Bots Enabled</TextBlock>
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </DockPanel>
+                                </DockPanel>
+                            </xcad:LayoutAnchorable>
+                            <xcad:LayoutAnchorable Title="Contacts" ContentId="contacts" >
+                                <TextBlock Text="Contacts Content" Margin="10" FontSize="18" FontWeight="Black" TextWrapping="Wrap"/>
+                            </xcad:LayoutAnchorable>
+                        </xcad:LayoutAnchorGroup>
+                    </xcad:LayoutAnchorSide>
+                </xcad:LayoutRoot.LeftSide>
+            </xcad:LayoutRoot>
+        </xcad:DockingManager>
+
+    </DockPanel>
+
+</Window>

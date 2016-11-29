@@ -1,6 +1,7 @@
 ﻿//#define Backtest
 #define Live
 #define Proprietary
+#define Bots
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -26,11 +27,12 @@ namespace LionFire.Trading.Agent.Program
     {
         static void Main(string[] args)
         {
+
             try
             {
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
 
-                new AppHost()
+                var a = new AppHost()
 
                 #region Bootstrap
                     .AddJsonAssetProvider(@"c:\Trading")
@@ -46,13 +48,19 @@ namespace LionFire.Trading.Agent.Program
                         )
                 #endregion
 
-                    .AddTrading(TradingOptions.Auto, AccountMode.Live)
-#if Live
-                    .AddSpotwareConnectClient("LionFireDev")
-                    .Add<TCTraderAccount>("IC Markets.Demo3") 
-                    
-                    //.Add<TCTraderAccount>("spotware-lionprowl") 
+                    //.AddSpotwareConnectClient("LionFire.Trading")  // TODO - use this one
+                    .AddSpotwareConnectClient("LionProwl")
+                    //.AddSpotwareConnectClient("LionFireDev")
 
+#if Live
+                    .AddTrading(TradingOptions.Auto, AccountMode.Live)
+                    .Add<TCTraderAccount>("IC Markets.Live.Manual")
+#else
+                    .AddTrading(TradingOptions.Auto, AccountMode.Demo)
+                    .Add<TCTraderAccount>("IC Markets.Demo3")
+#endif
+
+#if Live
                     .Bootstrap()
 #if Proprietary
                     //.Add(new TLionTrender("XAUUSD", "m1")
@@ -73,11 +81,10 @@ namespace LionFire.Trading.Agent.Program
                     //    }
                     //}.Create())
                     .Add<TLionTrender>("4bx2")
-
                     // Future: Add bot types
                     //.Add<TLionTrender>()
-
 #endif
+
 #endif
 
                     //.Add(TimeFrame.m1)
@@ -99,8 +106,10 @@ namespace LionFire.Trading.Agent.Program
 #endif
                     //.AddScanner()
                     //.AddShutdownOnConsoleExitCommand()
-                    .Run().Wait();
+                    ;
 
+                a.Run().Wait()
+                ;
                 //Console.WriteLine();
                 //Console.WriteLine("Press any key to exit");
                 //Console.ReadKey();

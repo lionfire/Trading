@@ -16,11 +16,12 @@ namespace LionFire.Trading.Agent.Program
     public static class BacktestAppExtensions
     {
 
-        public static TBacktestMarket DefaultConfig {
+        public static TBacktestAccount DefaultConfig {
             get {
-                return new TBacktestMarket()
+                return new TBacktestAccount()
                 {
                     
+                    SimulateAccount = @"cTrader\IC Markets.Live.Manual",
                     BrokerName = "IC Markets",
                     StartDate = new DateTime(2003, 5, 5),
                     EndDate = new DateTime(2016, 9, 15),
@@ -34,7 +35,7 @@ namespace LionFire.Trading.Agent.Program
                     new TLionTrender("XAUUSD", "h1")
                     {
                         Log=false,
-                        LogBacktest = true,
+                        //LogBacktest = true,
                         MinPositionSize = 1,
                         Indicator = new TLionTrending
                         {
@@ -53,7 +54,7 @@ namespace LionFire.Trading.Agent.Program
             }
         }
 
-        public static IAppHost AddBacktest(this IAppHost app, TBacktestMarket config = null)
+        public static IAppHost AddBacktest(this IAppHost app, TBacktestAccount config = null)
         {
             app.Add(new BacktestTask(config ?? DefaultConfig));
             return app;

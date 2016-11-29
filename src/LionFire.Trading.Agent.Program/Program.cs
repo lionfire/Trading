@@ -1,4 +1,6 @@
-﻿using System;
+﻿//#define Live
+#define Proprietary
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,6 +15,12 @@ using LionFire.Extensions.Logging;
 using System.Threading;
 using LionFire.Trading.Connect;
 using LionFire.Trading.Bots;
+using LionFire.Execution;
+using LionFire.Trading.Spotware.Connect;
+using LionFire.Assets;
+using LionFire.Trading.Applications;
+using LionFire.Extensions.Options;
+using LionFire.Templating;
 
 namespace LionFire.Trading.Agent.Program
 {
@@ -20,28 +28,90 @@ namespace LionFire.Trading.Agent.Program
     {
         public static void Main(string[] args)
         {
-            
+
             try
             {
+                var basePath = @"c:\Trading"; // MOVE somewhere?
+
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
+                
+                
 
                 new AppHost()
-                    //.AddSpotwareConnectAccount("IC Markets.Demo1")
-                    //.AddConfig(app => 
-                    //    app.ServiceCollection
-                    //        .AddLogging()
-                    //    )
-                    .AddInit(app => app.ServiceProvider.GetService<ILoggerFactory>()
-                        .AddNLog()
-                    //.AddConsole()
-                    )
-                    //.AddCAlgoRedisAccount()
-                    //.AddBacktest()
-                    .AddBot<LionTrender>()
-                    //.AddCommandLineDispatcher<AgentDispatcher>(args)
-                    .AddShutdownOnConsoleExitCommand()
-                    //.Run(TestHistoricalDataSource)
-                    ;
+                    //.AddOptions(basePath)
+
+                #region Bootstrap
+                    .AddJsonAssetProvider(@"c:\Trading")
+                    .Bootstrap()
+                #endregion
+
+                #region Logging
+                    .ConfigureServices(sc => sc.AddLogging())
+                    .AddInit(app =>
+                       app.ServiceProvider.GetService<ILoggerFactory>()
+                           .AddNLog()
+                       .AddConsole()
+                       )
+                #endregion
+
+                    //.AddSpotwareConnectClient("LionFire.Trading") // TODO - use this one
+                    .AddSpotwareConnectClient("LionProwl")
+                    //.AddSpotwareConnectClient("LionFireDev")
+
+#if Live
+                    .AddTrading(TradingOptions.Auto, AccountMode.Live)
+                    .Add<TCTraderAccount>("IC Markets.Live.Manual")
+#else
+                    .AddTrading(TradingOptions.Auto, AccountMode.Demo)
+                    .Add<TCTraderAccount>("IC Markets.Demo3")
+#endif
+                   //.AddConfig(app => 
+                   //    app.ServiceCollection
+                   //        .AddLogging()
+                   //    )
+
+                   //.AddCAlgoRedisAccount()
+                   //.AddBacktest("cTrader/IC Markets.Live.Manual".Load<TAccount>())
+                   .AddBacktest(new TBacktestAccount()
+                   {
+
+                       SimulateAccount = @"cTrader\IC Markets.Live.Manual.USD-Backtest",
+                       BrokerName = "IC Markets",
+                       StartDate = new DateTime(2016, 1, 1),
+                       EndDate = new DateTime(2016, 11, 23),
+                       TimeFrame = TimeFrame.h1,
+
+                       //Symbols = new List<string> { "XAUUSD", "EURUSD" }, // UNUSED
+
+                       Children = new List<ITemplate>
+                       {
+#if Proprietary
+                    new TLionTrender("XAUUSD", "h1")
+                    {
+                        Log=false,
+                        LogBacktest = true,
+                        MinPositionSize = 1,
+                        Indicator = new TLionTrending
+                        {
+                            Log = false,
+                            OpenWindowPeriods = 55,
+                            CloseWindowPeriods = 34,
+                            PointsToOpenLong = 3.0,
+                            PointsToOpenShort = 3.0,
+                            PointsToCloseLong = 2.0,
+                            PointsToCloseShort = 2.0,
+                        }
+                    }
+#endif
+                       }
+                   })
+                   //.AddBot<LionTrender>()
+                   //.AddCommandLineDispatcher<AgentDispatcher>(args)
+                   //.AddShutdownOnConsoleExitCommand()
+                   .RunAndWait()
+                   //.Run(TestHistoricalDataSource)
+                   ;
+
 
                 //Console.WriteLine();
                 //Console.WriteLine("Press any key to exit");
@@ -65,17 +135,17 @@ namespace LionFire.Trading.Agent.Program
         }
     }
 
-    public class BotTask : AppTask
-    {
-        protected override void Run()
-        {
-            base.Run();
-#warning TODO
-            //this.app
-            //ManualSingleton<IServiceCollection>
+//    public class BotTask : AppTask
+//    {
+//        protected override void Run()
+//        {
+//            base.Run();
+//#warning TODO
+//            //this.app
+//            //ManualSingleton<IServiceCollection>
 
-        }
-    }
+//        }
+//    }
 
     public static class MarketParticipantExtensions
     {
@@ -89,6 +159,6 @@ namespace LionFire.Trading.Agent.Program
             return host;
         }
     }
-    
+
 }
 

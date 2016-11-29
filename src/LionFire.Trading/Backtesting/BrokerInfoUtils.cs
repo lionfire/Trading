@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using LionFire.Assets;
 
 namespace LionFire.Trading
 {
@@ -23,7 +24,7 @@ namespace LionFire.Trading
 
     public class BrokerInfoUtils
     {
-        public static string BrokersDir { get { return @"e:\temp\Brokers"; } }
+        public static string BrokersDir { get { return @"c:\Trading\Brokers"; } }
         public static string SymbolsDirName { get { return "Symbols"; } }
         public static string AccountInfoFileName { get { return "AccountInfo"; } }
         public static string FileSuffix { get { return ".json"; } }
@@ -33,25 +34,32 @@ namespace LionFire.Trading
             return Path.Combine(BrokersDir, brokerName);
         }
 
-        public static AccountInfo GetAccountInfo(string brokerName)
+        //public static AccountInfo GetAccountInfo(string brokerName)
+        //{
+            
+        //    return brokerName.Load<AccountInfo>();
+
+        //    //if (brokerName == null) return null;
+
+        //    //var dir = GetBrokerInfoDir(brokerName);
+        //    //var path = Path.Combine(dir, AccountInfoFileName + FileSuffix);
+
+        //    //using (var sr = new StreamReader(new FileStream(path, FileMode.Open)))
+        //    //{
+        //    //    var json = sr.ReadToEnd();
+        //    //    var info = (AccountInfo)JsonConvert.DeserializeObject(json, typeof(AccountInfo));
+        //    //    return info;
+        //    //}
+        //}
+
+        public static string GetSymbolInfoPath(string brokerName, string symbolCode = null)
         {
-            if (brokerName == null) return null;
-
-            var dir = GetBrokerInfoDir(brokerName);
-            var path = Path.Combine(dir, AccountInfoFileName + FileSuffix);
-
-            using (var sr = new StreamReader(new FileStream(path, FileMode.Open)))
+            var path = Path.Combine(GetBrokerInfoDir(brokerName), SymbolsDirName);
+            if (symbolCode != null)
             {
-                var json = sr.ReadToEnd();
-                var info = (AccountInfo)JsonConvert.DeserializeObject(json, typeof(AccountInfo));
-                return info;
+                path = Path.Combine(path, symbolCode + FileSuffix);
             }
-        }
-
-        public static string GetSymbolInfoPath(string brokerName, string symbolCode)
-        {
-            var dir = Path.Combine(GetBrokerInfoDir(brokerName), SymbolsDirName);
-            return Path.Combine(dir, symbolCode + FileSuffix); 
+            return path;
         }
         
         public static SymbolInfo GetSymbolInfo(string brokerName, string symbolCode)
@@ -64,6 +72,11 @@ namespace LionFire.Trading
                 var info = (SymbolInfo)JsonConvert.DeserializeObject(json, typeof(SymbolInfo));
                 return info;
             }
+        }
+        public static IEnumerable<string> GetSymbolsAvailable(string brokerName)
+        {
+            if (brokerName == null) { return null; }
+            return Directory.GetFiles(GetSymbolInfoPath(brokerName), "*" + FileSuffix).Select(file => file.Substring(0, file.IndexOf(FileSuffix)));
         }
     }
     

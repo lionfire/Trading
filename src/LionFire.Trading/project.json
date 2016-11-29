@@ -21,14 +21,17 @@
     "LionFire.Execution.Abstractions": "0.1.0-*",
     "LionFire.Execution": "1.0.0-*",
     "LionFire.Extensions.Logging": "1.0.0-*",
-    "LionFire.Runtime.Extensions": "1.0.*",
+    "LionFire.Runtime.Extensions": "1.0.2",
     "LionFire.Templating": "1.0.0-*",
     "LionFire.Trading.Abstractions": "1.0.0-*",
     "Microsoft.Extensions.Logging.Abstractions": "1.0.0",
-    "NETStandard.Library": "1.6.0",
+    "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
     "System.Reactive": "3.0.0",
-    "System.Threading.Thread": "4.0.0"
+    "System.Threading.Thread": "4.0.0",
+    "Microsoft.Extensions.Options": "1.1.0",
+    "Microsoft.Extensions.Configuration.Abstractions": "1.1.0",
+    "Microsoft.Extensions.Configuration.Binder": "1.1.0"
   },
 
   "frameworks": {

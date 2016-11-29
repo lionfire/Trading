@@ -1,6 +1,12 @@
 ﻿//#define TRACE_EQUITY
 //#define TRACE_BALANCE
+using LionFire.Assets;
+using LionFire.Execution;
+using LionFire.ExtensionMethods;
 using LionFire.Extensions.Logging;
+using LionFire.Templating;
+using LionFire.Trading;
+using LionFire.Trading.Accounts;
 using LionFire.Trading.Bots;
 using Microsoft.Extensions.Logging;
 using System;
@@ -11,51 +17,18 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Backtesting
 {
 
-    public class BacktestAccount : MarketParticipant, IAccount
+    public class BacktestAccount : SimulatedAccountBase<TBacktestAccount>
     {
-        #region Relationships
-
-        public BacktestMarket BacktestMarket {
-            get {
-                return Market as BacktestMarket;
-            }
-        }
-
-        protected override void OnAttached()
-        {
-            base.OnAttached();
-            Market.Ticked += Market_Ticked;
-        }
-
-        private void Market_Ticked()
-        {
-            //logger.LogInformation("BacktestAccount - " + Market.Server.Time.ToDefaultString());
-            UpdatePositions();
-        }
-
-        #endregion
-
-        #region Construction
-
-        public BacktestAccount()
-        {
-            logger = this.GetLogger();
-            PositionStats = new PositionStats(this);
-        }
-        public BacktestAccount(string brokerName) : this()
-        {
-            this.BrokerName = brokerName;
-        }
-
-        #endregion
 
         #region State
-        
+
         #region Equity
 
-        public double Equity {
+        public override double Equity
+        {
             get { return equity; }
-            set {
+            protected set
+            {
 #if TRACE_EQUITY
                 if (equity == value) return;
                 var lastValue = equity;
@@ -77,15 +50,19 @@ namespace LionFire.Trading.Backtesting
         #region Balance
 
         public double StartingBalance { get; set; }
-        public double NetProfitPercent {
-            get {
+        public double NetProfitPercent
+        {
+            get
+            {
                 return (Equity - StartingBalance) / StartingBalance;
             }
         }
 
-        public double Balance {
+        public override double Balance
+        {
             get { return balance; }
-            set {
+            protected set
+            {
 #if TRACE_BALANCE
                 if (balance == value) return;
                 var lastValue = balance;
@@ -112,69 +89,40 @@ namespace LionFire.Trading.Backtesting
 
         #endregion
 
-
-        public double MarginUsed { get; set; }
-
-        IPositions IAccount.Positions { get { return this.Positions; } }
-        public Positions Positions { get; private set; } = new Positions();
-
-        IPendingOrders IAccount.PendingOrders { get { return this.PendingOrders; } }
-        public PendingOrders PendingOrders { get; private set; } = new PendingOrders();
-       
-        public PositionStats PositionStats { get; protected set; } 
-
-        public double StopOutLevel { get { return BacktestMarket.Config.StopOutLevel; } }
-
         #endregion
 
-        #region Account info
+        #region Account Info
 
-        #region BrokerName
-
-        public string BrokerName {
-            get { return brokerName; }
-            set {
-                brokerName = value;
-                this.AccountInfo = BrokerInfoUtils.GetAccountInfo(BrokerName);
-            }
-        }
-        private string brokerName;
-
-        #endregion
-
-        public string Currency {
-            get { return EffecitveAccountInfo.Currency; }
-        }
-
-        public bool IsDemo {
-            get { return true; }
-        }
-
-        protected AccountInfo EffecitveAccountInfo { get { return AccountInfo ?? DefaultAccountInfo; } }
-        public AccountInfo AccountInfo { get; set; }
+        protected TAccount EffecitveAccountInfo { get {                
+                return Template 
+                    //??  DefaultAccountInfo
+                    ;
+            } }
 
         #endregion
 
         #region (Static) Defaults
 
-        public static AccountInfo DefaultAccountInfo {
-            get {
-                if (defaultAccountInfo == null)
-                {
-                    defaultAccountInfo = new AccountInfo()
-                    {
-                        CommissionPerMillion = 0.0,
-                        BrokerName = "(default)",
-                        AccountNumber = 0,
-                        IsLive = false,
-                        Currency = "USD",
-                        Leverage = 100.0,
-                    };
-                }
-                return defaultAccountInfo;
-            }
-        }
-        private static AccountInfo defaultAccountInfo;
+        //public static TBacktestAccount DefaultAccountInfo
+        //{
+        //    get
+        //    {
+        //        if (defaultAccountInfo == null)
+        //        {
+        //            defaultAccountInfo = new TBacktestAccount()
+        //            {
+        //                CommissionPerMillion = 0.0,
+        //                BrokerName = "(default)",
+        //                AccountId = "(default)",
+        //                IsLive = false,
+        //                Currency = "USD",
+        //                Leverage = 100.0,
+        //            };
+        //        }
+        //        return defaultAccountInfo;
+        //    }
+        //}
+        //private static TBacktestAccount defaultAccountInfo;
 
         #endregion
 
@@ -187,22 +135,46 @@ namespace LionFire.Trading.Backtesting
 
         #endregion
 
+        #region Informational Properties
+
+        public override bool IsBacktesting { get { return true; } }
+
+        #endregion
+
         #region Initialization
 
-        protected override void OnStarting()
-        {
-            base.OnStarting();
+        bool isInitialized = false;
 
-            Equity = Balance = (this.Market as BacktestMarket).Config.StartingBalance;
+        public async override Task<bool> Initialize()
+        {
+            if (isInitialized) return true;
+
+            if (Template.SimulateAccount != null)
+            {
+                TAccount simulatedAccount = Template.SimulateAccount.Load<TAccount>();
+                Template.AssignPropertiesFrom(simulatedAccount);
+            }
+
+            this.TimeFrame = Template.TimeFrame;
+            this.StartDate = Template.StartDate;
+            this.EndDate = Template.EndDate;
+
+            if (await base.Initialize() == false) { return false; }
+
+            Equity = Balance = Template.StartingBalance;
+
+            isInitialized = true;
+
+            return true;
         }
 
         #endregion
 
         public int positionCounter = 1;
 
-        #region (Public) Methods
+        #region (Public) Trading Methods
 
-        public TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null)
+        public override TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null)
         {
             var slippage = 0;
             var entryPrice = tradeType == TradeType.Buy ? symbol.Bid + slippage : symbol.Ask - slippage;
@@ -213,7 +185,7 @@ namespace LionFire.Trading.Backtesting
             {
                 Comment = comment,
                 Id = positionCounter++,
-                EntryTime = Market.SimulationTime,
+                EntryTime = ServerTime,
                 EntryPrice = entryPrice,
                 Commissions = volume * EffecitveAccountInfo.CommissionPerMillion / 1000000.0,
                 Label = "Backtest (LFT)",
@@ -222,7 +194,7 @@ namespace LionFire.Trading.Backtesting
                 TradeType = tradeType,
                 Volume = volume,
             };
-            Positions.Add(p);
+            positions.Add(p);
 
             return new TradeResult
             {
@@ -230,11 +202,52 @@ namespace LionFire.Trading.Backtesting
             };
 
         }
+        
+        public override TradeResult ClosePosition(Position position)
+        {
+            if (!this.Positions.Contains(position))
+            {
+                return new TradeResult
+                {
+                    IsSuccessful = false,
+                    Message = "Position does not exist",
+                };
+            }
+#if SanityChecks
+            if (double.IsNaN(position.NetProfit))
+            {
+                throw new Exception("ClosePosition: position.NetProfit is null");
+            }
+#endif
+            this.Balance += position.NetProfit;
+            positions.Remove(position);
+
+            if (SaveHistory)
+            {
+                history.Add(new _HistoricalTrade(this, position));
+            }
+
+            return new TradeResult
+            {
+                Message = $"Closed position (#{position.Id}) {position.Volume} {position.SymbolCode} for profit of {position.NetProfit}",
+            };
+        }
+
+        public override TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
+
+        #region Statistics
 
         public _History history { get; private set; } = new _History();
-        public bool SaveHistory {
+        public bool SaveHistory
+        {
             get { return history != null; }
-            set {
+            set
+            {
                 if (value)
                 {
                     if (history == null)
@@ -249,40 +262,6 @@ namespace LionFire.Trading.Backtesting
             }
         }
 
-
-        public TradeResult ClosePosition(Position position)
-        {
-            if (!this.Positions.Contains(position))
-            {
-                return new TradeResult
-                {
-                    IsSuccessful = false,
-                    Message = "Position does not exist",
-                };
-            }
-            this.Balance += position.NetProfit;
-            Positions.Remove(position);
-
-            if (SaveHistory)
-            {
-                history.Add(new _HistoricalTrade(this, position));
-            }
-
-            return new TradeResult
-            {
-                Message = $"Closed position (#{position.Id}) {position.Volume} {position.SymbolCode} for profit of {position.NetProfit}",
-            };
-        }
-
-        public TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit)
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
-
-        #region (Private) Methods
-
         public double MaxEquity { get; set; }
         public double MinEquity { get; set; } = double.NaN;
         public double MaxEquityDrawdown { get; set; }
@@ -295,28 +274,51 @@ namespace LionFire.Trading.Backtesting
         public double MaxBalanceDrawdownPercent { get; set; }
         public double lastBalance { get; set; } = double.NaN;
 
-        public void UpdatePositions()
+        #endregion
+
+        #region Backtesting
+
+        public override GetFitnessArgs GetFitnessArgs()
         {
 
+            var result = new _GetFitnessArgs()
+            {
+                AverageTrade = history.Any() ? history.Select(p => p.NetProfit).Average() : double.NaN,
+                Equity = Equity,
+                History = this.history,
+                LosingTrades = history.Where(p => p.NetProfit < 0).Count(),
+                MaxBalanceDrawdown = this.MaxBalanceDrawdown,
+                MaxBalanceDrawdownPercentages = this.MaxBalanceDrawdownPercent,
+                MaxEquityDrawdown = this.MaxEquityDrawdown,
+                MaxEquityDrawdownPercentages = this.MaxEquityDrawdownPercent,
+                NetProfit = Equity - StartingBalance,
+                ProfitFactor = history.Select(p => p.NetProfit).Where(np => np > 0.0).Sum() / history.Select(p => p.NetProfit).Where(np => np < 0.0).Sum(), // TOVERIFY
+                SortinoRatio = double.NaN, // TODO
+                SharpeRatio = double.NaN, // FUTURE
+                TotalTrades = history.Count,
+                WinningTrades = history.Where(p => p.NetProfit >= 0).Count(),
+            };
+            return result;
+        }
+
+        #endregion
+
+        #region (Private) Methods
+       
+
+        public void UpdatePositions()
+        {            
             var marginUsed = 0.0;
             var netProfit = 0.0;
+
             foreach (var position in Positions)
             {
-                var exitPrice = position.TradeType == TradeType.Buy ? position.Symbol.Bid : position.Symbol.Ask;
-                //position.GrossProfit =
-                    var grossProfit = ((exitPrice - position.EntryPrice) / position.Symbol.TickSize) * position.Symbol.TickValue;
-                
-                if (position.TradeType == TradeType.Sell)
-                {
-                    grossProfit *= -1;
-                }
-                position.GrossProfit = grossProfit;
                 netProfit += position.NetProfit;
-                marginUsed += exitPrice*position.Volume / position.Symbol.PreciseLeverage; // TODO: Convert to account currency!!!
+                marginUsed += position.CurrentExitPrice * position.Volume / position.Symbol.PreciseLeverage; // TODO: Convert to account currency!!!
             }
 
             this.Equity = Balance + netProfit;
-           
+
             if (!double.IsNaN(Equity) && lastEquity != Equity)
             {
                 MaxEquityDrawdown = Math.Max(MaxEquityDrawdown, MaxEquity - Equity);
@@ -337,53 +339,46 @@ namespace LionFire.Trading.Backtesting
             //logger.LogInformation($"{Market.Server.Time.ToDefaultString()} Eq: {Equity}  Bal: {Balance}");
         }
 
-        public GetFitnessArgs GetFitnessArgs()
-        {
-
-            var result = new _GetFitnessArgs()
-            {
-                AverageTrade = history.Select(p=>p.NetProfit).Average(),
-                Equity = Equity,
-                History = this.history,
-                LosingTrades = history.Where(p => p.NetProfit < 0).Count(),
-                MaxBalanceDrawdown = this.MaxBalanceDrawdown,
-                MaxBalanceDrawdownPercentages = this.MaxBalanceDrawdownPercent,
-                MaxEquityDrawdown = this.MaxEquityDrawdown,
-                MaxEquityDrawdownPercentages = this.MaxEquityDrawdownPercent,
-                NetProfit = Equity - StartingBalance,
-                ProfitFactor = history.Select(p=>p.NetProfit).Where(np=>np > 0.0).Sum() / history.Select(p => p.NetProfit).Where(np => np < 0.0).Sum(), // TOVERIFY
-                SortinoRatio = double.NaN, // TODO
-                SharpeRatio = double.NaN, // FUTURE
-                TotalTrades = history.Count,
-                WinningTrades = history.Where(p => p.NetProfit >= 0).Count(),
-            };
-            return result;
-        }
-
         #endregion
 
         #region Event Handling
 
-        public override void OnBar(string symbolCode, TimeFrame timeFrame, TimedBar bar)
+        protected override void RaiseTicked()
         {
-            base.OnBar(symbolCode, timeFrame, bar);
-
-            UpdatePositions();
-        }
-
-        public override void OnTick(SymbolTick tick)
-        {
-            base.OnTick(tick);
-
+            base.RaiseTicked();
+            //logger.LogInformation("BacktestAccount - " + Market.Server.Time.ToDefaultString());
             UpdatePositions();
         }
 
         #endregion
 
-        public Task<IMarketSeries> CreateMarketSeries(string code, TimeFrame timeFrame)
+        #region Market Series
+        
+        public override Task<IMarketSeries> CreateMarketSeries(string code, TimeFrame timeFrame)
         {
-            return Task.FromResult<IMarketSeries>(new MarketSeries(code, timeFrame));
+            
+            return Task.FromResult<IMarketSeries>(new MarketSeries(this, code, timeFrame));
         }
+
+        #endregion
+
+        
+
+        #region Event Handling
+
+        protected override void OnLastExecutedTimeChanged()
+        {
+#if SanityChecks
+            if (LastExecutedTime != default(DateTime) && LastExecutedTime != Template.StartDate && double.IsNaN(Account.Balance))
+            {
+                throw new InvalidOperationException("Backtest in progress while Account Balance is NaN");
+            }
+#endif
+            base.OnLastExecutedTimeChanged(); // Does nothing at the moment
+            this.UpdatePositions();
+        }
+
+        #endregion
 
     }
 }

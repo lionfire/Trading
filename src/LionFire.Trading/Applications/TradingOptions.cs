@@ -26,6 +26,8 @@ namespace LionFire.Trading
         public int DefaultHistoricalDataBars { get; set; } = DefaultHistoricalDataBarsDefault;
         public const int DefaultHistoricalDataBarsDefault = 400;
 
+        public string Test { get; set; }
+
         #region Static (Defaults)
 
         public static TradingOptions Auto {

@@ -1,4 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using LionFire.Reactive;
+using LionFire.Templating;
+using LionFire.Trading.Accounts;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,36 +11,104 @@ namespace LionFire.Trading
 {
     
     public interface IAccount
+        //: ITemplateInstance<TAccount>
     {
+        #region Relationships
+
+        TAccount Template { get; }
+
+        #endregion
+
+        #region State
+
         double Equity { get;  }
         double Balance { get;  }
         string Currency { get; }
+
+        IPositions Positions { get; }
+
+        IPendingOrders PendingOrders { get; }
+
+        PositionStats PositionStats { get; }
+
+        string StatusText { get; }
+        event Action StatusTextChanged;
+
+        #region Server State
+
+        DateTime ServerTime { get; }
+        TimeZoneInfo TimeZone { get; }
+
+        #endregion
+
+        #endregion
+
+
+        #region Informational Properties
 
         double StopOutLevel { get; }
 
         bool IsDemo { get;  }
 
+
+
+        bool IsBacktesting { get; }
+
+        bool IsSimulation { get; }
+        bool IsRealMoney { get; }
+
+        bool TicksAvailable { get; }
+
+
+        #endregion
+
+        #region Market Series
+
+        Task<IMarketSeries> CreateMarketSeries(string symbol, TimeFrame timeFrame);
+
+
+        #endregion
+
+        #region Methods
+
         TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
 
-        
-        IPositions Positions { get; }
-
-        IPendingOrders PendingOrders { get; }
 
         TradeResult ClosePosition(Position position);
         TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
 
-        GetFitnessArgs GetFitnessArgs();
+        #endregion
 
-        PositionStats PositionStats { get; }
+        #region Events
+
+        event Action Ticked;
+
+        IBehaviorObservable<bool> Started { get; }
+
+        #endregion
+
+#if !cAlgo
+        Symbol GetSymbol(string symbolCode);
+        IMarketSeries GetMarketSeries(string symbol, TimeFrame tf);
+        MarketData MarketData { get; set; }
+        MarketDataProvider Data { get; }
+        Server Server { get; }
+
+        void Add(IMarketParticipant indicator);
+
+#endif
+
+        //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
+        //IEnumerable<string> SymbolsAvailable { get; }
+        //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
+
+        #region Misc
 
         // TODO: Move to internal interface and use friend assemblies
         ILogger Logger { get; }
 
-        Task<IMarketSeries> CreateMarketSeries(string symbol, TimeFrame timeFrame);
+        #endregion
+
     }
 
-    //internal interface IAccountInternal
-    //{
-    //}
 }

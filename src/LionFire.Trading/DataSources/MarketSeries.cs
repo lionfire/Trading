@@ -41,8 +41,11 @@ namespace LionFire.Trading
 
         #region Relationships
 
+        public IAccount Market { get; private set; }
         // Obsolete?
         public IDataSource Source { get; set; }
+
+        public IAccount Account { get; set; }
 
         #endregion
 
@@ -91,8 +94,9 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public MarketSeries(string key)
+        public MarketSeries(IAccount market, string key)
         {
+            this.Market = market;
             this.key = key;
 
             string symbol;
@@ -101,8 +105,9 @@ namespace LionFire.Trading
             this.SymbolCode = symbol;
             this.TimeFrame = timeFrame;
         }
-        public MarketSeries(string symbol, TimeFrame timeFrame)
+        public MarketSeries(IAccount market, string symbol, TimeFrame timeFrame)
         {
+            this.Market = market;
             this.key = symbol.GetSeriesKey(timeFrame);
             this.SymbolCode = symbol;
             this.TimeFrame = timeFrame;
@@ -234,7 +239,38 @@ namespace LionFire.Trading
 
         #region Events
 
-        
+        public event Action<SymbolBar> Bar
+        {
+            add
+            {
+                bool changed = bar == null;
+                bar += value;
+                if (changed)
+                {
+                    BarHasObserversChanged?.Invoke(this, BarHasObservers);
+                }
+            }
+            remove
+            {
+                bool changed = bar != null;
+                bar -= value;
+                if (bar == null)
+                {
+                    BarHasObserversChanged?.Invoke(this, BarHasObservers);
+                }
+            }
+        }
+        event Action<SymbolBar> bar;
+
+        public bool BarHasObservers
+        {
+            get
+            {
+                return bar != null;
+            }
+        }
+
+        public event Action<IMarketSeries, bool> BarHasObserversChanged;
 
         public bool LatestBarHasObservers { get { return barSubject.HasObservers; } }
         public IObservable<TimedBar> LatestBar
@@ -245,8 +281,7 @@ namespace LionFire.Trading
             }
         }
         BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
-
-        public event Action<IMarketSeries, bool> BarHasObserversChanged; // TODO
+        
 
         //public event Action<MarketSeries> BarReceived;
         public event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
@@ -314,6 +349,7 @@ namespace LionFire.Trading
             {
                 //BarReceived?.Invoke(this);
                 this.barSubject.OnNext(bar);
+                this.bar?.Invoke(new SymbolBar(SymbolCode, bar, bar.OpenTime));
             }
         }
 
@@ -680,7 +716,7 @@ namespace LionFire.Trading
 
         public static MarketSeries ImportFromFile(string symbolCode, TimeFrame timeFrame, string path, DateTime? startDate = null, DateTime? endDate = null)
         {
-            var series = new MarketSeries(symbolCode, timeFrame);
+            var series = new MarketSeries(null, symbolCode, timeFrame);
             series.ImportFromFile(path, startDate, endDate);
             GC.Collect();
 

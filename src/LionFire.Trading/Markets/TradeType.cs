@@ -9,6 +9,7 @@ namespace LionFire.Trading
     {
         Buy = 0,
         Sell = 1
+
     }
 
 }

@@ -63,6 +63,9 @@ namespace LionFire.Trading
 
         //IEnumerable<SymbolBar> GetBars(DateTime fromTimeExclusive, DateTime endTimeInclusive);
 
+        event Action<SymbolBar> Bar;
+        bool BarHasObservers { get; }
+
         IObservable<TimedBar> LatestBar { get; }
         bool LatestBarHasObservers {
             get;
@@ -72,7 +75,7 @@ namespace LionFire.Trading
 
     }
 
-    internal interface IMarketSeriesInternal : IMarketSeries
+    public interface IMarketSeriesInternal : IMarketSeries
     {
         void OnBar(TimedBar bar, bool finishedBar = false);
 

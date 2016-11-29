@@ -12,6 +12,18 @@ namespace LionFire.Trading
 
     public class TimedBar : Bar
     {
+        public TimedBar() { }
+        public TimedBar(SymbolBar b)
+        {
+            this.OpenTime = b.Time;
+            this.High = b.Bar.High;
+            this.Low = b.Bar.Low;
+            this.Open = b.Bar.Open;
+            this.Close = b.Bar.Close;
+            this.Volume = b.Bar.Volume;
+        }
+
+
         public DateTime OpenTime { get; set; }
 
         public override string ToString()

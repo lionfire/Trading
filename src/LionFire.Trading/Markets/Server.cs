@@ -5,30 +5,28 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+    // For cAlgo compatibility - TODO: Only compile for cAlgo
     public class Server
     {
+        IAccount account;
+        public Server(IAccount account)
+        {
+            this.account = account;
+        }
+
         #region Time
 
-        public DateTime Time {
-            get { return time; }
-            set {
-                time = value;
-                LocalDelta = DateTime.UtcNow - value;
-            }
+        public DateTime Time
+        {
+            get { return account.ServerTime; }
+            //set {
+            //    time = value;
+            //    LocalDelta = DateTime.UtcNow - value;
+            //}
         }
-        private DateTime time;
+        //private DateTime time;
 
         #endregion
-
-        public DateTime ExtrapolatedTime {
-            get {
-                return DateTime.UtcNow - LocalDelta;
-            }
-        }
-
-        public TimeSpan LocalDelta {
-            get; set;
-        }
 
     }
 }

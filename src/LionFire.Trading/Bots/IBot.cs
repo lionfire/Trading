@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LionFire.Templating;
+using LionFire.Execution;
 
 namespace LionFire.Trading.Bots
 {
@@ -19,10 +20,11 @@ namespace LionFire.Trading.Bots
 #endif
     }
     public interface IBot : ITemplateInstance
-    {
 #if !cAlgo
-        IAccount Account { get; }
+        , IStartable
+        , IMarketParticipant
 #endif
+    {
 
         new TBot Template { get; set; }
 
@@ -32,6 +34,9 @@ namespace LionFire.Trading.Bots
         TradeResult ModifyPosition(Position position, double? StopLoss, double? TakeProfit);
 
         Microsoft.Extensions.Logging.ILogger Logger { get; }
+
+        BotMode Mode { get; set; }
+
     }
 
     public static class VersionUtils

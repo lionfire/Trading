@@ -14,10 +14,11 @@ using System.Diagnostics;
 using Newtonsoft.Json;
 using System.IO;
 using LionFire.Trading;
+using System.Reflection;
 
 namespace LionFire.Applications.Trading
 {
-    
+
     public class BacktestTask : AppTask, IMarketTask
     {
         #region Identity
@@ -28,17 +29,20 @@ namespace LionFire.Applications.Trading
 
         #region Relationships
 
-        IMarket IMarketTask.Market { get { return this.Market; } }
-        public BacktestMarket Market { get; private set; }
+
+        IAccount IMarketTask.Account { get { return BacktestAccount; } }
+        public BacktestAccount BacktestAccount { get; private set; }
 
         #endregion
 
         #region Parameters
 
-        public TBacktestMarket Config {
-            get { return Market?.Config; }
-            set {
-                Market = LionFire.Templating.ITemplateExtensions.Create<BacktestMarket>(value);
+        public TBacktestAccount Config
+        {
+            get { return BacktestAccount?.Template; }
+            set
+            {
+                BacktestAccount = value.Create();
             }
         }
 
@@ -46,7 +50,7 @@ namespace LionFire.Applications.Trading
 
         #region Construction
 
-        public BacktestTask(TBacktestMarket config = null)
+        public BacktestTask(TBacktestAccount config = null)
         {
             if (config != null)
             {
@@ -59,13 +63,14 @@ namespace LionFire.Applications.Trading
         #region Init
 
         bool isInitialized = false;
+
         public override async Task<bool> Initialize()
         {
             if (isInitialized) return true;
             isInitialized = true;
             logger = this.GetLogger();
 
-            Market.Initialize();
+            if (await BacktestAccount.Initialize() == false) { return false; }
 
             return await base.Initialize();
         }
@@ -80,21 +85,21 @@ namespace LionFire.Applications.Trading
             logger.LogInformation($"Starting backtest from {Config.StartDate} to {Config.EndDate}");
 
             runStopwatch = System.Diagnostics.Stopwatch.StartNew();
-            Market.Run();
+            BacktestAccount.Run();
             runStopwatch.Stop();
             OnFinished();
         }
 
         protected virtual void OnFinished()
         {
-            foreach (var bot in Market.Participants.OfType<IBot>())
+            foreach (var bot in BacktestAccount.Participants.OfType<IBot>())
             {
                 OnBotFinished(bot);
             }
             var saveTasks = new List<Task<string>>();
             if (Config.SaveBacktestBotConfigs)
             {
-                foreach (var bot in Market.Participants.OfType<IBot>())
+                foreach (var bot in BacktestAccount.Participants.OfType<IBot>())
                 {
                     saveTasks.Add(BotConfigRepository.SaveConfig(bot));
                 }
@@ -105,8 +110,8 @@ namespace LionFire.Applications.Trading
 
         protected virtual void OnBotFinished(IBot bot)
         {
-            var fitnessArgs = bot.Account.GetFitnessArgs();
             var account = bot.Account as BacktestAccount;
+            var fitnessArgs = account?.GetFitnessArgs();
 
             double fitness;
             var customFitness = bot as IHasCustomFitness;
@@ -124,13 +129,9 @@ namespace LionFire.Applications.Trading
             logger.LogInformation($"[aroi/dd: {RoiVsDd.ToString("N2")}] [pft/yr: {((account.NetProfitPercent * 100.0) / (Config.TimeSpan.TotalDays / 365.0)).ToString("N1")}%] [dd%: {(account.MaxEquityDrawdownPercent * 100.0).ToString("N2")}] [{account.history.Count} trades] [pft: {(account.NetProfitPercent * 100.0).ToString("N1")}%] [Eq: {account.Equity.ToCurrencyString()}]  [bal: {account.Balance.ToCurrencyString()}] [Eq range: {account.MinEquity.ToCurrencyString()}-{account.MaxEquity.ToCurrencyString()}]");
             logger.LogInformation($"Backtest [time: {TimeSpan.FromMilliseconds(runStopwatch.ElapsedMilliseconds)}] [{Config.TimeSpan.TotalDays.ToString("N1")} days] [{(1000 * Config.TimeSpan.TotalDays / runStopwatch.ElapsedMilliseconds).ToString("N1") } days/sec] [{(Config.TotalBars / runStopwatch.ElapsedMilliseconds).ToString("N1")}k bars/sec]");
 
-
             //double MinProfitPerYear = 8;
             //double MaxDrawdownPercent = 40.0;
             //int MinTrades = 40;
-
-
-
         }
 
         #endregion
@@ -141,43 +142,4 @@ namespace LionFire.Applications.Trading
 
         #endregion
     }
-
-    public class BotConfigRepository
-    {
-        public static string ConfigDir { get { return @"c:\Trading\Configs\"; } }
-        public static async Task<string> SaveConfig(IBot bot)
-        {
-            var dir = ConfigDir;
-            dir = Path.Combine(dir, bot.GetType().Name);
-            var version = bot.Version.GetMinorCompatibilityVersion();
-            dir = Path.Combine(dir, version);
-
-            if (!Directory.Exists(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            var config = bot.Template;
-            if (config.Id == null)
-            {
-                config.Id = IdUtils.GenerateId();
-            }
-
-            var filename = config.Id + ".json";
-
-            var path = Path.Combine(dir, filename);
-
-            var json = JsonConvert.SerializeObject(bot.Template);
-
-            using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
-            {
-                await sw.WriteAsync(json);
-            }
-
-            return config.Id;
-        }
-
-    }
-
-
 }

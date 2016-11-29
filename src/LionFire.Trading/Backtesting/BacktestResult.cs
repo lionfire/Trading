@@ -12,7 +12,7 @@ namespace LionFire.Trading.Backtesting
 
         #region Derived
 
-        public TimeSpan Duration { get { return End.Value - Start.Value; } }
+        public TimeSpan Duration { get { if (!Start.HasValue || !Start.HasValue) { return TimeSpan.Zero; } return End.Value - Start.Value; } }
 
         public double WinRate { get { return WinningTrades / TotalTrades; } }
 

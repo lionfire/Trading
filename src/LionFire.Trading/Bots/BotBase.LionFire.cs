@@ -12,37 +12,28 @@ namespace LionFire.Trading.Bots
 
 
     public partial class BotBase<_TBot> : MarketParticipant, IBot, IStartable
-        //, IInitializable
     {
-        #region Relationships
-
-        public IAccount Account { get { return Market.Account; } }
-
-        #endregion
-
-        #region Execution State
-
-        //public Task<bool> Initialize()
-        //{
-            
-        //}
-
-        #endregion
 
         public MarketData MarketData { get; set; }
 
         public bool IsBacktesting { get; set; }
 
-        public Server Server { get { return Market.Server; } }
+        public Server Server { get { return base.Account.Server; } }
 
-        public Symbol Symbol { get; set; }
-
-#if cAlgo
-        protected
-#else
-        public
-#endif
-        virtual double GetFitness(GetFitnessArgs args) { return 0.0; }
+        public Symbol Symbol
+        {
+            get;
+            protected set; // Set in OnStarted
+            //get
+            //{
+            //    if (symbol == null && Template.Symbol != null && Market != null)
+            //    {
+            //        symbol = Market.GetSymbol(Template.Symbol);
+            //    }
+            //    return symbol;
+            //}
+        }
+        //private Symbol symbol;
 
 
         public IPositions Positions { get { return Account.Positions; } }

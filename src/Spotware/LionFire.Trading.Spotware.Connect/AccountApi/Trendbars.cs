@@ -18,4 +18,13 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
     {
         public SpotwareTrendbar[] data { get; set; }
     }
+    public class SpotwareErrorContainer
+    {
+        public SpotwareError error { get; set; }
+    }
+    public class SpotwareError
+    {
+        public string errorCode { get; set; }
+        public string description { get; set; }
+    }
 }

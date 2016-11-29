@@ -22,9 +22,10 @@ namespace LionFire.Trading.Indicators
             {
                 throw ConfigMissingException(nameof(Symbol));
             }
-            this.MarketSeries = Market.Data.GetMarketSeries(this.Symbol.Code, this.TimeFrame);
+            this.MarketSeries = Account.Data.GetMarketSeries(this.Symbol.Code, this.TimeFrame);
 
-            marketSeriesSubscription = this.MarketSeries.LatestBar.Subscribe(bar => OnBar(MarketSeries, bar));
+            //marketSeriesSubscription = this.MarketSeries.LatestBar.Subscribe(bar => OnBar(MarketSeries, bar));
+                this.MarketSeries.Bar += bar => OnBar(MarketSeries.SymbolCode, MarketSeries.TimeFrame, new TimedBar(bar));
         }
         
 
@@ -40,9 +41,9 @@ namespace LionFire.Trading.Indicators
             if (Symbol == null)
             {
                 if (Config == null) { throw ConfigMissingException(nameof(Symbol)); }
-                if (Market != null)
+                if (Account != null)
                 {
-                    Symbol = Market.GetSymbol(Config.Symbol);
+                    Symbol = Account.GetSymbol(Config.Symbol);
                 }
             }
         }
@@ -50,9 +51,10 @@ namespace LionFire.Trading.Indicators
         protected override void OnAttaching()
         {
             base.OnAttaching();
-            if (Market != null)
+            if (Account != null)
             {
-                Symbol = Market.GetSymbol(Config.Symbol);
+                Symbol = Account.GetSymbol(Config.Symbol);
+                Account.Started.Subscribe(started => { if (started) { OnStarting(); } });
             }
         }
     }

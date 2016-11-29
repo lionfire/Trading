@@ -27,7 +27,7 @@ namespace LionFire.Trading.Indicators
 
         public MarketData MarketData {
             get {
-                return Market?.MarketData;
+                return Account?.MarketData;
             }
         }
 
@@ -82,7 +82,8 @@ namespace LionFire.Trading.Indicators
             {
                 var indicator = pi.GetValue(this) as IMarketParticipant;
 
-                this.Market.Add(indicator);
+                indicator.Account = Account;
+                //this.Market.Add(indicator);
                 //indicator.Init();
             }
         }

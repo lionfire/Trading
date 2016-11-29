@@ -1,76 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using LionFire.Trading.Bots;
-using LionFire.Templating;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using System.Threading;
+//using System.Threading.Tasks;
+//using LionFire.Trading.Bots;
+//using LionFire.Templating;
+//using LionFire.Assets;
 
-namespace LionFire.Trading.Backtesting
-{
+//namespace LionFire.Trading.Backtesting
+//{
 
-    public class BacktestMarket : SimulatedMarketBase<TBacktestMarket>, IMarket
-    {
-        #region Relationships
+//    public class BacktestMarket : SimulatedAccountBase<TBacktestMarket>, IAccount
+//    {
+//        //#region Relationships
 
-        public new BacktestAccount Account {
-            get {
-                return (BacktestAccount) base.Accounts.SingleOrDefault();
-            }
-            set {
-                base.Accounts.Clear();
-                base.Accounts.Add(value);
-            }
-        }
+//        //public new BacktestAccount Account {
+//        //    get {
+//        //        return (BacktestAccount) base.Accounts.SingleOrDefault();
+//        //    }
+//        //    set {
+//        //        base.Accounts.Clear();
+//        //        base.Accounts.Add(value);
+//        //    }
+//        //}
 
-        #endregion
+//        //public TAccount TAccount { get; protected set; }
 
-        #region IMarket Implementation
+//        //#endregion
 
-        public override bool IsBacktesting { get { return true; } }
+//        #region IAccount Implementation
 
-        #endregion
+//        public override bool IsBacktesting { get { return true; } }
 
-        #region Construction
+//        #endregion
 
-        public BacktestMarket() { }
+//        #region Initialization
 
-        public BacktestMarket(TBacktestMarket config)
-        {
-            this.Config = config;
-        }
+//        bool isInitialized = false;
+//        public override void Initialize()
+//        {
+//            if (isInitialized) return;
 
-        #endregion
-
-        #region Initialization
-
-        bool isInitialized = false;
-        public override void Initialize()
-        {
-            if (isInitialized) return;
-            isInitialized = true;
-            this.TimeFrame = Config.TimeFrame;
-            this.StartDate = Config.StartDate;
-            this.EndDate = Config.EndDate;
+//            this.TAccount = Template.AccountName.Load<TAccount>();
+//            this.TimeFrame = Template.TimeFrame;
+//            this.StartDate = Template.StartDate;
+//            this.EndDate = Template.EndDate;
                         
-            this.Account = new BacktestAccount(Config.BrokerName)
-            {
-                Market = this,
-            };
+//            this.Account = new BacktestAccount(this);
 
-            base.Initialize();
-        }
+//            base.Initialize();
 
-        #endregion
+//            isInitialized = true;
+            
+//        }
 
-        #region Event Handling
+//        #endregion
 
-        protected override void OnLastExecutedTimeChanged()
-        {
-            base.OnLastExecutedTimeChanged();
-            this.Account.UpdatePositions();
-        }
+//        #region Event Handling
 
-        #endregion
-    }
-}
+//        protected override void OnLastExecutedTimeChanged()
+//        {
+//#if SanityChecks
+//            if (LastExecutedTime != default(DateTime)  && LastExecutedTime != Template.StartDate && double.IsNaN(Account.Balance) )
+//            {
+//                throw new InvalidOperationException("Backtest in progress while Account Balance is NaN");
+//            }
+//#endif
+//            base.OnLastExecutedTimeChanged(); // Does nothing at the moment
+//            this.Account.UpdatePositions();
+//        }
+
+//        #endregion
+//    }
+//}

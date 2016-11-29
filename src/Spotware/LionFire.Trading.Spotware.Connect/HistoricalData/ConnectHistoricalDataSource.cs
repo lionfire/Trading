@@ -11,7 +11,7 @@ using Flurl.Http;
 
 namespace LionFire.Trading.Connect
 {
-    
+
 
     public class ConnectHistoricalDataSource
     {
@@ -21,8 +21,10 @@ namespace LionFire.Trading.Connect
         private const string baseUrl = "https://api.spotware.com/connect";
         private const string TradingUrl = baseUrl + "/tradingaccounts";
 
-        public ConnectToken ConnectToken {
-            get {
+        public ConnectToken ConnectToken
+        {
+            get
+            {
                 if (connectToken == null)
                 {
                     connectToken = JsonConvert.DeserializeObject<ConnectToken>(File.ReadAllText(ConfigPath));
@@ -32,7 +34,7 @@ namespace LionFire.Trading.Connect
         }
         ConnectToken connectToken;
 
-#region Get historical bars
+        #region Get historical bars
 
         public async Task<IEnumerable<TimedBar>> Get(string symbol, string timeFrame, DateTime from, DateTime to)
         {
@@ -54,7 +56,7 @@ namespace LionFire.Trading.Connect
                 ;
 
             var epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);
-            
+
             return response.data.Select(tb => new TimedBar
             {
                 OpenTime = epoch.AddSeconds(Convert.ToDouble(tb.timestamp) / 1000.0),
@@ -66,22 +68,26 @@ namespace LionFire.Trading.Connect
             });
         }
 
-private class TrendbarsResponse
-    {
-        public Trendbar[] data { get; set; }
-    }
-    private class Trendbar
-    {
+        #region (Private) Api Response Classes
 
-        public string timestamp { get; set; }
-        public double high { get; set; }
-        public double low { get; set; }
-        public double open { get; set; }
-        public double close { get; set; }
-        public long volume { get; set; }
-    }
+        private class TrendbarsResponse
+        {
+            public Trendbar[] data { get; set; }
+        }
+        private class Trendbar
+        {
 
-#endregion
+            public string timestamp { get; set; }
+            public double high { get; set; }
+            public double low { get; set; }
+            public double open { get; set; }
+            public double close { get; set; }
+            public long volume { get; set; }
+        }
+
+        #endregion
+
+        #endregion
 
 
     }

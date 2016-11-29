@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0-*",
+
+  "dependencies": {
+    "LionFire.Annotations.Compilation": "1.0.0-*",
+    "LionFire.Applications": "1.0.0-*",
+    "LionFire.Assets": "1.0.0-*",
+    "LionFire.Environment": "0.0.4-*",
+    "LionFire.Execution": "1.0.0-*",
+    "LionFire.Extensions.Logging": "1.0.0-*",
+    "LionFire.Extensions.Logging.NLog": "1.0.0-*",
+    "LionFire.Runtime.Extensions": "1.0.2",
+    "LionFire.Templating": "1.0.0-*",
+    "LionFire.Trading": "1.0.1-*",
+    "LionFire.Trading.Abstractions": "1.0.0-*",
+    "LionFire.Trading.Agent": "1.0.0-*",
+    "LionFire.Trading.Proprietary": "1.0.0-*",
+    "LionFire.Trading.Spotware.Connect": "1.0.0-*",
+    "NETStandard.Library": "1.6.1"
+  },
+
+  "frameworks": {
+    "netstandard1.6": {
+      "imports": "dnxcore50"
+    },
+    "net462":  { }
+  }
+}

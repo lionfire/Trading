@@ -12,11 +12,11 @@ namespace LionFire.Trading
 
     public class Bar
     {
-        public double High { get; set; }
-        public double Low { get; set; }
-        public double Open { get; set; }
-        public double Close { get; set; }
-        public double Volume { get; set; }
+        public double High { get; set; } = double.NaN;
+        public double Low { get; set; } = double.NaN;
+        public double Open { get; set; } = double.NaN;
+        public double Close { get; set; } = double.NaN;
+        public double Volume { get; set; } = double.NaN;
 
         public override string ToString()
         {

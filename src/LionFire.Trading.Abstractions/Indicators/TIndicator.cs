@@ -18,7 +18,7 @@ namespace LionFire.Trading
         }
 
         public string Symbol { get; set; }
-        public string TimeFrame { get; set; } = "h1";
+        public string TimeFrame { get; set; } 
         
         public double SignalThreshold { get; set; } = 0.75;
         public bool Log { get; set; } = false;

@@ -5,9 +5,11 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public interface ISimulatedMarket 
+    public interface ISimulatedAccount  : IAccount
     {
+        GetFitnessArgs GetFitnessArgs();
+
         TimeFrame SimulationTimeStep { get; set; }
-        event Action SimulationTickFinished;
+        //event Action SimulationTickFinished;
     }
 }

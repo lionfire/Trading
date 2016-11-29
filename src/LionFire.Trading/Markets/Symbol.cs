@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Trading.Backtesting;
+using System.Collections.Concurrent;
 
 namespace LionFire.Trading
 {
@@ -52,12 +53,8 @@ namespace LionFire.Trading
 
     public class SymbolImpl : SymbolImplBase, IBacktestSymbol
     {
-        public SymbolImpl(string symbolCode, IMarket market) : base(symbolCode, market) { }
-
-        public override IMarketSeries GetMarketSeries(TimeFrame timeFrame)
-        {
-            throw new NotImplementedException();
-        }
+        public SymbolImpl(string symbolCode, IAccount market) : base(symbolCode, market) { }
+        
     }
 
     public abstract class SymbolImplBase : Symbol, ISymbolInternal
@@ -80,7 +77,7 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        public IMarket Market { get; protected set; }
+        public IAccount Market { get; protected set; }
 
         public IAccount Account { get; set; }
 
@@ -88,10 +85,11 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public SymbolImplBase(string symbolCode, IMarket market)
+        public SymbolImplBase(string symbolCode, IAccount market)
         {
             this.Code = symbolCode;
             this.Market = market;
+            this.Account = market as IAccount;
         }
 
         #endregion
@@ -148,12 +146,36 @@ namespace LionFire.Trading
 
         void ISymbolInternal.OnTick(SymbolTick tick)
         {
+            if(tick.HasBid) this.Bid = tick.Bid;
+            if(tick.HasAsk) this.Ask = tick.Ask;
             tickEvent?.Invoke(tick);
         }
 
         #endregion
 
         #region 
+
+        #region Series
+
+        #region Series
+
+        ConcurrentDictionary<string, IMarketSeries> seriesByTimeFrame = new ConcurrentDictionary<string, IMarketSeries>();
+
+        public IMarketSeries GetMarketSeries(TimeFrame timeFrame)
+        {
+            return seriesByTimeFrame.GetOrAdd(timeFrame.Name, timeFrameName =>
+            {
+                var task = this.Account.CreateMarketSeries(Code, timeFrame);
+                task.Wait();
+                return task.Result;
+            });
+        }
+
+
+        #endregion
+
+
+        #endregion
 
         public void LoadSymbolInfo(SymbolInfo info)
         {
@@ -164,12 +186,16 @@ namespace LionFire.Trading
             this.PipSize = info.PipSize;
             this.PointSize = info.PointSize;
             this.TickSize = info.TickSize;
+            //this.TickValue = info.TickValue;
             this.VolumeMin = info.VolumeMin;
             this.VolumeMax = info.VolumeMax;
             this.VolumeStep = info.VolumeStep;
             this.QuantityPerHundredThousandVolume = info.QuantityPerHundredThousandVolume;
             this.VolumePerHundredThousandQuantity = info.VolumePerHundredThousandQuantity;
             this.Currency = info.Currency;
+
+            if (double.IsNaN(TickSize)) { throw new ArgumentException("Failed to load TickSize for symbol: " + info.Code); }
+            //if (double.IsNaN(TickValue)) { throw new ArgumentException("Failed to load TickValue for symbol: " + info.Code); }
         }
         private double QuantityPerHundredThousandVolume;
         private long VolumePerHundredThousandQuantity;
@@ -263,7 +289,7 @@ namespace LionFire.Trading
 
         public double Convert(double amount, string from, string to, TradeType? tradeType)
         {
-            var symbol = Market.GetSymbol(to + from );
+            var symbol = Market.GetSymbol(to + from);
             bool inverse = false;
             if (symbol == null)
             {
@@ -274,9 +300,17 @@ namespace LionFire.Trading
 
             double result = amount;
 
-            double conversion = !tradeType.HasValue ? ((symbol.Ask + symbol.Bid) / 2.0) : 
-                (!inverse ? tradeType == TradeType.Buy ? symbol.Ask : symbol.Bid 
-                : 1.0 / (tradeType == TradeType.Buy ? symbol.Bid: symbol.Ask)); // REVIEW
+            var bid = symbol.Bid;
+            var ask = symbol.Ask;
+
+            if (double.IsNaN(bid) || double.IsNaN(ask))
+            {
+                throw new Exception("Currency conversion symbol pricing is not available for {from} to {to}");
+            }
+
+            double conversion = !tradeType.HasValue ? ((ask + bid) / 2.0) : 
+                (!inverse ? tradeType == TradeType.Buy ? ask : bid 
+                : 1.0 / (tradeType == TradeType.Buy ? bid: ask)); // REVIEW
 
             result *= conversion;
 
@@ -299,7 +333,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        public abstract IMarketSeries GetMarketSeries(TimeFrame timeFrame);
+        
     }
 
 }

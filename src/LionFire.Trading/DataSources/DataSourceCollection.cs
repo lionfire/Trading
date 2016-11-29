@@ -13,6 +13,11 @@ namespace LionFire.Trading
 
     public class DataSourceCollection
     {
+        #region Relationships
+
+        public IAccount Market { get; protected set; }
+
+        #endregion
 
         #region Configuration
 
@@ -25,8 +30,9 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public DataSourceCollection(bool isHistorical)
+        public DataSourceCollection(bool isHistorical, IAccount market)
         {
+            this.Market = market;
             this.IsHistorical = isHistorical;
 
             if (isHistorical)
@@ -49,7 +55,7 @@ namespace LionFire.Trading
                 var d = new HistoricalDataSource()
                 {
                     SourceName = "DukasCopy (TickDownloader)",
-                    RootDir = @"E:\TickDownloader\tickdata\",
+                    RootDir = @"c:\TickDownloader\tickdata\", // HARDCODE HARDPATH  - TODO: move to Trading root and get from options
                 };
                 Sources.Add(d);
             }
@@ -112,8 +118,9 @@ namespace LionFire.Trading
             }
             else
             {
+                var split = key.Split(';');
                 // TODO: Return null if live data not available
-                var series = new MarketSeries(key);
+                var series = (MarketSeries) this.Market.GetMarketSeries(split[0],split[1]); // REVIEW Cast
                 dict.Add(key, series);
                 return series;
             }

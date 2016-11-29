@@ -45,11 +45,14 @@ namespace LionFire.Trading
 
         #region Subscriptions
 
-        public IEnumerable<MarketDataSubscription> DesiredSubscriptions {
-            get {
+        public IEnumerable<MarketDataSubscription> DesiredSubscriptions
+        {
+            get
+            {
                 return desiredSubscriptions;
             }
-            set {
+            set
+            {
                 if (desiredSubscriptions == value) return;
                 var oldValue = desiredSubscriptions;
                 desiredSubscriptions = value;
@@ -67,7 +70,7 @@ namespace LionFire.Trading
                 {
                     if (sub.TimeFrame.Name == "t1")
                     {
-                        Market.GetSymbol(sub.Symbol).Tick -= OnTick;
+                        Account.GetSymbol(sub.Symbol).Tick -= OnTick;
                     }
                     else
                     {
@@ -75,13 +78,13 @@ namespace LionFire.Trading
                     }
                 }
             }
-            if (market != null && newValue != null)
+            if (account != null && newValue != null)
             {
                 foreach (var sub in newValue)
                 {
                     if (sub.Series == null)
                     {
-                        sub.Series = market.GetMarketSeries(sub.Symbol, sub.TimeFrame);
+                        sub.Series = account.GetMarketSeries(sub.Symbol, sub.TimeFrame);
                     }
                     if (sub.Series == null)
                     {
@@ -102,9 +105,9 @@ namespace LionFire.Trading
                     if (sub.TimeFrame.Name == "t1")
                     {
                         //sub.Observable = Observable.FromEvent(add => 
-                        Market.GetSymbol(sub.Symbol).Tick += OnTick;
+                        Account.GetSymbol(sub.Symbol).Tick += OnTick;
                     }
-                    else 
+                    else
                     {
                         sub.Observable = sub.Series.LatestBar.Subscribe(timedBar => OnBar(sub.Series, timedBar));
                     }
@@ -117,13 +120,16 @@ namespace LionFire.Trading
         #region Relationships
 
         [Dependency]
-        public IMarket Market {
-            get {
-                return market;
+        public IAccount Account
+        {
+            get
+            {
+                return account;
             }
-            set {
-                if (market == value) return;
-                if (market != null)
+            set
+            {
+                if (account == value) return;
+                if (account != null)
                 {
                     OnDetaching();
                     foreach (var sub in DesiredSubscriptions)
@@ -133,17 +139,22 @@ namespace LionFire.Trading
                         sub.Series = null;
                     }
                 }
-                market = value;
+                account = value;
 
-                if (market != null && DesiredSubscriptions != null)
+                if (account != null)
                 {
-                    OnDesiredSubscriptionsChanged(null, DesiredSubscriptions);
+                    account.Add(this); // REVIEW
+
+                    if (DesiredSubscriptions != null)
+                    {
+                        OnDesiredSubscriptionsChanged(null, DesiredSubscriptions);
+                    }
                 }
                 OnAttaching();
                 OnAttached();
             }
         }
-        private IMarket market;
+        private IAccount account;
 
         List<IDisposable> marketSubscriptions = new List<IDisposable>();
 
@@ -152,7 +163,8 @@ namespace LionFire.Trading
         }
         protected virtual void OnAttached()
         {
-            Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
+            Account.Started.Subscribe(started => { if (started) { OnMarketStarted().Wait(); } });
+            //Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
         }
 
         /// <summary>
@@ -170,8 +182,10 @@ namespace LionFire.Trading
 
         #region ExecutionState
 
-        public IBehaviorObservable<ExecutionState> ExecutionState {
-            get {
+        public IBehaviorObservable<ExecutionState> ExecutionState
+        {
+            get
+            {
                 return executionState;
             }
         }
@@ -187,7 +201,7 @@ namespace LionFire.Trading
 
             StartOnMarketAvailable = true;
 
-            if (Market.Started.Value)
+            if (Account.Started.Value)
             {
                 await Task.Run(() => this.OnStarting());
             }
@@ -213,6 +227,10 @@ namespace LionFire.Trading
         public void OnBar(IMarketSeries series, TimedBar bar)
         {
             OnBar(series.SymbolCode, series.TimeFrame, bar);
+        }
+        public void OnBar(string symbolCode, SymbolBar bar, TimeFrame timeFrame)
+        {
+            OnBar(symbolCode, timeFrame, new TimedBar(bar));
         }
 
         public void OnBar(MarketSeries series)

@@ -29,5 +29,18 @@ namespace LionFire.Trading
             IsSuccessful = false,
             Message = "Prevented by configuration and the current state",
         };
+
+        public static TradeResult NotImplemented
+        {
+            get
+            {
+                return notImplemented;
+            }
+        }
+        private static TradeResult notImplemented = new TradeResult
+        {
+            IsSuccessful = false,
+            Message = "Not implemented",
+        };
     }
 }

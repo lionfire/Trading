@@ -3,6 +3,7 @@
 #define TRACE_RISK
 #define TRACE_CLOSE
 #define TRACE_OPEN
+#define TRACE_EVALUATE
 #endif
 #if cAlgo
 using cAlgo.API;
@@ -78,7 +79,7 @@ namespace LionFire.Trading.Bots
         partial void SignalBotBase_();
 
         #endregion
-        
+
         #region Computations by Derived Class
 
         public virtual double StopLossInPips { get { return 0; } }
@@ -90,10 +91,7 @@ namespace LionFire.Trading.Bots
 
         public int barCount = 0;
 
-
         #endregion
-
-
 
         #region Evaluate
 
@@ -101,6 +99,8 @@ namespace LionFire.Trading.Bots
 
         private void Evaluate()
         {
+            if (!StartDate.HasValue) StartDate = Server.Time;
+            EndDate = Server.Time;
 
 #if NULLCHECKS
             if (Indicator == null)
@@ -115,11 +115,7 @@ namespace LionFire.Trading.Bots
 
             try
             {
-                DateTime time =
-#if !cAlgo
-                    (Market as BacktestMarket)?.SimulationTime ??
-#endif
-                    Server.Time;
+                DateTime time = Server.Time;
                 Indicator.CalculateToTime(time);
             }
             catch (Exception ex)
@@ -136,7 +132,7 @@ namespace LionFire.Trading.Bots
                 || Indicator.CloseShortPoints.LastValue > traceThreshold
                                 )
             {
-                l.Trace($"SignalBot Evaluate({Indicator.OpenLongPoints.Count}) Open long: " + Indicator.OpenLongPoints.LastValue.ToString("N2") + " Close long: " + Indicator.CloseLongPoints.LastValue.ToString("N2") +
+                logger.LogDebug($"[{this.ToString()} evaluate #{Indicator.OpenLongPoints.Count}] Open long: " + Indicator.OpenLongPoints.LastValue.ToString("N2") + " Close long: " + Indicator.CloseLongPoints.LastValue.ToString("N2") +
                      " Open short: " + Indicator.OpenShortPoints.LastValue.ToString("N2") + " Close short: " + Indicator.CloseShortPoints.LastValue.ToString("N2")
                     );
             }
@@ -247,9 +243,21 @@ namespace LionFire.Trading.Bots
             }
         }
 
+        public bool UseParCurrencyConversionFallback = true;
+
+        public void ValidateCurrency(string currency, string paramName)
+        {
+            if (String.IsNullOrWhiteSpace(currency)) { throw new ArgumentException($"{paramName} invalid currency: {currency}");  }
+            if (char.IsDigit(currency[0])) { throw new ArgumentException($"{paramName} invalid currency: {currency}"); }
+
+        }
+
+
         // MOVE
         public double ConvertToCurrency(double amount, string fromCurrency, string toCurrency = null)
         {
+            ValidateCurrency(fromCurrency, nameof(fromCurrency));
+            ValidateCurrency(toCurrency, nameof(toCurrency));
 
             if (toCurrency == null) toCurrency = Account.Currency;
             if (fromCurrency == toCurrency) return amount;
@@ -280,12 +288,32 @@ namespace LionFire.Trading.Bots
                     }
                     else
                     {
-                        throw new NotImplementedException($"No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
+                        // REFACTOR - deduplicate with below
+                        if (UseParCurrencyConversionFallback)
+                        {
+                            logger.LogWarning($"Warning: Using par for currency conversion from {fromCurrency} to {toCurrency} --   Not implemented: No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
+                            return amount;
+                        }
+                        else
+                        {
+                            throw new NotImplementedException($"No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
+                        }
                     }
                 }
                 else
                 {
-                    throw new NotImplementedException($"cAlgo doesn't support currency conversion in backtesting.  Require conversion from {Symbol.Code.Substring(3)} to {toCurrency}");
+                    // REFACTOR - deduplicate with above
+                    if (UseParCurrencyConversionFallback)
+                    {
+                        logger.LogWarning($"Warning: Using par for currency conversion from {fromCurrency} to {toCurrency} --   Not implemented: No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
+                        return amount;
+                    }
+                    else
+                    {
+                        throw new NotImplementedException($"No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
+                    }
+
+                    //throw new NotImplementedException($"cAlgo doesn't support currency conversion in backtesting.  Require conversion from {Symbol.Code.Substring(3)} to {toCurrency}");
                 }
             }
             else
@@ -325,7 +353,39 @@ namespace LionFire.Trading.Bots
 
             if (Template.PositionRiskPercent > 0)
             {
-                var fromCurrency = Symbol.Code.Substring(3);
+                string fromCurrency;
+                //Market.GetSymbol(Symbol.Code).Cur
+                switch (Symbol.Code)
+                {
+                    case "AUS200":
+                        fromCurrency = "AUD";
+                        break;
+                    case "US30":
+                    case "US500":
+                    case "US2000":
+                    case "USTEC":
+                        fromCurrency = "USD";
+                        break;
+                    case "DE30":
+                    case "ES35":
+                    case "F40":
+                    case "IT40":
+                    case "STOXX50":
+                        fromCurrency = "EUR";
+                        break;
+                    case "UK100":
+                        fromCurrency = "GBP";
+                        break;
+                    case "JP225":
+                        fromCurrency = "JPY";
+                        break;
+                    case "HK50":
+                        fromCurrency = "HKD";
+                        break;
+                    default:
+                        fromCurrency = Symbol.Code.Substring(3);
+                        break;
+                }
                 var toCurrency = Account.Currency;
 
                 var stopLossDistanceAccountCurrency = ConvertToCurrency(stopLossDistance, fromCurrency, toCurrency);
@@ -449,100 +509,43 @@ p.onBars.Add(new StopLossTrailer(p)
 
         #region Fitness
 
-
-#if cAlgo
-        protected
-#else
-        public
-#endif
-            override double GetFitness(GetFitnessArgs args)
-        {
-            var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
-
-            var invDrawDown = 1 - (Math.Min(100, args.MaxEquityDrawdownPercentages) / 100);
-            //var drawDownPenalty = 0.5;
-            var drawDownPenalty = 0.8;
-            invDrawDown = Math.Pow(invDrawDown, drawDownPenalty * Math.E);
-
-            var tradeCount = args.History.Count;
-            var tradeCountBonus = 2;
-            var tradeCountMultiplier = Math.Log(tradeCount, 5 / tradeCountBonus);
-
-            var fitness = (args.NetProfit / initialBalance) * invDrawDown * tradeCountMultiplier;
-
-
-            if (Template.LogBacktest && (Template.LogBacktestThreshold == 0 || fitness > Template.LogBacktestThreshold))
-            {
-                var backtestResult = new BacktestResult()
-                {
-                    BacktestDate = DateTime.UtcNow,
-                    BotType = this.GetType().FullName,
-                    Config = this.Template,
-
-                    Start = this.MarketSeries?.OpenTime?[0],
-                    End = this.MarketSeries?.OpenTime?.LastValue,
-
-                    AverageTrade = args.AverageTrade,
-                    Equity = args.Equity,
-                    //History
-                    LosingTrades = args.LosingTrades,
-                    MaxBalanceDrawdown = args.MaxBalanceDrawdown,
-                    MaxBalanceDrawdownPercentages = args.MaxBalanceDrawdownPercentages,
-                    MaxEquityDrawdown = args.MaxEquityDrawdown,
-                    MaxEquityDrawdownPercentages = args.MaxEquityDrawdownPercentages,
-                    NetProfit = args.NetProfit,
-                    //PendingOrders
-                    //Positions
-                    ProfitFactor = args.ProfitFactor,
-                    SharpeRatio = args.SharpeRatio,
-                    SortinoRatio = args.SortinoRatio,
-                    TotalTrades = args.TotalTrades,
-                    WinningTrades = args.WinningTrades,
-                };
-
-                BacktestLogger = this.GetLogger(this.ToString().Replace(' ', '.') + ".Backtest");
-
-                try
-                {
-                    string resultJson = "";
-#if cAlgo
-#endif
-                    resultJson = Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
-
-                    var profit = args.Equity / initialBalance;
-
-                    this.BacktestLogger.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
-
-                    SaveResult(resultJson);
-                }
-                catch (Exception ex)
-                {
-                    this.BacktestLogger.LogError(ex.ToString());
-                }
-            }
-
-            return fitness;
-        }
-
-        #endregion
-
-        private async void SaveResult(string json)
-        {
-            var dir = @"c:\Trading\Results";
-            var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + Symbol.Code + " " + this.GetType().Name + ".json";
-            var path = Path.Combine(dir, filename);
-            using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
-            {
-                await sw.WriteAsync(json);
-            }
-        }
-
-
-
-        public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
-
-        #endregion
         
+
+//#if cAlgo
+//        protected
+//#else
+//        public
+//#endif
+//            override double GetFitness(GetFitnessArgs args)
+//        {
+//            var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
+
+//            var invDrawDown = 1 - (Math.Min(100, args.MaxEquityDrawdownPercentages) / 100);
+//            //var drawDownPenalty = 0.5;
+//            var drawDownPenalty = 0.8;
+//            invDrawDown = Math.Pow(invDrawDown, drawDownPenalty * Math.E);
+
+//            var tradeCount = args.History.Count;
+//            var tradeCountBonus = 2;
+//            var tradeCountMultiplier = Math.Log(tradeCount, 5 / tradeCountBonus);
+
+//            var fitness = (args.NetProfit / initialBalance) * invDrawDown * tradeCountMultiplier;
+
+
+         
+
+//            return fitness;
+//        }
+
+        #endregion
+
+        
+
+
+        
+
+        #endregion
+
         #region Misc
 
         public string TradeString(TradeType tradeType)
@@ -567,12 +570,12 @@ p.onBars.Add(new StopLossTrailer(p)
             var dateStr = this.MarketSeries.OpenTime.LastValue.ToDefaultString();
             logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
 #else
-            var dateStr = this.Market.Server.Time.ToDefaultString();
+            var dateStr = this.Account.Server.Time.ToDefaultString();
             logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
 #endif
         }
 
         #endregion
-        
+
     }
 }

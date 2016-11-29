@@ -12,6 +12,8 @@ namespace LionFire.Trading.Spotware.Connect
         {
             get;
         }
+
+        string RedirectUri { get; }
         string ClientPublicId { get; }
         string ClientSecret { get; }
 
@@ -27,6 +29,8 @@ namespace LionFire.Trading.Spotware.Connect
         public bool IsSandbox { get; set; }
         public string ClientPublicId { get; set; }
         public string ClientSecret { get; set; }
+
+        public string RedirectUri { get; set; }
 
         public string ApiHost { get; set; }
         public string TradeApiHost { get; set; }
