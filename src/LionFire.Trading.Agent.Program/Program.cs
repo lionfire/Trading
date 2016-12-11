@@ -89,13 +89,13 @@ namespace LionFire.Trading.Agent.Program
                     new TLionTrender("XAUUSD", "h1")
                     {
                         Log=false,
-                        LogBacktest = true,
+                        //LogBacktestThreshold = 2.0,
                         MinPositionSize = 1,
                         Indicator = new TLionTrending
                         {
                             Log = false,
-                            OpenWindowPeriods = 55,
-                            CloseWindowPeriods = 34,
+                            OpenWindowMinutes = 55*60,
+                            CloseWindowMinutes = 34*60,
                             PointsToOpenLong = 3.0,
                             PointsToOpenShort = 3.0,
                             PointsToCloseLong = 2.0,
@@ -147,7 +147,7 @@ namespace LionFire.Trading.Agent.Program
 //        }
 //    }
 
-    public static class MarketParticipantExtensions
+    public static class AccountParticipantExtensions
     {
         public static IAppHost AddBot<T>(this IAppHost host)
             where T : IBot

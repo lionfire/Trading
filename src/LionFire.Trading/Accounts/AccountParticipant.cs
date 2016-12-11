@@ -12,6 +12,8 @@ using System.Threading;
 using System.Collections.Concurrent;
 using LionFire.Dependencies;
 using System.Reactive.Linq;
+using System.ComponentModel;
+using System.Diagnostics;
 
 namespace LionFire.Trading
 {
@@ -28,20 +30,85 @@ namespace LionFire.Trading
 
     //}
 
+    public interface IInterestedInMarketData
+    {
+        IEnumerable<MarketSeries> MarketSeriesOfInterest { get; }
+        Task EnsureDataAvailable(DateTime upToDate);
+    }
     /// <summary>
     /// Represents an entity that participates in the market, either passively (readonly, which will receive events for DesiredSubscriptions via OnBar) and/or actively (by creating orders)
     /// </summary>
-    public abstract class MarketParticipant : IMarketParticipant, IExecutable
+    public abstract class AccountParticipant : IAccountParticipant, IExecutable, INotifyPropertyChanged, IInterestedInMarketData
     {
+
+
+        #region Desired Bars
+
+        public virtual IEnumerable<MarketSeries> MarketSeriesOfInterest
+        {
+            get { yield break; }
+        }
+
+        public static int DefaultDesiredBars = 100;
+        public virtual int GetDesiredBars(string symbolCode, TimeFrame timeFrame)
+        {
+            return DefaultDesiredBars;
+        }
+        public virtual TimeSpan GetDesiredTimeSpan(string symbolCode, TimeFrame timeFrame)
+        {
+            var bars = GetDesiredBars(symbolCode, timeFrame);
+            var time = TimeSpan.FromMilliseconds(timeFrame.TimeSpan.TotalMilliseconds * bars);
+            return time;
+        }
+
+        public Task EnsureDataAvailable(DateTime startDate)
+        {
+            var tasks = new List<Task>();
+            foreach (var s in MarketSeriesOfInterest)
+            {
+                var desiredBars = GetDesiredBars(s.SymbolCode, s.TimeFrame);
+                var index = s.FindIndex(Account.ExtrapolatedServerTime);
+
+                if (index == -1 || index - desiredBars < s.MinIndex)
+                {
+                    var task = Account.Data.EnsureDataAvailable(s, null, startDate /* yes, supplying startDate as endDate */, desiredBars); // TODO: Reorder  parameters to move startdate to end and default to null
+                    if (task != null)
+                    {
+                        tasks.Add(task);
+                    }
+                    else
+                    {
+                        Debug.WriteLine("task==null");
+                    }
+                }
+            }
+            if (tasks.Count == 1)
+            {
+                return tasks[0];
+            }
+            else if (tasks.Count == 0)
+            {
+                return Task.CompletedTask;
+            }
+            else
+            {
+                return Task.Factory.StartNew(() => Task.WaitAll(tasks.ToArray()));
+            }
+        }
+
+        #endregion
+
 
         #region Construction
 
-        public MarketParticipant()
+        public AccountParticipant()
         {
             logger = this.GetLogger();
         }
 
         #endregion
+
+
 
         #region Subscriptions
 
@@ -138,6 +205,7 @@ namespace LionFire.Trading
                         //sub.Series.BarReceived -= OnBar;
                         sub.Series = null;
                     }
+                    OnDetached();
                 }
                 account = value;
 
@@ -176,20 +244,29 @@ namespace LionFire.Trading
             marketSubscriptions.Clear();
         }
 
+        protected virtual void OnDetached()
+        {
+        }
         #endregion
 
         #region State
 
         #region ExecutionState
 
-        public IBehaviorObservable<ExecutionState> ExecutionState
+        public IBehaviorObservable<ExecutionState> State
         {
             get
             {
-                return executionState;
+                return state;
             }
         }
-        protected BehaviorObservable<ExecutionState> executionState = new BehaviorObservable<ExecutionState>();
+        protected BehaviorObservable<ExecutionState> state = new BehaviorObservable<ExecutionState>();
+        protected void SetState(ExecutionState state)
+        {
+            this.state.OnNext(state);
+            OnPropertyChanged(nameof(this.State));
+        }
+
 
         #endregion
 
@@ -197,13 +274,19 @@ namespace LionFire.Trading
 
         public async Task Start()
         {
+            if (State.Value == ExecutionState.Started || State.Value == ExecutionState.Starting) return;
+
             this.ValidateDependencies();
 
             StartOnMarketAvailable = true;
 
             if (Account.Started.Value)
             {
-                await Task.Run(() => this.OnStarting());
+                OnStarting();
+            }
+            else
+            {
+                state.OnNext(ExecutionState.WaitingToStart);
             }
         }
 
@@ -220,6 +303,12 @@ namespace LionFire.Trading
         protected virtual void OnStarting()
         {
             this.OnEnteringState(LionFire.Execution.ExecutionState.Starting);
+
+            var interested = this as IInterestedInMarketData;
+            if (interested != null)
+            {
+                EnsureDataAvailable(Account.ExtrapolatedServerTime).Wait();
+            }
         }
 
         #region Market Event Handling
@@ -262,12 +351,25 @@ namespace LionFire.Trading
 
         public virtual void OnTick(SymbolTick tick)
         {
-            Console.WriteLine("MarketParticipant.OnTick: " + tick.ToString());
+            Console.WriteLine("AccountParticipant.OnTick: " + tick.ToString());
         }
 
         #endregion
 
         #region Misc
+
+
+        #region INotifyPropertyChanged Implementation
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
+
 
         public ILogger Logger { get { return logger; } }
         protected ILogger logger;

@@ -1,9 +1,11 @@
-﻿using System;
+﻿//#define DEBUG_TICK
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Trading.Backtesting;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace LionFire.Trading
 {
@@ -15,7 +17,7 @@ namespace LionFire.Trading
     public interface Symbol : IBacktestSymbol
     {
         double Ask { get; }
-        
+
         double Bid { get; }
         string Code { get; }
         int Digits { get; }
@@ -43,18 +45,27 @@ namespace LionFire.Trading
         IMarketSeries GetMarketSeries(TimeFrame timeFrame);
 
         event Action<SymbolTick> Tick;
+
+        Task<TimedBar> GetLastBar(TimeFrame timeFrame);
+
+        MarketTickSeries MarketTickSeries { get; }
     }
 
     public interface ISymbolInternal : Symbol
     {
         event Action<Symbol, bool> TickHasObserversChanged;
         void OnTick(SymbolTick tick);
+
     }
 
     public class SymbolImpl : SymbolImplBase, IBacktestSymbol
     {
         public SymbolImpl(string symbolCode, IAccount market) : base(symbolCode, market) { }
-        
+
+        public override Task<TimedBar> GetLastBar(TimeFrame timeFrame)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     public abstract class SymbolImplBase : Symbol, ISymbolInternal
@@ -69,7 +80,8 @@ namespace LionFire.Trading
 
         #region Identity
 
-        public string Code {
+        public string Code
+        {
             get; private set;
         }
 
@@ -96,20 +108,55 @@ namespace LionFire.Trading
 
         #region Current Market State
 
-        public  double Ask {
-            get; set;
-        } = double.NaN;
+        public double Ask
+        {
+            get
+            {
+                if (ask == double.MinValue)
+                {
+                    LoadLatestTicks();
+                }
+                return ask;
+            }
+            set
+            {
+                ask = value;
+            }
+        }
+        double ask = double.MinValue;
 
-        public double Bid {
-            get; set;
-        } = double.NaN;
+        public double Bid
+        {
+            get
+            {
+                if (bid == double.MinValue)
+                {
+                    LoadLatestTicks();
+                }
+                return bid;
+            }
+            set
+            {
+                bid = value;
+            }
+        }
+        double bid = double.MinValue;
 
-        public double Spread {
-            get {
+        public void LoadLatestTicks()
+        {
+            // TODO
+            GetMarketSeries(TimeFrame.t1);
+        }
+
+
+        public double Spread
+        {
+            get
+            {
                 return Ask - Bid;
             }
         }
-        
+
         #endregion
 
         #region Tick Events
@@ -146,8 +193,11 @@ namespace LionFire.Trading
 
         void ISymbolInternal.OnTick(SymbolTick tick)
         {
-            if(tick.HasBid) this.Bid = tick.Bid;
-            if(tick.HasAsk) this.Ask = tick.Ask;
+            if (tick.HasBid) this.Bid = tick.Bid;
+            if (tick.HasAsk) this.Ask = tick.Ask;
+#if DEBUG_TICK
+            Debug.WriteLine("[tick] " + tick.ToString());
+#endif
             tickEvent?.Invoke(tick);
         }
 
@@ -160,20 +210,33 @@ namespace LionFire.Trading
         #region Series
 
         ConcurrentDictionary<string, IMarketSeries> seriesByTimeFrame = new ConcurrentDictionary<string, IMarketSeries>();
-
         public IMarketSeries GetMarketSeries(TimeFrame timeFrame)
         {
-            return seriesByTimeFrame.GetOrAdd(timeFrame.Name, timeFrameName =>
-            {
-                var task = this.Account.CreateMarketSeries(Code, timeFrame);
-                task.Wait();
-                return task.Result;
-            });
+            return seriesByTimeFrame.GetOrAdd(timeFrame.Name, timeFrameName => this.Account.CreateMarketSeries(Code, timeFrame));
         }
 
 
+        public MarketTickSeries MarketTickSeries
+        {
+            get
+            {
+                if (marketTickSeries == null)
+                {
+                    lock (_lock)
+                    {
+                        if (marketTickSeries == null)
+                        {
+                            marketTickSeries = new MarketTickSeries(this.Account, this.Code);
+                        }
+                    }
+                }
+                return marketTickSeries;
+            }
+        }
+        MarketTickSeries marketTickSeries;
+        private object _lock = new object();
+      
         #endregion
-
 
         #endregion
 
@@ -201,39 +264,48 @@ namespace LionFire.Trading
         private long VolumePerHundredThousandQuantity;
         public string Currency;
 
-        public int Digits {
+        public int Digits
+        {
             get; private set;
         }
 
-        public int Leverage {
+        public int Leverage
+        {
             get; private set;
         }
 
-        public long LotSize {
+        public long LotSize
+        {
             get; set;
         }
 
-        public double PipSize {
+        public double PipSize
+        {
             get; private set;
         }
 
-        public double PointSize {
+        public double PointSize
+        {
             get; private set;
         }
 
-        public double PreciseLeverage {
+        public double PreciseLeverage
+        {
             get; private set;
         }
 
-        public long VolumeMax {
+        public long VolumeMax
+        {
             get; private set;
         }
 
-        public long VolumeMin {
+        public long VolumeMin
+        {
             get; private set;
         }
 
-        public long VolumeStep {
+        public long VolumeStep
+        {
             get; private set;
         }
 
@@ -259,12 +331,15 @@ namespace LionFire.Trading
 
         #endregion
 
-        public double TickSize {
+        public double TickSize
+        {
             get; private set;
         }
 
-        public double TickValue {
-            get {
+        public double TickValue
+        {
+            get
+            {
                 if (Account == null) { throw new ArgumentException("Requires Account to be set"); }
                 if (Account.Currency == this.Currency)
                 {
@@ -275,8 +350,10 @@ namespace LionFire.Trading
             }
         }
 
-        public double PipValue {
-            get {
+        public double PipValue
+        {
+            get
+            {
                 if (Account == null) { throw new ArgumentException("Requires Account to be set"); }
                 if (Account.Currency == this.Currency)
                 {
@@ -308,32 +385,38 @@ namespace LionFire.Trading
                 throw new Exception("Currency conversion symbol pricing is not available for {from} to {to}");
             }
 
-            double conversion = !tradeType.HasValue ? ((ask + bid) / 2.0) : 
-                (!inverse ? tradeType == TradeType.Buy ? ask : bid 
-                : 1.0 / (tradeType == TradeType.Buy ? bid: ask)); // REVIEW
+            double conversion = !tradeType.HasValue ? ((ask + bid) / 2.0) :
+                (!inverse ? tradeType == TradeType.Buy ? ask : bid
+                : 1.0 / (tradeType == TradeType.Buy ? bid : ask)); // REVIEW
 
             result *= conversion;
 
-            return result;            
+            return result;
         }
 
         #region Account Current Positions
 
-        public virtual double UnrealizedGrossProfit {
-            get {
+        public virtual double UnrealizedGrossProfit
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
-        public virtual double UnrealizedNetProfit {
-            get {
+        public virtual double UnrealizedNetProfit
+        {
+            get
+            {
                 throw new NotImplementedException();
             }
         }
 
         #endregion
 
-        
+
+        public abstract Task<TimedBar> GetLastBar(TimeFrame timeFrame);
+
     }
 
 }

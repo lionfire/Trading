@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Execution;
 
 namespace LionFire.Trading.Accounts
 {
@@ -29,6 +30,8 @@ namespace LionFire.Trading.Accounts
         #region Derived
 
         public bool IsDemo { get { return !IsLive; } }
+
+        public ExecutionState DesiredExecutionState { get; set; }
 
         #endregion
     }

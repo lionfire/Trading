@@ -11,15 +11,29 @@ namespace LionFire.Trading.Bots
 {
 
 
-    public partial class BotBase<_TBot> : MarketParticipant, IBot, IStartable
+    public partial class BotBase<_TBot> : AccountParticipant, IBot, IStartable
     {
 
-        public MarketData MarketData { get; set; }
-
-        public bool IsBacktesting { get; set; }
+        #region Relationships
 
         public Server Server { get { return base.Account.Server; } }
 
+        #endregion
+
+        #region Configuration
+
+        public bool IsBacktesting { get; set; }
+
+        #endregion
+
+        #region Data
+
+
+        public MarketData MarketData { get; set; }
+
+
+
+        [RequiredToEnterState(ExecutionState.Starting)]
         public Symbol Symbol
         {
             get;
@@ -35,8 +49,22 @@ namespace LionFire.Trading.Bots
         }
         //private Symbol symbol;
 
+        #endregion
 
-        public IPositions Positions { get { return Account.Positions; } }
+
+        #region Positions
+
+        
+
+        public IPositions Positions
+        {
+            get
+            {
+                return Account?.Positions;
+            }
+        }
+
+        #region Position Methods
 
         public TradeResult ClosePosition(Position position)
         {
@@ -68,5 +96,11 @@ namespace LionFire.Trading.Bots
 
             return Account?.ExecuteMarketOrder(tradeType, symbol, volumeInUnits, label, stopLossInPips, takeProfitInPips, marketRangePips, comment);
         }
+
+        #endregion
+
+        #endregion
+
+
     }
 }

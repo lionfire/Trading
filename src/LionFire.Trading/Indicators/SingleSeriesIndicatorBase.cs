@@ -1,7 +1,9 @@
 ﻿#if DEBUG
 #define NULLCHECKS
 #endif
-
+#if cAlgo
+using cAlgo.API.Internals;
+#endif
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +15,17 @@ namespace LionFire.Trading.Indicators
             where TConfig : ITIndicator, new()
     {
 
-        #region Construction
+#if !cAlgo
+        public override IEnumerable<MarketSeries> MarketSeriesOfInterest
+        {
+            get
+            {
+                yield return MarketSeries;
+            }
+        }
+#endif
+
+#region Construction
 
         public SingleSeriesIndicatorBase() { }
 
@@ -21,7 +33,7 @@ namespace LionFire.Trading.Indicators
         {
         }
 
-        #endregion
+#endregion
 
         protected override void OnInitializing()
         {

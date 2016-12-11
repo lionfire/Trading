@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace LionFire.Trading.Indicators
 {
-    public abstract partial class IndicatorBase : MarketParticipant
+    public abstract partial class IndicatorBase : AccountParticipant
     {
 
         
@@ -39,12 +39,12 @@ namespace LionFire.Trading.Indicators
         private EffectiveIndicators _effectiveIndicators;
     }
 
-    public abstract partial class IndicatorBase<TConfig> : IndicatorBase
-        where TConfig : ITIndicator, new()
+    public abstract partial class IndicatorBase<TIndicator> : IndicatorBase
+        where TIndicator : ITIndicator, new()
     {
 
         #region Initialization (LionFire specific)
-        
+
 
         //private void InitDataSeries()
         //{
@@ -78,9 +78,9 @@ namespace LionFire.Trading.Indicators
 
         protected virtual void AttachChildren()
         {
-            foreach (var pi in this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(_pi => typeof(IMarketParticipant).IsAssignableFrom(_pi.PropertyType)))
+            foreach (var pi in this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(_pi => typeof(IAccountParticipant).IsAssignableFrom(_pi.PropertyType)))
             {
-                var indicator = pi.GetValue(this) as IMarketParticipant;
+                var indicator = pi.GetValue(this) as IAccountParticipant;
 
                 indicator.Account = Account;
                 //this.Market.Add(indicator);

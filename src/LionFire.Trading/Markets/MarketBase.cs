@@ -132,12 +132,12 @@
 
 //        //#endregion
 
-//        //#region Attached MarketParticipants
+//        //#region Attached AccountParticipants
 
 //        //void IHierarchicalTemplateInstance.Add(object child)
-//        //{ Add((IMarketParticipant)child); }
+//        //{ Add((IAccountParticipant)child); }
 
-//        //public void Add(IMarketParticipant actor)
+//        //public void Add(IAccountParticipant actor)
 //        //{
 //        //    if (!participants.Contains(actor))
 //        //    {
@@ -145,8 +145,8 @@
 //        //    }
 //        //    actor.Market = (IAccount)this;
 //        //}
-//        //public IReadOnlyList<IMarketParticipant> Participants { get { return participants; } }
-//        //List<IMarketParticipant> participants = new List<IMarketParticipant>();
+//        //public IReadOnlyList<IAccountParticipant> Participants { get { return participants; } }
+//        //List<IAccountParticipant> participants = new List<IAccountParticipant>();
 
 //        //#endregion
 

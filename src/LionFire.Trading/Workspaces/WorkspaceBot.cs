@@ -1,12 +1,11 @@
 ﻿using LionFire.Templating;
-using LionFire.Trading.Proprietary.Bots;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using LionFire.Trading.Bots;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading.Supervising
+namespace LionFire.Trading.Workspaces
 {
     
     public class TWorkspaceBot : ITemplate<WorkspaceBot>

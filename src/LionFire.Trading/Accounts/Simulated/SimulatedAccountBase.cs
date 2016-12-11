@@ -115,6 +115,7 @@ namespace LionFire.Trading.Accounts
             }
         }
         private DateTime simulationTime;
+        public override DateTime ExtrapolatedServerTime { get { return ServerTime; } }
 
         public event Action SimulationTimeChanged;
 
@@ -545,11 +546,5 @@ namespace LionFire.Trading.Accounts
         }
 
         #endregion
-
-
     }
-
-
-
-
 }

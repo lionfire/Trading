@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Bots
 {
-    public class IndicatorLogBot : MarketParticipant
+    public class IndicatorLogBot : AccountParticipant
     {
         DonchianChannel indicator;
 

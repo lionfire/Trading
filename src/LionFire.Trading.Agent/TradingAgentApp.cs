@@ -81,8 +81,8 @@ namespace LionFire.Trading.Agent
 //                        var lionTrending = new LionTrendingBase(new LionTrendingConfig("XAUUSD", "h1")
 //                        {
 //                            Log = true,
-//                            OpenWindowPeriods = 55,
-//                            CloseWindowPeriods = 34,
+//                            OpenWindowMinutes = 55,
+//                            CloseWindowMinutes = 34,
 //                            PointsToOpenLong = 3.0,
 //                            PointsToOpenShort = 3.0,
 //                            PointsToCloseLong = 2.0,
@@ -95,8 +95,8 @@ namespace LionFire.Trading.Agent
 //                        {
 //                            Indicator = new LionTrendingConfig
 //                            {
-//                                OpenWindowPeriods = 15,
-//                                CloseWindowPeriods = 15,
+//                                OpenWindowMinutes = 15,
+//                                CloseWindowMinutes = 15,
 //                                PointsToOpenLong = 1,
 //                                PointsToOpenShort = 1,
 //                                Symbol = "XAUUSD",

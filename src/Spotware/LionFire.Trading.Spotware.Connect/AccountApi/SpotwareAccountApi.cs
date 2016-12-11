@@ -1,11 +1,17 @@
-﻿using System;
+﻿using LionFire.ExtensionMethods;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
+
 
 namespace LionFire.Trading.Spotware.Connect.AccountApi
 {
+    
+
     public static class SpotwareAccountApi
     {
         public static string SandboxUriRoot { get; } = "https://sandbox-api.spotware.com/";
@@ -67,7 +73,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
                 .Replace("{limit}", "10000")  // HARDCODE REVIEW
                 ;
             //UpdateProgress(0.11, "Sending request");
-            var response = await client.GetAsync(uri);
+            var response = await client.GetAsyncWithRetries(uri);
 
             //UpdateProgress(0.12, "Receiving response");
 

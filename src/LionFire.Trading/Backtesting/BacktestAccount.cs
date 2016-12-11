@@ -93,11 +93,15 @@ namespace LionFire.Trading.Backtesting
 
         #region Account Info
 
-        protected TAccount EffecitveAccountInfo { get {                
-                return Template 
+        protected TAccount EffecitveAccountInfo
+        {
+            get
+            {
+                return Template
                     //??  DefaultAccountInfo
                     ;
-            } }
+            }
+        }
 
         #endregion
 
@@ -202,7 +206,7 @@ namespace LionFire.Trading.Backtesting
             };
 
         }
-        
+
         public override TradeResult ClosePosition(Position position)
         {
             if (!this.Positions.Contains(position))
@@ -304,10 +308,10 @@ namespace LionFire.Trading.Backtesting
         #endregion
 
         #region (Private) Methods
-       
+
 
         public void UpdatePositions()
-        {            
+        {
             var marginUsed = 0.0;
             var netProfit = 0.0;
 
@@ -353,16 +357,22 @@ namespace LionFire.Trading.Backtesting
         #endregion
 
         #region Market Series
-        
-        public override Task<IMarketSeries> CreateMarketSeries(string code, TimeFrame timeFrame)
-        {
-            
-            return Task.FromResult<IMarketSeries>(new MarketSeries(this, code, timeFrame));
+
+        public override MarketSeries CreateMarketSeries(string code, TimeFrame timeFrame)
+        {            
+            return new MarketSeries(this, code, timeFrame);
         }
 
         #endregion
 
-        
+
+        public override IEnumerable<string> SymbolsAvailable
+        {
+            get
+            {
+                return BrokerInfoUtils.GetSymbolsAvailable(Template?.BrokerName);
+            }
+        }
 
         #region Event Handling
 

@@ -27,9 +27,11 @@ namespace LionFire.Trading.Agent.Program
     {
         static void Main(string[] args)
         {
-
+            
             try
             {
+                throw new Exception("TODO: IsCommandLineEnabled = true");
+
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
 
                 var a = new AppHost()
@@ -55,6 +57,7 @@ namespace LionFire.Trading.Agent.Program
 #if Live
                     .AddTrading(TradingOptions.Auto, AccountMode.Live)
                     .Add<TCTraderAccount>("IC Markets.Live.Manual")
+                    
 #else
                     .AddTrading(TradingOptions.Auto, AccountMode.Demo)
                     .Add<TCTraderAccount>("IC Markets.Demo3")
@@ -72,8 +75,8 @@ namespace LionFire.Trading.Agent.Program
                     //    Indicator = new TLionTrending
                     //    {
                     //        Log = true,
-                    //        OpenWindowPeriods = 55,
-                    //        CloseWindowPeriods = 34,
+                    //        OpenWindowMinutes = 55,
+                    //        CloseWindowMinutes = 34,
                     //        PointsToOpenLong = 3.0,
                     //        PointsToOpenShort = 3.0,
                     //        PointsToCloseLong = 2.0,

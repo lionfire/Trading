@@ -76,7 +76,7 @@ namespace LionFire.Trading
         public static IEnumerable<string> GetSymbolsAvailable(string brokerName)
         {
             if (brokerName == null) { return null; }
-            return Directory.GetFiles(GetSymbolInfoPath(brokerName), "*" + FileSuffix).Select(file => file.Substring(0, file.IndexOf(FileSuffix)));
+            return Directory.GetFiles(GetSymbolInfoPath(brokerName), "*" + FileSuffix).Select(file => Path.GetFileNameWithoutExtension(file));
         }
     }
     

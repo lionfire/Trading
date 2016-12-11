@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+
+    
     public interface IMarketSeries
     {
         HistoricalPlaybackState HistoricalPlaybackState { get; set; }
@@ -54,7 +56,7 @@ namespace LionFire.Trading
         TimedBar LastBar { get; }
         
 
-        int FindIndex(DateTime time);
+        int FindIndex(DateTime time, bool loadHistoricalData = false);
 
         TimedBar this[DateTime time] { get; }
         TimedBar this[int index] { get; }

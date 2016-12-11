@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Bots
 {
-    public class LogBot : MarketParticipant
+    public class LogBot : AccountParticipant
     {
         public LogBot()
         {

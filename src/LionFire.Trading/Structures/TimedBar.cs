@@ -13,6 +13,16 @@ namespace LionFire.Trading
     public class TimedBar : Bar
     {
         public TimedBar() { }
+        public TimedBar(DateTime date, double open, double high, double low, double close, double volume)
+        {
+            this.OpenTime = date;
+            this.Open = open;
+            this.High = high;
+            this.Low = low;
+            this.Close = close;
+            this.Volume = volume;
+        }
+
         public TimedBar(SymbolBar b)
         {
             this.OpenTime = b.Time;
@@ -22,7 +32,19 @@ namespace LionFire.Trading
             this.Close = b.Bar.Close;
             this.Volume = b.Bar.Volume;
         }
-
+        public TimedBar(TimedBarStruct b)
+        {
+            this.OpenTime = b.OpenTime;
+            this.High = b.High;
+            this.Low = b.Low;
+            this.Open = b.Open;
+            this.Close = b.Close;
+            this.Volume = b.Volume;
+        }
+        public static implicit operator TimedBar(TimedBarStruct b)
+        {
+            return new TimedBar(b);
+        }
 
         public DateTime OpenTime { get; set; }
 

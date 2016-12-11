@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Accounts
 {
     public abstract class LiveAccountBase<TTemplate> : AccountBase<TTemplate>, IAccount
-        where  TTemplate : TAccount
+        where TTemplate : TAccount
     {
 
         #region State
@@ -39,6 +39,7 @@ namespace LionFire.Trading.Accounts
         #endregion
 
         #endregion
+        
 
         #region Server State
 
@@ -53,12 +54,23 @@ namespace LionFire.Trading.Accounts
             protected set
             {
                 serverTime = value;
-                LocalDelta = DateTime.UtcNow - value;
+                var delta = DateTime.UtcNow - value;
+                if (Math.Abs(delta.TotalMinutes) < 5.0) // REVIEW
+                {
+                    LocalDelta = DateTime.UtcNow - value;
+                }
             }
         }
         protected DateTime serverTime = default(DateTime);
+        public void AdvanceServerTime(DateTime time)
+        {
+            if (time > serverTime)
+            {
+                ServerTime = time;
+            }
+        }
 
-        public DateTime ExtrapolatedServerTime
+        public override DateTime ExtrapolatedServerTime
         {
             get
             {
@@ -76,7 +88,7 @@ namespace LionFire.Trading.Accounts
         #endregion
 
         #region Informational Properties
-        
+
 
         public override bool IsBacktesting { get { return false; } }
 
@@ -102,7 +114,7 @@ namespace LionFire.Trading.Accounts
 
         #region Symbol Information
 
-        public IEnumerable<string> SymbolsAvailable
+        public override IEnumerable<string> SymbolsAvailable
         {
             get
             {

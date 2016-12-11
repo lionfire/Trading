@@ -5,8 +5,37 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+    
     public class Position
     {
+        public IAccount Account { get; set; }
+
+        public PositionKind Kind
+        {
+            get
+            {
+                var kind = PositionKind.Unspecified;
+
+                if (Account != null)
+                {
+                    if (Account.IsRealMoney)
+                    {
+                        kind |= PositionKind.Live;
+                    }
+                    else
+                    {
+                        kind |= PositionKind.Demo;
+                    }
+                }
+
+                if (kind == PositionKind.Unspecified)
+                {
+                    kind = PositionKind.Paper;
+                }
+                return kind;
+            }
+        }
+
         public string Comment { get; set; }
         public double Commissions { get; set; } // REVEW - verify this is getting set
         public double EntryPrice { get; set; }

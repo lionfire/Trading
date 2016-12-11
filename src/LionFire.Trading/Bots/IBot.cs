@@ -10,9 +10,26 @@ using System.Text;
 using System.Threading.Tasks;
 using LionFire.Templating;
 using LionFire.Execution;
+using System.Collections.ObjectModel;
 
 namespace LionFire.Trading.Bots
 {
+    public enum PositionEventKind
+    {
+        Unspecified,
+        Opened = 1 << 0,
+        Closed = 1 << 1,
+        Modified = 1 << 2,
+        StoppedOut = 1 << 3,
+        PartialPosition = 1 << 4,
+    }
+
+    public class PositionEvent
+    {
+        public Position Position { get; set; }
+        public PositionEventKind Kind { get; set; }
+    }
+
     public interface IHasCustomFitness
     {
 #if !cAlgo
@@ -22,7 +39,7 @@ namespace LionFire.Trading.Bots
     public interface IBot : ITemplateInstance
 #if !cAlgo
         , IStartable
-        , IMarketParticipant
+        , IAccountParticipant
 #endif
     {
 
@@ -37,6 +54,10 @@ namespace LionFire.Trading.Bots
 
         BotMode Mode { get; set; }
 
+#if !cAlgo
+        Positions BotPositions { get; }
+        event Action<PositionEvent> BotPositionChanged;
+#endif
     }
 
     public static class VersionUtils

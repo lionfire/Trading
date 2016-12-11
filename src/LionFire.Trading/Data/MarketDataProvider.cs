@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using LionFire.Execution;
+using LionFire.Execution.Jobs;
+using System.Diagnostics;
 
 namespace LionFire.Trading
 {
@@ -57,7 +61,7 @@ namespace LionFire.Trading
 
         //Dictionary<string, MarketDataSubscriptions> subscriptions = new Dictionary<string, MarketDataSubscriptions>();
 
-        //public void Subscribe(MarketParticipant actor, MarketDataSubscriptions sub)
+        //public void Subscribe(AccountParticipant actor, MarketDataSubscriptions sub)
         //{
         //    MarketDataSubscriptions sub;
         //    if (subscriptions.Contains(sub.Key))
@@ -117,6 +121,21 @@ namespace LionFire.Trading
                 }
             }
         }
+
+        public Task EnsureDataAvailable(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int minBars)
+        {
+            if (LoadHistoricalDataAction == null) throw new NotImplementedException();
+
+            var job = LoadHistoricalDataAction(marketSeries, startDate, endDate, minBars);
+            Debug.WriteLine($"JOB {job.GetHashCode()} ");
+            job = marketSeries.LoadDataJobs.EnqueueOrGet(job);
+            job.Start();
+            return job.RunTask;
+        }
+
+        public Func<MarketSeriesBase, DateTime?, DateTime, int, IJob> LoadHistoricalDataAction;
+
+        
 
         #endregion
     }

@@ -20,7 +20,7 @@
 //        MarketDataProvider Data { get; }
 //        Server Server { get; }
 
-//        void Add(IMarketParticipant indicator);
+//        void Add(IAccountParticipant indicator);
 
 //        event Action Ticked;
 

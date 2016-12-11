@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading.Supervising
+namespace LionFire.Trading.Workspaces
 {
     public class TWorkspace : ITemplate<Workspace>
     {
@@ -34,14 +34,15 @@ namespace LionFire.Trading.Supervising
         public TradeLimits WorkspaceTradeLimits { get; set; }
         public TradeLimits LiveAccountTradeLimits { get; set; }
 
-        public List<string> LiveBots { get; set; }
-        public List<string> DemoBots { get; set; }
-        public List<string> Scanners { get; set; }
+
 
         public List<string> LiveAccounts { get; internal set; }
 
         public List<string> DemoAccounts { get; internal set; }
+        public List<string> ScannerAccounts { get; internal set; }
         public TradingOptions TradingOptions { get; internal set; }
+
+        public List<TSession> Sessions { get; set; }
 
         #region Static Default
 
@@ -64,28 +65,31 @@ namespace LionFire.Trading.Supervising
                     {
                         "IC Markets.Demo3"
                     },
+                    ScannerAccounts = new List<string>
+                    {
+                        "IC Markets.Demo3"
+                    },
 
-                    LiveBots = new List<string>
+                    Sessions = new List<TSession>
                     {
-                        "3ull3apuya9u",
-                        "znows7x945e7",
-                    },
-                    DemoBots = new List<string>
-                    {
-                        "3ull3apuya9u",
-                        "znows7x945e7",
-                    },
-                    Scanners = new List<string>
-                    {
-                        "3ull3apuya9u",
-                        "znows7x945e7",
+                        new TSession("Default Scanners")
+                        {
+                            ScanAccount = "IC Markets.Demo3",
+                            Scanners = new List<string>
+                            {
+                                "a1ayraigo5l0",
+                            },
+                        },
+                        new TSession("Experimental Bots")
+                        {
+                            ScanAccount = "IC Markets.Demo3",
+                        }
                     },
                 };
             }
         }
 
         #endregion
-
 
     }
 }

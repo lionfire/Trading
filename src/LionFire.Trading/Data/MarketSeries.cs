@@ -1,4 +1,5 @@
-﻿//#define BarStruct
+﻿#define DEBUG_BARSCOPIED
+//#define BarStruct
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -6,48 +7,267 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Reactive.Subjects;
+using LionFire.Validation;
+using LionFire.Templating;
+using LionFire;
+using System.Collections.Concurrent;
+using LionFire.Execution;
+using LionFire.Execution.Jobs;
 #if BarStruct
 using BarType = LionFire.Trading.TimedBarStruct;
 #else
 using BarType = LionFire.Trading.TimedBar;
 #endif
 using System.Threading.Tasks;
+using TickType = LionFire.Trading.Tick;
 
 namespace LionFire.Trading
 {
 
+    public class TMarketSeriesBase : ITemplate
+    {
+        //[Ignore]
+        //[Required]
+        public IAccount Account { get; set; }
 
-    public sealed class MarketSeries : IMarketSeries, IMarketSeriesInternal
+        //[Required]
+        public string Symbol { get; set; }
+
+        //[Required]
+        public string TimeFrame { get; set; }
+
+        public string Key { get { return MarketSeriesUtilities.GetSeriesKey(Symbol, TimeFrame); } }
+    }
+
+    public class TMarketSeries : TMarketSeriesBase, ITemplate<MarketSeries>, IValidatesCreate
+    {
+        public ValidationContext ValidateCreate(ValidationContext context)
+        {
+            context.MemberNonNull(Account, nameof(Account));
+            if (TimeFrame == "t1")
+            {
+                context.AddIssue(new ValidationIssue
+                {
+                    Message = "t1 not supported for TMarketSeries.  Use TMarketTickSeries instead.",
+                    MemberName = nameof(TimeFrame),
+                    Kind = ValidationIssueKind.InvalidConfiguration | ValidationIssueKind.ParameterOutOfRange,
+                });
+            }
+            return context;
+        }
+    }
+
+    public class TMarketTickSeries : TMarketSeriesBase, ITemplate<MarketTickSeries>, IValidatesCreate
+
+    {
+        public ValidationContext ValidateCreate(ValidationContext context)
+        {
+            context.MemberNonNull(Account, nameof(Account));
+            if (TimeFrame != "t1")
+            {
+                context.AddIssue(new ValidationIssue
+                {
+                    Message = "Only t1 supported for TMarketTickSeries.  Use TMarketSeries instead for other timeframes.",
+                    MemberName = nameof(TimeFrame),
+                    Kind = ValidationIssueKind.InvalidConfiguration | ValidationIssueKind.ParameterOutOfRange,
+                });
+            }
+
+            return context;
+        }
+    }
+
+    public class MarketSeriesBase<MarketSeriesTemplate> : MarketSeriesBase, ITemplateInstance
+        where MarketSeriesTemplate : TMarketSeriesBase, new()
+    {
+
+        #region Template
+
+        ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (MarketSeriesTemplate)value; } }
+        public MarketSeriesTemplate Template
+        {
+            get
+            {
+                if (template == null)
+                {
+                    template = new MarketSeriesTemplate
+                    {
+                        Account = this.Account,
+                        Symbol = this.SymbolCode,
+                        TimeFrame = this.TimeFrame.Name,
+                    };
+                }
+                return template;
+            }
+            set { template = value; }
+        }
+        public MarketSeriesTemplate template;
+
+        #endregion
+
+    }
+    public class MarketSeriesBase
     {
         #region Identity
 
         #region Derived
 
-        public string Key { get { return key; } }
-        private readonly string key;
+        public string Key
+        {
+            get
+            {
+                if (key == null && SymbolCode != null)
+                {
+                    key = SymbolCode.GetSeriesKey(TimeFrame);
+                }
+                return key;
+            }
+        }
+        private string key;
 
         #endregion
+
+        public JobQueue LoadDataJobs { get; private set; } = new JobQueue();
+        //public async Task WaitForLoadData()
+        //{
+        //    var arr = LoadDataJobs.Where(t => !t.IsCompleted).ToArray();
+        //    await Task.Factory.StartNew(() => Task.WaitAll(arr));
+        //    foreach (var t in arr)
+        //    {
+        //        LoadDataJobs.Remove(t);
+        //    }
+        //}
 
         public string SymbolCode
         {
-            get; private set;
+            get; protected set;
         }
         public TimeFrame TimeFrame
         {
-            get; private set;
+            get; protected set;
         }
 
         #endregion
 
+
         #region Relationships
 
-        public IAccount Market { get; private set; }
+        public IAccount Market { get; protected set; }
         // Obsolete?
         public IDataSource Source { get; set; }
 
-        public IAccount Account { get; set; }
+        public IAccount Account { get { return Market; } protected set { this.Market = value; } }
 
         #endregion
+
+
+
+        #region Data
+
+        public TimeSeries OpenTime
+        {
+            get { return openTime; }
+        }
+        protected TimeSeries openTime = new TimeSeries();
+
+        /// <param name="time"></param>
+        /// <param name="loadHistoricalData">If true, this may block for a long time!</param>
+        /// <returns></returns>
+        public int FindIndex(DateTime time, bool loadHistoricalData = false)
+        {
+            var result = openTime.FindIndex(time);
+            if (result == -1 && loadHistoricalData)
+            {
+                var first = OpenTime.First();
+                if (time < first)
+                {
+                    //var span = time - first;
+                    //var estimatedBars = span.TotalMilliseconds / TimeFrame.TimeSpan.TotalMilliseconds;
+                    EnsureDataAvailable(time, first).Wait(); // BLOCKING!
+                }
+                result = openTime.FindIndex(time);
+            }
+            //else
+            //{
+
+            //}
+            return result;
+        }
+
+        #endregion
+
+        #region Historical Data
+
+        public Task EnsureDataAvailable(DateTime? startDate, DateTime endDate, int minBars = 0)
+        {
+            return Account.Data.EnsureDataAvailable(this, startDate, endDate, minBars);
+        }
+
+        #endregion
+    }
+
+    public sealed class MarketTickSeries : MarketSeriesBase<TMarketTickSeries>, ITemplateInstance<TMarketTickSeries>
+
+    {
+
+        #region Construction
+
+        public MarketTickSeries() { }
+        public MarketTickSeries(IAccount account, string symbolCode)
+        {
+            this.Account = account;
+            this.SymbolCode = symbolCode;
+        }
+
+        #endregion
+
+        #region Data
+
+        public TickType this[DateTime time]
+        {
+            get
+            {
+                var index = FindIndex(time);
+                if (index < 0) return default(TickType);
+                return this[index];
+            }
+        }
+
+        public TickType this[int index]
+        {
+            get
+            {
+                return new TickType
+                {
+                    Time = openTime[index],
+                    Bid = bid[index],
+                    Ask = ask[index],
+                };
+            }
+            set
+            {
+                openTime[index] = value.Time;
+                bid[index] = value.Bid;
+                ask[index] = value.Ask;
+            }
+        }
+
+        public IDataSeries Bid
+        {
+            get { return bid; }
+        }
+        private DoubleDataSeries bid = new DoubleDataSeries();
+        public IDataSeries Ask
+        {
+            get { return ask; }
+        }
+        private DoubleDataSeries ask = new DoubleDataSeries();
+
+        #endregion
+    }
+
+    public sealed class MarketSeries : MarketSeriesBase<TMarketSeries>, IMarketSeries, IMarketSeriesInternal, ITemplateInstance<TMarketSeries>
+    {
 
         #region Configuration
 
@@ -67,7 +287,7 @@ namespace LionFire.Trading
                 switch (TimeFrame.TimeFrameUnit)
                 {
                     case TimeFrameUnit.Tick:
-                        return TimeSpan.Zero;
+                        return TimeSpan.Zero; // REVIEW
                     //case TimeFrameUnit.Second:
                     //    break;
                     //case TimeFrameUnit.Minute:
@@ -94,11 +314,10 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public MarketSeries(IAccount market, string key)
+        public MarketSeries() { }
+        public MarketSeries(IAccount account, string key)
         {
-            this.Market = market;
-            this.key = key;
-
+            this.Market = account;
             string symbol;
             TimeFrame timeFrame;
             MarketSeriesUtilities.DecodeKey(key, out symbol, out timeFrame);
@@ -108,7 +327,6 @@ namespace LionFire.Trading
         public MarketSeries(IAccount market, string symbol, TimeFrame timeFrame)
         {
             this.Market = market;
-            this.key = symbol.GetSeriesKey(timeFrame);
             this.SymbolCode = symbol;
             this.TimeFrame = timeFrame;
         }
@@ -117,17 +335,22 @@ namespace LionFire.Trading
 
         #region Data
 
+        public BarType this[DateTime time]
+        {
+            get
+            {
+                var index = FindIndex(time);
+                if (index < 0) return default(BarType);
+                return this[index];
+            }
+        }
+
         public IBarSeries Bars
         {
             get { return bars; }
         }
         private BarSeries bars = new BarSeries();
 
-        public TimeSeries OpenTime
-        {
-            get { return openTime; }
-        }
-        private TimeSeries openTime = new TimeSeries();
 
         public IDataSeries Open
         {
@@ -173,6 +396,13 @@ namespace LionFire.Trading
             }
         }
 
+        public TimedBar FirstBar
+        {
+            get
+            {
+                return this[OpenTime.MinIndex];
+            }
+        }
         public TimedBar LastBar
         {
             get
@@ -211,6 +441,15 @@ namespace LionFire.Trading
                 };
 #endif
             }
+            set
+            {
+                openTime[index] = value.OpenTime;
+                open[index] = value.Open;
+                high[index] = value.High;
+                low[index] = value.Low;
+                close[index] = value.Close;
+                tickVolume[index] = value.Volume;
+            }
         }
 
         private IEnumerable<DoubleDataSeries> AllDataSeries
@@ -235,7 +474,6 @@ namespace LionFire.Trading
         public HistoricalPlaybackState HistoricalPlaybackState { get; set; }
 
         #endregion
-
 
         #region Events
 
@@ -280,8 +518,11 @@ namespace LionFire.Trading
                 return barSubject;
             }
         }
+
+        public int MinIndex { get { return OpenTime.MinIndex; } }
+
         BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
-        
+
 
         //public event Action<MarketSeries> BarReceived;
         public event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
@@ -289,20 +530,32 @@ namespace LionFire.Trading
         //public event Action<TimedBar> InterimBarReceived;
         #endregion
 
-        public int FindIndex(DateTime time)
-        {
-            return openTime.FindIndex(time);
-        }
+        #region Methods
 
-        public BarType this[DateTime time]
+        /// <param name="time"></param>
+        /// <param name="loadHistoricalData">If true, this may block for a long time!</param>
+        /// <returns></returns>
+        public int FindIndex(DateTime time, bool loadHistoricalData = false)
         {
-            get
+            var result = openTime.FindIndex(time);
+            if (result == -1 && loadHistoricalData)
             {
-                var index = FindIndex(time);
-                if (index < 0) return default(BarType);
-                return this[index];
+                var first = OpenTime.First();
+                if (time < first)
+                {
+                    //var span = time - first;
+                    //var estimatedBars = span.TotalMilliseconds / TimeFrame.TimeSpan.TotalMilliseconds;
+                    EnsureDataAvailable(time, first).Wait(); // BLOCKING!
+                }
+                result = openTime.FindIndex(time);
             }
+            //else
+            //{
+
+            //}
+            return result;
         }
+        #endregion
 
         //public IEnumerable<SymbolBar> GetBars(DateTime fromTimeExclusive, DateTime endTimeInclusive)
         //{
@@ -390,13 +643,128 @@ namespace LionFire.Trading
             }
         }
 
-        public void Add(IEnumerable<TimedBarStruct> bars)
+        public void Add(List<TimedBarStruct> bars, DateTime? startDate = null, DateTime? endDate = null)
         {
-            foreach (var b in bars)
+            // TODO: Fill range from startDate to endDate with "NoData" and if a range is loaded that creates a gap with existing ranges, fill that with "MissingData"
+
+            if (bars.Count == 0) return;
+            var resultsStartDate = bars[0].OpenTime;
+            var resultsEndDate = bars[bars.Count - 1].OpenTime;
+            if (!startDate.HasValue) startDate = resultsStartDate;
+            if (!endDate.HasValue) endDate = resultsEndDate;
+
+#if DEBUG_BARSCOPIED
+            int barsCopied = 0;
+#endif
+
+            if (this.Count == 0)
             {
-                Add(b.OpenTime, b.Open, b.High, b.Low, b.Close, b.Volume);
+                foreach (var b in bars)
+                {
+                    Add(b.OpenTime, b.Open, b.High, b.Low, b.Close, b.Volume);
+                }
+            }
+            else
+            {
+                var dataStartDate = this.OpenTime.First();
+                var dataEndDate = this.OpenTime.Last();
+
+
+                if (startDate <= dataStartDate) // prepending data
+                {
+                    int lastIndexToCopy;
+                    for (lastIndexToCopy = bars.Count - 1; lastIndexToCopy >= 0 && bars[lastIndexToCopy].OpenTime >= dataStartDate; lastIndexToCopy--) ; // OPTIMIZE?
+
+                    for (int dataIndex = OpenTime.MinIndex - 1; lastIndexToCopy >= 0; dataIndex--, lastIndexToCopy--)
+                    {
+                        this[dataIndex] = bars[lastIndexToCopy];
+#if DEBUG_BARSCOPIED
+                        barsCopied++;
+#endif
+                    }
+
+                    if (endDate.Value < dataStartDate)
+                    {
+                        AddGap(endDate.Value + TimeFrame.TimeSpan, dataStartDate - TimeFrame.TimeSpan);
+                    }
+                }
+
+                // Both above and below may get run
+
+                if (endDate >= dataEndDate) // append data
+                {
+                    int lastIndexToCopy;
+                    for (lastIndexToCopy = 0; lastIndexToCopy < bars.Count && bars[lastIndexToCopy].OpenTime <= dataEndDate; lastIndexToCopy++) ; // OPTIMIZE?
+
+                    for (int dataIndex = OpenTime.LastIndex + 1; lastIndexToCopy < bars.Count; dataIndex++, lastIndexToCopy++)
+                    {
+                        this[dataIndex] = bars[lastIndexToCopy];
+#if DEBUG_BARSCOPIED
+                        barsCopied++;
+#endif
+                    }
+
+                    if (startDate.Value > dataEndDate)
+                    {
+                        AddGap(dataEndDate + TimeFrame.TimeSpan, startDate.Value - TimeFrame.TimeSpan);
+                    }
+                }
+            }
+#if DEBUG_BARSCOPIED
+            Debug.WriteLine($"{SymbolCode}-{TimeFrame.Name} Imported {barsCopied} bars");
+#endif
+            EraseGap(startDate.Value, endDate.Value);
+        }
+        private void AddGap(DateTime startDate, DateTime endDate)
+        {
+            if (HasGap(startDate, endDate))
+            {
+                //Gap in data would be created.  Fill with MissingValue
+                throw new NotImplementedException("TODO: Resolve Overlapping gaps");
+            }
+            Debug.WriteLine($"UNTESTED - {this.ToString()} GAP: {startDate} - {endDate}");
+            if (Gaps == null) { Gaps = new SortedDictionary<DateTime, DateTime>(); }
+            if (Gaps.ContainsKey(startDate))
+            {
+                var existingEnd = Gaps[startDate];
+                if (existingEnd < endDate)
+                {
+                    Gaps[startDate] = endDate;
+                }
+            }
+            Gaps.Add(startDate, endDate);
+        }
+        private void EraseGap(DateTime startDate, DateTime endDate)
+        {
+            if (HasGap(startDate, endDate))
+            {
+                throw new NotImplementedException("TODO: Erase gap");
             }
         }
+        public bool HasData(DateTime startDate, DateTime endDate)
+        {
+            if (LastBar.OpenTime >= endDate && FirstBar.OpenTime <= startDate) return true;
+
+            foreach (var kvp in Gaps)
+            {
+                if (kvp.Key > endDate) break;
+                if (kvp.Key < endDate && kvp.Value > startDate) return false;
+            }
+            return true;
+        }
+        public bool HasGap(DateTime startDate, DateTime endDate)
+        {
+            if (Gaps == null) { return false; }
+            foreach (var kvp in Gaps)
+            {
+                if (kvp.Key > endDate) break;
+                if (kvp.Key < endDate && kvp.Value > startDate) return true;
+            }
+            return false;
+        }
+        private SortedDictionary<DateTime, DateTime> Gaps;
+
+
         public void Add(DateTime time, double open, double high, double low, double close, double volume)
         {
             this.openTime.Add(time);
@@ -733,6 +1101,11 @@ namespace LionFire.Trading
 
         #endregion
 
+        public event Action<DateTime, DateTime> LoadHistoricalDataCompleted;
+        public void RaiseLoadHistoricalDataCompleted(DateTime startDate, DateTime endDate)
+        {
+            LoadHistoricalDataCompleted?.Invoke(startDate, endDate);
+        }
     }
 
     public static class MarketSeriesUtilities

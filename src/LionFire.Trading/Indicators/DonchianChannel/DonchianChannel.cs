@@ -34,7 +34,7 @@ namespace LionFire.Trading.Indicators
 
         #region Convenience
 
-        public int Periods { get { return Config.Periods; } }
+        public int Periods { get { return Template.Periods; } }
 
         #endregion
 
@@ -44,8 +44,11 @@ namespace LionFire.Trading.Indicators
             }
         }
 
+        
+
         public override void Calculate(int upToIndex)
         {
+            bool failedToGetHistoricalData = false;
             for (int index = Top.Count; index <= upToIndex; index++)
             {
                 double high = double.NaN;
@@ -53,13 +56,18 @@ namespace LionFire.Trading.Indicators
 
                 var lookbackIndex = index - Periods;
 
-                if (lookbackIndex < 0)
+                if (lookbackIndex < MarketSeries.MinIndex)
                 {
-                    // Market data not available
-                    Top[index] = double.NaN;
-                    Bottom[index] = double.NaN;
-                    Middle[index] = double.NaN;
-                    break;
+                    if (!failedToGetHistoricalData) { MarketSeries.EnsureDataAvailable(null, MarketSeries.OpenTime.First(), 2 + MarketSeries.MinIndex - lookbackIndex).Wait(); }
+                    if (lookbackIndex < MarketSeries.MinIndex)
+                    {
+                        failedToGetHistoricalData = true; // REVIEW
+                        // Market data not available
+                        Top[index] = double.NaN;
+                        Bottom[index] = double.NaN;
+                        Middle[index] = double.NaN;
+                        continue;
+                    }
                 }
 
                 for (; lookbackIndex < index; lookbackIndex++)

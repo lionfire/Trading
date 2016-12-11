@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -19,10 +20,18 @@ namespace LionFire.Trading
 
     public sealed class TimeSeries : DataSeries<DateTime>, ITimeSeries
     {
+
         public int FindIndex(DateTime time)
         {
-            return list.FindLastIndex(d => d <= time);
+            var result = list.FindLastIndex(d => d <= time);
+            if (result == -1)
+            {
+
+                result = reverseList.FindLastIndex(d => d <= time);
+            }
+            return result;
         }
+
     }
 
     public class DataSeries<ListType>
@@ -35,63 +44,158 @@ namespace LionFire.Trading
             DataSeries<double>.InvalidValue = double.NaN;
         }
 
-        public static ListType InvalidValue;
+        public static ListType InvalidValue = default(ListType);
 
         #endregion
 
         protected List<ListType> list = new List<ListType>();
 
-        public ListType this[int index] {
-            get {
-                if (index >= list.Count) return InvalidValue;
-                return list[index];
-            }
-            set {
-                if (index >= list.Count)
+        public ListType this[int index]
+        {
+            get
+            {
+                if (index < 0)
                 {
-                    var padCount = index - list.Count;
-                    if (padCount > 0)
-                    {
-                        list.AddRange(Enumerable.Repeat(InvalidValue, padCount));
-                    }
+                    var reverseIndex = -index + 1;
+                    if (reverseIndex >= reverseList.Count) return InvalidValue;
+                    return reverseList[reverseIndex];
                 }
-                list.Add(value);
+                else
+                {
+                    if (index >= list.Count) return InvalidValue;
+                    return list[index];
+                }
+
+            }
+            set
+            {
+                if (index < 0)
+                {
+                    index = -index - 1;
+                    SetListValue(reverseList, index, value);
+                }
+                else
+                {
+                    SetListValue(list, index, value);
+                }
             }
         }
 
-        public int Count { get { return list.Count; } }
-
-        public ListType LastValue {
-            get {
-                if (list.Count == 0) return InvalidValue;
-                return list[list.Count - 1];
+        private static void SetListValue(List<ListType> listParameter, int index, ListType val)
+        {
+            if (index > listParameter.Count)
+            {
+                var padCount = index - listParameter.Count;
+                if (padCount > 0)
+                {
+                    listParameter.AddRange(Enumerable.Repeat(InvalidValue, padCount));
+                }
+                listParameter[index] = val;
             }
-            internal set {
+            else if (index == listParameter.Count)
+            {
+                listParameter.Add(val);
+            }
+            else
+            {
+                Debug.WriteLine($"WARNING - resetting index {index} to {val}");
+                listParameter[index] = val;
+            }
+        }
+
+        public int Count { get { return list.Count + reverseList.Count; } }
+
+        public ListType LastValue
+        {
+            get
+            {
+                return this[LastIndex];
+            }
+            internal set
+            {
                 if (list.Count == 0) throw new ArgumentOutOfRangeException("Cannot set LastValue because no values exist.");
                 list[list.Count - 1] = value;
             }
         }
 
-        public ListType Last(int indexFromEnd)
+        public int LastIndex
         {
-            var absoluteIndex = (list.Count - 1) - indexFromEnd;
-            if (absoluteIndex < 0) return InvalidValue;
-            return list[absoluteIndex];
+            get
+            {
+                if (list.Count != 0)
+                {
+                    return list.Count - 1;
+                }
+                else
+                {
+                    return -reverseList.Count;
+                }
+            }
         }
+
+        public ListType First(int indexFromStart = 0)
+        {
+            return this[MinIndex + indexFromStart];
+        }
+
+        public ListType Last(int indexFromEnd = 0)
+        {
+            return this[LastIndex - indexFromEnd];
+        }
+
+        #region Add
 
         public void Add()
         {
             list.Add(InvalidValue);
         }
-
         public void Add(ListType[] items)
         {
             list.AddRange(items);
         }
-
         public void Add(ListType item)
         {
             list.Add(item);
         }
+
+        #endregion
+
+        public int MinIndex
+        {
+            get
+            {
+                if (reverseList != null && reverseList.Count > 0)
+                {
+                    return -reverseList.Count + 2;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
+        }
+
+        #region Reverse List
+
+
+
+        protected List<ListType> reverseList = new List<ListType>();
+
+        public void AddReverse()
+        {
+            reverseList.Add(InvalidValue);
+        }
+        public void AddReverse(ListType[] items)
+        {
+            reverseList.AddRange(items);
+        }
+        public void AddReverse(ListType item)
+        {
+            reverseList.Add(item);
+        }
+
+        #endregion
+
+
     }
 }

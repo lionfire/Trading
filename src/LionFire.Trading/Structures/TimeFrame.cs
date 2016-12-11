@@ -2,21 +2,32 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+#if cAlgo
+//using Timerame = LionFire.Trading.LionFireTimeFrame;
+using cAlgo.API;
+#endif
 using System.Threading.Tasks;
 
 
 namespace LionFire.Trading
 {
 
-    
+#if !cAlgo
 
-
+#if cAlgo
+    public class LionFireTimeFrame
+#else
     public class TimeFrame
+#endif
     {
 
-        #region Static
+    #region Static
 
+#if cAlgo
+        static LionFireTimeFrame()
+#else
         static TimeFrame()
+#endif
         {
             t1 = new TimeFrame("t1");
             m1 = new TimeFrame("m1");
@@ -31,11 +42,15 @@ namespace LionFire.Trading
         public static TimeFrame h2 { get; private set; }
         public static TimeFrame h4 { get; private set; }
 
-        #endregion
+    #endregion
 
-        #region Construction
+    #region Construction
 
-        public TimeFrame(string name)
+#if cAlgo
+        public LionFireTimeFrame(string name)
+#else
+                public TimeFrame(string name)
+#endif
         {
             this.Name = name;
             string type = name[0].ToString();
@@ -72,8 +87,9 @@ namespace LionFire.Trading
 
         public static TimeFrame TryParse(string timeFrameCode)
         {
-            var pi = typeof(TimeFrame).GetProperty(timeFrameCode, BindingFlags.Public | BindingFlags.Static);
+            if (string.IsNullOrWhiteSpace(timeFrameCode)) return null;
 
+            var pi = typeof(TimeFrame).GetProperty(timeFrameCode, BindingFlags.Public | BindingFlags.Static);
             return pi?.GetValue(null) as TimeFrame;
         }
 
@@ -82,18 +98,18 @@ namespace LionFire.Trading
             return TryParse(timeFrameCode);
         }
 
-        #endregion
+    #endregion
 
-        #region Operators
+    #region Operators
 
         public static implicit operator string(TimeFrame tf)
         {
             return tf.Name;
         }
 
-        #endregion
+    #endregion
 
-        #region Properties
+    #region Properties
 
         public string Name { get; set; }
 
@@ -101,12 +117,14 @@ namespace LionFire.Trading
 
         public int TimeFrameValue { get; set; }
 
-        #endregion
+    #endregion
 
-        #region Derived
+    #region Derived
 
-        public TimeSpan TimeSpan { // TODO - Init this readonly during construction
-            get {
+        public TimeSpan TimeSpan
+        { // TODO - Init this readonly during construction
+            get
+            {
                 if (timeSpan == default(TimeSpan))
                 {
                     switch (TimeFrameUnit)
@@ -140,10 +158,10 @@ namespace LionFire.Trading
 
 
 
-        #endregion
+    #endregion
 
 
-        #region Misc
+    #region Misc
 
         public override string ToString()
         {
@@ -211,8 +229,102 @@ namespace LionFire.Trading
             return TryParse(unit.ToLetterCode() + val.ToString());
         }
 
-        #endregion
+    #endregion
     }
+#endif
 
+    public static class TimeFrameExtensions
+    {
+        public static int GetBarsFromMinutes(this TimeFrame timeFrame, double minutes)
+        {
+            return (int)timeFrame._GetBarsFromMinutes(minutes);
+        }
+        private static double _GetBarsFromMinutes(this TimeFrame timeFrame, double minutes)
+        {
+#if !cAlgo
+#else
+#endif
+            switch (timeFrame.ToShortString())
+            {
+                case "m":
+                case "m1":
+                    return minutes;
+                case "m2":
+                    return minutes / 2.0;
+                case "m3":
+                    return minutes / 3.0;
+                case "m4":
+                    return minutes / 4.0;
+                case "m5":
+                    return minutes / 5.0;
+                case "m6":
+                    return minutes / 6.0;
+                case "m7":
+                    return minutes / 7.0;
+                case "m8":
+                    return minutes / 8.0;
+                case "m9":
+                    return minutes / 9.0;
+                case "m10":
+                    return minutes / 10.0;
+                case "m15":
+                    return minutes / 15.0;
+                case "m20":
+                    return minutes / 20.0;
+                case "m30":
+                    return minutes / 30.0;
+                case "m45":
+                    return minutes / 45.0;
+                case "h1":
+                case "h":
+                    return minutes / 60.0;
+                case "h2":
+                    return minutes / (60.0 * 2);
+                case "h4":
+                    return minutes / (60.0 * 4);
+                case "h6":
+                    return minutes / (60.0 * 6);
+                case "h8":
+                    return minutes / (60.0 * 8);
+                case "h10":
+                    return minutes / (60.0 * 10);
+                case "h12":
+                    return minutes / (60.0 * 12);
+                case "h16":
+                    return minutes / (60.0 * 16);
+                case "h18":
+                    return minutes / (60.0 * 18);
+                case "d":
+                case "d1":
+                    return minutes / (60.0 * 24);
+                case "d2":
+                    return minutes / (60.0 * 24 * 2);
+                case "d3":
+                    return minutes / (60.0 * 24 * 3);
+                case "w":
+                case "w1":
+                    return minutes / (60.0 * 24 * 7);
+            }
+            throw new NotImplementedException(timeFrame.ToString());
+        }
+
+
+
+        public static string ToShortString(this TimeFrame tf)
+        {
+            var str = tf.ToString();
+#if cAlgo
+            str = str.Replace("Day", "d");
+            str = str.Replace("Hour", "h");
+            str = str.Replace("Minute", "m");
+            str = str.Replace("Tick", "t");
+            if (str.Length == 1) { str += "1"; }
+#endif
+            return str;
+
+        }
+
+
+    }
 
 }

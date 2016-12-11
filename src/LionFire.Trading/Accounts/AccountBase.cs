@@ -1,4 +1,5 @@
 ﻿using LionFire.Assets;
+using LionFire.Execution.Jobs;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
 using LionFire.Templating;
@@ -6,12 +7,14 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Trading.Workspaces;
 
 namespace LionFire.Trading.Accounts
 {
-    public abstract class AccountBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, IAccount
+    public abstract class AccountBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, IAccount, INotifyPropertyChanged
         where TTemplate : TAccount
     {
 
@@ -81,7 +84,7 @@ namespace LionFire.Trading.Accounts
         public IPositions Positions
         {
             get { return positions; }
-        } 
+        }
         protected Positions positions = new Positions();
 
         public virtual bool TicksAvailable { get { return true; } }
@@ -101,6 +104,7 @@ namespace LionFire.Trading.Accounts
         #region Server State
 
         public abstract DateTime ServerTime { get; protected set; }
+        public abstract DateTime ExtrapolatedServerTime { get; }
         public virtual TimeZoneInfo TimeZone
         {
             get
@@ -108,7 +112,6 @@ namespace LionFire.Trading.Accounts
                 return TimeZoneInfo.Utc;
             }
         }
-
 
         #endregion
 
@@ -152,7 +155,7 @@ namespace LionFire.Trading.Accounts
         }
 
 
-        public abstract Task<IMarketSeries> CreateMarketSeries(string symbol, TimeFrame timeFrame);
+        public abstract MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame);
 
         #region MarketSeries
 
@@ -163,10 +166,18 @@ namespace LionFire.Trading.Accounts
 
         public IMarketSeries GetMarketSeries(string symbol, TimeFrame tf)
         {
-            return GetSymbol(symbol).GetMarketSeries(tf);
+            if (tf == TimeFrame.t1)
+            {
+                throw new ArgumentException("Use Symbol.MarketTickSeries for t1");
+            }
+            else
+            {
+                return GetSymbol(symbol).GetMarketSeries(tf);
+            }
         }
 
         #endregion
+        
 
         #endregion
 
@@ -245,25 +256,53 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
-        #region Attached MarketParticipants
+        #region Attached AccountParticipants
 
         void IHierarchicalTemplateInstance.Add(object child)
-        { Add((IMarketParticipant)child); }
-
-        public void Add(IMarketParticipant actor)
         {
+            Add((IAccountParticipant)child).Wait();
+        }
+
+        public async Task Add(IAccountParticipant actor)
+        {
+            actor.Account = (IAccount)this;
             if (!participants.Contains(actor))
             {
                 participants.Add(actor);
+                var interested = actor as IInterestedInMarketData;
+                if (interested != null)
+                {
+                    await interested.EnsureDataAvailable(ExtrapolatedServerTime);
+                }
             }
-            actor.Account = (IAccount)this;
         }
-        public IReadOnlyList<IMarketParticipant> Participants { get { return participants; } }
-        List<IMarketParticipant> participants = new List<IMarketParticipant>();
+        public IReadOnlyList<IAccountParticipant> Participants { get { return participants; } }
+        List<IAccountParticipant> participants = new List<IAccountParticipant>();
 
         #endregion
 
+        protected virtual async Task OnStarting()
+        {
+            await EnsureParticipantsHaveDesiredData();
+        }
+
+        protected async virtual Task EnsureParticipantsHaveDesiredData()
+        {
+            var time = ExtrapolatedServerTime;
+            if (time == default(DateTime))
+            {
+                time = DateTime.UtcNow;
+            }
+
+            foreach (var p in participants.OfType<IInterestedInMarketData>())
+            {
+                await p.EnsureDataAvailable(time);
+            }
+        }
+
         #region Market Data
+
+        public JobQueue LoadDataJobQueue = new JobQueue() { MaxConcurrentJobs = 4 };
 
         public MarketDataProvider Data { get { if (data == null) { data = new MarketDataProvider(this); } return data; } set { data = value; } }
         private MarketDataProvider data;
@@ -281,6 +320,7 @@ namespace LionFire.Trading.Accounts
             set { marketData = value; }
         }
         private MarketData marketData;
+
         #endregion
 
         #region Events
@@ -301,7 +341,28 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
+        public abstract IEnumerable<string> SymbolsAvailable { get; }
+
+        public void TryAdd(Session session)
+        {
+
+        }
+
+
         #region Misc
+
+
+        #region INotifyPropertyChanged Implementation
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
+
 
         #region Logger
 
@@ -309,6 +370,8 @@ namespace LionFire.Trading.Accounts
         {
             get { return logger; }
         }
+
+
         protected ILogger logger;
 
         #endregion

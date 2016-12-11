@@ -29,6 +29,8 @@ using LionFire.Structures;
 using LionFire.Trading;
 using LionFire.Trading.Spotware.Connect.AccountApi;
 using LionFire.Trading.Accounts;
+using LionFire.Reactive;
+using LionFire.Reactive.Subjects;
 
 namespace LionFire.Trading.Spotware.Connect
 {
@@ -38,7 +40,7 @@ namespace LionFire.Trading.Spotware.Connect
     {
     }
 
-    public partial class CTraderAccount : LiveAccountBase<TCTraderAccount>, 
+    public partial class CTraderAccount : LiveAccountBase<TCTraderAccount>,
         //IRequiresServices,
         IStartable, IHasExecutionFlags, IHasRunTask, IConfigures<IServiceCollection>
     //, IHandler<SymbolTick>
@@ -82,7 +84,7 @@ namespace LionFire.Trading.Spotware.Connect
         //protected IServiceProvider ServiceProvider { get; private set; }
 
         #endregion
-        
+
 
         #region Construction
 
@@ -90,7 +92,23 @@ namespace LionFire.Trading.Spotware.Connect
         {
             CTraderAccount_NetFramework();
             logger = this.GetLogger();
+            this.Data.LoadHistoricalDataAction = LoadHistoricalDataAction;
         }
+
+        public IJob LoadHistoricalDataAction(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int minBars = 0)
+        {
+            var loadTask = new SpotwareLoadHistoricalDataJob(marketSeries.SymbolCode, marketSeries.TimeFrame)
+            {
+                Account = this,
+                MarketSeries = marketSeries as MarketSeries,
+                MarketTickSeries = marketSeries as MarketTickSeries,
+                EndTime = endDate,
+                StartTime = startDate,
+                MinBars = minBars
+            };
+            return loadTask;
+        }
+
         partial void CTraderAccount_NetFramework();
 
         #endregion
@@ -115,39 +133,45 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Execution
 
-        public ExecutionFlags ExecutionFlags { get { return executionFlags; } set { executionFlags = value; } }
-        private volatile ExecutionFlags executionFlags = ExecutionFlags.WaitForRunCompletion;
+        public ExecutionFlag ExecutionFlags { get { return executionFlags; } set { executionFlags = value; } }
+        private volatile ExecutionFlag executionFlags = ExecutionFlag.WaitForRunCompletion;
 
         //volatile bool isRestart;
         bool isRestart
         {
-            get { return ExecutionFlags.HasFlag(ExecutionFlags.AutoRestart); }
+            get { return ExecutionFlags.HasFlag(ExecutionFlag.AutoRestart); }
             set
             {
-                if (value) ExecutionFlags |= ExecutionFlags.AutoRestart;
-                else ExecutionFlags &= ~ExecutionFlags.AutoRestart;
+                if (value) ExecutionFlags |= ExecutionFlag.AutoRestart;
+                else ExecutionFlags &= ~ExecutionFlag.AutoRestart;
             }
         }
 
-        //public ExecutionState ExecutionState {
+        //public ExecutionState ExecutionState
+        //{
         //    get { return ExecutionStates.Value; }
         //    protected set { ExecutionStates.OnNext(value); }
         //}
-        //public BehaviorSubject<ExecutionState> ExecutionStates = new BehaviorSubject<ExecutionState>(ExecutionState.Unspecified);
+        public IBehaviorObservable<ExecutionState> State { get { return state; } }
+        BehaviorObservable<ExecutionState> state = new BehaviorObservable<ExecutionState>(ExecutionState.Unspecified);
 
-        public Task Start()
+
+
+        public async Task Start()
         {
+            state.OnNext(ExecutionState.Starting);
+            await OnStarting();
+
             RunTask = Task.Factory.StartNew(Run);
-            return Task.CompletedTask;
         }
-        
+
         public Task RunTask
         {
             get; private set;
         }
-        
+
         #endregion
-        
+
         partial void Run_TradeApi();
         partial void Stop_TradeApi();
 
@@ -173,51 +197,109 @@ namespace LionFire.Trading.Spotware.Connect
             Console.WriteLine(DumpPositions(Positions));
         }
 
-        public void Run()
+
+        #region IsTradeApiEnabled
+
+        public bool IsTradeApiEnabled
         {
-            do
+            get { return isTradeApiEnabled; }
+            set
             {
-                isRestart = false;
-
-                UpdatePositions().Wait();
-
-                StatusText = "Connecting";
-
-                Run_TradeApi();
-
-                StatusText = "Connected";
-
-                if (IsCommandLineEnabled)
+                if (isTradeApiEnabled == value) return;
+                isTradeApiEnabled = value;
+                if (isTradeApiEnabled)
                 {
-
-                    while (IsCommandLineAlive)
-                    {
-                        //DisplayMenu();
-#if NET462
-                        if (!ProcessInput()) break;
-#endif
-
-                        Thread.Sleep(700);
-                    }
+                    // TODO
                 }
                 else
                 {
-                    while (IsTradeConnectionAlive)
-                    {
-                        Thread.Sleep(700);
-                    }
                 }
+                OnPropertyChanged(nameof(IsTradeApiEnabled));
+            }
+        }
+        private bool isTradeApiEnabled = false;
 
-                
-            } while (isRestart);
+        #endregion
 
-            StatusText = "Disconnecting";
+        public void Run()
+        {
 
-            Stop_TradeApi();
-            StatusText = "Disconnected";
+            // TODO: Verify account valid via web api
+            if (!IsTradeApiEnabled)
+            {
+                StatusText = "Updating positions";
+
+                UpdatePositions().Wait();
+
+                StatusText = "Disconnected mode";
+                state.OnNext(ExecutionState.Started);
+            }
+            else
+            {
+                do
+                {
+                    isRestart = false;
+
+                    StatusText = "Updating positions";
+                    UpdatePositions().Wait();
+
+                    if (IsTradeApiEnabled)
+                    {
+                        StatusText = "Connecting";
+
+                        Run_TradeApi();
+
+                        StatusText = "Connected";
+                        state.OnNext(ExecutionState.Started);
+                    }
+                    else
+                    {
+                        StatusText = "Disabled";
+                    }
+
+                    if (IsCommandLineEnabled)
+                    {
+
+                        while (IsCommandLineAlive)
+                        {
+                            //DisplayMenu();
+#if NET462
+                            if (!ProcessInput()) break;
+#endif
+                            Thread.Sleep(700);
+                        }
+                    }
+                    else
+                    {
+                        while (IsTradeConnectionAlive)
+                        {
+                            Thread.Sleep(700);
+                        }
+                    }
+                } while (isRestart);
+
+                state.OnNext(ExecutionState.Stopping);
+
+                StatusText = "Disconnecting";
+                Stop_TradeApi();
+                StatusText = "Disconnected";
+            }
+            state.OnNext(ExecutionState.Stopped);
         }
 
-        public bool IsCommandLineEnabled { get; set;  } = true;
+        //public bool IsCommandLineEnabled { get; set;  } = true;
+
+        #region IsCommandLineEnabled
+
+        public bool IsCommandLineEnabled
+        {
+            get { return isCommandLineEnabled; }
+            set { isCommandLineEnabled = value; }
+        }
+        private bool isCommandLineEnabled = false;
+
+        #endregion
+
         public bool IsCommandLineAlive
         {
             get { return IsCommandLineEnabled && IsTradeConnectionAlive; }
@@ -509,17 +591,10 @@ namespace LionFire.Trading.Spotware.Connect
         public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
         {
             var kvp = new KeyValuePair<string, string>(symbol.Code, timeFrame.ToString());
-            return marketSeries.GetOrAdd(kvp, _ =>
-            {
-                var task = ((IAccount)this).CreateMarketSeries(symbol.Code, timeFrame);
-                task.Wait();
-                var result = (MarketSeries) task.Result;
-                
-                return result;
-            });
+            return marketSeries.GetOrAdd(kvp, _ => ((IAccount)this).CreateMarketSeries(symbol.Code, timeFrame));
         }
 
-        public override async Task<IMarketSeries> CreateMarketSeries(string symbol, TimeFrame timeFrame)
+        public override MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame)
         {
             var series = new MarketSeries(this, symbol, timeFrame);
 
@@ -546,17 +621,17 @@ namespace LionFire.Trading.Spotware.Connect
                 throw new NotImplementedException();
             }
 
-            //barCount = 0; // TEMP DISABLE
-            var task = new LoadHistoricalDataTask(symbol, timeFrame)
-            {
-                MinBars = barCount,
-                AccountId = this.AccountId.ToString(),
-                AccessToken = this.AccessToken,
-            };
+            Data.EnsureDataAvailable(series, null, ExtrapolatedServerTime, barCount);
+            ////barCount = 0; // TEMP DISABLE
+            //var task = new SpotwareLoadHistoricalDataJob(symbol, timeFrame)
+            //{
+            //    MinBars = barCount,
+            //    Account = this,
+            //    //AccountId = this.AccountId.ToString(),
+            //    //AccessToken = this.AccessToken,
+            //};
 
-            await task.Run();
-
-            series.Add(task.Result.ToArray());
+            //series.LoadDataJobs.Add(task.Run());
 
             return series;
         }
@@ -580,12 +655,12 @@ namespace LionFire.Trading.Spotware.Connect
 #endif
         }
 
-        public List<ProgressiveTask> LoadHistoricalDataTasks { get; set; }
+        public List<ProgressiveJob> LoadHistoricalDataJobs { get; set; }
 
-        
+
         #endregion
 
-       
+
         #region Order Execution
 
         public override TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null)
@@ -605,7 +680,7 @@ namespace LionFire.Trading.Spotware.Connect
             logger.LogError($"NOT IMPLEMENTED: ModifyPosition {position.Id} sl:{stopLoss} tp:{takeProfit}");
             return TradeResult.NotImplemented;
         }
-        
+
         #endregion
 
     }

@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Trading.Workspaces;
 
 namespace LionFire.Trading
 {
@@ -37,6 +38,7 @@ namespace LionFire.Trading
         #region Server State
 
         DateTime ServerTime { get; }
+        DateTime ExtrapolatedServerTime { get; }
         TimeZoneInfo TimeZone { get; }
 
         #endregion
@@ -64,8 +66,7 @@ namespace LionFire.Trading
 
         #region Market Series
 
-        Task<IMarketSeries> CreateMarketSeries(string symbol, TimeFrame timeFrame);
-
+        MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame);
 
         #endregion
 
@@ -89,17 +90,21 @@ namespace LionFire.Trading
 
 #if !cAlgo
         Symbol GetSymbol(string symbolCode);
+        void TryAdd(Session session);
         IMarketSeries GetMarketSeries(string symbol, TimeFrame tf);
         MarketData MarketData { get; set; }
         MarketDataProvider Data { get; }
         Server Server { get; }
 
-        void Add(IMarketParticipant indicator);
+        Task Add(IAccountParticipant indicator);
+
+
+        
 
 #endif
 
         //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
-        //IEnumerable<string> SymbolsAvailable { get; }
+        IEnumerable<string> SymbolsAvailable { get; }
         //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
 
         #region Misc
@@ -110,5 +115,7 @@ namespace LionFire.Trading
         #endregion
 
     }
+
+    
 
 }

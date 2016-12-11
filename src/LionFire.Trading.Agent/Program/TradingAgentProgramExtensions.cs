@@ -40,8 +40,8 @@ namespace LionFire.Trading.Agent.Program
                         Indicator = new TLionTrending
                         {
                             Log = false,
-                            OpenWindowPeriods = 55,
-                            CloseWindowPeriods = 34,
+                            OpenWindowMinutes = 55*60,
+                            CloseWindowMinutes = 34*60,
                             PointsToOpenLong = 3.0,
                             PointsToOpenShort = 3.0,
                             PointsToCloseLong = 2.0,

@@ -64,14 +64,15 @@ namespace LionFire.Trading.Spotware.Connect
         }
     }
 
-    public class LiveSymbol<TAccount> : SymbolImplBase
-        where TAccount : IAccount
+    public abstract class LiveSymbol<AccountType> : SymbolImplBase
+        where AccountType : IAccount
     {
-        protected TAccount account;
+        public new AccountType Account { get { return account; } }
+        protected AccountType account;
 
         #region Construction
 
-        public LiveSymbol(string symbolCode, TAccount account) : base(symbolCode, account)
+        public LiveSymbol(string symbolCode, AccountType account) : base(symbolCode, account)
         {
             System.Reactive.AnonymousObservable<TimedBar> a;
 
@@ -100,7 +101,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        
+
         #region Handle Data from Server
 
         internal void Handle(TimeFrameBar bar)
@@ -166,6 +167,8 @@ namespace LionFire.Trading.Spotware.Connect
         }
 
         #endregion
+
+
     }
 
     public class CTraderSymbol : LiveSymbol<CTraderAccount>
@@ -179,6 +182,32 @@ namespace LionFire.Trading.Spotware.Connect
         }
 
         #endregion
+
+        public TimeSpan MaxTimeDifferential = TimeSpan.FromMinutes(5); // TODO Make this smaller, fix my clock
+        public override async Task<TimedBar> GetLastBar(TimeFrame timeFrame)
+        {
+            if (Account.ExtrapolatedServerTime != default(DateTime) && (DateTime.UtcNow - Account.ExtrapolatedServerTime) < MaxTimeDifferential)
+            {
+                var series = this.GetMarketSeries(timeFrame);
+                if ((Account.ExtrapolatedServerTime - series.OpenTime.LastValue) < TimeSpan.FromSeconds(65))
+                {
+                    return series.LastBar; // Assume m1 subscription is in effect
+                }
+            }
+
+            var task = new SpotwareLoadHistoricalDataJob(this.Code, timeFrame)
+            {
+                Account = Account,
+                //AccountId = Account.Template.AccountId,
+                //AccessToken = Account.Template.AccessToken,
+                EndTime = DateTime.UtcNow,
+                MinBars = 1,
+            };
+            await task.Run();
+            if (task.Result.Count == 0) return null;
+            Account.AdvanceServerTime(task.Result.Last().OpenTime + timeFrame.TimeSpan);
+            return task.Result[task.Result.Count - 1];
+        }
 
 
     }

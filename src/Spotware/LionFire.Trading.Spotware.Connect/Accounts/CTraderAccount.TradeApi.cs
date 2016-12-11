@@ -31,6 +31,7 @@ using System.Reactive.Linq;
 using LionFire.Structures;
 using OpenApiLib;
 using LionFire.Trading;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Spotware.Connect
 {
@@ -363,17 +364,23 @@ namespace LionFire.Trading.Spotware.Connect
             #region close ssl connection
 
             isShutdown = true;
-            apiSocket.Close();
+            if (apiSocket != null)
+            {
+                apiSocket.Close();
+                apiSocket = null; 
+            }
 
             #endregion
 
             #region wait for shutting down threads
 
-            Console.WriteLine("Shutting down connection...");
-            while (listenerThread.IsAlive || heartbeatThread.IsAlive || handlerThread.IsAlive || senderThread.IsAlive)
+            Console.Write("Shutting down connection...");
+            while (IsTradeConnectionAlive)
             {
                 Thread.Sleep(100);
+                Console.Write(".");
             }
+            Console.WriteLine(" Done.");
 
             #endregion
         }
@@ -382,7 +389,10 @@ namespace LionFire.Trading.Spotware.Connect
         {
             get
             {
-                return listenerThread.IsAlive || heartbeatThread.IsAlive || handlerThread.IsAlive || senderThread.IsAlive;
+                return (listenerThread != null && listenerThread.IsAlive)
+                    || (heartbeatThread != null && heartbeatThread.IsAlive)
+                    || (handlerThread != null && handlerThread.IsAlive)
+                    || (senderThread != null && senderThread.IsAlive);
             }
         }
 
@@ -562,6 +572,7 @@ namespace LionFire.Trading.Spotware.Connect
                         };
 
                         var symbol = (ISymbolInternal)GetSymbol(payload.SymbolName);
+                        
                         symbol.OnTick(tick);
                         break;
                     }

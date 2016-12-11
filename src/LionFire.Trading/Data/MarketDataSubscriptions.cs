@@ -9,7 +9,7 @@ namespace LionFire.Trading
     {
         public string Symbol { get; set; }
         public TimeFrame TimeFrame { get; set; }
-        public List<MarketParticipant> Subscribers { get; set; } = new List<MarketParticipant>();
+        public List<AccountParticipant> Subscribers { get; set; } = new List<AccountParticipant>();
 
         
     }

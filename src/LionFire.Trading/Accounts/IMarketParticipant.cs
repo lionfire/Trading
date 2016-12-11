@@ -6,9 +6,10 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public interface IMarketParticipant 
+    public interface IAccountParticipant 
     {
         IAccount Account { get; set; }
+        
     }
 
 }

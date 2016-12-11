@@ -24,7 +24,7 @@ namespace LionFire.Trading
         public AccountMode AccountModes { get; set; } = AccountMode.Demo;
 
         public int DefaultHistoricalDataBars { get; set; } = DefaultHistoricalDataBarsDefault;
-        public const int DefaultHistoricalDataBarsDefault = 400;
+        public const int DefaultHistoricalDataBarsDefault = 15;
 
         public string Test { get; set; }
 

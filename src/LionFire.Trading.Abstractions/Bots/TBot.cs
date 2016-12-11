@@ -59,7 +59,7 @@ namespace LionFire.Trading.Bots
         Live = 1 << 0,
         Demo = 1 << 1,
         Scanner = 1 << 2,
-        //Paper = 1 << 3,
+        Paper = 1 << 3,
     }
 
     [AssetPath("Algos")]
@@ -115,6 +115,8 @@ namespace LionFire.Trading.Bots
 
         public double PositionRiskPercent { get; set; }
 
+        public double PositionPercentOfEquity { get; set; }
+
         public bool AllowLong { get; set; } = true;
         public bool AllowShort { get; set; } = true;
 
@@ -127,6 +129,9 @@ namespace LionFire.Trading.Bots
 
         public double BacktestProfitTPMultiplierOnSL { get; set; } = 0.0;
         public double BacktestMinTradesPerMonth { get; set; } = 0;
+
+
+        //public double MaxEquityExposurePercent { get; set; } = 0.0;
 
         //public bool UseTakeProfit {
         //    get {

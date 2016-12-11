@@ -9,20 +9,51 @@ using cAlgo.API;
 using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
 using System.Reflection;
+using LionFire.Templating;
 
 namespace LionFire.Trading.Indicators
 {
 
-    public abstract partial class IndicatorBase<TConfig> : IIndicator
-        where TConfig : ITIndicator, new()
+    public abstract partial class IndicatorBase<TIndicator> : IIndicator
+        where TIndicator : ITIndicator, new()
     {
+        #region Configuration
+
+        #region Template
+
+        public TIndicator Template
+        {
+            get { return template; }
+            set { template = value; OnConfigChanged(); }
+        }
+        private TIndicator template = new TIndicator();
+
+        protected virtual void OnConfigChanged()
+        {
+        }
+
+        #endregion
+
+        ITIndicator IIndicator.Template { get { return this.Template; } set { this.Template = (TIndicator)value; } }
+        ITemplate ITemplateInstance.Template { get { return Template; } set { this.Template = (TIndicator)value; } }
+
+        #endregion
+
+
+        //#region Identity
+
+        //ITemplate ITemplateInstance Tempalte{get{}}
+
+        //#endregion
+
+
         #region Construction and Init
 
         public IndicatorBase() { }
 
-        public IndicatorBase(TConfig config)
+        public IndicatorBase(TIndicator config)
         {
-            this.Config = config;
+            this.Template = config;
         }
 
         // Not in cAlgo: called by OnStarting
@@ -85,9 +116,22 @@ namespace LionFire.Trading.Indicators
             }
         }
 
+        public
+#if !cAlgo
+            async 
+#endif
+            Task Start()
+        {
+#if !cAlgo
+            await EnsureDataAvailable(Account.ExtrapolatedServerTime);
+#else
+            return Task.CompletedTask;
+#endif
+        }
+
         protected
 #if cAlgo
-         virtual 
+         virtual
 #else
          override
 #endif
@@ -97,6 +141,7 @@ namespace LionFire.Trading.Indicators
             Init();
             base.OnStarting();
 #endif
+
             //l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
             //if (l != null)
             //{
@@ -109,7 +154,7 @@ namespace LionFire.Trading.Indicators
         {
             try
             {
-                l = this.GetLogger(this.ToString().Replace(' ', '.'), Config == null ? false : Config.Log);
+                l = this.GetLogger(this.ToString().Replace(' ', '.'), Template == null ? false : Template.Log);
 
                 l.LogInformation($"....... START {this.ToStringDescription()} .......");
             }
@@ -119,7 +164,7 @@ namespace LionFire.Trading.Indicators
             }
         }
 
-        #endregion
+#endregion
 
         //protected SortedList<KeyValuePair<DateTime, TimeSpan>, int> indexOffsets = new SortedList<KeyValuePair<DateTime, TimeSpan>, int>();
 
@@ -132,32 +177,7 @@ namespace LionFire.Trading.Indicators
         }
 
 
-
-
-        #region Configuration
-
-        #region Config
-
-        public TConfig Config {
-            get { return config; }
-            set { config = value; OnConfigChanged(); }
-        }
-        private TConfig config = new TConfig();
-
-        protected virtual void OnConfigChanged()
-        {
-        }
-
-        #endregion
-
-
-        ITIndicator IIndicator.Config { get { return this.Config; } set { this.Config = (TConfig)value; } }
-
-        #endregion
-
-
-
-        #region Misc
+#region Misc
 
         public virtual string ToStringDescription()
         {
@@ -166,7 +186,7 @@ namespace LionFire.Trading.Indicators
 
         protected Microsoft.Extensions.Logging.ILogger l;
 
-        #endregion
+#endregion
 
 
     }
