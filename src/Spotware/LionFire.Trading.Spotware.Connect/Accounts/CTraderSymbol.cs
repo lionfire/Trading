@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 using LionFire.ExtensionMethods;
 using System.Reactive;
 using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.ComponentModel;
 
 namespace LionFire.Trading.Spotware.Connect
 {
@@ -64,7 +66,7 @@ namespace LionFire.Trading.Spotware.Connect
         }
     }
 
-    public abstract class LiveSymbol<AccountType> : SymbolImplBase
+    public abstract class LiveSymbol<AccountType> : SymbolImplBase, INotifyPropertyChanged
         where AccountType : IAccount
     {
         public new AccountType Account { get { return account; } }
@@ -101,14 +103,15 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
+        
 
         #region Handle Data from Server
 
-        internal void Handle(TimeFrameBar bar)
-        {
-            Console.WriteLine("ToDo: Handle TimeFrameBar: " + bar);
+        //internal void Handle(TimeFrameBar bar)
+        //{
+        //    Console.WriteLine("ToDo: Handle TimeFrameBar: " + bar);
 
-        }
+        //}
 
         internal void Handle(Tick tick)
         {
@@ -168,7 +171,6 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-
     }
 
     public class CTraderSymbol : LiveSymbol<CTraderAccount>
@@ -183,34 +185,87 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        public TimeSpan MaxTimeDifferential = TimeSpan.FromMinutes(5); // TODO Make this smaller, fix my clock
+        public static readonly TimeSpan DefaultLagDelay = TimeSpan.FromMilliseconds(2000);  // HARDCONST
+        public static readonly TimeSpan MaxTimeDifferential = TimeSpan.FromMinutes(5); // HARDCONST - TODO Make this smaller, fix my clock
+
         public override async Task<TimedBar> GetLastBar(TimeFrame timeFrame)
         {
+            if (timeFrame == TimeFrame.t1) { throw new ArgumentException("Can't get last bar for t1"); }
+
+            var series = this.GetMarketSeries(timeFrame);
             if (Account.ExtrapolatedServerTime != default(DateTime) && (DateTime.UtcNow - Account.ExtrapolatedServerTime) < MaxTimeDifferential)
             {
-                var series = this.GetMarketSeries(timeFrame);
                 if ((Account.ExtrapolatedServerTime - series.OpenTime.LastValue) < TimeSpan.FromSeconds(65))
                 {
-                    return series.LastBar; // Assume m1 subscription is in effect
+                    return series.Last; // Assume m1 subscription is in effect
                 }
             }
 
-            var task = new SpotwareLoadHistoricalDataJob(this.Code, timeFrame)
-            {
-                Account = Account,
-                //AccountId = Account.Template.AccountId,
-                //AccessToken = Account.Template.AccessToken,
-                EndTime = DateTime.UtcNow,
-                MinBars = 1,
-            };
-            await task.Run();
-            if (task.Result.Count == 0) return null;
-            Account.AdvanceServerTime(task.Result.Last().OpenTime + timeFrame.TimeSpan);
-            return task.Result[task.Result.Count - 1];
+            await series.EnsureDataAvailable(null, DateTime.UtcNow, 1);
+
+            if (series.Count == 0) return TimedBar.Invalid;
+            return series.Last;
         }
 
+        public override async Task<Tick> GetLastTick()
+        {
+            var series = this.MarketTickSeries;
 
+            DateTime time = default(DateTime);
+            double lastBid = double.NaN;
+            double lastAsk = double.NaN;
+
+            var minIndex = series.MinIndex;
+            for (int index = series.MaxIndex; double.IsNaN(lastBid) || double.IsNaN(lastAsk); index--)
+            {
+                if (index < series.MinIndex)
+                {
+                    await series.LoadMoreData();
+                    if (index < series.MinIndex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("LoadMoreData didn't get any more data.  That must be all that's available");
+                        break;
+                    }
+                }
+
+                var tick = series[index];
+                if (time == default(DateTime))
+                {
+                    time = tick.Time;
+                }
+                if (double.IsNaN(lastBid))
+                {
+                    if (!double.IsNaN(Bid))
+                    {
+                        lastBid = tick.Bid;
+                    }
+                }
+                if (double.IsNaN(lastAsk))
+                {
+                    if (!double.IsNaN(Ask))
+                    {
+                        lastAsk = tick.Ask;
+                    }
+                }
+            }
+
+            if (Account.ExtrapolatedServerTime != default(DateTime) && (DateTime.UtcNow - Account.ExtrapolatedServerTime) < MaxTimeDifferential)
+            {
+                if ((Account.ExtrapolatedServerTime - series.OpenTime.LastValue) < TimeSpan.FromSeconds(65))
+                {
+                    return series.Last;
+                }
+            }
+
+            // DefaultLagDelay is an extra buffer on top of LocalDelta. TODO: Account for StdDev, also see how far in the future Spotware will let me query
+            await series.EnsureDataAvailable(series.Last.Time + series.TimeFrame.TimeSpan, DateTime.UtcNow - Account.LocalDelta + DefaultLagDelay, forceRetrieve:true); 
+
+            if (series.Count == 0) return Tick.Invalid;
+            return new Tick(time, lastBid, lastAsk);
+        }
+        
     }
+    
 }
 
 //#endif

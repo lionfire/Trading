@@ -54,7 +54,7 @@ namespace LionFire.Trading.Bots
 
         #region Positions
 
-        
+
 
         public IPositions Positions
         {

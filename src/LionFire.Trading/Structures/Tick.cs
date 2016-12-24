@@ -5,8 +5,9 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public struct Tick
+    public struct Tick : IMarketDataPoint
     {
+        public bool IsValid { get { return Time != default(DateTime); } }
         
         public Tick(DateTime time, double bid = double.NaN, double ask = double.NaN) {
             this.Time = time;
@@ -14,12 +15,15 @@ namespace LionFire.Trading
             Ask = ask;
         }
 
-        public DateTime Time;
+        public DateTime Time { get; set; }
         public double Bid;
         public double Ask;
 
         public bool HasBid { get { return !double.IsNaN(Bid); } }
         public bool HasAsk { get { return !double.IsNaN(Ask); } }
+
+        public static Tick Invalid { get; set; }
+        private static readonly Tick invalid = new Tick { Time = default(DateTime), Bid=double.NaN, Ask = double.NaN  };
 
         public override string ToString()
         {

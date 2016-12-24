@@ -53,7 +53,7 @@ namespace LionFire.Trading
 
         #region Bar Accessors
 
-        TimedBar LastBar { get; }
+        TimedBar Last { get; }
         
 
         int FindIndex(DateTime time, bool loadHistoricalData = false);

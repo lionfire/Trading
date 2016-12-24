@@ -10,9 +10,9 @@ using LionFire.Trading.Workspaces;
 
 namespace LionFire.Trading
 {
-    
+
     public interface IAccount
-        //: ITemplateInstance<TAccount>
+    //: ITemplateInstance<TAccount>
     {
         #region Relationships
 
@@ -22,8 +22,8 @@ namespace LionFire.Trading
 
         #region State
 
-        double Equity { get;  }
-        double Balance { get;  }
+        double Equity { get; }
+        double Balance { get; }
         string Currency { get; }
 
         IPositions Positions { get; }
@@ -50,11 +50,12 @@ namespace LionFire.Trading
 
         double StopOutLevel { get; }
 
-        bool IsDemo { get;  }
+        bool IsDemo { get; }
 
 
 
         bool IsBacktesting { get; }
+        DateTime BacktestEndDate { get; }
 
         bool IsSimulation { get; }
         bool IsRealMoney { get; }
@@ -91,7 +92,7 @@ namespace LionFire.Trading
 #if !cAlgo
         Symbol GetSymbol(string symbolCode);
         void TryAdd(Session session);
-        IMarketSeries GetMarketSeries(string symbol, TimeFrame tf);
+        MarketSeries GetMarketSeries(string symbol, TimeFrame tf);
         MarketData MarketData { get; set; }
         MarketDataProvider Data { get; }
         Server Server { get; }
@@ -99,7 +100,7 @@ namespace LionFire.Trading
         Task Add(IAccountParticipant indicator);
 
 
-        
+        IHistoricalDataProvider HistoricalDataProvider { get; }
 
 #endif
 
@@ -117,5 +118,6 @@ namespace LionFire.Trading
     }
 
     
+
 
 }

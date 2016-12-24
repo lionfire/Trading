@@ -16,11 +16,11 @@ using System.Windows.Shapes;
 namespace LionFire.Trading.Dash.Wpf
 {
     /// <summary>
-    /// Interaction logic for HistoricalData.xaml
+    /// Interaction logic for SessionView.xaml
     /// </summary>
-    public partial class HistoricalData : UserControl
+    public partial class SessionView : UserControl
     {
-        public HistoricalData()
+        public SessionView()
         {
             InitializeComponent();
         }

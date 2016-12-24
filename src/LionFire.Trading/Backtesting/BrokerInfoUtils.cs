@@ -24,7 +24,7 @@ namespace LionFire.Trading
 
     public class BrokerInfoUtils
     {
-        public static string BrokersDir { get { return @"c:\Trading\Brokers"; } }
+        public static string BrokersDir { get { return Path.Combine(LionFireEnvironment.AppProgramDataDir,  @"Brokers"); } } 
         public static string SymbolsDirName { get { return "Symbols"; } }
         public static string AccountInfoFileName { get { return "AccountInfo"; } }
         public static string FileSuffix { get { return ".json"; } }

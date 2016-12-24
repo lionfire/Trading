@@ -1,0 +1,79 @@
+﻿<UserControl x:Class="LionFire.Trading.Dash.Wpf.SessionView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:LionFire.Trading.Dash.Wpf"
+               xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+                 xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
+        xmlns:xcdg="http://schemas.xceed.com/wpf/xaml/datagrid"
+        x:Name="uc"
+                 xmlns:cal="http://www.caliburnproject.org"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+        <DataTemplate x:Key="AlertItem">
+            <DockPanel>
+                <TextBlock Text="{Binding Symbol}"/>
+                <TextBlock Text="{Binding Price}"/>
+                <Button>X</Button>
+            </DockPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+    <TabControl TabStripPlacement="Left">
+        <TabItem Header="Old">
+            <TabControl>
+                <!--<TabItem Header="W">
+                                            <cef:ChromiumWebBrowser  Address="https://www.tradingview.com/widget/"></cef:ChromiumWebBrowser>
+                                        </TabItem>-->
+     
+                <TabItem Header="Bots">
+                    <xcdg:DataGridControl x:Name="BotsGrid" ItemsSource="{Binding Bots}">
+                    </xcdg:DataGridControl>
+                </TabItem>
+                
+                
+
+                <TabItem Header="Results">
+                    <local:BacktestingView></local:BacktestingView>
+
+                </TabItem>
+
+                <TabItem Header="Overview">
+                </TabItem>
+
+                <TabItem Header="Optimization">
+                </TabItem>
+
+                <TabItem Header="Alerts">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Bottom">Add</Button>
+                        <ListView ItemTemplate="{StaticResource AlertItem}" ItemsSource="{Binding VM.Workspace.Alerts, ElementName=uc}">
+                        </ListView>
+                    </DockPanel>
+                </TabItem>
+
+
+                <TabItem Header="Settings">
+                    <xctk:PropertyGrid NameColumnWidth="140" SelectedObject="{Binding Workspace.Settings}"/>
+                </TabItem>
+
+                <TabItem Header="Info">
+                    <DockPanel>
+                        <xctk:PropertyGrid NameColumnWidth="140" SelectedObject="{Binding Workspace.Info}"/>
+                    </DockPanel>
+                </TabItem>
+
+            </TabControl>
+        </TabItem>
+        <TabItem Header="New">
+                <TabControl x:Name="Screens"  DockPanel.Dock="Top" SelectedIndex="2"   TabStripPlacement="Bottom">
+                    <TabControl.ItemTemplate>
+                        <DataTemplate>
+                            <ContentControl cal:View.Model="{Binding .}" IsTabStop="False"/>
+                        </DataTemplate>
+                    </TabControl.ItemTemplate>
+                </TabControl>
+            </TabItem>
+    </TabControl>
+</UserControl>

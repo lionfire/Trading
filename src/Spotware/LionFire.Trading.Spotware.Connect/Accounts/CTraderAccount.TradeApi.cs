@@ -816,7 +816,7 @@ namespace LionFire.Trading.Spotware.Connect
         {
             if (!IsAuthorized)
             {
-                throw new InvalidOperationException("Connection is not authorized yet");
+                throw new NotConnectedException("Connection is not authorized yet");
             }
         }
 

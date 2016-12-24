@@ -137,7 +137,7 @@ namespace LionFire.Trading
                 {
                     if (sub.TimeFrame.Name == "t1")
                     {
-                        Account.GetSymbol(sub.Symbol).Tick -= OnTick;
+                        Account.GetSymbol(sub.Symbol).Ticked -= OnTick;
                     }
                     else
                     {
@@ -172,7 +172,7 @@ namespace LionFire.Trading
                     if (sub.TimeFrame.Name == "t1")
                     {
                         //sub.Observable = Observable.FromEvent(add => 
-                        Account.GetSymbol(sub.Symbol).Tick += OnTick;
+                        Account.GetSymbol(sub.Symbol).Ticked += OnTick;
                     }
                     else
                     {
@@ -282,7 +282,7 @@ namespace LionFire.Trading
 
             if (Account.Started.Value)
             {
-                OnStarting();
+                await Task.Run(() => OnStarting());
             }
             else
             {
@@ -324,7 +324,7 @@ namespace LionFire.Trading
 
         public void OnBar(MarketSeries series)
         {
-            var bar = series.LastBar;
+            var bar = series.Last;
             OnBar(series.SymbolCode, series.TimeFrame, bar);
         }
 

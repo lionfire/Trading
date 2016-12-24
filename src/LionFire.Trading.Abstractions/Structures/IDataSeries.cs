@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LionFire.Trading;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace LionFire.Trading
     {
     }
 
-    public interface IBarSeries : ISeries<TimedBarStruct>
+    public interface IBarSeries : ISeries<ITimedBar>
     {
     }
 

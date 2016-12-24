@@ -10,7 +10,8 @@ namespace LionFire.Trading
     {
     }
 
-    public sealed class BarSeries : DataSeries<TimedBarStruct>, IBarSeries
+    public sealed class BarSeries : DataSeries<TimedBar>
+        //, IBarSeries
     {
     }
 
@@ -28,6 +29,8 @@ namespace LionFire.Trading
             {
 
                 result = reverseList.FindLastIndex(d => d <= time);
+                result = -1 - result;
+
             }
             return result;
         }
@@ -98,7 +101,7 @@ namespace LionFire.Trading
             }
             else
             {
-                Debug.WriteLine($"WARNING - resetting index {index} to {val}");
+                Debug.WriteLine($"WARNING - resetting index {index} from {listParameter[index]} to {val}");
                 listParameter[index] = val;
             }
         }
@@ -166,7 +169,7 @@ namespace LionFire.Trading
             {
                 if (reverseList != null && reverseList.Count > 0)
                 {
-                    return -reverseList.Count + 2;
+                    return -reverseList.Count;
                 }
                 else
                 {

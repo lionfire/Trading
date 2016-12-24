@@ -84,6 +84,16 @@ namespace LionFire.Trading.Bots
             logger.LogInformation($"------- STOP {this} -------");
         }
 
+#if !cAlgo
+        public  Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
+        {
+            this.state.OnNext(ExecutionState.Stopping);
+
+            this.state.OnNext(ExecutionState.Stopped);
+            return Task.CompletedTask;
+        }
+#endif
+
         #endregion
 
         #region State
@@ -102,20 +112,20 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region Event Handling
+#region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-        #endregion
+#endregion
 
-        #region Derived
+#region Derived
 
         public bool CanOpenLong
         {
@@ -166,9 +176,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        #endregion
+#endregion
 
-        #region Backtesting
+#region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.001;
@@ -313,7 +323,7 @@ namespace LionFire.Trading.Bots
 
         private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan)
         {
-            var dir = @"c:\Trading\Results"; // HARDPATH
+            var dir = Path.Combine(LionFireEnvironment.ProgramDataDir, "Results");
 
             //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
             var sym =
@@ -338,7 +348,7 @@ namespace LionFire.Trading.Bots
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-        #endregion
+#endregion
 
 #if !cAlgo
         public Positions BotPositions
@@ -364,7 +374,7 @@ namespace LionFire.Trading.Bots
         //        private Positions positions =  new Positions<Position>();
         //#endif
 
-        #region Position Events
+#region Position Events
 
         public event Action<PositionEvent> BotPositionChanged;
 
@@ -373,9 +383,9 @@ namespace LionFire.Trading.Bots
             BotPositionChanged?.Invoke(e);
         }
 
-        #endregion
+#endregion
 
-        #region Position Sizing
+#region Position Sizing
 
 
         // MOVE?
@@ -664,9 +674,9 @@ namespace LionFire.Trading.Bots
         }
 
 
-        #endregion
+#endregion
 
-        #region Misc
+#region Misc
 
         public virtual string Label
         {
@@ -690,7 +700,7 @@ namespace LionFire.Trading.Bots
         }
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
-        #region INotifyPropertyChanged Implementation
+#region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -699,11 +709,11 @@ namespace LionFire.Trading.Bots
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        #endregion
+#endregion
 
 #endif
 
-        #endregion
+#endregion
     }
 
 

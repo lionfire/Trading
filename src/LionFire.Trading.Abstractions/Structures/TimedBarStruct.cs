@@ -5,14 +5,16 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public struct TimedBarStruct
+    
+    public struct TimedBarStruct : ITimedBar
     {
-        public DateTime OpenTime;
-        public double Open;
-        public double High;
-        public double Low;
-        public double Close;
-        public double Volume;
+        DateTime IMarketDataPoint.Time { get { return OpenTime; } }
+        public DateTime OpenTime { get; set; }
+        public double Open { get; set; }
+        public double High { get; set; }
+        public double Low { get; set; }
+        public double Close { get; set; }
+        public double Volume { get; set; }
 
         public override string ToString()
         {

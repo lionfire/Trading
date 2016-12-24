@@ -14,17 +14,9 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         public double close { get; set; }
         public long volume { get; set; }
     }
-    public class SpotwareTrendbarsResult
+    public class SpotwareTrendbarsResult : ISpotwareItemsResult
     {
         public SpotwareTrendbar[] data { get; set; }
-    }
-    public class SpotwareErrorContainer
-    {
-        public SpotwareError error { get; set; }
-    }
-    public class SpotwareError
-    {
-        public string errorCode { get; set; }
-        public string description { get; set; }
+        public int Count { get { return data.Length; } }
     }
 }

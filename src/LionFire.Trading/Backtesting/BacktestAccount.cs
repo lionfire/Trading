@@ -91,6 +91,8 @@ namespace LionFire.Trading.Backtesting
 
         #endregion
 
+        public override DateTime BacktestEndDate { get { return Template.EndDate; } }
+
         #region Account Info
 
         protected TAccount EffecitveAccountInfo

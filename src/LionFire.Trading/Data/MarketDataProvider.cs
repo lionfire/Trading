@@ -93,10 +93,12 @@ namespace LionFire.Trading
 
         #region Accessors
 
+
         public MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, bool historical = false)
         {
             if (historical) { return this.HistoricalDataSources.GetMarketSeries(symbol, timeFrame); }
-            else {
+            else
+            {
                 return this.LiveDataSources.GetMarketSeries(symbol, timeFrame);
             }
         }
@@ -122,20 +124,23 @@ namespace LionFire.Trading
             }
         }
 
-        public Task EnsureDataAvailable(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int minBars)
+        public async Task EnsureDataAvailable(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int totalDesiredBars, bool forceRetrieve = false)
         {
-            if (LoadHistoricalDataAction == null) throw new NotImplementedException();
+            await marketSeries.Account.HistoricalDataProvider.GetData(marketSeries, startDate, endDate, totalDesiredBars: totalDesiredBars, forceRetrieve: forceRetrieve);
 
-            var job = LoadHistoricalDataAction(marketSeries, startDate, endDate, minBars);
-            Debug.WriteLine($"JOB {job.GetHashCode()} ");
-            job = marketSeries.LoadDataJobs.EnqueueOrGet(job);
-            job.Start();
-            return job.RunTask;
+
+            //if (LoadHistoricalDataAction == null) throw new NotImplementedException();
+
+            //var job = LoadHistoricalDataAction(marketSeries, startDate, endDate, minBars);
+            //Debug.WriteLine($"JOB {job.GetHashCode()} ");
+            //job = marketSeries.LoadDataJobs.EnqueueOrGet(job);
+            //job.Start();
+            //return job.RunTask;
         }
 
-        public Func<MarketSeriesBase, DateTime?, DateTime, int, IJob> LoadHistoricalDataAction;
+        //public Func<MarketSeriesBase, DateTime?, DateTime, int, IJob> LoadHistoricalDataAction;
 
-        
+
 
         #endregion
     }

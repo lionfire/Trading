@@ -88,7 +88,7 @@ namespace LionFire.Trading.Bots
         //long i = 0;
         public override void OnBar(string symbolCode, TimeFrame timeFrame, TimedBar bar)
         {
-            if (bar != null)
+            if (bar.IsValid)
             {
                 Console.WriteLine("OnBar: " + bar);
                 Evaluate();

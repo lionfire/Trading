@@ -70,6 +70,10 @@
       <HintPath>..\..\..\Trading.Proprietary\packages\Caliburn.Micro.3.0.2\lib\net45\Caliburn.Micro.Platform.Core.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="LionFire.Annotations.Compilation, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Core\src\LionFire.Annotations.Compilation\bin\Debug\net462\LionFire.Annotations.Compilation.dll</HintPath>
+    </Reference>
     <Reference Include="LionFire.Applications">
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Applications.dll</HintPath>
     </Reference>
@@ -82,6 +86,13 @@
     </Reference>
     <Reference Include="LionFire.Assets.Abstractions">
       <HintPath>..\..\..\Core\src\LionFire.Assets\bin\Debug\net462\LionFire.Assets.Abstractions.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Environment">
+      <HintPath>..\..\..\Core\src\LionFire.Environment\bin\Debug\net462\LionFire.Environment.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Execution, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\Core\src\LionFire.Execution\bin\Debug\net462\LionFire.Execution.dll</HintPath>
     </Reference>
     <Reference Include="LionFire.Execution.Abstractions">
       <HintPath>..\..\..\Core\src\LionFire.Execution.Abstractions\bin\Debug\net462\LionFire.Execution.Abstractions.dll</HintPath>
@@ -112,6 +123,9 @@
     </Reference>
     <Reference Include="LionFire.Trading.Spotware.Connect">
       <HintPath>..\Spotware\LionFire.Trading.Spotware.Connect\bin\Debug\net462\LionFire.Trading.Spotware.Connect.dll</HintPath>
+    </Reference>
+    <Reference Include="LionFire.Utility">
+      <HintPath>..\..\..\Bin\LionFire.Utility.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.DependencyInjection, Version=1.1.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\..\..\Trading.Proprietary\packages\Microsoft.Extensions.DependencyInjection.1.1.0\lib\netstandard1.1\Microsoft.Extensions.DependencyInjection.dll</HintPath>
@@ -247,28 +261,28 @@
     <Reference Include="WindowsBase" />
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
-    <Reference Include="Xceed.Wpf.AvalonDock, Version=2.9.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.2.9\lib\net40\Xceed.Wpf.AvalonDock.dll</HintPath>
+    <Reference Include="Xceed.Wpf.AvalonDock, Version=3.0.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.3.0\lib\net40\Xceed.Wpf.AvalonDock.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Aero, Version=2.9.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.2.9\lib\net40\Xceed.Wpf.AvalonDock.Themes.Aero.dll</HintPath>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Aero, Version=3.0.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.3.0\lib\net40\Xceed.Wpf.AvalonDock.Themes.Aero.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Metro, Version=2.9.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.2.9\lib\net40\Xceed.Wpf.AvalonDock.Themes.Metro.dll</HintPath>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.Metro, Version=3.0.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.3.0\lib\net40\Xceed.Wpf.AvalonDock.Themes.Metro.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Xceed.Wpf.AvalonDock.Themes.VS2010, Version=2.9.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.2.9\lib\net40\Xceed.Wpf.AvalonDock.Themes.VS2010.dll</HintPath>
+    <Reference Include="Xceed.Wpf.AvalonDock.Themes.VS2010, Version=3.0.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.3.0\lib\net40\Xceed.Wpf.AvalonDock.Themes.VS2010.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Xceed.Wpf.DataGrid, Version=2.9.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.2.9\lib\net40\Xceed.Wpf.DataGrid.dll</HintPath>
+    <Reference Include="Xceed.Wpf.DataGrid, Version=3.0.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.3.0\lib\net40\Xceed.Wpf.DataGrid.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Xceed.Wpf.Toolkit, Version=2.9.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
-      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.2.9\lib\net40\Xceed.Wpf.Toolkit.dll</HintPath>
+    <Reference Include="Xceed.Wpf.Toolkit, Version=3.0.0.0, Culture=neutral, PublicKeyToken=3e4669d2f30244f4, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\Extended.Wpf.Toolkit.3.0\lib\net40\Xceed.Wpf.Toolkit.dll</HintPath>
       <Private>True</Private>
     </Reference>
   </ItemGroup>
@@ -277,18 +291,83 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="Bootstrapper.cs" />
-    <Compile Include="HistoricalData.xaml.cs">
-      <DependentUpon>HistoricalData.xaml</DependentUpon>
+    <Compile Include="Application\DashSettings.cs" />
+    <Compile Include="BacktestingView.xaml.cs">
+      <DependentUpon>BacktestingView.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Bootstrapper.cs" />
+    <Compile Include="BotsView.xaml.cs">
+      <DependentUpon>BotsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="BotsViewModel.cs" />
+    <Compile Include="Caliburn.Micro\LionFireScreen.cs" />
+    <Compile Include="HistoricalDataView.xaml.cs">
+      <DependentUpon>HistoricalDataView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="IWorkspaceViewModel.cs" />
+    <Compile Include="JobsViewModel.cs" />
+    <Compile Include="LayoutItemTemplateSelector.cs" />
     <Compile Include="Move\VmCollection.cs" />
+    <Compile Include="SeriesDataView.xaml.cs">
+      <DependentUpon>SeriesDataView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="SessionView.xaml.cs">
+      <DependentUpon>SessionView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ShellView.xaml.cs">
+      <DependentUpon>ShellView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="ShellViewModel.cs" />
+    <Compile Include="SymbolsView.xaml.cs">
+      <DependentUpon>SymbolsView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Utilities\NewMenuItemTemplateSelector.cs" />
+    <Compile Include="Utilities\TypeToDisplayName.cs" />
+    <Compile Include="ViewModels\SeriesDataViewModel.cs" />
+    <Compile Include="ViewModels\SymbolsViewModel.cs" />
     <Compile Include="TypeResolver.cs" />
-    <Compile Include="ViewModels\BotVM.cs" />
-    <Compile Include="StringParser.cs" />
-    <Compile Include="ViewModels\HistoricalDataVM.cs" />
-    <Compile Include="ViewModels\SymbolVM.cs" />
-    <Compile Include="ViewModels\WorkspaceVM.cs" />
-    <Page Include="HistoricalData.xaml">
+    <Compile Include="Caliburn.Micro\AddNewViewModelMenuItemViewModel.cs" />
+    <Compile Include="ViewModels\BacktestingViewModel.cs" />
+    <Compile Include="ViewModels\BotViewModel.cs" />
+    <Compile Include="ViewModels\HistoricalDataItemViewModel.cs" />
+    <Compile Include="ViewModels\HistoricalDataViewModel.cs" />
+    <Compile Include="ViewModels\SessionViewModel.cs" />
+    <Compile Include="ViewModels\SymbolViewModel.cs" />
+    <Compile Include="ViewModels\ViewModelResolver.cs" />
+    <Compile Include="WorkspaceExplorerView.xaml.cs">
+      <DependentUpon>WorkspaceExplorerView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="WorkspaceExplorerViewModel.cs" />
+    <Compile Include="ViewModels\WorkspaceViewModel.cs" />
+    <Page Include="BacktestingView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="BotsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="HistoricalDataView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SeriesDataView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SessionView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="ShellView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="SymbolsView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="WorkspaceExplorerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -300,6 +379,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="WorkspaceScreen.cs" />
     <Compile Include="WorkspaceView.xaml.cs">
       <DependentUpon>WorkspaceView.xaml</DependentUpon>
       <SubType>Code</SubType>

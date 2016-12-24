@@ -59,7 +59,8 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
 
         #region Positions
 
-        public async static Task<List<Position>> GetPositions(long accountId, string accessToken, IAccount market)
+        public static readonly int PositionsPageSize = 500;  // HARDCONST  REVIEW
+        public async static Task<List<Position>> GetPositions(CTraderAccount account)
         {
             List<Position> Result = new List<Position>();
 
@@ -68,9 +69,9 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
 
             var uri = SpotwareAccountApi.PositionsUri;
             uri = uri
-                .Replace("{id}", accountId.ToString())
-                .Replace("{access_token}", accessToken)
-                .Replace("{limit}", "10000")  // HARDCODE REVIEW
+                .Replace("{id}", account.Template.AccountId)
+                .Replace("{access_token}", System.Uri.EscapeDataString(account.Template.AccessToken))
+                .Replace("{limit}", PositionsPageSize.ToString())  // TODO: Paging if there are more positions, and cache
                 ;
             //UpdateProgress(0.11, "Sending request");
             var response = await client.GetAsyncWithRetries(uri);
@@ -92,7 +93,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
 
             //UpdateProgress(0.98, "Processing data");
 
-            if (data.data != null)
+            if (data?.data != null)
             {
                 foreach (var pos in data.data)
                 {
@@ -110,13 +111,17 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
                         TradeType = pos.tradeSide.ToTradeType(),
                         Volume = pos.volume,
                         SymbolCode = pos.symbolName,
-                        Symbol = market.GetSymbol(pos.symbolName),
+                        Symbol = account.GetSymbol(pos.symbolName),
                         Commissions = pos.commission,
                         Comment = pos.comment,
                     };
-                    
+
                     Result.Add(position);
                 }
+            }
+            else
+            {
+                throw new Exception("GetPositions: got no data from json response: " + json);
             }
 
             //UpdateProgress(1, "Done");

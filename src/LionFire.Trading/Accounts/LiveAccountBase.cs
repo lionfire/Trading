@@ -78,7 +78,11 @@ namespace LionFire.Trading.Accounts
             }
         }
 
-        protected TimeSpan LocalDelta
+        /// <summary>
+        /// Positive delta: local clock is ahead of server.
+        /// Negative delta: server clock is ahead.
+        /// </summary>
+        public TimeSpan LocalDelta
         {
             get; set;
         }

@@ -349,9 +349,9 @@ namespace LionFire.Trading.Accounts
                         }
                         else
                         {
-                            if (state.NextBarInProgress != null && !double.IsNaN(state.NextBarInProgress.High))
+                            if (state.NextBarInProgress.HasValue && !double.IsNaN(state.NextBarInProgress.Value.High))
                             {
-                                ((IMarketSeriesInternal)series).OnBar(state.NextBarInProgress, true);   // OPTIMIZE - AsParallel
+                                ((IMarketSeriesInternal)series).OnBar(state.NextBarInProgress.Value, true);   // OPTIMIZE - AsParallel
                             }
                             state.NextBarInProgress = null;
                             mergeCount = 0;
@@ -371,7 +371,7 @@ namespace LionFire.Trading.Accounts
                         }
                         else
                         {
-                            state.NextBarInProgress.Merge(historicalBar);
+                            state.NextBarInProgress = state.NextBarInProgress.Value.Merge(historicalBar);
                             mergeCount++;
                         }
                     }

@@ -8,11 +8,14 @@ using System.Threading.Tasks;
 namespace LionFire.Trading
 {
 
-    public class SymbolVM : INotifyPropertyChanged
+    public class SymbolViewModel : INotifyPropertyChanged
     {
         public Symbol Symbol { get; private set; }
+
+
+
         //public string Code { get { return Symbol?.Code; } }
-        public IAccount Account { get; private set; }
+        public IAccount Account { get { return Symbol.Account; } }
 
         //public TimedBar LastMinuteBar { get; set; }
         //public DateTime LastMinuteBarTime
@@ -22,37 +25,38 @@ namespace LionFire.Trading
 
         public TimedBar LastHourBar { get; set; }
 
-        public SymbolVM(Symbol symbol, IAccount account)
+        public SymbolViewModel(Symbol symbol)
         {
             this.Symbol = symbol;
             this.Name = symbol.Code;
-            this.Account = account;
-#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            UpdateBidAsk();
-#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+//#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            //Task.Run(() => UpdateBidAsk());
+//#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
 
-        public async Task UpdateBidAsk()
-        {
-            this.Ask = Symbol.Ask;
-            this.Bid = Symbol.Bid;
-            if (double.IsNaN(Bid))
-            {
-                if (
-                     //Symbol.Code == "XAUUSD" 
-                     //Symbol.Code == "EURUSD"
-                    //|| Symbol.Code == "USDJPY"
-                    Symbol.Code == "GBPUSD"
-                    )
-                {
-                    var bar = await Symbol.GetLastBar(TimeFrame.h1);
-                    if (bar != null)
-                    {
-                        this.Bid = bar.Close;
-                    }
-                }
-            }
-        }
+        //public async Task UpdateBidAsk()
+        //{
+        //    this.Ask = Symbol.Ask;
+        //    this.Bid = Symbol.Bid;
+        //    if (double.IsNaN(Bid))
+        //    {
+        //        if ( // TEMP - don't do for all symbols yet, may slow down and/or overload the server
+        //             Symbol.Code == "XAUUSD"
+        //            || Symbol.Code == "EURUSD"
+        //            || Symbol.Code == "USDJPY" ||
+        //            Symbol.Code == "GBPUSD"
+        //            )
+        //        {
+        //            var tick = await Symbol.GetLastTick();
+        //            if (tick.IsValid)
+        //            {
+        //                this.Bid = tick.Bid;
+        //                this.Ask = tick.Ask;
+        //                this.LastTickTime = tick.Time;
+        //            }
+        //        }
+        //    }
+        //}
 
         public string Name { get; set; }
 
@@ -67,12 +71,16 @@ namespace LionFire.Trading
                 subscribed = value;
                 if (subscribed)
                 {
-                    Symbol.Tick += Symbol_Tick;
+                    Symbol.Ticked += Symbol_Tick;
                 }
                 else
                 {
-                    Symbol.Tick -= Symbol_Tick;
+                    Symbol.Ticked -= Symbol_Tick;
                 }
+                OnPropertyChanged(nameof(Bid));
+                OnPropertyChanged(nameof(Ask));
+                OnPropertyChanged(nameof(LastTickTime));
+                OnPropertyChanged(nameof(Spread));
             }
         }
         private bool subscribed;
@@ -114,6 +122,27 @@ namespace LionFire.Trading
             }
         }
         private double ask;
+
+        #endregion
+
+        public double Spread
+        {
+            get { return Ask - Bid; }
+        }
+
+        #region LastTickTime
+
+        public DateTime LastTickTime
+        {
+            get { return lastTickTime; }
+            set
+            {
+                if (lastTickTime == value) return;
+                lastTickTime = value;
+                OnPropertyChanged(nameof(LastTickTime));
+            }
+        }
+        private DateTime lastTickTime;
 
         #endregion
 

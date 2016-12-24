@@ -12,22 +12,42 @@ namespace LionFire.ExtensionMethods
     {
         public static bool IsTimeError(HttpResponseMessage response)
         {
-            return ((int)response.StatusCode) == 509;
+            var code = ((int)response.StatusCode);
+            return code == 509 || code == 429;
+        }
+        public static string GetTimeErrorString(HttpResponseMessage response)
+        {
+            var code = ((int)response.StatusCode);
+            switch (code)
+            {
+                case 509:
+                    return "Bandwidth limit exceeded";
+                case 429:
+                    return "Too many requests";
+                default:
+                    return "";
+            }
         }
 
-        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = 2000, int retryCount = 30)
+        public static int RetryIncreaseMilliseconds = 5000;
+        public const int DefaultRetryDelayMilliseconds = 2000;
+        public const int DefaultRetryCount = 30;
+
+        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount)
         {
             if (retryCondition == null) { retryCondition = IsTimeError; }
 
             int failCount = 0;
             HttpResponseMessage response = null;
-            for (int retry509 = retryCount; response == null || retry509 > 0 && retryCondition(response); retry509--)
+            for (int retriesRemaining = retryCount; response == null || retriesRemaining > 0 && retryCondition(response); retriesRemaining--)
             {
                 response = await client.GetAsync(uri);
                 if (retryCondition(response))
                 {
-                    Debug.WriteLine($"509 {uri}");
-                    Thread.Sleep(retryDelayMilliseconds + 5000 * failCount);
+                    var msg = GetTimeErrorString(response);
+
+                    Debug.WriteLine($"{response.StatusCode} {msg} - {uri}");
+                    Thread.Sleep(retryDelayMilliseconds + RetryIncreaseMilliseconds * failCount);
                     failCount++;
                 }
             }

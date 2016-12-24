@@ -1,4 +1,4 @@
-﻿#define DEBUG_BARSCOPIED
+﻿//#define DEBUG_BARSCOPIED
 //#define BarStruct
 using System;
 using System.Collections.Generic;
@@ -20,25 +20,13 @@ using BarType = LionFire.Trading.TimedBar;
 #endif
 using System.Threading.Tasks;
 using TickType = LionFire.Trading.Tick;
+using LionFire.Trading.Data;
+using System.Threading;
+using System.ComponentModel;
+using LionFire.Collections.Concurrent;
 
 namespace LionFire.Trading
 {
-
-    public class TMarketSeriesBase : ITemplate
-    {
-        //[Ignore]
-        //[Required]
-        public IAccount Account { get; set; }
-
-        //[Required]
-        public string Symbol { get; set; }
-
-        //[Required]
-        public string TimeFrame { get; set; }
-
-        public string Key { get { return MarketSeriesUtilities.GetSeriesKey(Symbol, TimeFrame); } }
-    }
-
     public class TMarketSeries : TMarketSeriesBase, ITemplate<MarketSeries>, IValidatesCreate
     {
         public ValidationContext ValidateCreate(ValidationContext context)
@@ -57,216 +45,7 @@ namespace LionFire.Trading
         }
     }
 
-    public class TMarketTickSeries : TMarketSeriesBase, ITemplate<MarketTickSeries>, IValidatesCreate
-
-    {
-        public ValidationContext ValidateCreate(ValidationContext context)
-        {
-            context.MemberNonNull(Account, nameof(Account));
-            if (TimeFrame != "t1")
-            {
-                context.AddIssue(new ValidationIssue
-                {
-                    Message = "Only t1 supported for TMarketTickSeries.  Use TMarketSeries instead for other timeframes.",
-                    MemberName = nameof(TimeFrame),
-                    Kind = ValidationIssueKind.InvalidConfiguration | ValidationIssueKind.ParameterOutOfRange,
-                });
-            }
-
-            return context;
-        }
-    }
-
-    public class MarketSeriesBase<MarketSeriesTemplate> : MarketSeriesBase, ITemplateInstance
-        where MarketSeriesTemplate : TMarketSeriesBase, new()
-    {
-
-        #region Template
-
-        ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (MarketSeriesTemplate)value; } }
-        public MarketSeriesTemplate Template
-        {
-            get
-            {
-                if (template == null)
-                {
-                    template = new MarketSeriesTemplate
-                    {
-                        Account = this.Account,
-                        Symbol = this.SymbolCode,
-                        TimeFrame = this.TimeFrame.Name,
-                    };
-                }
-                return template;
-            }
-            set { template = value; }
-        }
-        public MarketSeriesTemplate template;
-
-        #endregion
-
-    }
-    public class MarketSeriesBase
-    {
-        #region Identity
-
-        #region Derived
-
-        public string Key
-        {
-            get
-            {
-                if (key == null && SymbolCode != null)
-                {
-                    key = SymbolCode.GetSeriesKey(TimeFrame);
-                }
-                return key;
-            }
-        }
-        private string key;
-
-        #endregion
-
-        public JobQueue LoadDataJobs { get; private set; } = new JobQueue();
-        //public async Task WaitForLoadData()
-        //{
-        //    var arr = LoadDataJobs.Where(t => !t.IsCompleted).ToArray();
-        //    await Task.Factory.StartNew(() => Task.WaitAll(arr));
-        //    foreach (var t in arr)
-        //    {
-        //        LoadDataJobs.Remove(t);
-        //    }
-        //}
-
-        public string SymbolCode
-        {
-            get; protected set;
-        }
-        public TimeFrame TimeFrame
-        {
-            get; protected set;
-        }
-
-        #endregion
-
-
-        #region Relationships
-
-        public IAccount Market { get; protected set; }
-        // Obsolete?
-        public IDataSource Source { get; set; }
-
-        public IAccount Account { get { return Market; } protected set { this.Market = value; } }
-
-        #endregion
-
-
-
-        #region Data
-
-        public TimeSeries OpenTime
-        {
-            get { return openTime; }
-        }
-        protected TimeSeries openTime = new TimeSeries();
-
-        /// <param name="time"></param>
-        /// <param name="loadHistoricalData">If true, this may block for a long time!</param>
-        /// <returns></returns>
-        public int FindIndex(DateTime time, bool loadHistoricalData = false)
-        {
-            var result = openTime.FindIndex(time);
-            if (result == -1 && loadHistoricalData)
-            {
-                var first = OpenTime.First();
-                if (time < first)
-                {
-                    //var span = time - first;
-                    //var estimatedBars = span.TotalMilliseconds / TimeFrame.TimeSpan.TotalMilliseconds;
-                    EnsureDataAvailable(time, first).Wait(); // BLOCKING!
-                }
-                result = openTime.FindIndex(time);
-            }
-            //else
-            //{
-
-            //}
-            return result;
-        }
-
-        #endregion
-
-        #region Historical Data
-
-        public Task EnsureDataAvailable(DateTime? startDate, DateTime endDate, int minBars = 0)
-        {
-            return Account.Data.EnsureDataAvailable(this, startDate, endDate, minBars);
-        }
-
-        #endregion
-    }
-
-    public sealed class MarketTickSeries : MarketSeriesBase<TMarketTickSeries>, ITemplateInstance<TMarketTickSeries>
-
-    {
-
-        #region Construction
-
-        public MarketTickSeries() { }
-        public MarketTickSeries(IAccount account, string symbolCode)
-        {
-            this.Account = account;
-            this.SymbolCode = symbolCode;
-        }
-
-        #endregion
-
-        #region Data
-
-        public TickType this[DateTime time]
-        {
-            get
-            {
-                var index = FindIndex(time);
-                if (index < 0) return default(TickType);
-                return this[index];
-            }
-        }
-
-        public TickType this[int index]
-        {
-            get
-            {
-                return new TickType
-                {
-                    Time = openTime[index],
-                    Bid = bid[index],
-                    Ask = ask[index],
-                };
-            }
-            set
-            {
-                openTime[index] = value.Time;
-                bid[index] = value.Bid;
-                ask[index] = value.Ask;
-            }
-        }
-
-        public IDataSeries Bid
-        {
-            get { return bid; }
-        }
-        private DoubleDataSeries bid = new DoubleDataSeries();
-        public IDataSeries Ask
-        {
-            get { return ask; }
-        }
-        private DoubleDataSeries ask = new DoubleDataSeries();
-
-        #endregion
-    }
-
-    public sealed class MarketSeries : MarketSeriesBase<TMarketSeries>, IMarketSeries, IMarketSeriesInternal, ITemplateInstance<TMarketSeries>
+    public sealed class MarketSeries : MarketSeriesBase<TMarketSeries, TimedBar>, IMarketSeries, IMarketSeriesInternal, ITemplateInstance<TMarketSeries>
     {
 
         #region Configuration
@@ -275,60 +54,16 @@ namespace LionFire.Trading
         // If true, each index represents an increment of the TimeFrame.  
         public static readonly bool UniformBars = false;
 
-        #region Derived
-
-        private TimeSpan TimeSpanIncrement
-        {
-            get
-            {
-                var timeSpan = TimeFrame.TimeSpan;
-                if (timeSpan != TimeSpan.Zero) return timeSpan;
-
-                switch (TimeFrame.TimeFrameUnit)
-                {
-                    case TimeFrameUnit.Tick:
-                        return TimeSpan.Zero; // REVIEW
-                    //case TimeFrameUnit.Second:
-                    //    break;
-                    //case TimeFrameUnit.Minute:
-                    //    break;
-                    //case TimeFrameUnit.Hour:
-                    //    break;
-                    //case TimeFrameUnit.Day:
-                    //    break;
-                    //case TimeFrameUnit.Week:
-                    //    break;
-                    //case TimeFrameUnit.Month:
-                    //    break;
-                    //case TimeFrameUnit.Year:
-                    //    break;
-                    default:
-                        throw new NotImplementedException();
-                }
-            }
-        }
-
-        #endregion
-
         #endregion
 
         #region Construction
 
-        public MarketSeries() { }
-        public MarketSeries(IAccount account, string key)
+        public MarketSeries() : base() { }
+        public MarketSeries(IAccount account, string key) : base(account, key)
         {
-            this.Market = account;
-            string symbol;
-            TimeFrame timeFrame;
-            MarketSeriesUtilities.DecodeKey(key, out symbol, out timeFrame);
-            this.SymbolCode = symbol;
-            this.TimeFrame = timeFrame;
         }
-        public MarketSeries(IAccount market, string symbol, TimeFrame timeFrame)
+        public MarketSeries(IAccount market, string symbol, TimeFrame timeFrame) : base(market, symbol, timeFrame)
         {
-            this.Market = market;
-            this.SymbolCode = symbol;
-            this.TimeFrame = timeFrame;
         }
 
         #endregion
@@ -345,11 +80,11 @@ namespace LionFire.Trading
             }
         }
 
-        public IBarSeries Bars
-        {
-            get { return bars; }
-        }
-        private BarSeries bars = new BarSeries();
+        //public IBarSeries Bars // FUTURE
+        //{
+        //    get { return bars; }
+        //}
+        //private BarSeries bars = new BarSeries();
 
 
         public IDataSeries Open
@@ -384,46 +119,7 @@ namespace LionFire.Trading
 
         #region Derived
 
-        public int Count
-        {
-            get
-            {
-#if BarStruct
-                return bars.Count;
-#else
-                return OpenTime.Count;
-#endif
-            }
-        }
-
-        public TimedBar FirstBar
-        {
-            get
-            {
-                return this[OpenTime.MinIndex];
-            }
-        }
-        public TimedBar LastBar
-        {
-            get
-            {
-#if BarStruct
-                return bars.LastValue;
-#else
-                return new TimedBar
-                {
-                    OpenTime = openTime.LastValue,
-                    Open = open.LastValue,
-                    High = high.LastValue,
-                    Low = low.LastValue,
-                    Close = close.LastValue,
-                    Volume = tickVolume.LastValue,
-                };
-#endif
-            }
-        }
-
-        public BarType this[int index]
+        public override BarType this[int index]
         {
             get
             {
@@ -463,7 +159,6 @@ namespace LionFire.Trading
                 yield return tickVolume;
             }
         }
-
 
         #endregion
 
@@ -519,9 +214,8 @@ namespace LionFire.Trading
             }
         }
 
-        public int MinIndex { get { return OpenTime.MinIndex; } }
 
-        BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(null);
+        BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(TimedBar.New);
 
 
         //public event Action<MarketSeries> BarReceived;
@@ -530,31 +224,33 @@ namespace LionFire.Trading
         //public event Action<TimedBar> InterimBarReceived;
         #endregion
 
+        
         #region Methods
 
-        /// <param name="time"></param>
-        /// <param name="loadHistoricalData">If true, this may block for a long time!</param>
-        /// <returns></returns>
-        public int FindIndex(DateTime time, bool loadHistoricalData = false)
-        {
-            var result = openTime.FindIndex(time);
-            if (result == -1 && loadHistoricalData)
-            {
-                var first = OpenTime.First();
-                if (time < first)
-                {
-                    //var span = time - first;
-                    //var estimatedBars = span.TotalMilliseconds / TimeFrame.TimeSpan.TotalMilliseconds;
-                    EnsureDataAvailable(time, first).Wait(); // BLOCKING!
-                }
-                result = openTime.FindIndex(time);
-            }
-            //else
-            //{
+        // OLD - this is also in base class
+        ///// <param name="time"></param>
+        ///// <param name="loadHistoricalData">If true, this may block for a long time!</param>
+        ///// <returns></returns>
+        //public int FindIndex(DateTime time, bool loadHistoricalData = false)
+        //{
+        //    var result = openTime.FindIndex(time);
+        //    if (result == -1 && loadHistoricalData)
+        //    {
+        //        var first = OpenTime.First();
+        //        if (time < first)
+        //        {
+        //            //var span = time - first;
+        //            //var estimatedBars = span.TotalMilliseconds / TimeFrame.TimeSpan.TotalMilliseconds;
+        //            EnsureDataAvailable(time, first).Wait(); // BLOCKING!
+        //        }
+        //        result = openTime.FindIndex(time);
+        //    }
+        //    //else
+        //    //{
 
-            //}
-            return result;
-        }
+        //    //}
+        //    return result;
+        //}
         #endregion
 
         //public IEnumerable<SymbolBar> GetBars(DateTime fromTimeExclusive, DateTime endTimeInclusive)
@@ -580,7 +276,7 @@ namespace LionFire.Trading
                 {
                     // REVIEW 
                     Console.WriteLine("WARN: Bug exists when trying to fill from year 0 to present when FillMissingBars enabled.");
-                    for (var nextTime = OpenTime.LastValue + TimeSpanIncrement; nextTime < bar.OpenTime; nextTime += TimeSpanIncrement)
+                    for (var nextTime = OpenTime.LastValue + TimeFrameTimeSpan; nextTime < bar.OpenTime; nextTime += TimeFrameTimeSpan)
                     {
                         AddDataPointAtTime(nextTime);
                     }
@@ -602,7 +298,7 @@ namespace LionFire.Trading
             {
                 //BarReceived?.Invoke(this);
                 this.barSubject.OnNext(bar);
-                this.bar?.Invoke(new SymbolBar(SymbolCode, bar, bar.OpenTime));
+                this.bar?.Invoke(new SymbolBar(SymbolCode, bar));
             }
         }
 
@@ -610,7 +306,7 @@ namespace LionFire.Trading
         {
             if (open.Count > 0)
             {
-                AddDataPointAtTime(openTime.LastValue + TimeSpanIncrement);
+                AddDataPointAtTime(openTime.LastValue + TimeFrameTimeSpan);
                 open.LastValue = high.LastValue = low.LastValue = close.LastValue = close.Last(1);
             }
             else
@@ -626,7 +322,7 @@ namespace LionFire.Trading
         }
         public void OnTick(DateTime time, double bid, double ask)
         {
-            if ((openTime.LastValue + TimeSpanIncrement) <= time)
+            if ((openTime.LastValue + TimeFrameTimeSpan) <= time)
             {
                 StartNewBar(time);
             }
@@ -642,128 +338,124 @@ namespace LionFire.Trading
                 ds.Add();
             }
         }
-
-        public void Add(List<TimedBarStruct> bars, DateTime? startDate = null, DateTime? endDate = null)
+        /*
+        public void Add(List<TimedBar> bars, DateTime? startDate = null, DateTime? endDate = null)
         {
             // TODO: Fill range from startDate to endDate with "NoData" and if a range is loaded that creates a gap with existing ranges, fill that with "MissingData"
 
-            if (bars.Count == 0) return;
-            var resultsStartDate = bars[0].OpenTime;
-            var resultsEndDate = bars[bars.Count - 1].OpenTime;
-            if (!startDate.HasValue) startDate = resultsStartDate;
-            if (!endDate.HasValue) endDate = resultsEndDate;
+            //if (bars.Count == 0) return;
+            var resultsStartDate = bars.Count == 0 ? default(DateTime):bars[0].OpenTime;
+            var resultsEndDate = bars.Count == 0 ? default(DateTime) : bars[bars.Count - 1].OpenTime;
+            if (!startDate.HasValue) { startDate = resultsStartDate; Debug.WriteLine("WARN -!startDate.HasValue in MarketSeries.Add"); }
+            if (!endDate.HasValue) { endDate = resultsEndDate; Debug.WriteLine("WARN -!endDate.HasValue in MarketSeries.Add"); }
 
 #if DEBUG_BARSCOPIED
             int barsCopied = 0;
 #endif
 
-            if (this.Count == 0)
+            if (this.Count == 0 && DataEndDate == default(DateTime) && DataStartDate == default(DateTime))
             {
                 foreach (var b in bars)
                 {
-                    Add(b.OpenTime, b.Open, b.High, b.Low, b.Close, b.Volume);
+                    //Add(b.Time,b.Open,b.High,b.Low,b.Close,b.Volume);
+                    this.openTime.Add(b.Time);
+                    this.open.Add(b.Open);
+                    this.high.Add(b.High);
+                    this.low.Add(b.Low);
+                    this.close.Add(b.Close);
+                    this.tickVolume.Add(b.Volume);
                 }
             }
             else
             {
-                var dataStartDate = this.OpenTime.First();
-                var dataEndDate = this.OpenTime.Last();
 
-
-                if (startDate <= dataStartDate) // prepending data
+                if (startDate <= DataStartDate) // prepending data
                 {
                     int lastIndexToCopy;
-                    for (lastIndexToCopy = bars.Count - 1; lastIndexToCopy >= 0 && bars[lastIndexToCopy].OpenTime >= dataStartDate; lastIndexToCopy--) ; // OPTIMIZE?
+                    for (lastIndexToCopy = bars.Count - 1; lastIndexToCopy >= 0 && bars[lastIndexToCopy].OpenTime >= DataStartDate; lastIndexToCopy--) ; // OPTIMIZE?
 
                     for (int dataIndex = OpenTime.MinIndex - 1; lastIndexToCopy >= 0; dataIndex--, lastIndexToCopy--)
                     {
+                        //var bar = bars[lastIndexToCopy] as TimedBar;
+                        //if (bar == null)
+                        //{
+                        //    bar = new TimedBar(bars[lastIndexToCopy]);
+                        //}
                         this[dataIndex] = bars[lastIndexToCopy];
 #if DEBUG_BARSCOPIED
                         barsCopied++;
 #endif
                     }
 
-                    if (endDate.Value < dataStartDate)
+                    if (DataStartDate != default(DateTime) && endDate.Value + TimeFrame.TimeSpan < DataStartDate)
                     {
-                        AddGap(endDate.Value + TimeFrame.TimeSpan, dataStartDate - TimeFrame.TimeSpan);
+                        Debug.WriteLine($"[DATA GAP] endDate: {endDate.Value}, DataStartDate: {DataStartDate}");
+                        AddGap(endDate.Value + TimeFrame.TimeSpan, DataStartDate - TimeFrame.TimeSpan);
                     }
+
                 }
 
                 // Both above and below may get run
 
-                if (endDate >= dataEndDate) // append data
+                if (endDate >= DataEndDate) // append data
                 {
                     int lastIndexToCopy;
-                    for (lastIndexToCopy = 0; lastIndexToCopy < bars.Count && bars[lastIndexToCopy].OpenTime <= dataEndDate; lastIndexToCopy++) ; // OPTIMIZE?
+                    for (lastIndexToCopy = 0; lastIndexToCopy < bars.Count && bars[lastIndexToCopy].OpenTime <= DataEndDate; lastIndexToCopy++) ; // OPTIMIZE?
 
                     for (int dataIndex = OpenTime.LastIndex + 1; lastIndexToCopy < bars.Count; dataIndex++, lastIndexToCopy++)
                     {
-                        this[dataIndex] = bars[lastIndexToCopy];
+                        //var bar = bars[lastIndexToCopy] as TimedBar;
+                        //if (bar == null)
+                        //{
+                        //    bar = new TimedBar(bars[lastIndexToCopy]);
+                        //}
+                        this[dataIndex] = bars[lastIndexToCopy];                       
 #if DEBUG_BARSCOPIED
                         barsCopied++;
 #endif
                     }
 
-                    if (startDate.Value > dataEndDate)
+                    if (DataEndDate != default(DateTime) && startDate.Value - TimeFrame.TimeSpan > DataEndDate)
                     {
-                        AddGap(dataEndDate + TimeFrame.TimeSpan, startDate.Value - TimeFrame.TimeSpan);
+                        Debug.WriteLine($"[DATA GAP] startDate: {startDate.Value}, DataEndDate: {DataEndDate}");
+                        AddGap(DataEndDate + TimeFrame.TimeSpan, startDate.Value - TimeFrame.TimeSpan);
                     }
                 }
             }
+
+            var oldEnd = DataEndDate;
+            var oldStart = DataStartDate;
+            if (DataEndDate == default(DateTime) || startDate.Value - TimeFrame.TimeSpan <= DataEndDate && endDate.Value > DataEndDate)
+            {
+                DataEndDate = endDate.Value;
+            }
+            if (DataStartDate == default(DateTime) || endDate.Value + TimeFrame.TimeSpan >= DataStartDate && startDate.Value < DataStartDate)
+            {
+                DataStartDate = startDate.Value;
+            }
+
+            Debug.WriteLine($"[{this}] New data range: {DataStartDate} - {DataEndDate}  (was {oldStart} - {oldEnd})");
 #if DEBUG_BARSCOPIED
             Debug.WriteLine($"{SymbolCode}-{TimeFrame.Name} Imported {barsCopied} bars");
 #endif
             EraseGap(startDate.Value, endDate.Value);
         }
-        private void AddGap(DateTime startDate, DateTime endDate)
-        {
-            if (HasGap(startDate, endDate))
-            {
-                //Gap in data would be created.  Fill with MissingValue
-                throw new NotImplementedException("TODO: Resolve Overlapping gaps");
-            }
-            Debug.WriteLine($"UNTESTED - {this.ToString()} GAP: {startDate} - {endDate}");
-            if (Gaps == null) { Gaps = new SortedDictionary<DateTime, DateTime>(); }
-            if (Gaps.ContainsKey(startDate))
-            {
-                var existingEnd = Gaps[startDate];
-                if (existingEnd < endDate)
-                {
-                    Gaps[startDate] = endDate;
-                }
-            }
-            Gaps.Add(startDate, endDate);
-        }
-        private void EraseGap(DateTime startDate, DateTime endDate)
-        {
-            if (HasGap(startDate, endDate))
-            {
-                throw new NotImplementedException("TODO: Erase gap");
-            }
-        }
-        public bool HasData(DateTime startDate, DateTime endDate)
-        {
-            if (LastBar.OpenTime >= endDate && FirstBar.OpenTime <= startDate) return true;
+        */
 
-            foreach (var kvp in Gaps)
-            {
-                if (kvp.Key > endDate) break;
-                if (kvp.Key < endDate && kvp.Value > startDate) return false;
-            }
-            return true;
-        }
-        public bool HasGap(DateTime startDate, DateTime endDate)
-        {
-            if (Gaps == null) { return false; }
-            foreach (var kvp in Gaps)
-            {
-                if (kvp.Key > endDate) break;
-                if (kvp.Key < endDate && kvp.Value > startDate) return true;
-            }
-            return false;
-        }
-        private SortedDictionary<DateTime, DateTime> Gaps;
 
+
+        protected override void Add(TimedBar dataPoint)
+        {
+            var bar = dataPoint;
+            // TODO: Don't split into 6 bidirectional arrays -- use one pair of arrays for TimedBar
+            //this.bars.Add((TimedBar)dataPoint);
+            this.openTime.Add(bar.OpenTime);
+            this.open.Add(bar.Open);
+            this.high.Add(bar.High);
+            this.low.Add(bar.Low);
+            this.close.Add(bar.Close);
+            this.tickVolume.Add(bar.Volume);
+        }
 
         public void Add(DateTime time, double open, double high, double low, double close, double volume)
         {
@@ -928,7 +620,6 @@ namespace LionFire.Trading
             return Math.Max(0, seekBytes + bytesDelta - 2); // Minus 2 for \r\n -- first line is discarded.
         }
 
-
         public void ImportFromFile(string path, DateTime? startDate = null, DateTime? endDate = null, bool getPreviousBar = true)
         {
             int lines = 0;
@@ -1080,8 +771,6 @@ namespace LionFire.Trading
             }
         }
 
-
-
         public static MarketSeries ImportFromFile(string symbolCode, TimeFrame timeFrame, string path, DateTime? startDate = null, DateTime? endDate = null)
         {
             var series = new MarketSeries(null, symbolCode, timeFrame);
@@ -1101,27 +790,13 @@ namespace LionFire.Trading
 
         #endregion
 
-        public event Action<DateTime, DateTime> LoadHistoricalDataCompleted;
-        public void RaiseLoadHistoricalDataCompleted(DateTime startDate, DateTime endDate)
-        {
-            LoadHistoricalDataCompleted?.Invoke(startDate, endDate);
-        }
+        #region Misc
+
+        public override string DataPointName { get { return "bars"; } }
+
+        
+
+        #endregion
     }
 
-    public static class MarketSeriesUtilities
-    {
-        public const char Delimiter = ';';
-
-        public static string GetSeriesKey(this string symbol, TimeFrame timeFrame)
-        {
-            return symbol + Delimiter.ToString() + timeFrame.Name;
-        }
-
-        internal static void DecodeKey(string key, out string symbol, out TimeFrame timeFrame)
-        {
-            var chunks = key.Split(Delimiter);
-            symbol = chunks[0];
-            timeFrame = TimeFrame.TryParse(chunks[1]);
-        }
-    }
 }

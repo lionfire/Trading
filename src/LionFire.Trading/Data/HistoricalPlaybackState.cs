@@ -20,6 +20,6 @@ namespace LionFire.Trading
         public int NextHistoricalIndex { get; set; } 
 
         public DateTime NextHistoricalBar { get; set; }
-        public TimedBar NextBarInProgress { get; internal set; }
+        public TimedBar? NextBarInProgress { get; internal set; }
     }
 }

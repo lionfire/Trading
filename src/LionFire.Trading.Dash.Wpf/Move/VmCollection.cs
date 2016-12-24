@@ -11,13 +11,37 @@ using System.Threading.Tasks;
 
 namespace LionFire.Avalon
 {
-    public interface IViewModel { }
-    public interface IViewModelProvider { }
-
-    public interface IViewModelProvider<T> : IViewModelProvider
-        where T : IViewModel {
-        T GetFor(object model, object context);
+    public interface IViewModel { object Model { get; set; } }
+    public interface IViewModel<T> : IViewModel
+    {
+        new T Model { get; set; }
+        bool IsViewModelOf(object obj);
     }
+    public interface IViewModelProvider
+    {
+        T GetFor<T>(object model, object context);
+    }
+
+    //public class ViewModel<T> : IViewModel<T>
+    //{
+    //    object IViewModel.Model { get { return Model; } set { Model = (T)value; } }
+    //    public T Model { get; set; }
+    //    bool IsViewModelOf(object obj);
+    //}
+
+    public class ViewModelProvider : IViewModelProvider
+    {
+        public T GetFor<T>(object model, object context)
+        {
+            return default(T);
+        }
+    }
+
+    //public interface IViewModelProvider<T> : IViewModelProvider
+    //    where T : IViewModel
+    //{
+
+    //}
 
     /// <summary>
     /// Observable collection of ViewModels that pushes changes to a related collection of models
@@ -141,7 +165,7 @@ namespace LionFire.Avalon
 
                 case NotifyCollectionChangedAction.Remove:
                     foreach (var m in e.OldItems.OfType<TModel>())
-                        this.RemoveIfContains(GetViewModelOfModel(m));
+                        this.Remove(GetViewModelOfModel(m));
                     break;
 
                 case NotifyCollectionChangedAction.Reset:
@@ -151,6 +175,14 @@ namespace LionFire.Avalon
             }
 
             _synchDisabled = false;
+        }
+
+        private void AddIfNotNull(TViewModel viewModel)
+        {
+            if (viewModel != null)
+            {
+                this.Add(viewModel);
+            }
         }
 
         private TViewModel CreateViewModel(TModel model)

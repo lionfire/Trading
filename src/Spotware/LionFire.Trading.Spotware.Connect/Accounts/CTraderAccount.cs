@@ -92,22 +92,20 @@ namespace LionFire.Trading.Spotware.Connect
         {
             CTraderAccount_NetFramework();
             logger = this.GetLogger();
-            this.Data.LoadHistoricalDataAction = LoadHistoricalDataAction;
+            historicalDataProvider = new SpotwareConnectLoadHistoricalDataProvider(this);
+            //this.Data.LoadHistoricalDataAction = LoadHistoricalDataAction;
         }
 
-        public IJob LoadHistoricalDataAction(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int minBars = 0)
-        {
-            var loadTask = new SpotwareLoadHistoricalDataJob(marketSeries.SymbolCode, marketSeries.TimeFrame)
-            {
-                Account = this,
-                MarketSeries = marketSeries as MarketSeries,
-                MarketTickSeries = marketSeries as MarketTickSeries,
-                EndTime = endDate,
-                StartTime = startDate,
-                MinBars = minBars
-            };
-            return loadTask;
-        }
+        //public IJob LoadHistoricalDataAction(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int minBars = 0)
+        //{
+        //    var loadTask = new SpotwareLoadHistoricalDataJob(marketSeries)
+        //    {
+        //        EndTime = endDate,
+        //        StartTime = startDate,
+        //        MinBars = minBars
+        //    };
+        //    return loadTask;
+        //}
 
         partial void CTraderAccount_NetFramework();
 
@@ -191,12 +189,15 @@ namespace LionFire.Trading.Spotware.Connect
 
         public async Task UpdatePositions()
         {
-            var positions = await SpotwareAccountApi.GetPositions(this.AccountId, this.AccessToken, this);
+            var positions = await SpotwareAccountApi.GetPositions(this);
             this.positions.Clear();
             this.positions.AddRange(positions);
             Console.WriteLine(DumpPositions(Positions));
         }
 
+
+        public override IHistoricalDataProvider HistoricalDataProvider { get { return historicalDataProvider; } }
+        SpotwareConnectLoadHistoricalDataProvider historicalDataProvider;
 
         #region IsTradeApiEnabled
 
@@ -316,10 +317,11 @@ namespace LionFire.Trading.Spotware.Connect
         #region Symbol Subscriptions
 
         ConcurrentDictionary<string, DateTime> subscriptionActive = new ConcurrentDictionary<string, DateTime>();
+        ConcurrentDictionary<string, DateTime> subscriptionWaitingForConnection = new ConcurrentDictionary<string, DateTime>();
         ConcurrentDictionary<string, DateTime> subscriptionRequested = new ConcurrentDictionary<string, DateTime>();
         ConcurrentDictionary<string, DateTime> unsubscriptionRequested = new ConcurrentDictionary<string, DateTime>();
-
         public bool MinuteBarsFromTicks = true;
+        public bool OtherBarsFromMinutes = true;
 
 
         protected override void Subscribe(string symbolCode, string timeFrame)
@@ -337,7 +339,15 @@ namespace LionFire.Trading.Spotware.Connect
                 var existing = subscriptionRequested.GetOrAdd(symbolCode, date);
                 if (date == existing)
                 {
-                    RequestSubscribeForSymbol(symbolCode);
+                    try
+                    {
+                        RequestSubscribeForSymbol(symbolCode);
+                        subscriptionRequested.AddOrUpdate(key, DateTime.UtcNow, (x, y) => y);
+                    }
+                    catch (NotConnectedException)
+                    {
+                        subscriptionWaitingForConnection.GetOrAdd(key, DateTime.UtcNow);
+                    }
                 }
             }
             else if (timeFrame == "m1")
@@ -345,23 +355,39 @@ namespace LionFire.Trading.Spotware.Connect
                 if (MinuteBarsFromTicks)
                 {
                     var t1Series = GetSymbol(symbolCode);
-                    t1Series.Tick += TickToMinuteHandler;
+                    t1Series.Ticked += TickToMinuteHandler;
                 }
                 else
                 {
                     throw new NotImplementedException("MinuteBarsFromTicks == false");
                 }
             }
-            else if (timeFrame == "h1")
+            else 
             {
+                if (OtherBarsFromMinutes)
+                {
+                    MarketSeries series = GetMarketSeries(symbolCode, timeFrame);
+
+                    var handler = BarToOtherBarHandlers.GetOrAdd(key, k => new BarToOtherBarHandler(this, series));
+                    handler.IsEnabled = true; 
+                }
+                else
+                {
+                    throw new NotImplementedException("HourBarsFromMinutes == false");
+                }
             }
-            else
-            {
-                throw new NotImplementedException();
-            }
+            //else
+            //{
+            //    throw new NotImplementedException();
+            //}
+            
 #else
 #endif
         }
+
+        
+        ConcurrentDictionary<string, BarToOtherBarHandler> BarToOtherBarHandlers = new ConcurrentDictionary<string, BarToOtherBarHandler>();
+
 
         public int WaitForTickToMinuteToFinishInMilliseconds = 2000;
 
@@ -399,7 +425,7 @@ namespace LionFire.Trading.Spotware.Connect
             {
                 foreach (var kvp in tickToMinuteBars.ToArray())
                 {
-                    if (kvp.Value == null || kvp.Value.OpenTime == default(DateTime)) continue;
+                    if (!kvp.Value.IsValid) continue;
                     if (!IsSameMinute(previousMinute, kvp.Value.OpenTime)
                         && kvp.Value.OpenTime > previousMinute // Shouldn't happen - TOSANITYCHECK
                         ) continue;
@@ -414,16 +440,11 @@ namespace LionFire.Trading.Spotware.Connect
             lock (TickToMinuteBarLock)
             {
                 //var bar = tickToMinuteBars[symbolCode];
-                if (bar == null || bar.OpenTime == default(DateTime)
-                    || double.IsNaN(bar.High)
-                    || double.IsNaN(bar.Open) // these 3 are overkill TOSANITYCHECK
-                    || double.IsNaN(bar.Low)
-                    || double.IsNaN(bar.Close)
-                    ) return;
+                if (!bar.IsValid) return;
 
                 GetMarketSeriesInternal(symbolCode, TimeFrame.m1).OnBar(bar, true);
 
-                tickToMinuteBars[symbolCode] = null;
+                tickToMinuteBars[symbolCode] = TimedBar.New;
             }
         }
 
@@ -436,6 +457,11 @@ namespace LionFire.Trading.Spotware.Connect
                 && time1.Day == time2.Day
                 && time1.Hour == time2.Hour
                 && time1.Minute == time2.Minute;
+        }
+
+        private void OtherBarsFromMinuteBars(SymbolBar obj, TimeFrame tf)
+        {
+            throw new NotImplementedException();
         }
 
         // Hardcoded to Bid prices
@@ -451,15 +477,15 @@ namespace LionFire.Trading.Spotware.Connect
                 ServerTimeFromTick = obj.Time; // May trigger a bar from previous minute, for all symbols, after a delay (to wait for remaining ticks to come in)
             }
 
-            TimedBar bar = tickToMinuteBars.TryGetValue(obj.Symbol);
-            if (bar != null && !IsSameMinute(bar.OpenTime, obj.Time))
+            TimedBar bar = tickToMinuteBars.TryGetValue(obj.Symbol, TimedBar.Invalid);
+            if (bar.IsValid && !IsSameMinute(bar.OpenTime, obj.Time))
             {
                 // Immediately Trigger a finished bar even after starting the timer above.
                 TickToMinuteBar(obj.Symbol, bar);
-                bar = null;
+                bar = TimedBar.Invalid;
             }
 
-            if (bar == null)
+            if (!bar.IsValid)
             {
                 var minuteBarOpen = new DateTime(obj.Time.Year, obj.Time.Month, obj.Time.Day, obj.Time.Hour, obj.Time.Minute, 0);
 

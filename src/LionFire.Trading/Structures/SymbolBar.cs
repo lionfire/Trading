@@ -16,6 +16,19 @@ namespace LionFire.Trading
             this.Bar = bar;
             this.Time = time;
         }
+        public SymbolBar(string code, TimedBar bar)
+        {
+            this.Code = code;
+            this.Bar = new Bar
+            {
+                Open = bar.Open,
+                High = bar.High,
+                Low = bar.Low,
+                Close = bar.Close,
+                Volume = bar.Volume,
+            };
+            this.Time = bar.OpenTime;
+        }
 
         #endregion
 

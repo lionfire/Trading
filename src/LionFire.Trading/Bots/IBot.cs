@@ -39,7 +39,9 @@ namespace LionFire.Trading.Bots
     public interface IBot : ITemplateInstance
 #if !cAlgo
         , IStartable
+        , IStoppable
         , IAccountParticipant
+        , IExecutable
 #endif
     {
 

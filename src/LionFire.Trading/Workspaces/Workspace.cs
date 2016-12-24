@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
 using System.ComponentModel;
+using System.IO;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -20,6 +21,8 @@ namespace LionFire.Trading.Workspaces
     /// </summary>
     public class Workspace : ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged
     {
+
+
         #region Relationships
 
         public TWorkspace Template { get; set; }
@@ -36,6 +39,25 @@ namespace LionFire.Trading.Workspaces
         #endregion
 
         #region State
+
+
+        #region StatusText
+
+        public string StatusText
+        {
+            get { return statusText; }
+            set
+            {
+                if (statusText == value) return;
+                statusText = value;
+                OnPropertyChanged(nameof(StatusText));
+            }
+        }
+        private string statusText;
+
+        #endregion
+
+
 
         //public WorkspaceNode Root { get; set; } = new WorkspaceNode(); // FUTURE
 
@@ -126,6 +148,7 @@ namespace LionFire.Trading.Workspaces
         }
         public IAccount GetAccount(string accountName)
         {
+            if (accountName == null) return null;
             IAccount account;
             accountsByName.TryGetValue(accountName, out account);
             return account;
@@ -169,13 +192,14 @@ namespace LionFire.Trading.Workspaces
                 }
             }
 
-            foreach (var session in Sessions)
+            foreach (var tSession in Template.Sessions)
             {
-                if (!await session.Initialize())
-                {
-                    return false;
-                }
+                var session = tSession.Create();
+                session.Workspace = this;
+                this.Sessions.Add(session);
+                await session.Initialize().ConfigureAwait(continueOnCapturedContext: false);
             }
+            
 
             state.OnNext(ExecutionState.Ready);
             return true;

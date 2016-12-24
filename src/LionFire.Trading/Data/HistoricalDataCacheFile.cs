@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -13,13 +14,41 @@ namespace LionFire.Trading.Data
     {
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
+        public DateTime QueryDate { get; set; }
     }
 
     public class HistoricalDataCacheFile
     {
+
+        #region (Static) Utility Methods
+
+        public static void GetChunkRange(TimeFrame tf, DateTime date, out DateTime chunkStartDate, out DateTime chunkEndDate) // TOC#7
+        {
+
+            switch (tf.Name)
+            {
+                case "t1":
+                    chunkStartDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0, DateTimeKind.Utc);
+                    chunkEndDate = new DateTime(chunkStartDate.Year, chunkStartDate.Month, chunkStartDate.Day, chunkStartDate.Hour, 59, 59, 999, DateTimeKind.Utc);
+                    break;
+                case "m1":
+                    chunkStartDate = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Utc);
+                    chunkEndDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59, 999, DateTimeKind.Utc);
+                    break;
+                case "h1":
+                    chunkStartDate = new DateTime(date.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    chunkEndDate = new DateTime(date.Year, 12, 31, 23, 59, 59, 999, DateTimeKind.Utc);
+                    break;
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
+        #endregion
+
         #region Configuration
 
-        public string CacheRoot = @"d:\st\Investing-Data\MarketData"; // HARDPATH
+        public string CacheRoot = @"d:\st\Investing-Data\MarketData"; // HARDPATH TODO
 
         #endregion
 
@@ -49,11 +78,36 @@ namespace LionFire.Trading.Data
             return $"{brokerName}{subType}\\{symbolCode}\\{tf.Name}\\{dateStr}";
         }
 
-        public string SymbolCode { get; set; }
-        public TimeFrame TimeFrame { get; set; }
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
+        public string SymbolCode { get { return MarketSeriesBase.SymbolCode; } }
+        public TimeFrame TimeFrame { get { return MarketSeriesBase.TimeFrame; } }
         public string BrokerSubType { get; set; }
+
+        public MarketSeriesBase MarketSeriesBase { get; set; }
+        public MarketSeries MarketSeries { get { return MarketSeriesBase as MarketSeries; } }
+        public MarketTickSeries MarketTickSeries { get { return MarketSeriesBase as MarketTickSeries; } }
+
+        #region StartDate
+
+        public DateTime StartDate
+        {
+            get { return startDate; }
+            set { startDate = value; }
+        }
+        private DateTime startDate;
+
+        #endregion
+
+        #region EndDate
+
+        public DateTime EndDate
+        {
+            get { return endDate; }
+            set { endDate = value; }
+        }
+        private DateTime endDate;
+
+        #endregion
+        public DateTime QueryDate { get; set; }
 
         public string Key
         {
@@ -65,67 +119,95 @@ namespace LionFire.Trading.Data
 
         #endregion
 
-        #region Construction
-
-        public HistoricalDataCacheFile(IAccount account, string symbol, TimeFrame timeFrame, DateTime startDate)
+        public DataLoadResult DataLoadResult
         {
-            this.Account = account;
-            this.SymbolCode = symbol;
-            this.TimeFrame = timeFrame;
-            this.StartDate = startDate;
-        }
-
-        public static void GetChunkRange(TimeFrame tf, DateTime date, out DateTime chunkStartDate, out DateTime chunkEndDate)
-        {
-
-            switch (tf.Name)
+            get
             {
-                case "t1":
-                    chunkStartDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0, DateTimeKind.Utc);
-                    chunkEndDate = new DateTime(chunkStartDate.Year, chunkStartDate.Month, chunkStartDate.Day, chunkStartDate.Hour, 59, 59, 999, DateTimeKind.Utc);
-                    break;
-                case "m1":
-                    chunkStartDate = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Utc);
-                    chunkEndDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59, 999, DateTimeKind.Utc);
-                    break;
-                case "h1":
-                    chunkStartDate = new DateTime(date.Year, 0, 0, 0, 0, 0, DateTimeKind.Utc);
-                    chunkEndDate = new DateTime(date.Year, 12, 31, 23, 59, 59, 999, DateTimeKind.Utc);
-                    break;
-                default:
-                    throw new NotImplementedException();
+                return new DataLoadResult(MarketSeriesBase)
+                {
+                    Bars = this.Bars,
+                    IsAvailable = this.IsAvailable,
+                    IsPartial = this.IsPartial,
+                    StartDate = this.StartDate,
+                    EndDate = this.EndDate,
+                    Ticks = this.Ticks,
+                    QueryDate = this.QueryDate,
+                };
             }
         }
 
-        public static HistoricalDataCacheFile GetCacheFile(IAccount account, string symbolCode, TimeFrame tf, DateTime date)
+
+        #region Construction
+
+        public HistoricalDataCacheFile(MarketSeriesBase series, DateTime chunkDate)
         {
-            DateTime chunkStartDate, chunkEndDate;
-            GetChunkRange(tf, date, out chunkStartDate, out chunkEndDate);
+            this.MarketSeriesBase = series;
+            this.Account = series.Account;
+            GetChunkRange(TimeFrame, chunkDate, out startDate, out endDate);
+            FilePath = GetFilePath();
+        }
 
-            var key = GetKey(account.Template.BrokerName, symbolCode, tf, date) + ".dat";
+        public string GetFilePath()
+        {
+            var path = Path.Combine(LionFireEnvironment.AppProgramDataDir, "Data", Account.Template.BrokerName, SymbolCode, TimeFrame.Name);
 
-            HistoricalDataCacheFile cacheFile = cache.GetOrAdd(key, _ =>
-                new HistoricalDataCacheFile(account, symbolCode, tf, chunkStartDate)
+            switch (TimeFrame.Name)
+            {
+                case "t1":
+                    path = Path.Combine(path, StartDate.Year.ToString(), StartDate.Month.ToString(), StartDate.Day.ToString(), StartDate.Hour.ToString());
+                    break;
+                case "m1":
+                    path = Path.Combine(path, StartDate.Year.ToString(), StartDate.Month.ToString(), StartDate.Day.ToString());
+                    break;
+                case "h1":
+                    path = Path.Combine(path, StartDate.Year.ToString());
+                    break;
+                default:
+                    break;
+            }
+
+            path += ExtensionWithDot;
+            return path;
+        }
+
+        public HistoricalDataCacheFile(MarketSeriesBase series, DateTime start, DateTime end, DateTime queryDate)
+        {
+            this.MarketSeriesBase = series;
+            this.Account = series.Account;
+            this.StartDate = start;
+            this.EndDate = end;
+            this.QueryDate = queryDate;
+            this.FilePath = GetFilePath();
+        }
+
+
+        public static async Task<HistoricalDataCacheFile> GetCacheFile(MarketSeriesBase marketSeries, DateTime chunkDate)
+        {
+            HistoricalDataCacheFile cacheFile = cache.GetOrAdd(
+                GetKey(marketSeries.Account.Template.BrokerName, marketSeries.SymbolCode, marketSeries.TimeFrame, chunkDate),
+                 _ => new HistoricalDataCacheFile(marketSeries, chunkDate)
              );
 
-            cacheFile.EnsureLoaded();
+            await cacheFile.EnsureLoaded();
+
             return cacheFile;
         }
 
         #endregion
 
-        public async Task EnsureLoaded()
+        public async Task<bool> EnsureLoaded()
         {
             if (Ticks == null && Bars == null)
             {
-                await Load();
+                return await Load();
             }
+            return true;
         }
         #region Cache
 
         private static ConcurrentDictionary<string, HistoricalDataCacheFile> cache = new ConcurrentDictionary<string, HistoricalDataCacheFile>();
 
-        public void ClearCache()
+        public static void ClearCache()
         {
             cache.Clear();
         }
@@ -140,18 +222,67 @@ namespace LionFire.Trading.Data
 
         #region Serialization
 
-        public HistoricalDataCacheFileHeader Header { get; set; } = new HistoricalDataCacheFileHeader();
+        public HistoricalDataCacheFileHeader Header
+        {
+            get
+            {
+                return new HistoricalDataCacheFileHeader()
+                {
+                    StartDate = this.StartDate,
+                    EndDate = this.EndDate,
+                    QueryDate = this.QueryDate,
+                };
+            }
+            set
+            {
+                StartDate = value.StartDate;
+                EndDate = value.EndDate;
+                QueryDate = value.QueryDate;
+            }
+        }
 
         #endregion
 
         #region Properties
 
         public string FilePath { get; private set; }
-        public string PartFilePath { get { return FilePath.Replace(".dat", ".part.dat"); } }
+        public string PartFilePath { get { return FilePath.Replace(ExtensionWithDot, ".part" + ExtensionWithDot); } }
+        public string ExtensionWithDot { get { return ".dat"; } }
+
+        public bool IsPartial
+        {
+            get
+            {
+                if (isPartial.HasValue) return isPartial.Value;
+                return QueryDate < EndDate + TimeSpan.FromMinutes(2); // HARDCODE
+            }
+            set { isPartial = value; }
+        }
+        bool? isPartial = null;
+        public bool IsAvailable
+        {
+            get
+            {
+                if (isAvailable.HasValue) return isAvailable.Value;
+                return Bars != null && Bars.Count > 0;
+            }
+            set { isAvailable = value; }
+        }
+        private bool? isAvailable = null;
+
+        public bool IsPersisted { get; set; }
+
+        public TimeSpan OutOfDateTimeSpan
+        {
+            get
+            {
+                if (!IsPartial) return TimeSpan.MinValue;
+                return DateTime.UtcNow - QueryDate;
+            }
+        }
 
         public List<Tick> Ticks { get; set; }
         public List<TimedBar> Bars { get; set; }
-
 
         #endregion
 
@@ -165,18 +296,18 @@ namespace LionFire.Trading.Data
             }
         }
 
-        public static List<HistoricalDataCacheFile> GetCacheFiles(IAccount account, string symbol, TimeFrame timeFrame, DateTime startTime, DateTime endTime)
-        {
-            var results = new List<HistoricalDataCacheFile>();
-
-            while (true)
-            {
-                var file = GetCacheFile(account, symbol, timeFrame, startTime);
-            }
-
-        }
-
         #region Save
+
+        public static void SaveCacheFile(DataLoadResult result)
+        {
+            var cacheFile = new HistoricalDataCacheFile(result.MarketSeriesBase, result.StartDate, result.EndDate, result.QueryDate)
+            {
+                Bars = result.Bars,
+                Ticks = result.Ticks,
+            };
+
+            cacheFile.Save();
+        }
 
         public void Save()
         {
@@ -186,58 +317,102 @@ namespace LionFire.Trading.Data
             // m1: Last expected + 2,
             // h1: Last expected + 2h
 
-            if (!Directory.Exists(System.IO.Path.GetDirectoryName(FilePath))) { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FilePath)); }
+            var path = IsPartial ? PartFilePath : FilePath;
+            if (!Directory.Exists(System.IO.Path.GetDirectoryName(path))) { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); }
 
-            if (File.Exists(FilePath))
+            if (File.Exists(path))
             {
+                int i = 1;
                 do
                 {
-                    int i = 1;
-                    var bakPath = FilePath + "-" + i + ".old.dat";
+                    var bakPath = path + "-" + i++ + ".old.dat";
                     if (!File.Exists(bakPath))
                     {
-                        File.Move(FilePath, bakPath);
+                        File.Move(path, bakPath);
                         break;
                     }
                 }
                 while (true);
             }
 
-            using (var sw = new BinaryWriter(new FileStream(FilePath, FileMode.Create)))
+            int versionNumber = 1;
+            using (var sw = new BinaryWriter(new FileStream(path, FileMode.Create)))
             {
-                var json = JsonConvert.SerializeObject(Header);
-                sw.Write(json);
+                //var json = JsonConvert.SerializeObject(Header);
+                //sw.Write(json);
+                sw.Write(versionNumber);
+                sw.Write(Header.StartDate.ToBinary());
+                sw.Write(Header.EndDate.ToBinary());
+                sw.Write(Header.QueryDate.ToBinary());
 
-                if (Ticks != null)
+                if (TimeFrame == TimeFrame.t1)
                 {
-                    foreach (var tick in Ticks)
+                    if (Ticks != null)
                     {
-                        sw.Write(tick.Time.ToBinary());
-                        sw.Write(tick.Bid);
-                        sw.Write(tick.Ask);
+                        foreach (var tick in Ticks)
+                        {
+                            sw.Write(tick.Time.ToBinary());
+                            sw.Write(tick.Bid);
+                            sw.Write(tick.Ask);
+                        }
+                    }
+                    else
+                    {
+                        var series = MarketTickSeries;
+                        int startIndex = series.FindIndex(StartDate);
+                        int endIndex = series.FindIndex(EndDate);
+                        for (int i = startIndex; i <= endIndex; i++)
+                        {
+                            var tick = series[i];
+                            if (tick.Time < StartDate || tick.Time > EndDate) continue;
+                            sw.Write(tick.Time.ToBinary());
+                            sw.Write(tick.Bid);
+                            sw.Write(tick.Ask);
+                        }
                     }
                 }
                 else
                 {
-                    foreach (var bar in Bars)
+                    if (Bars != null)
                     {
-                        sw.Write(bar.OpenTime.ToBinary());
-                        sw.Write(bar.Open);
-                        sw.Write(bar.High);
-                        sw.Write(bar.Low);
-                        sw.Write(bar.Close);
-                        sw.Write(bar.Volume);
+                        foreach (var bar in Bars)
+                        {
+                            sw.Write(bar.OpenTime.ToBinary());
+                            sw.Write(bar.Open);
+                            sw.Write(bar.High);
+                            sw.Write(bar.Low);
+                            sw.Write(bar.Close);
+                            sw.Write(bar.Volume);
+                        }
+                    }
+                    else
+                    {
+                        var series = MarketSeries;
+                        int startIndex = series.FindIndex(StartDate);
+                        int endIndex = series.FindIndex(EndDate);
+                        for (int i = startIndex; i <= endIndex; i++)
+                        {
+                            var bar = series[i];
+                            if (bar.OpenTime < StartDate || bar.OpenTime > EndDate) continue;
+                            sw.Write(bar.OpenTime.ToBinary());
+                            sw.Write(bar.Open);
+                            sw.Write(bar.High);
+                            sw.Write(bar.Low);
+                            sw.Write(bar.Close);
+                            sw.Write(bar.Volume);
+                        }
                     }
                 }
+                Debug.WriteLine($"[{MarketSeriesBase} - cache saved]  - Info: {this.ToString()}");
             }
+            IsPersisted = true;
         }
 
         #endregion
 
         #region Load
 
-        public bool IsPartial { get; set; }
-        public async Task<bool> Load()
+        public async Task<bool> Load(bool loadOnlyHeader = false)
         {
             string path;
             if (File.Exists(FilePath))
@@ -252,17 +427,38 @@ namespace LionFire.Trading.Data
             }
             else
             {
+                IsAvailable = false;
                 return false;
             }
 
             // OPTIMIZE: Albeit, it might be considered dangerous) Instead of parsing EACH Int32, you could do them all at once using Buffer.BlockCopy()
             //http://stackoverflow.com/questions/17043631/using-stream-read-vs-binaryreader-read-to-process-binary-streams
 
-            await Task.Factory.StartNew(() =>
+            await Task.Run(() =>
             {
                 using (var br = new BinaryReader(new FileStream(path, FileMode.Open)))
                 {
-                    this.Header = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
+                    //var deserializedHeader = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
+                    //if (deserializedHeader.StartDate != StartDate)
+                    //{
+                    //    throw new Exception("deserializedHeader.StartDate != StartDate");
+                    //}
+                    //if (deserializedHeader.EndDate != EndDate)
+                    //{
+                    //    throw new Exception("deserializedHeader.EndDate != EndDate");
+                    //}
+                    //this.Header = deserializedHeader;// Overwrites local properties
+
+                    int version = br.ReadInt32();
+                    if (version != 1) { throw new InvalidDataException("Cache file data versions supported: 1"); }
+
+                    this.StartDate = DateTime.FromBinary(br.ReadInt64());
+                    this.EndDate = DateTime.FromBinary(br.ReadInt64());
+                    this.QueryDate = DateTime.FromBinary(br.ReadInt64());
+
+
+
+                    if (loadOnlyHeader) return;
 
                     if (TimeFrame == TimeFrame.t1)
                     {
@@ -275,6 +471,7 @@ namespace LionFire.Trading.Data
                             , br.ReadDouble()
                             ));
                         }
+                        this.Ticks = ticks;
                     }
                     else
                     {
@@ -290,13 +487,27 @@ namespace LionFire.Trading.Data
                             , br.ReadDouble()
                             ));
                         }
+                        this.Bars = bars;
                     }
                 }
+
+                Debug.WriteLine($"[{MarketSeriesBase} - cache loaded] Loaded {StartDate} - {EndDate} @ {QueryDate}, {Count} items");
+                Debug.WriteLine($"[{MarketSeriesBase} - cache loaded]  - Info: {this.ToString()}");
             });
 
+            IsPersisted = true;
             return true;
         }
 
+        public int Count
+        {
+            get
+            {
+                if (Bars != null) { return Bars.Count; }
+                if (Ticks != null) { return Ticks.Count; }
+                return 0;
+            }
+        }
         #endregion
 
         #endregion
@@ -319,6 +530,10 @@ namespace LionFire.Trading.Data
         //}
 
 
+        public override string ToString()
+        {
+            return $"{{cache file {this.MarketSeriesBase} Start:{StartDate} End:{EndDate} Query:{QueryDate} IsAvailable:{IsAvailable} IsPartial:{IsPartial}}}";
+        }
     }
 
 }

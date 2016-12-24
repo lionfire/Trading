@@ -11,17 +11,18 @@ using LionFire.Trading.Backtesting;
 using System.Collections.ObjectModel;
 using System.IO;
 using Newtonsoft.Json;
+using LionFire.Execution;
 
 namespace LionFire.Trading
 {
 
 
-    public class BotVM : System.ComponentModel.INotifyPropertyChanged
+    public class BotViewModel : System.ComponentModel.INotifyPropertyChanged
     {
 
         #region Relationships
 
-        public BotVM Self { get { return this; } }
+        public BotViewModel Self { get { return this; } }
 
 
         //public IBot Bot { get; set; }
@@ -31,7 +32,9 @@ namespace LionFire.Trading
         public IBot Bot
         {
             get { return bot; }
-            set { bot = value;
+            set
+            {
+                bot = value;
                 bot.BotPositionChanged += Bot_PositionChanged;
 
                 var signalBot = SignalBot;
@@ -51,7 +54,7 @@ namespace LionFire.Trading
         {
             var pos = obj.Position;
             UpdatePositionVM();
-            
+
         }
         protected virtual void UpdatePositionVM()
         {
@@ -99,13 +102,28 @@ namespace LionFire.Trading
             {
                 if (isScanEnabled == value) return;
                 isScanEnabled = value;
-                OnPropertyChanged(nameof(IsScanEnabled));
+                if (isScanEnabled)
+                {
+                    if (!Bot.Mode.HasFlag(BotMode.Scanner))
+                    {
+                        if (Bot.IsStarted())
+                        {
+                            Bot.Stop();
+                        }
+
+                        Bot.Mode |= BotMode.Scanner;
+                    }
+                    if (!Bot.IsStarted())
+                    {
+                        Bot.Start();
+                    }
+                    OnPropertyChanged(nameof(IsScanEnabled));
+                }
             }
         }
         private bool isScanEnabled;
 
         #endregion
-
 
         #region IsLiveEnabled
 
@@ -144,9 +162,13 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public BotVM()
+        public BotViewModel()
         {
             backtestResults.CollectionChanged += BacktestResults_CollectionChanged;
+        }
+        public BotViewModel(IBot bot) : this()
+        {
+            this.Bot = bot;
         }
 
         #endregion
@@ -177,7 +199,7 @@ namespace LionFire.Trading
 
         private void LoadBacktestResults()
         {
-             var dir = @"C:\Trading\Results"; // HARDPATH
+            var dir = System.IO.Path.Combine(LionFireEnvironment.AppProgramDataDir, @"Results");
             if (backtestResults == null) { backtestResults = new ObservableCollection<BacktestResult>(); }
             backtestResults.Clear();
             foreach (var file in Directory.GetFiles(dir, $"*id={Bot.Template.Id}*.json"))

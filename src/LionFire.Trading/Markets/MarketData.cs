@@ -31,7 +31,7 @@ namespace LionFire.Trading
 
         public MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
         {
-            return Account.Data.GetMarketSeries(symbol, timeFrame);
+            return Account.GetMarketSeries(symbol.Code, timeFrame);
         }
 
         #region Convenience Accessors

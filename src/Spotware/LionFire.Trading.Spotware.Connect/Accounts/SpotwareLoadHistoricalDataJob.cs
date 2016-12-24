@@ -14,6 +14,7 @@ using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using LionFire.Trading.Data;
 
+
 namespace LionFire.Trading.Spotware.Connect
 {
 
@@ -21,10 +22,62 @@ namespace LionFire.Trading.Spotware.Connect
     //{
     //}
 
-    public class DataLoadResult
+    public class SpotwareConnectLoadHistoricalDataProvider : IHistoricalDataProvider
     {
-        public DateTime StartDate;
-        public DateTime EndDate;
+        public IAccount Account { get { return account; } }
+        private CTraderAccount account;
+        public SpotwareConnectLoadHistoricalDataProvider(CTraderAccount account)
+        {
+            this.account = account;
+        }
+
+        public const int MaxConcurrentRequests = 5;
+        private static SemaphoreSlim retrieveSemaphore = new SemaphoreSlim(MaxConcurrentRequests, MaxConcurrentRequests);
+
+        public async Task<DataLoadResult> RetrieveDataForChunk(MarketSeriesBase series, DateTime date, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null)
+        {
+            var result = new DataLoadResult(series);
+
+            DateTime chunkStart;
+            DateTime chunkEnd;
+            HistoricalDataCacheFile.GetChunkRange(series.TimeFrame, date, out chunkStart, out chunkEnd);
+
+            result.QueryDate = DateTime.UtcNow;
+            var job = new SpotwareLoadHistoricalDataJob(series)
+            {
+                StartTime = chunkStart,
+                EndTime = chunkEnd,
+                WriteCache = writeCache,
+                LinkWithAccountData = !cacheOnly,
+            };
+
+            try
+            {
+                await retrieveSemaphore.WaitAsync();
+                await job.Run();
+            }
+            finally
+            {
+                retrieveSemaphore.Release();
+            }
+
+            if (job.ResultCount > 0)
+            {
+                result.IsAvailable = true;
+            }
+
+            result.Bars = job.ResultBars;
+            result.Ticks = job.ResultTicks;
+            result.StartDate = chunkStart;
+            result.EndDate = chunkEnd;
+
+            if (result.QueryDate < chunkEnd)
+            {
+                result.IsPartial = true;
+            }
+
+            return result;
+        }
     }
 
     public class SpotwareLoadHistoricalDataJob : ProgressiveJob, IJob
@@ -32,14 +85,35 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Parameters
 
-        public bool WriteCache { get; set; } = true;
+        public bool WriteCache { get; set; } = false;
 
         public string Symbol;
         public TimeFrame TimeFrame;
 
+        /// <summary>
+        /// Will be changed to UTC Now if past now.
+        /// </summary>
         public DateTime EndTime = DateTime.UtcNow;
+        //public DateTime EffectiveEndTime
+        //{
+        //    get
+        //    {
+        //        return GetEffectiveEndTime(EndTime);
+        //    }
+        //}
         public DateTime? StartTime = null;
-        public int MinBars = TradingOptions.DefaultHistoricalDataBarsDefault;
+        //public int MinBars = TradingOptions.DefaultHistoricalDataBarsDefault;
+        public int MinItems = 0;
+
+        public DateTime GetEffectiveEndTime(DateTime endTime)
+        {
+            var now = DateTime.UtcNow + TimeSpan.FromMinutes(5); // HARDCODE
+            if (now < endTime)
+            {
+                return now;
+            }
+            return endTime;
+        }
 
         #endregion
 
@@ -51,9 +125,21 @@ namespace LionFire.Trading.Spotware.Connect
         public bool LinkWithAccountData { get; set; } = true;
 
         public CTraderAccount Account { get; set; }
-        protected MarketSeriesBase MarketSeriesBase { get; private set; }
-        public MarketSeries MarketSeries { get; set; }
-        public MarketTickSeries MarketTickSeries { get; set; }
+
+        #region MarketSeriesBase
+
+        public MarketSeriesBase MarketSeriesBase
+        {
+            get { return marketSeriesBase; }
+            set { marketSeriesBase = value; }
+        }
+        private MarketSeriesBase marketSeriesBase;
+
+        #endregion
+
+
+        public MarketSeries MarketSeries { get { return MarketSeriesBase as MarketSeries; } }
+        public MarketTickSeries MarketTickSeries { get { return MarketSeriesBase as MarketTickSeries; } }
 
         public string AccountId { get { if (accountId != null) { return accountId; } return Account?.Template.AccountId; } set { this.accountId = value; } }
         private string accountId;
@@ -79,7 +165,15 @@ namespace LionFire.Trading.Spotware.Connect
         #region Construction
 
         public SpotwareLoadHistoricalDataJob() { }
-        public SpotwareLoadHistoricalDataJob(string symbol, TimeFrame timeFrame) { this.Symbol = symbol; this.TimeFrame = timeFrame; }
+        public SpotwareLoadHistoricalDataJob(MarketSeriesBase series)
+        {
+            if (series == null) throw new ArgumentNullException(nameof(series));
+            this.MarketSeriesBase = series;
+            this.Symbol = series.SymbolCode;
+            this.TimeFrame = series.TimeFrame;
+            this.Account = (CTraderAccount)series.Account;
+        }
+        //public SpotwareLoadHistoricalDataJob(string symbol, TimeFrame timeFrame) { this.Symbol = symbol; this.TimeFrame = timeFrame; }
 
         #endregion
 
@@ -92,7 +186,7 @@ namespace LionFire.Trading.Spotware.Connect
             if (TimeFrame != null) { hash ^= TimeFrame.Name.GetHashCode(); }
             hash ^= EndTime.GetHashCode();
             if (StartTime.HasValue) hash ^= StartTime.Value.GetHashCode();
-            hash ^= MinBars.GetHashCode();
+            hash ^= MinItems.GetHashCode();
             return hash;
         }
 
@@ -101,7 +195,7 @@ namespace LionFire.Trading.Spotware.Connect
             var other = obj as SpotwareLoadHistoricalDataJob;
             if (other == null) return false;
 
-            return Symbol == other.Symbol && TimeFrame?.Name == other.TimeFrame?.Name && EndTime == other.EndTime && StartTime == other.StartTime && MinBars == other.MinBars;
+            return Symbol == other.Symbol && TimeFrame?.Name == other.TimeFrame?.Name && EndTime == other.EndTime && StartTime == other.StartTime && MinItems == other.MinItems;
         }
 
         #endregion
@@ -136,27 +230,55 @@ namespace LionFire.Trading.Spotware.Connect
             await _Execute();
         }
 
-        private async Task<DataLoadResult> LoadDataForChunk(DateTime date, bool cacheOnly = false, bool writeCache = true)
+        public static class MarketDateUtils
         {
-            var result = new DataLoadResult();
+            public static int MarketOpenHour = 21;
+            public static int MarketCloseHour = 22;
 
-            HistoricalDataCacheFile.GetChunkRange(TimeFrame, date, out result.StartDate, out result.EndDate);
+            public static int GetMarketHourDays(DateTime startDate, DateTime? endDate)
+            {
+                int result = 0;
+                if (!endDate.HasValue) endDate = startDate;
 
-            var cacheFile = HistoricalDataCacheFile.GetCacheFile(this.Account, this.Symbol, TimeFrame, date);
-            await cacheFile.EnsureLoaded();
+                for (DateTime date = startDate; date <= endDate; date += TimeSpan.FromDays(1))
+                {
+                    if (date.DayOfWeek == DayOfWeek.Saturday) continue;
 
-            return result;
+                    if (date.Month == 12)
+                    {
+                        if (date.Day == 25 || date.Day == 31) continue;
+                    }
+                    if (date.Month == 1)
+                    {
+                        if (date.Day == 1 || date.Day == 2) continue;
+                    }
+                    result++;
+                }
+                return result;
+            }
         }
+
 
         // ENH: max request size, and progress reporting
         private async Task _Execute()
         {
-            MarketSeriesBase = MarketSeries ?? (MarketSeriesBase)MarketTickSeries;
+            //MarketSeriesBase = MarketSeries ?? (MarketSeriesBase)MarketTickSeries;
+            bool useTicks = TimeFrame.Name == "t1";
+            if (useTicks)
+            {
+                ResultTicks = new List<Tick>();
+            }
+            else
+            {
+                ResultBars = new List<TimedBar>();
+            }
 
-            if (MinBars == 0 && !StartTime.HasValue)
+            if (
+                MinItems == 0 &&
+                !StartTime.HasValue)
             {
                 UpdateProgress(0.1, "Done.  (No action since MinBars == 0 && !StartTime.HasValue)");
-                Result = new List<TimedBarStruct>();
+
                 return;
             }
             UpdateProgress(0.1, "Starting");
@@ -188,42 +310,47 @@ namespace LionFire.Trading.Spotware.Connect
 
             int daysPageSize;
 
-            int requestBars = (int)(MinBars * multiplier);
+            int requestBars = (int)(MinItems * multiplier);
 
             //var prefix = "{ \"data\":[";
 
+#if AllowRewind
+
             bool rewind = false;
-            int MarketOpenHour = 21; // 
-            int MarketCloseHour = 22; // 
-            switch (EndTime.DayOfWeek)
-            {
-                case DayOfWeek.Friday:
-                    break;
-                case DayOfWeek.Saturday:
-                    EndTime = EndTime - TimeSpan.FromDays(1);
-                    rewind = true;
-                    break;
-                case DayOfWeek.Sunday:
-                    if (EndTime.Hour < MarketOpenHour)
-                    {
-                        EndTime = EndTime - TimeSpan.FromDays(2);
-                        rewind = true;
-                    }
-                    break;
-                default:
-                    break;
-            }
+            rewind = DateUtils.IsMarketDate(StartTime, EndTime);
+            // TODO: Subtract days
+            //int MarketOpenHour = 21; // 
+            //int MarketCloseHour = 22; // 
+            //switch (EndTime.DayOfWeek)
+            //{
+            //    case DayOfWeek.Friday:
+            //        break;
+            //    case DayOfWeek.Saturday:
+            //        EndTime = EndTime - TimeSpan.FromDays(1);
+            //        rewind = true;
+            //        break;
+            //    case DayOfWeek.Sunday:
+            //        if (EndTime.Hour < MarketOpenHour)
+            //        {
+            //            EndTime = EndTime - TimeSpan.FromDays(2);
+            //            rewind = true;
+            //        }
+            //        break;
+            //    default:
+            //        break;
+            //}
             if (rewind)
             {
                 EndTime = new DateTime(EndTime.Year, EndTime.Month, EndTime.Day, MarketCloseHour, 0, 0);
             }
+#endif
 
             if (StartTime.HasValue)
             {
                 startTime = StartTime.Value;
                 // TODO: maxBarsPerRequest?
             }
-            else
+            else if (requestBars > 0)
             {
                 if (requestTimeFrame == "h1")
                 {
@@ -233,6 +360,10 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     startTime = EndTime - TimeSpan.FromMinutes(requestBars);
                 }
+            }
+            else
+            {
+                throw new Exception("!StartTime.HasValue && requestBars <= 0");
             }
 
             if (requestTimeFrame == "h1")
@@ -247,8 +378,9 @@ namespace LionFire.Trading.Spotware.Connect
             #endregion
 
             var InitialEndTime = EndTime;
+            var endTimeIterator = EndTime;
 
-            var timeSpan = EndTime - startTime;
+            var timeSpan = endTimeIterator - startTime;
             if (timeSpan.TotalDays < 0)
             {
                 throw new ArgumentException("timespan is negative");
@@ -259,8 +391,10 @@ namespace LionFire.Trading.Spotware.Connect
                 Console.WriteLine("WARNING TODO: download historical trendbars - timeSpan.TotalDays > daysPageSize.  TimeSpan: " + timeSpan);
             }
 
+            var downloadedTickSets = new Stack<SpotwareTick[]>();
             var downloadedBarSets = new Stack<SpotwareTrendbar[]>();
-            int totalBarsDownloaded = 0;
+
+            int totalItemsDownloaded = 0;
             int tryAgainCount = 0;
             tryagain:
 
@@ -270,7 +404,8 @@ namespace LionFire.Trading.Spotware.Connect
             }
 
             var from = startTime.ToSpotwareUriParameter();
-            var to = EndTime.ToSpotwareUriParameter();
+
+            var to = GetEffectiveEndTime(endTimeIterator).ToSpotwareUriParameter();
 
             var uri = SpotwareAccountApi.TrendBarsUri;
             uri = uri
@@ -284,6 +419,7 @@ namespace LionFire.Trading.Spotware.Connect
 
             // Read from stream: see http://stackoverflow.com/questions/26601594/what-is-the-correct-way-to-use-json-net-to-parse-stream-of-json-objects
 
+            DateTime queryDate = DateTime.UtcNow;
             UpdateProgress(0.11, $"Sending request: {from}-{to}");
 
             var response = await client.GetAsyncWithRetries(uri, retryDelayMilliseconds: 10000);
@@ -292,6 +428,15 @@ namespace LionFire.Trading.Spotware.Connect
             var receiveStream = await response.Content.ReadAsStreamAsync();
             System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
             var json = readStream.ReadToEnd();
+
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                if ((int)response.StatusCode == 429)
+                {
+                    Debug.WriteLine("429 - Too Many Requests.");
+
+                }
+            }
 
             UpdateProgress(0.95, "Deserializing");
             var error = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareErrorContainer>(json);
@@ -304,37 +449,62 @@ namespace LionFire.Trading.Spotware.Connect
                 throw new Exception($"API returned empty response.  StatusCode:  {response.StatusCode}");
             }
 
-            var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTrendbarsResult>(json);
+            ISpotwareItemsResult data2;
 
-            if (data.data == null)
+
+            if (useTicks)
             {
-                throw new Exception($"API returned no data.  StatusCode:  {response.StatusCode}");
+                var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTicksResult>(json);
+                data2 = data;
+                if (data.data == null)
+                {
+                    throw new Exception($"API returned no data.  StatusCode:  {response.StatusCode}");
+                }
+
+                downloadedTickSets.Push(data.data);
+                totalItemsDownloaded += data.data.Length;
+            }
+            else
+            {
+                var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTrendbarsResult>(json);
+                data2 = data;
+                if (data.data == null)
+                {
+                    throw new Exception($"API returned no data.  StatusCode:  {response.StatusCode}");
+                }
+
+                downloadedBarSets.Push(data.data);
+                totalItemsDownloaded += data.data.Length;
             }
 
-            downloadedBarSets.Push(data.data);
-            totalBarsDownloaded += data.data.Length;
-
-            if (totalBarsDownloaded < MinBars)
+            if (MinItems > 0 && totalItemsDownloaded < MinItems)
             {
-                int lessThanExpectedAmount = MinBars - data.data.Length;
+                int lessThanExpectedAmount = MinItems - data2.Count;
 
                 if (tryAgainCount > MaxTryAgainCount)
                 {
-                    throw new Exception($"Didn't get the requested {MinBars} minimum bars.  Tried rewinding to {EndTime}.  If this rewind is not enough, increase MaxTryAgainCount.");
+                    throw new Exception($"Didn't get the requested {MinItems} minimum bars.  Tried rewinding to {endTimeIterator}.  If this rewind is not enough, increase MaxTryAgainCount.");
                 }
                 switch (requestTimeFrame)
                 {
+                    case "t1":
+                        {
+                            var amount = TimeSpan.FromMinutes(Math.Min(TryAgainRewindHours * 60 * 60, lessThanExpectedAmount));
+                            endTimeIterator = startTime - TimeSpan.FromMilliseconds(1); // REVIEW: can two ticks happen at the same millisecond and would the data supplier only give me one?
+                            startTime -= amount;
+                            break;
+                        }
                     case "m1":
                         {
                             var amount = TimeSpan.FromMinutes(Math.Min(TryAgainRewindHours * 60, lessThanExpectedAmount));
-                            EndTime = startTime - TimeSpan.FromMinutes(1);
+                            endTimeIterator = startTime - TimeSpan.FromMinutes(1);
                             startTime -= amount;
                             break;
                         }
                     case "h1":
                         {
                             var amount = TimeSpan.FromHours(Math.Min(TryAgainRewindHours, lessThanExpectedAmount));
-                            EndTime = startTime - TimeSpan.FromHours(1);
+                            endTimeIterator = startTime - TimeSpan.FromHours(1);
                             startTime -= amount;
                             break;
                         }
@@ -345,21 +515,46 @@ namespace LionFire.Trading.Spotware.Connect
                 goto tryagain;
             }
 
-            UpdateProgress(0.98, "Processing data");
+            UpdateProgress(0.96, "Processing data");
 
-            Result = new List<TimedBarStruct>();
-            while (downloadedBarSets.Count > 0)
+            if (useTicks)
             {
-                var set = downloadedBarSets.Pop();
-                //foreach (var set in downloadedBarSets)
+                var sets = downloadedTickSets;
+                while (sets.Count > 0)
                 {
+                    var set = sets.Pop();
+
+                    // TOSANITYCHECK: verify contiguous
+                    if (set.Length > 0)
+                    {
+                        Debug.WriteLine($"[data] {Symbol} {TimeFrame.Name} Loading {set.Length} bars {set[0].timestamp.ToDateTime().ToString(DateFormat)} to {set[set.Length - 1].timestamp.ToDateTime().ToString(DateFormat)}");
+                        foreach (var b in set)
+                        {
+                            ResultTicks.Add(new Tick()
+                            {
+                                Time = b.timestamp.ToDateTime(),
+                                Bid = b.bid,
+                                Ask = b.ask,
+                            });
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var sets = downloadedBarSets;
+
+                while (sets.Count > 0)
+                {
+                    var set = sets.Pop();
+
                     // TOSANITYCHECK: verify contiguous
                     if (set.Length > 0)
                     {
                         Debug.WriteLine($"[data] {Symbol} {TimeFrame.Name} Loading bars {set[0].timestamp.ToDateTime().ToString(DateFormat)} to {set[set.Length - 1].timestamp.ToDateTime().ToString(DateFormat)}");
                         foreach (var b in set)
                         {
-                            Result.Add(new TimedBarStruct()
+                            ResultBars.Add(new TimedBar()
                             {
                                 OpenTime = b.timestamp.ToDateTime(),
                                 Open = b.open,
@@ -373,29 +568,36 @@ namespace LionFire.Trading.Spotware.Connect
                 }
             }
 
-            if (LinkWithAccountData && Account != null && Result.Count > 0)
-            {
-                UpdateProgress(0.99, "Loading data into memory");
-                if (MarketSeries != null)
-                {
-                    //var series = (MarketSeries)Account.GetMarketSeries(this.Symbol, this.TimeFrame);
-                    MarketSeries.Add(Result, startTime, InitialEndTime);
-                    MarketSeries.RaiseLoadHistoricalDataCompleted(startTime, EndTime);
-                }
-            }
-
             UpdateProgress(1, "Done");
         }
 
         public const string DateFormat = "yyyy-MM-dd HH:mm:ss";
-        public List<TimedBarStruct> Result { get; set; }
-
+        public List<TimedBar> ResultBars { get; set; }
+        public List<Tick> ResultTicks { get; set; }
+        public int ResultCount
+        {
+            get
+            {
+                if (ResultBars != null) return ResultBars.Count;
+                if (ResultTicks != null) return ResultTicks.Count;
+                return 0;
+            }
+        }
+        public DateTime LastOpenTime
+        {
+            get
+            {
+                if (ResultBars != null) return ResultBars.Last().OpenTime;
+                if (ResultTicks != null) return ResultTicks.Last().Time;
+                return default(DateTime);
+            }
+        }
 
         #region Misc
 
         public override string ToString()
         {
-            return $"LoadHistoricalData({Symbol}, {TimeFrame.Name} {this.startTime} - {this.EndTime}  minbars: {MinBars}  hash: {GetHashCode()})";
+            return $"LoadHistoricalData({Symbol}, {TimeFrame.Name} {this.startTime} - {this.EndTime}  minbars: {MinItems}  hash: {GetHashCode()})";
         }
         #endregion
     }

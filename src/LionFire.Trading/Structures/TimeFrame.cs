@@ -130,7 +130,7 @@ namespace LionFire.Trading
                     switch (TimeFrameUnit)
                     {
                         case TimeFrameUnit.Tick:
-                            timeSpan = TimeSpan.Zero;
+                            timeSpan = TimeSpan.FromMilliseconds(1);
                             break;
                         case TimeFrameUnit.Minute:
                             timeSpan = TimeSpan.FromMinutes(TimeFrameValue);

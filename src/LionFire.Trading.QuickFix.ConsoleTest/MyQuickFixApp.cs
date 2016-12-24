@@ -110,7 +110,8 @@ namespace LionFire.Trading.QuickFixN.ConsoleTest
         }
         public AccountSettings settings {
             get {
-                using (var sr = new StreamReader(new FileStream(@"c:\Trading\Accounts\icmarkets-demo.json", FileMode.Open)))
+                var basePath = @"C:\ProgramData\Trading"; // HARDPATH TODO
+                using (var sr = new StreamReader(new FileStream(Path.Combine(basePath, @"Accounts\icmarkets-demo.json"), FileMode.Open)))
                 {
                     return JsonConvert.DeserializeObject<AccountSettings>(sr.ReadToEnd());
                 }

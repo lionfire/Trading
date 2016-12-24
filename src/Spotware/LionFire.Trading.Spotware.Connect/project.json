@@ -12,11 +12,12 @@
     "System.Threading.Thread": "4.0.0"
   },
   "frameworks": {
-    "netstandard1.4": {
+    "netstandard1.5": {
     },
     "net462": {
       "dependencies": {
-        "Google.ProtocolBuffers": "2.4.1.555"
+        "Google.ProtocolBuffers": "2.4.1.555",
+        "LionFire.Environment": "0.0.4-*"
       }
     }
   }

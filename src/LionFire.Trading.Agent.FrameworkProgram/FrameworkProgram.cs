@@ -37,7 +37,7 @@ namespace LionFire.Trading.Agent.Program
                 var a = new AppHost()
 
                 #region Bootstrap
-                    .AddJsonAssetProvider(@"c:\Trading")
+                    .AddJsonAssetProvider(LionFireEnvironment.ProgramDataDir)
                     .Bootstrap()
                 #endregion
 

@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+#if !cAlgo
+using LionFire.Parsing.String;
+#endif
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Backtesting
 {
+    [Assets.AssetPath("Results")]
     public class BacktestResult
     {
         public DateTime? Start { get; set; }
@@ -66,4 +70,62 @@ namespace LionFire.Trading.Backtesting
 
 
     }
+
+#if !cAlgo
+
+    public class BacktestResultHandle :IReadHandle<BacktestResult> // TODO: Use IReadHandle or something
+    {
+        public static implicit operator BacktestResultHandle(BacktestResult r)
+        {
+            return new BacktestResultHandle { Object = r };
+        }
+
+        public bool HasObject { get { return obj != null; } }
+
+        public BacktestResult Object
+        {
+            get
+            {
+                if (obj == null && Path != null)
+                {
+                    try
+                    {
+                        obj = Newtonsoft.Json.JsonConvert.DeserializeObject<BacktestResult>(System.IO.File.ReadAllText(Path));
+                    }
+                    catch { }
+                }
+                return obj;
+            }
+            set { obj = value; }
+        }
+        private BacktestResult obj;
+
+        public BacktestResultHandle Self { get { return this; } } // REVIEW - another way to get context from datagrid: ancestor row?
+        public string Path { get; set; }
+
+        [Unit("id=")]
+        public string Id { get; set; }
+
+        [Unit("bot=")]
+        public string Bot { get; set; }
+
+        [Unit("sym=")]
+        public string Symbol { get; set; }
+
+        /// <summary>
+        /// AROI vs Max Equity Drawdown
+        /// </summary>
+        [Unit("ad")]
+        public double AD { get; set; }
+
+        /// <summary>
+        /// Trades Per month
+        /// </summary>
+        [Unit("tpm")]
+        public double TPM { get; set; }
+
+        [Unit("d")]
+        public double Days { get; set; }
+    }
+#endif
 }

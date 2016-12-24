@@ -5,14 +5,100 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public class TimeFrameBar : TimedBar
+    //public class TimeFrameBar : TimedBar
+    //{
+    //    public string TimeFrame { get; set; }
+    //}
+
+    public enum DataStatus
     {
-        public string TimeFrame { get; set; }
+        Invalid = 0,
+        Valid = 1,
+        ValidTimeNoData = 2,
+        NotLoaded = 3,
     }
 
-    public class TimedBar : Bar
+    public struct TimedBar : ITimedBar
     {
-        public TimedBar() { }
+
+        public bool IsValid { get { return DataStatus == DataStatus.Valid; } }
+
+        public DataStatus DataStatus
+        {
+            get
+            {
+                if (OpenTime == default(DateTime))
+                { return DataStatus.Invalid; }
+                else if (OpenTime == DateTime.MaxValue)
+                { return DataStatus.NotLoaded; }
+                else
+                {
+                    if (double.IsNaN(Open) ||
+                        double.IsNaN(High) ||
+                        double.IsNaN(Low) ||
+                        double.IsNaN(Close)
+                        )
+                    {
+                        return DataStatus.ValidTimeNoData;
+                    }
+                    else
+                    {
+                        return DataStatus.Valid;
+                    }
+                }
+            }
+
+        }
+
+        DateTime IMarketDataPoint.Time
+        {
+            get { return OpenTime; }
+        }
+
+        public DateTime OpenTime { get; set; }
+        public double High { get; set; }
+        public double Low { get; set; }
+        public double Open { get; set; }
+        public double Close { get; set; }
+        public double Volume { get; set; }
+
+
+        #region Construction
+
+        public static TimedBar New
+        {
+            get
+            {
+                return new TimedBar()
+                {
+                    OpenTime = default(DateTime),
+                    High = double.NaN,
+                    Low = double.NaN,
+                    Open = double.NaN,
+                    Close = double.NaN,
+                    Volume = double.NaN,
+                };
+            }
+        }
+
+        public static TimedBar Invalid { get; private set; }
+
+        static TimedBar()
+        {
+            Invalid = New;
+        }
+
+
+        //private TimedBar() { }
+        //public TimedBar() {
+        //    OpenTime = default(DateTime);
+        //    High = double.NaN;
+        //    Low = double.NaN;
+        //    Open = double.NaN;
+        //    Close = double.NaN;
+        //    Volume = double.NaN;
+        //}
+
         public TimedBar(DateTime date, double open, double high, double low, double close, double volume)
         {
             this.OpenTime = date;
@@ -32,7 +118,7 @@ namespace LionFire.Trading
             this.Close = b.Bar.Close;
             this.Volume = b.Bar.Volume;
         }
-        public TimedBar(TimedBarStruct b)
+        public TimedBar(ITimedBar b)
         {
             this.OpenTime = b.OpenTime;
             this.High = b.High;
@@ -46,26 +132,23 @@ namespace LionFire.Trading
             return new TimedBar(b);
         }
 
-        public DateTime OpenTime { get; set; }
+        #endregion
 
-        public override string ToString()
-        {
-            var date = OpenTime.ToDefaultString();
-            return $"{date} {base.ToString()}";
-        }
+        #region Clone/Merge Methods
 
-
-        public void Merge(TimedBar next)
+        public TimedBar Merge(TimedBar next)
         {
 
             var current = this;
-            if (next != null)
+            if (next.OpenTime != null)
             {
                 High = Math.Max(current.High, next.High);
                 Low = Math.Min(current.Low, next.Low);
                 Close = next.Close;
                 Volume = current.Volume + next.Volume;
             }
+
+            return this;
 
             //return new TimedBar
             //{
@@ -90,5 +173,24 @@ namespace LionFire.Trading
                 Volume = this.Volume,
             };
         }
+
+        #endregion
+
+        #region Misc
+
+        public override string ToString()
+        {
+            var date = OpenTime.ToDefaultString();
+
+            var chars = 8;
+            var padChar = ' ';
+            //var padChar = '0';
+            var vol = Volume > 0 ? $" [v:{Volume.ToString().PadLeft(chars)}]" : "";
+            return $"{date} o:{Open.ToString().PadRight(chars, padChar)} h:{High.ToString().PadRight(chars, padChar)} l:{Low.ToString().PadRight(chars, padChar)} c:{Close.ToString().PadRight(chars, padChar)}{vol}";
+
+        }
+
+        #endregion
+
     }
 }

@@ -31,17 +31,15 @@ namespace LionFire.Trading.Agent.Program
 
             try
             {
-                var basePath = @"c:\Trading"; // MOVE somewhere?
+                var basePath = LionFireEnvironment.ProgramDataDir;
 
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
-                
-                
 
                 new AppHost()
                     //.AddOptions(basePath)
 
                 #region Bootstrap
-                    .AddJsonAssetProvider(@"c:\Trading")
+                    .AddJsonAssetProvider(LionFireEnvironment.ProgramDataDir)
                     .Bootstrap()
                 #endregion
 

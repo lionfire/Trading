@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using LionFire.Trading.Backtesting;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.ComponentModel;
 
 namespace LionFire.Trading
 {
@@ -42,13 +43,17 @@ namespace LionFire.Trading
         long QuantityToVolume(double quantity);
         double VolumeToQuantity(long volume);
 
-        IMarketSeries GetMarketSeries(TimeFrame timeFrame);
+        MarketSeries GetMarketSeries(TimeFrame timeFrame);
+        MarketSeriesBase GetMarketSeriesBase(TimeFrame timeFrame);
 
-        event Action<SymbolTick> Tick;
+        event Action<SymbolTick> Ticked;
 
         Task<TimedBar> GetLastBar(TimeFrame timeFrame);
+        Task<Tick> GetLastTick();
 
         MarketTickSeries MarketTickSeries { get; }
+
+        IAccount Account { get; }
     }
 
     public interface ISymbolInternal : Symbol
@@ -66,6 +71,11 @@ namespace LionFire.Trading
         {
             throw new NotImplementedException();
         }
+        public override Task<Tick> GetLastTick()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 
     public abstract class SymbolImplBase : Symbol, ISymbolInternal
@@ -106,13 +116,32 @@ namespace LionFire.Trading
 
         #endregion
 
+        #region IsSubscribed
+
+        public bool IsSubscribed
+        {
+            get { return isSubscribed; }
+            set
+            {
+                if (isSubscribed == value) return;
+                isSubscribed = value;
+                // TODO: Actually subscribe
+                OnPropertyChanged(nameof(IsSubscribed));
+            }
+        }
+        protected bool isSubscribed;
+
+        #endregion
+
         #region Current Market State
+
+
 
         public double Ask
         {
             get
             {
-                if (ask == double.MinValue)
+                if (double.IsNaN(ask ) && isSubscribed)
                 {
                     LoadLatestTicks();
                 }
@@ -123,13 +152,13 @@ namespace LionFire.Trading
                 ask = value;
             }
         }
-        double ask = double.MinValue;
+        double ask = double.NaN;
 
         public double Bid
         {
             get
             {
-                if (bid == double.MinValue)
+                if (double.IsNaN(bid) && isSubscribed)
                 {
                     LoadLatestTicks();
                 }
@@ -140,13 +169,13 @@ namespace LionFire.Trading
                 bid = value;
             }
         }
-        double bid = double.MinValue;
+        double bid = double.NaN;
 
         public void LoadLatestTicks()
         {
-            // TODO
-            GetMarketSeries(TimeFrame.t1);
+            MarketTickSeries.EnsureDataAvailable(null, DateTime.UtcNow, DefaultTicks);
         }
+        public static readonly int DefaultTicks = 30;
 
 
         public double Spread
@@ -161,32 +190,32 @@ namespace LionFire.Trading
 
         #region Tick Events
 
-        public event Action<SymbolTick> Tick
+        public event Action<SymbolTick> Ticked
         {
             add
             {
                 lock (eventLock)
                 {
-                    if (tickEvent == null)
+                    if (tickedEvent == null)
                     {
                         TickHasObserversChanged?.Invoke(this, true);
                     }
-                    tickEvent += value;
+                    tickedEvent += value;
                 }
             }
             remove
             {
                 lock (eventLock)
                 {
-                    tickEvent -= value;
-                    if (tickEvent == null)
+                    tickedEvent -= value;
+                    if (tickedEvent == null)
                     {
                         TickHasObserversChanged?.Invoke(this, false);
                     }
                 }
             }
         }
-        private event Action<SymbolTick> tickEvent;
+        private event Action<SymbolTick> tickedEvent;
         private object eventLock = new object();
 
         public event Action<Symbol, bool> TickHasObserversChanged;
@@ -198,7 +227,7 @@ namespace LionFire.Trading
 #if DEBUG_TICK
             Debug.WriteLine("[tick] " + tick.ToString());
 #endif
-            tickEvent?.Invoke(tick);
+            tickedEvent?.Invoke(tick);
         }
 
         #endregion
@@ -209,12 +238,18 @@ namespace LionFire.Trading
 
         #region Series
 
-        ConcurrentDictionary<string, IMarketSeries> seriesByTimeFrame = new ConcurrentDictionary<string, IMarketSeries>();
-        public IMarketSeries GetMarketSeries(TimeFrame timeFrame)
+        ConcurrentDictionary<string, MarketSeries> seriesByTimeFrame = new ConcurrentDictionary<string, MarketSeries>();
+        public MarketSeries GetMarketSeries(TimeFrame timeFrame)
         {
+            if (timeFrame.Name == "t1") { throw new ArgumentException("Use MarketTickSeries instead for t1"); }
             return seriesByTimeFrame.GetOrAdd(timeFrame.Name, timeFrameName => this.Account.CreateMarketSeries(Code, timeFrame));
         }
 
+        public MarketSeriesBase GetMarketSeriesBase(TimeFrame timeFrame)
+        {
+            if (timeFrame.Name == "t1") { return MarketTickSeries; }
+            return GetMarketSeries(timeFrame);
+        }
 
         public MarketTickSeries MarketTickSeries
         {
@@ -235,7 +270,7 @@ namespace LionFire.Trading
         }
         MarketTickSeries marketTickSeries;
         private object _lock = new object();
-      
+
         #endregion
 
         #endregion
@@ -416,6 +451,19 @@ namespace LionFire.Trading
 
 
         public abstract Task<TimedBar> GetLastBar(TimeFrame timeFrame);
+        public abstract Task<Tick> GetLastTick();
+
+
+        #region INotifyPropertyChanged Implementation
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
 
     }
 

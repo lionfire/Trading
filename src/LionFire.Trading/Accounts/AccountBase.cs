@@ -14,6 +14,11 @@ using LionFire.Trading.Workspaces;
 
 namespace LionFire.Trading.Accounts
 {
+    //public class TPaperAccount
+    //{
+    //}
+    //public class PaperAccount : BacktestAccount
+    
     public abstract class AccountBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, IAccount, INotifyPropertyChanged
         where TTemplate : TAccount
     {
@@ -101,6 +106,8 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
+        public virtual DateTime BacktestEndDate { get { return default(DateTime); } }
+
         #region Server State
 
         public abstract DateTime ServerTime { get; protected set; }
@@ -153,8 +160,7 @@ namespace LionFire.Trading.Accounts
         {
             return (MarketSeries)GetMarketSeries(symbol.Code, timeFrame);
         }
-
-
+        
         public abstract MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame);
 
         #region MarketSeries
@@ -164,7 +170,19 @@ namespace LionFire.Trading.Accounts
             return (IMarketSeriesInternal)GetMarketSeries(symbol, tf);
         }
 
-        public IMarketSeries GetMarketSeries(string symbol, TimeFrame tf)
+        public MarketSeriesBase GetMarketSeriesBase(string symbol, TimeFrame tf)
+        {
+            if (tf == TimeFrame.t1)
+            {
+                return GetSymbol(symbol).MarketTickSeries;
+            }
+            else
+            {
+                return GetMarketSeries(symbol,tf);
+            }
+        }
+
+        public MarketSeries GetMarketSeries(string symbol, TimeFrame tf)
         {
             if (tf == TimeFrame.t1)
             {
@@ -280,6 +298,8 @@ namespace LionFire.Trading.Accounts
         List<IAccountParticipant> participants = new List<IAccountParticipant>();
 
         #endregion
+
+        public virtual IHistoricalDataProvider HistoricalDataProvider { get { return null; } }
 
         protected virtual async Task OnStarting()
         {
