@@ -92,14 +92,14 @@ namespace LionFire.Trading
         {
             get
             {
-                return this[MinIndex];
+                return this[FirstIndex];
             }
         }
         public DataType Last
         {
             get
             {
-                return this[MaxIndex];
+                return this[LastIndex];
                 //#if BarStruct
                 //                return bars.LastValue;
                 //#else
@@ -157,7 +157,7 @@ namespace LionFire.Trading
                     int lastIndexToCopy;
                     for (lastIndexToCopy = dataPoints.Count - 1; lastIndexToCopy >= 0 && dataPoints[lastIndexToCopy].Time >= DataStartDate; lastIndexToCopy--) ; // OPTIMIZE?
 
-                    for (int dataIndex = OpenTime.MinIndex - 1; lastIndexToCopy >= 0; dataIndex--, lastIndexToCopy--)
+                    for (int dataIndex = OpenTime.Count == 0 ? 0 : OpenTime.FirstIndex - 1; lastIndexToCopy >= 0; dataIndex--, lastIndexToCopy--)
                     {
                         //var bar = bars[lastIndexToCopy] as TimedBar;
                         //if (bar == null)
@@ -511,8 +511,8 @@ namespace LionFire.Trading
         #endregion
 
 
-        public int MinIndex { get { return OpenTime.MinIndex; } }
-        public int MaxIndex { get { return OpenTime.LastIndex; } }
+        public int FirstIndex { get { return OpenTime.FirstIndex; } }
+        public int LastIndex { get { return OpenTime.LastIndex; } }
 
         public ConcurrentDictionary<DateTime, DataLoadResult> DataLoadResults
         {

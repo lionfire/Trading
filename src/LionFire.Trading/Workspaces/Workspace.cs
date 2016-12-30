@@ -11,30 +11,72 @@ using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
 using System.ComponentModel;
 using System.IO;
+using LionFire.States;
+using LionFire.Structures;
+using System.Reflection;
 
 namespace LionFire.Trading.Workspaces
 {
-
+    
     /// <summary>
     /// Each user will typically work with one workspace.  
     /// FUTURE: Hierarchy of groups and sessions, allowing users to start/stop/view entire groups
     /// </summary>
-    public class Workspace : ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged
+    public class Workspace : ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged
     {
-
 
         #region Relationships
 
-        public TWorkspace Template { get; set; }
+        #region Template
+
+        public TWorkspace Template
+        {
+            get { return template; }
+            set
+            {
+                if (template == value) return;
+                if (template != null)
+                {
+                    template.ControlSwitchChanged -= ControlSwitchChanged;
+                }
+                template = value;
+
+                if (template != null)
+                {
+                    template.ControlSwitchChanged += ControlSwitchChanged;
+                }
+            }
+        }
+        private TWorkspace template;
+
+        #endregion
+
         ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (TWorkspace)value; } }
 
 
         #endregion
 
-        #region Settings
-
-        public WorkspaceSettings Settings { get; set; }
         public WorkspaceInfo Info { get; set; }
+
+        #region Settings
+               
+
+        #region Handlers
+
+        private void ControlSwitchChanged()
+        {
+            foreach (var a in Accounts)
+            {
+                a.IsTradeApiEnabled = CanConnect;
+            }
+        }
+
+        public bool CanConnect
+        {
+            get { return Template.AllowAny && Template.AllowConnect; }
+        }
+
+        #endregion
 
         #endregion
 
@@ -58,7 +100,6 @@ namespace LionFire.Trading.Workspaces
         #endregion
 
 
-
         //public WorkspaceNode Root { get; set; } = new WorkspaceNode(); // FUTURE
 
         public ObservableCollection<Session> Sessions { get; private set; } = new ObservableCollection<Session>();
@@ -75,37 +116,6 @@ namespace LionFire.Trading.Workspaces
         public ObservableCollection<WorkspaceBot> Scanners { get; private set; } = new ObservableCollection<WorkspaceBot>();
         public ObservableCollection<PriceAlert> Alerts { get; private set; } = new ObservableCollection<PriceAlert>();
 
-        #region IsLiveEnabled
-
-        public bool IsLiveEnabled
-        {
-            get { return isLiveEnabled; }
-            set
-            {
-                if (isLiveEnabled == value) return;
-                isLiveEnabled = value;
-                OnPropertyChanged(nameof(IsLiveEnabled));
-            }
-        }
-        private bool isLiveEnabled;
-
-        #endregion
-
-        #region IsTradeApiEnabled
-
-        public bool IsTradeApiEnabled
-        {
-            get { return isTradeApiEnabled; }
-            set
-            {
-                if (isTradeApiEnabled == value) return;
-                isTradeApiEnabled = value;
-                OnPropertyChanged(nameof(IsTradeApiEnabled));
-            }
-        }
-        private bool isTradeApiEnabled;
-
-        #endregion
 
         #region Derived
 
@@ -161,6 +171,7 @@ namespace LionFire.Trading.Workspaces
 
         public Workspace()
         {
+            //this.AttachChangedEventToCollections(() => Changed?.Invoke(this));
         }
 
         public async Task<bool> Initialize()
@@ -199,7 +210,6 @@ namespace LionFire.Trading.Workspaces
                 this.Sessions.Add(session);
                 await session.Initialize().ConfigureAwait(continueOnCapturedContext: false);
             }
-            
 
             state.OnNext(ExecutionState.Ready);
             return true;
@@ -217,6 +227,7 @@ namespace LionFire.Trading.Workspaces
         {
             await StartAllAccounts();
             await StartAllSessions();
+            ControlSwitchChanged();
             state.OnNext(ExecutionState.Started);
         }
 
@@ -260,19 +271,22 @@ namespace LionFire.Trading.Workspaces
 
         #region Misc
 
+        public event Action<object> Changed;
+
         #region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged(string propertyName)
         {
-            var ev = PropertyChanged;
-            if (ev != null) ev(this, new PropertyChangedEventArgs(propertyName));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            Changed?.Invoke(this);
         }
 
         #endregion
 
         #endregion
     }
+
 
 }

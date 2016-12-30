@@ -41,17 +41,51 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
+        public bool IsSamePeriod(DateTime time, DateTime time2)
+        {
+            var tf = MarketSeries.TimeFrame;
+            var periodStart = MarketSeries.TimeFrame.GetPeriodStart(time);
+            var periodEndExclusive = periodStart + tf.TimeSpan;
+            return time2 < periodEndExclusive && time2 >= periodStart;
+        }
+
+
+
+        //private static ILogger logger = Log.Get();
+
+        TimedBar otherBar;
+        //DateTime ServerTimeFromTick = DateTime.MinValue;
+
+        #region ServerTimeFromTick
+
+        public DateTime ServerTimeFromTick
+        {
+            get { return serverTimeFromTick; }
+            set {
+                if (serverTimeFromTick == value) return;
+
+                // TODO: Bar
+
+                serverTimeFromTick = value;
+            }
+        }
+        private DateTime serverTimeFromTick;
+
+        #endregion
 
 
         private void M1_Bar(SymbolBar obj)
         {
-            throw new NotImplementedException("M1 bar to " + MarketSeries.TimeFrame);
+            System.Diagnostics.Debug.WriteLine("Not implemented: M1 bar to " + MarketSeries.TimeFrame);
 
-#if FromTickToMinute
-            if (!IsSameMinute(obj.Time, ServerTimeFromTick) && obj.Time < serverTickToMinuteTime)
+            var serverTime = Account.ServerTime;
+            if (!IsSamePeriod(obj.Time, Account.ServerTime) && obj.Time < Account.ServerTime)
             {
-                logger.LogWarning($"[TICK] Got old {obj.Symbol} tick for time {obj.Time} when server tick to minute time is {serverTickToMinuteTime} and server time from tick is {ServerTimeFromTick}");
+                //logger.LogWarning($"[BAR] Got old {obj.Code} bar for time {obj.Time} when server time is {serverTime}");
             }
+            //throw new NotImplementedException("M1 bar to " + MarketSeries.TimeFrame);
+#if FromTickToMinute
+            // in progress...
 
             if (obj.Time > ServerTimeFromTick)
             {

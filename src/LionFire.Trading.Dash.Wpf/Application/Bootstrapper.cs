@@ -38,6 +38,9 @@ using Newtonsoft.Json;
 using LionFire.Trading.Backtesting;
 using Newtonsoft.Json.Linq;
 using Caliburn.Micro;
+using IEventAggregator = Caliburn.Micro.IEventAggregator;
+using EventAggregator = Caliburn.Micro.EventAggregator;
+using LionFire.Structures;
 
 namespace LionFire.Trading.Dash.Wpf
 {
@@ -48,9 +51,15 @@ namespace LionFire.Trading.Dash.Wpf
             Initialize();
         }
 
+        private readonly SimpleContainer _container = new SimpleContainer();
+
         protected override void Configure()
         {
             base.Configure();
+
+
+            _container.Singleton<IEventAggregator, EventAggregator>();
+            ManualSingleton<IEventAggregator>.Instance = _container.GetInstance<IEventAggregator>();
 
             // http://caliburnmicro.codeplex.com/discussions/287228
             MessageBinder.SpecialValues.Add("$orignalsourcecontext", context =>

@@ -1,42 +1,42 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ComponentModel;
-using System.Threading.Tasks;
+﻿//using System;
+//using System.Collections.Generic;
+//using System.Linq;
+//using System.ComponentModel;
+//using System.Threading.Tasks;
 
-namespace LionFire.Trading.Workspaces
-{
-    public class WorkspaceSettings : INotifyPropertyChanged
-    {
+//namespace LionFire.Trading.Workspaces
+//{
+//    public class WorkspaceSettings : INotifyPropertyChanged
+//    {
 
-        #region TestSetting
+//        #region TestSetting
 
-        public string TestSetting
-        {
-            get { return testSetting; }
-            set
-            {
-                if (testSetting == value) return;
-                testSetting = value;
-                OnPropertyChanged(nameof(TestSetting));
-            }
-        }
-        private string testSetting;
+//        public string TestSetting
+//        {
+//            get { return testSetting; }
+//            set
+//            {
+//                if (testSetting == value) return;
+//                testSetting = value;
+//                OnPropertyChanged(nameof(TestSetting));
+//            }
+//        }
+//        private string testSetting;
 
-        #endregion
+//        #endregion
 
 
-        #region INotifyPropertyChanged Implementation
+//        #region INotifyPropertyChanged Implementation
 
-        public event PropertyChangedEventHandler PropertyChanged;
+//        public event PropertyChangedEventHandler PropertyChanged;
 
-        private void OnPropertyChanged(string propertyName)
-        {
-            var ev = PropertyChanged;
-            if (ev != null) ev(this, new PropertyChangedEventArgs(propertyName));
-        }
+//        private void OnPropertyChanged(string propertyName)
+//        {
+//            var ev = PropertyChanged;
+//            if (ev != null) ev(this, new PropertyChangedEventArgs(propertyName));
+//        }
 
-        #endregion
+//        #endregion
 
-    }
-}
+//    }
+//}

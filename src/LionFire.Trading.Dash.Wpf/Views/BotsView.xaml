@@ -1,0 +1,156 @@
+﻿<UserControl x:Class="LionFire.Trading.Dash.Wpf.BotsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:LionFire.Trading.Dash.Wpf"
+             xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+                 xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
+        xmlns:xcdg="http://schemas.xceed.com/wpf/xaml/datagrid"
+        x:Name="uc"
+                 xmlns:cal="http://www.caliburnproject.org"
+             mc:Ignorable="d" 
+             d:DesignHeight="600" d:DesignWidth="800">
+    <UserControl.Resources>
+
+        <Style TargetType="ToggleButton">
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <!--<Style TargetType="xcdg:DataGridControl">
+            <Setter Property=
+            </Style>-->
+
+        <Style TargetType="xcdg:ColumnManagerRow">
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderBrush" Value="#999"/>
+            <Setter Property="FontFamily" Value="Novecento Wide"/>
+            <Setter Property="FontSize" Value="9"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+
+        <!--<ControlTemplate x:Key="HeaderTemplate" TargetType="{x:Type xcdg:ColumnManagerCell}">
+            <TextBlock Text="{TemplateBinding Content}">
+                <TextBlock.Style>
+                    <Style TargetType="{x:Type TextBlock}">
+                        <Setter Property="Background" Value="White" />
+                        <Setter Property="Foreground" Value="Black" />
+                        
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </ControlTemplate>-->
+
+        <Style TargetType="{x:Type xcdg:ColumnManagerCell}">
+            <!--<Setter Property="Template" Value="{StaticResource HeaderTemplate}"/>-->
+            <Setter Property="BorderBrush" Value="#444"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Background" Value="{StaticResource BG}"/>
+            <Setter Property="Foreground" Value="{StaticResource FG-A}"/>
+        </Style>
+
+        <Style TargetType="xcdg:DataGridControl">
+            <Setter Property="Background" Value="{StaticResource BG}"/>
+            <Setter Property="Foreground" Value="{StaticResource FG-A}"/>
+        </Style>
+
+        <Style TargetType="TextBlock" x:Key="GlyphHeader">
+            <Setter Property="FontFamily" Value="WebHostingHub-Glyphs"/>
+            <Setter Property="FontSize" Value="12"/>
+        </Style>
+        
+        
+    </UserControl.Resources>
+    <DockPanel >
+        <ToolBarTray DockPanel.Dock="Top">
+            <ToolBar>
+                <Button x:Name="RefreshSelected" FontFamily="WebHostingHub-Glyphs">&#xF52A;</Button>
+                <ToggleButton  FontFamily="WebHostingHub-Glyphs" IsChecked="{Binding IsAllEnabled}">&#xF4F9;</ToggleButton>
+                <ToggleButton FontFamily="WebHostingHub-Glyphs" IsChecked="{Binding AllScannersEnabled}">&#xF0F1;</ToggleButton>
+            </ToolBar>
+        </ToolBarTray>
+
+
+        <xcdg:DataGridControl x:Name="ScannersGrid"  ItemsSource="{Binding Items}" AutoCreateColumns="False" SelectedItem="{Binding SelectedItem}">
+            <xcdg:DataGridControl.Columns>
+                <xcdg:Column FieldName="Self" Width="40">
+                    <xcdg:Column.CellContentTemplate>
+                        <DataTemplate>
+                            <DataTemplate.Resources>
+                                <Style TargetType="ToggleButton">
+                                    <Setter Property="BorderBrush" Value="Transparent"/>
+                                    <Setter Property="FontFamily" Value="WebHostingHub-Glyphs"/>
+                                </Style>
+                            </DataTemplate.Resources>
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton IsChecked="{Binding IsLiveEnabled}" Visibility="{Binding CanLive, Converter={StaticResource bvc}}">&#xF21F;</ToggleButton>
+                                <ToggleButton IsChecked="{Binding IsDemoEnabled}" Visibility="{Binding CanDemo, Converter={StaticResource bvc}}">&#xF223;</ToggleButton>
+                                <ToggleButton IsChecked="{Binding IsScanEnabled}" Visibility="{Binding CanScanner, Converter={StaticResource bvc}}">&#xF0F1;</ToggleButton>
+                                <ToggleButton IsChecked="{Binding IsPaperEnabled}" Visibility="{Binding CanPaper, Converter={StaticResource bvc}}">&#xF27E;</ToggleButton>
+                            </StackPanel>
+                        </DataTemplate>
+
+                    </xcdg:Column.CellContentTemplate>
+                </xcdg:Column>
+                <!--<xcdg:Column FieldName="Position" Title="Signal" Width="100" DisplayMemberBinding="{Binding PositionsText}" />-->
+                <xcdg:Column FieldName="NetPositionSizeText" Title="Net Position" Width="80">
+                </xcdg:Column>
+                <xcdg:Column FieldName="Self2" Title="Signal">
+                    <xcdg:Column.CellContentTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding LongSignalText}"></TextBlock>
+                                <TextBlock Text=" "/>
+                                <TextBlock Text="{Binding ShortSignalText}"></TextBlock>
+                            </StackPanel>
+                        </DataTemplate>
+                    </xcdg:Column.CellContentTemplate>
+                </xcdg:Column>
+                <xcdg:Column FieldName="Symbol" Title="Symbol" Width="50" />
+                <xcdg:Column FieldName="TimeFrame" Title="TF" Width="40"/>
+                <xcdg:Column FieldName="Id" Title="Id" />
+                <xcdg:Column FieldName="OpenLong"  Width="40" DisplayMemberBinding="{Binding Indicator.OpenLongPoints.LastValue, StringFormat={}{0:0.0}}">
+                    <xcdg:Column.Title>
+                        <TextBlock  Style="{StaticResource GlyphHeader}">&#xF251;</TextBlock>
+                    </xcdg:Column.Title>
+                </xcdg:Column>
+                <xcdg:Column FieldName="CloseLong"  Width="40"  DisplayMemberBinding="{Binding Indicator.CloseLongPoints.LastValue}">
+                    <xcdg:Column.Title>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource GlyphHeader}">&#xF1B4; &#xF251;</TextBlock>
+                        </StackPanel>
+                    </xcdg:Column.Title>
+                </xcdg:Column>
+                <xcdg:Column FieldName="OpenShort"  Width="40"  DisplayMemberBinding="{Binding Indicator.OpenShortPoints.LastValue}">
+                    <xcdg:Column.Title>
+                        <TextBlock Style="{StaticResource GlyphHeader}">&#xF252;</TextBlock>
+                    </xcdg:Column.Title>
+                </xcdg:Column>
+                <xcdg:Column FieldName="CloseShort"  Width="40" DisplayMemberBinding="{Binding Indicator.CloseShortPoints.LastValue}">
+                    <xcdg:Column.Title>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource GlyphHeader}">&#xF1B4; &#xF252;</TextBlock>
+                        </StackPanel>
+                    </xcdg:Column.Title>
+                </xcdg:Column>
+                <xcdg:Column FieldName="Type" Title="Type" Width="90" />
+                <xcdg:Column FieldName="State" Title="State" DisplayMemberBinding="{Binding Bot.State.Value}" Width="50"/>
+
+                <xcdg:Column FieldName="AD" Title="AD" />
+                <xcdg:Column FieldName="TPM" Title="TPM" />
+                <xcdg:Column FieldName="Days" Title="Days" />
+
+
+                <!--<xcdg:Column FieldName="LongAt" Title="Long @" DisplayMemberBinding="{Binding LongPosition.EntryPrice}" />
+                <xcdg:Column FieldName="LongSL" Title="Long SL" DisplayMemberBinding="{Binding LongPosition.StopLoss}" />
+                <xcdg:Column FieldName="LongTP" Title="Long TP" DisplayMemberBinding="{Binding LongPosition.TakeProfit}" />
+
+                <xcdg:Column FieldName="ShortAt" Title="Short @"  DisplayMemberBinding="{Binding ShortPosition.EntryPrice}" />
+                <xcdg:Column FieldName="ShortSL" Title="Short SL" DisplayMemberBinding="{Binding ShortPosition.StopLoss}"/>
+                <xcdg:Column FieldName="Short TP" Title="Short TP" DisplayMemberBinding="{Binding ShortPosition.TakeProfit}"/>-->
+
+            </xcdg:DataGridControl.Columns>
+        </xcdg:DataGridControl>
+    </DockPanel>
+</UserControl>

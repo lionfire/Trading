@@ -215,13 +215,13 @@ namespace LionFire.Trading.Spotware.Connect
             double lastBid = double.NaN;
             double lastAsk = double.NaN;
 
-            var minIndex = series.MinIndex;
-            for (int index = series.MaxIndex; double.IsNaN(lastBid) || double.IsNaN(lastAsk); index--)
+            var minIndex = series.FirstIndex;
+            for (int index = series.LastIndex; double.IsNaN(lastBid) || double.IsNaN(lastAsk); index--)
             {
-                if (index < series.MinIndex)
+                if (index < series.FirstIndex)
                 {
                     await series.LoadMoreData();
-                    if (index < series.MinIndex)
+                    if (index < series.FirstIndex)
                     {
                         System.Diagnostics.Debug.WriteLine("LoadMoreData didn't get any more data.  That must be all that's available");
                         break;

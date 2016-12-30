@@ -68,7 +68,7 @@ namespace LionFire.Avalon
         /// Determines whether the collection of ViewModels should be
         /// fetched from the model collection on construction
         /// </param>
-        public VmCollection(ICollection<TModel> models, IViewModelProvider viewModelProvider, object context = null, bool autoFetch = true)
+        public VmCollection(ICollection<TModel> models, IViewModelProvider viewModelProvider = null, object context = null, bool autoFetch = true)
         {
             _models = models;
             _context = context;
@@ -187,6 +187,10 @@ namespace LionFire.Avalon
 
         private TViewModel CreateViewModel(TModel model)
         {
+            if (_viewModelProvider == null)
+            {
+                throw new Exception("No ViewModelProvider was provided at create time.  Cannot CreateViewModel.");
+            }
             return _viewModelProvider.GetFor<TViewModel>(model, _context);
         }
 

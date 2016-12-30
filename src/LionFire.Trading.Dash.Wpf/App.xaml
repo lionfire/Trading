@@ -2,6 +2,10 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:LionFire.Trading.Dash.Wpf"
+                          xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
+                 xmlns:xcad="http://schemas.xceed.com/wpf/xaml/avalondock"
+        xmlns:xcdg="http://schemas.xceed.com/wpf/xaml/datagrid"
+
              >
     <Application.Resources>
         <ResourceDictionary>
@@ -10,6 +14,46 @@
                     <local:HelloBootstrapper x:Key="bootstrapper" />
                 </ResourceDictionary>
             </ResourceDictionary.MergedDictionaries>
+
+            <BooleanToVisibilityConverter x:Key="bvc"/>
+
+            <Style TargetType="{x:Type xcdg:GroupLevelIndicatorPane}">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Setter Property="ShowIndicators" Value="False" />
+            </Style>
+            
+            <!-- SWCT Dark Theme -->
+            <!--<SolidColorBrush x:Key="BGTrim" Color="#525252"/>
+            <SolidColorBrush x:Key="BG" Color="#292929"/>
+            <SolidColorBrush x:Key="FG-F" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="FG-E" Color="#EEEEEE"/>
+            <SolidColorBrush x:Key="FG-A" Color="#AAAAAA"/>
+            <SolidColorBrush x:Key="FG" Color="#AAAAAA"/>
+            <SolidColorBrush x:Key="FG-8" Color="#888888"/>-->
+
+            <!-- Normal -->
+            <SolidColorBrush x:Key="BGTrim" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="BG" Color="#FFFFFF"/>
+            <SolidColorBrush x:Key="FG" Color="#000000"/>
+            <SolidColorBrush x:Key="FG-A" Color="#000000"/>
+            <SolidColorBrush x:Key="FG-F" Color="#333333"/>
+            <!--
+            
+            <Style TargetType="DockPanel">
+                <Setter Property="Background" Value="#292929"/>
+            </Style>
+
+            <Style TargetType="xcdg:DataGridControl">
+                <Setter Property="Background" Value="#292929"/>
+            </Style>
+            
+            -->
+
+            <Style TargetType="ToggleButton">
+                <Setter Property="BorderBrush" Value="Transparent"/>
+                <Setter Property="Margin" Value="3 0"/>
+            </Style>
+            
         </ResourceDictionary>
     </Application.Resources>
 </Application>

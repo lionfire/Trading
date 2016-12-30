@@ -16,6 +16,7 @@ using LionFire.Assets;
 using System.Windows.Controls;
 using LionFire.Structures;
 using LionFire.States;
+using System.Threading;
 
 namespace LionFire.Trading.Dash.Wpf
 {
@@ -27,8 +28,13 @@ namespace LionFire.Trading.Dash.Wpf
 
 
     // Primary child: Session
-    public class WorkspaceViewModel : Conductor<IScreen>.Collection.AllActive, IHasStateType
+    public class WorkspaceViewModel : Conductor<IScreen>.Collection.AllActive, IHasStateType, IHandle<WorkspaceDataChanged>
     {
+        public void Handle(WorkspaceDataChanged dc)
+        {
+            Workspace?.Template?.QueueAutoSave();
+        }
+
         #region Children
 
         public WorkspaceExplorerViewModel WorkspaceExplorerViewModel { get; set; }
@@ -56,6 +62,8 @@ namespace LionFire.Trading.Dash.Wpf
 
         #endregion
 
+        public CancellationTokenSource deactivating = new CancellationTokenSource();
+
         #region State
 
         Type IHasStateType.StateType => typeof(WorkspaceState);
@@ -80,18 +88,25 @@ namespace LionFire.Trading.Dash.Wpf
 
         #endregion
 
+        #region Lifecycle
+
         public WorkspaceViewModel()
         {
+            //ManualSingleton<IEventAggregator>.Instance.Subscribe(this);
         }
 
         public WorkspaceViewModel(Workspace workspace) : base()
         {
             this.Workspace = workspace;
+            //ManualSingleton<IEventAggregator>.Instance.Subscribe(this);
         }
 
         protected override void OnActivate()
         {
             base.OnActivate();
+            ManualSingleton<IEventAggregator>.Instance.Subscribe(this);
+
+
             Task.Run(async () =>
             {
                 await InitWorkspace();
@@ -109,7 +124,7 @@ namespace LionFire.Trading.Dash.Wpf
                     }
                     var type = ViewModelResolver.GetViewModelType(tItem.View);
                     var item = (IWorkspaceViewModel)Activator.CreateInstance(type);
-                    item.Session = session;
+                    item.SessionViewModel = session;
                     item.WorkspaceViewModel = this;
 
                     (item as IHasStateType)?.SetState(tItem.State);
@@ -135,8 +150,106 @@ namespace LionFire.Trading.Dash.Wpf
                 //    Items.Add(WorkspaceExplorerViewModel);
                 //    ActivateItem(WorkspaceExplorerViewModel);
                 //}
+
+                deactivating = new CancellationTokenSource();
+                var timerTask = Task.Run(async () =>
+                {
+                    while (true)
+                    {
+                        UpdateStats();
+                        await Task.Delay(1000, deactivating.Token);
+                    }
+                }, deactivating.Token);
+
             });
         }
+
+        private void UpdateStats()
+        {
+            if (StartTime == default(DateTime))
+            {
+                StartTime = DateTime.UtcNow;
+            }
+            TotalTicks = Sessions.Select(s => s.Session.Account.AccountStats.Totals.Ticks).Sum();
+            TotalOther = Sessions.Select(s => s.Session.Account.AccountStats.Totals.Other).Sum();
+
+            TicksPerMinute = (int)(TotalTicks / (DateTime.UtcNow - StartTime).TotalMinutes);
+            OtherPerMinute = (int)(TotalOther / (DateTime.UtcNow - StartTime).TotalMinutes);
+
+        }
+        public DateTime StartTime { get; set; }
+
+
+        #region TicksPerMinute
+
+        public int TicksPerMinute
+        {
+            get { return ticksPerMinute; }
+            set
+            {
+                if (ticksPerMinute == value) return;
+                ticksPerMinute = value;
+                NotifyOfPropertyChange(() => TicksPerMinute);
+            }
+        }
+        private int ticksPerMinute;
+
+        #endregion
+
+
+        #region OtherPerMinute
+
+        public int OtherPerMinute
+        {
+            get { return otherPerMinute; }
+            set
+            {
+                if (otherPerMinute == value) return;
+                otherPerMinute = value;
+                NotifyOfPropertyChange(() => OtherPerMinute);
+            }
+        }
+        private int otherPerMinute;
+
+        #endregion
+
+
+
+
+
+        #region TotalTicks
+
+        public long TotalTicks
+        {
+            get { return totalTicks; }
+            set
+            {
+                if (totalTicks == value) return;
+                totalTicks = value;
+                NotifyOfPropertyChange(() => TotalTicks);
+            }
+        }
+        private long totalTicks;
+
+        #endregion
+
+        #region TotalOther
+
+        public long TotalOther
+        {
+            get { return totalOther; }
+            set
+            {
+                if (totalOther == value) return;
+                totalOther = value;
+                NotifyOfPropertyChange(() => TotalOther);
+            }
+        }
+        private long totalOther;
+
+        #endregion
+
+
 
         private async Task InitWorkspace()
         {
@@ -163,6 +276,9 @@ namespace LionFire.Trading.Dash.Wpf
 
             OnAccountStatusTextChanged();
         }
+
+        #endregion
+
 
         protected IAccount DefaultCTraderAccount
         {
@@ -308,7 +424,7 @@ namespace LionFire.Trading.Dash.Wpf
         {
             if (workspaceScreen == null) return;
             TryEnsureSessionNewTarget();
-            workspaceScreen.Session = Sessions.Where(s => s.IsNewTarget).FirstOrDefault();
+            workspaceScreen.SessionViewModel = Sessions.Where(s => s.IsNewTarget).FirstOrDefault();
 
             // TODO: http://stackoverflow.com/questions/39396035/how-to-select-tabs-with-avalondock
             //WorkspaceView a;
@@ -342,7 +458,7 @@ namespace LionFire.Trading.Dash.Wpf
             {
             }
 
-            Workspace.Save(Workspace.Template.Name);
+            Workspace.Template.Save();
         }
 
         #endregion

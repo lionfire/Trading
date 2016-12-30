@@ -45,13 +45,13 @@ namespace LionFire.Trading.Bots
         {
 
             SignalBotBase_();
-            
+
         }
 
         public void CreateIndicator()
         {
             if (Indicator != null) throw new Exception("Indicator is already created");
-            Indicator = (ISignalIndicator) Template.Indicator.Create(typeof(IndicatorType));
+            Indicator = (ISignalIndicator)Template.Indicator.Create(typeof(IndicatorType));
             //Indicator = new IndicatorType();
             //var iti = Indicator as ITemplateInstance<ITIndicator>;
             //iti.Template = Template.Indicator;
@@ -90,52 +90,57 @@ namespace LionFire.Trading.Bots
 
         //private int counter = 0;
 
-
-
-        private void Evaluate()
+        private object botLock = new object();
+        public void Evaluate()
         {
-            if (Server.Time == default(DateTime))
+            //lock (botLock)
             {
-                return;
-            }
+#if cAlgo
+            DateTime time = Server.Time;
+#else
+                DateTime time = Account.ExtrapolatedServerTime;
+#endif
+                if (time == default(DateTime))
+                {
+                    return;
+                }
 
-            if (!StartDate.HasValue) StartDate = ExtrapolatedServerTime;
-            EndDate = ExtrapolatedServerTime;
+                if (!StartDate.HasValue) StartDate = ExtrapolatedServerTime;
+                EndDate = ExtrapolatedServerTime;
 
 #if NULLCHECKS
-            if (Indicator == null)
-            {
-                throw new ArgumentNullException("Indicator (Evaluate)");
-            }
-            //if (Market.IsBacktesting && Server == null)
-            //{
-            //    throw new ArgumentNullException("!IsBacktesting && Server");
-            //}
+                if (Indicator == null)
+                {
+                    throw new ArgumentNullException("Indicator (Evaluate)");
+                }
+                //if (Market.IsBacktesting && Server == null)
+                //{
+                //    throw new ArgumentNullException("!IsBacktesting && Server");
+                //}
 #endif
 
-            try
-            {
-                DateTime time = Server.Time;
-                Indicator.CalculateToTime(time);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Indicator.CalculateToTime threw " + ex + " stack: " + ex.StackTrace, ex);
-            }
+                try
+                {
+                    Indicator.CalculateToTime(time);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("Indicator.CalculateToTime threw " + ex + " stack: " + ex.StackTrace, ex);
+                }
 
 #if TRACE_EVALUATE
-            var traceThreshold = 0.0;
+                var traceThreshold = 0.0;
 
-            if (Indicator.OpenLongPoints.LastValue > traceThreshold
-                || Indicator.CloseLongPoints.LastValue > traceThreshold
-            || Indicator.OpenShortPoints.LastValue > traceThreshold
-                || Indicator.CloseShortPoints.LastValue > traceThreshold
-                                )
-            {
-                logger.LogDebug($"[{this.ToString()} evaluate #{Indicator.OpenLongPoints.Count}] Open long: " + Indicator.OpenLongPoints.LastValue.ToString("N2") + " Close long: " + Indicator.CloseLongPoints.LastValue.ToString("N2") +
-                     " Open short: " + Indicator.OpenShortPoints.LastValue.ToString("N2") + " Close short: " + Indicator.CloseShortPoints.LastValue.ToString("N2")
-                    );
-            }
+                if (Indicator.OpenLongPoints.LastValue > traceThreshold
+                    || Indicator.CloseLongPoints.LastValue > traceThreshold
+                || Indicator.OpenShortPoints.LastValue > traceThreshold
+                    || Indicator.CloseShortPoints.LastValue > traceThreshold
+                                    )
+                {
+                    logger.LogDebug($"[{this.ToString()} evaluate #{Indicator.OpenLongPoints.Count}] Open long: " + Indicator.OpenLongPoints.LastValue.ToString("N2") + " Close long: " + Indicator.CloseLongPoints.LastValue.ToString("N2") +
+                         " Open short: " + Indicator.OpenShortPoints.LastValue.ToString("N2") + " Close short: " + Indicator.CloseShortPoints.LastValue.ToString("N2")
+                        );
+                }
 #endif
 
 #if false
@@ -153,75 +158,75 @@ namespace LionFire.Trading.Bots
             }
 #endif
 
-            if (Template.AllowLong
-                && Indicator.OpenLongPoints.LastValue >=
-                1.0
-                && Indicator.CloseLongPoints.LastValue <
-                0.9
-                && CanOpenLong && CanOpen)
-            {
-                _Open(TradeType.Buy, Indicator.LongStopLoss);
-            }
-
-            if (Template.AllowShort
-            && -Indicator.OpenShortPoints.LastValue >=
-                1.0
-                && -Indicator.CloseShortPoints.LastValue <
-                0.9
-                && CanOpenShort && CanOpen)
-            {
-                _Open(TradeType.Sell, Indicator.ShortStopLoss);
-            }
-
-            List<Position> toClose = null;
-            if (Indicator.CloseLongPoints.LastValue >= 1.0)
-            {
-                foreach (var position in Positions.Where(p => p.TradeType == TradeType.Buy))
+                if (Template.AllowLong
+                    && Indicator.OpenLongPoints.LastValue >=
+                    1.0
+                    && Indicator.CloseLongPoints.LastValue <
+                    0.9
+                    && CanOpenLong && CanOpen)
                 {
+                    _Open(TradeType.Buy, Indicator.LongStopLoss);
+                }
+
+                if (Template.AllowShort
+                && -Indicator.OpenShortPoints.LastValue >=
+                    1.0
+                    && -Indicator.CloseShortPoints.LastValue <
+                    0.9
+                    && CanOpenShort && CanOpen)
+                {
+                    _Open(TradeType.Sell, Indicator.ShortStopLoss);
+                }
+
+                List<Position> toClose = null;
+                if (Indicator.CloseLongPoints.LastValue >= 1.0)
+                {
+                    foreach (var position in Positions.Where(p => p.TradeType == TradeType.Buy))
+                    {
 
 #if TRACE_CLOSE
-                    string plus = position.NetProfit > 0 ? "+" : "";
-                    logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE LONG {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Ask}] {plus}{position.NetProfit}");
+                        string plus = position.NetProfit > 0 ? "+" : "";
+                        logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE LONG {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Ask}] {plus}{position.NetProfit}");
 #endif
-                    if (toClose == null) toClose = new List<Position>();
-                    toClose.Add(position);
+                        if (toClose == null) toClose = new List<Position>();
+                        toClose.Add(position);
+                    }
                 }
-            }
-            if (-Indicator.CloseShortPoints.LastValue >= 1.0)
-            {
-                foreach (var position in Positions.Where(p => p.TradeType == TradeType.Sell))
+                if (-Indicator.CloseShortPoints.LastValue >= 1.0)
                 {
+                    foreach (var position in Positions.Where(p => p.TradeType == TradeType.Sell))
+                    {
 
 #if TRACE_CLOSE
-                    string plus = position.NetProfit > 0 ? "+" : "";
-                    logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE SHORT {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Bid}] {plus}{position.NetProfit}");
+                        string plus = position.NetProfit > 0 ? "+" : "";
+                        logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE SHORT {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Bid}] {plus}{position.NetProfit}");
 #endif
-                    if (toClose == null) toClose = new List<Position>();
-                    toClose.Add(position);
+                        if (toClose == null) toClose = new List<Position>();
+                        toClose.Add(position);
+                    }
                 }
-            }
-            if (toClose != null)
-            {
-                foreach (var c in toClose)
+                if (toClose != null)
                 {
-                    var result = ClosePosition(c);
+                    foreach (var c in toClose)
+                    {
+                        var result = ClosePosition(c);
 #if TRACE_CLOSE
-                    logger.LogTrace(result.ToString());
+                        logger.LogTrace(result.ToString());
 #endif
+                    }
                 }
+                OnEvaluated();
             }
-            OnEvaluated();
+            
         }
-        
+
 
         #endregion
 
-        public Dictionary<Position, BotPosition> BotPositions = new Dictionary<Position, BotPosition>();
+        public Dictionary<Position, BotPosition> BotPositionDict = new Dictionary<Position, BotPosition>();
 
         #region Position Management
 
-
-     
 
         private void _Open(TradeType tradeType, IndicatorDataSeries indicatorSL)
         {
@@ -261,14 +266,22 @@ namespace LionFire.Trading.Bots
 
             //if (tradeType == TradeType.Sell) { stopLossInPips = -stopLossInPips; }
 
-            var result = ExecuteMarketOrder(tradeType, Symbol, volumeInUnits, Label, stopLossInPips, takeProfitInPips);
-
-            if (result.Position != null)
+            TradeResult result = null;
+            if (Mode.HasFlag(BotMode.Live) || Mode.HasFlag(BotMode.Demo))
             {
-                // ShortPositions.Add(result.Position);
-                var p = new BotPosition(result.Position, this);
-                BotPositions.Add(result.Position, p);
-                OnNewPosition(p);
+                result = ExecuteMarketOrder(tradeType, Symbol, volumeInUnits, Label, stopLossInPips, takeProfitInPips);
+            }
+
+            var accountPosition = result?.Position;
+
+            if (accountPosition != null || Mode.HasFlag(BotMode.Paper) || Mode.HasFlag(BotMode.Scanner))
+            {
+                var botPosition = new BotPosition(accountPosition, this, this.Symbol, tradeType, stopLossInPips, takeProfitInPips, volumeInUnits);
+                if (accountPosition != null)
+                {
+                    BotPositionDict.Add(accountPosition, botPosition);
+                }
+                OnNewPosition(botPosition);
             }
         }
 
@@ -367,6 +380,26 @@ p.onBars.Add(new StopLossTrailer(p)
             logger.LogInformation($"{dateStr} [{TradeString(tradeType)} {volumeInUnits} {Symbol.Code} @ {price}] SL: {stopLoss} (dist: {stopLossDistance.ToString("N3")}{stopLossDistanceAccount}) risk: {risk.ToString("N2")}");
 #endif
         }
+
+        #endregion
+
+        #region TOREVIEW
+
+        #region Event Handlers
+
+//#if cAlgo
+//        protected override void OnTick()
+//        {
+//            base.OnTick();
+//            Symbol_Tick(new SymbolTick()); // REFACTOR to base
+//        }
+//#endif
+
+        
+
+        
+
+        #endregion
 
         #endregion
 

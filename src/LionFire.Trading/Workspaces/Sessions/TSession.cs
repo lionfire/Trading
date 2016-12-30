@@ -4,11 +4,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Execution;
 using LionFire.Templating;
+using LionFire.ExtensionMethods;
 using LionFire.Trading.Bots;
+using System.Collections.ObjectModel;
+using LionFire.Structures;
+using System.ComponentModel;
 
 namespace LionFire.Trading.Workspaces
 {
-    public class TSession : ITemplate<Session>
+    public class TSession : ITemplate<Session>, IChanged
     {
         #region Construction
 
@@ -20,9 +24,38 @@ namespace LionFire.Trading.Workspaces
 
         #region Description
 
-        public string Name { get; set; }
-        public string Description { get; set; }
+        #region Name
 
+        public string Name
+        {
+            get { return name; }
+            set
+            {
+                if (name == value) return;
+                name = value;
+                OnPropertyChanged(nameof(Name));
+            }
+        }
+        private string name;
+
+        #endregion
+
+        #region Description
+
+        public string Description
+        {
+            get { return description; }
+            set
+            {
+                if (description == value) return;
+                description = value;
+                OnPropertyChanged(nameof(Description));
+            }
+        }
+        private string description;
+
+        #endregion
+        
         #endregion
 
         #region State
@@ -88,10 +121,70 @@ namespace LionFire.Trading.Workspaces
 
         #region Participants
 
-        public List<string> LiveBots { get; set; }
-        public List<string> DemoBots { get; set; }
-        public List<string> PaperBots { get; set; }
-        public List<string> Scanners { get; set; }
+        #region LiveBots
+
+        public ObservableCollection<string> LiveBots
+        {
+            get { return liveBots; }
+            set
+            {
+                if (liveBots != null) liveBots.CollectionChanged -= CollectionChangedToChanged;
+                liveBots = value;
+                if (liveBots != null) liveBots.CollectionChanged += CollectionChangedToChanged;
+            }
+        }
+        private ObservableCollection<string> liveBots;
+
+        #endregion
+
+        #region DemoBots
+
+        public ObservableCollection<string> DemoBots
+        {
+            get { return demoBots; }
+            set
+            {
+                if (demoBots != null) demoBots.CollectionChanged -= CollectionChangedToChanged;
+                demoBots = value;
+                if (demoBots != null) demoBots.CollectionChanged += CollectionChangedToChanged;
+            }
+        }
+
+        private ObservableCollection<string> demoBots;
+
+        #endregion
+
+        #region Scanners
+
+        public ObservableCollection<string> Scanners
+        {
+            get { return scanners; }
+            set
+            {
+                if (scanners != null) scanners.CollectionChanged -= CollectionChangedToChanged;
+                scanners = value;
+                if (scanners != null) scanners.CollectionChanged += CollectionChangedToChanged;
+            }
+        }
+        private ObservableCollection<string> scanners;
+
+        #endregion
+
+        #region PaperBots
+
+        public ObservableCollection<string> PaperBots
+        {
+            get { return paperBots; }
+            set
+            {
+                if (paperBots != null) paperBots.CollectionChanged += CollectionChangedToChanged;
+                paperBots = value;
+                if (paperBots != null) paperBots.CollectionChanged += CollectionChangedToChanged;
+            }
+        }
+        private ObservableCollection<string> paperBots;
+
+        #endregion
 
         #endregion
 
@@ -102,5 +195,32 @@ namespace LionFire.Trading.Workspaces
         {
             return $"{{TSession \"{Name}\" {Mode}}}";
         }
+
+        public string[] BGColors { get; set; }
+        public string[] FGColors { get; set; }
+
+        #region Misc
+
+        public event Action<object> Changed;
+        private void RaiseChanged() => Changed?.Invoke(this);
+        private void CollectionChangedToChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            RaiseChanged();
+        }
+
+        #region INotifyPropertyChanged Implementation
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            Changed?.Invoke(this);
+        }
+
+        #endregion
+
+        #endregion
     }
+   
 }

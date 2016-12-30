@@ -13,29 +13,14 @@ namespace LionFire.Trading
     public sealed class BarSeries : DataSeries<TimedBar>
         //, IBarSeries
     {
+        public TimedBar UnsetValue { get { return TimedBar.Invalid; } }
     }
 
     public sealed class DoubleDataSeries : DataSeries<double>, IDataSeries
     {
+        public double UnsetValue { get { return double.NaN; } }
     }
-
-    public sealed class TimeSeries : DataSeries<DateTime>, ITimeSeries
-    {
-
-        public int FindIndex(DateTime time)
-        {
-            var result = list.FindLastIndex(d => d <= time);
-            if (result == -1)
-            {
-
-                result = reverseList.FindLastIndex(d => d <= time);
-                result = -1 - result;
-
-            }
-            return result;
-        }
-
-    }
+   
 
     public class DataSeries<ListType>
         where ListType : new()
@@ -59,7 +44,7 @@ namespace LionFire.Trading
             {
                 if (index < 0)
                 {
-                    var reverseIndex = -index + 1;
+                    var reverseIndex = -index - 1;
                     if (reverseIndex >= reverseList.Count) return InvalidValue;
                     return reverseList[reverseIndex];
                 }
@@ -93,7 +78,7 @@ namespace LionFire.Trading
                 {
                     listParameter.AddRange(Enumerable.Repeat(InvalidValue, padCount));
                 }
-                listParameter[index] = val;
+                listParameter.Add(val);
             }
             else if (index == listParameter.Count)
             {
@@ -121,6 +106,9 @@ namespace LionFire.Trading
             }
         }
 
+        /// <summary>
+        /// Returns int.MinValue if no items
+        /// </summary>
         public int LastIndex
         {
             get
@@ -129,16 +117,20 @@ namespace LionFire.Trading
                 {
                     return list.Count - 1;
                 }
+                else if (reverseList.Count > 0)
+                {
+                    return -1;
+                }
                 else
                 {
-                    return -reverseList.Count;
+                    return int.MinValue;
                 }
             }
         }
 
         public ListType First(int indexFromStart = 0)
         {
-            return this[MinIndex + indexFromStart];
+            return this[FirstIndex + indexFromStart];
         }
 
         public ListType Last(int indexFromEnd = 0)
@@ -163,7 +155,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        public int MinIndex
+        public int FirstIndex
         {
             get
             {
@@ -171,9 +163,13 @@ namespace LionFire.Trading
                 {
                     return -reverseList.Count;
                 }
-                else
+                else if (list.Count > 0)
                 {
                     return 0;
+                }
+                else
+                {
+                    return int.MaxValue;
                 }
             }
         }

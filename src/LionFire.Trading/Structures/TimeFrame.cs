@@ -85,6 +85,8 @@ namespace LionFire.Trading
             TimeFrameValue = Int32.Parse(name.Substring(1));
         }
 
+        
+
         public static TimeFrame TryParse(string timeFrameCode)
         {
             if (string.IsNullOrWhiteSpace(timeFrameCode)) return null;
@@ -99,6 +101,8 @@ namespace LionFire.Trading
         }
 
     #endregion
+
+
 
     #region Operators
 
@@ -160,6 +164,62 @@ namespace LionFire.Trading
 
     #endregion
 
+    #region Utilities
+
+        public DateTime GetPeriodStart(DateTime time)
+        {
+            switch (TimeFrameUnit)
+            {
+                //case TimeFrameUnit.Unspecified:
+                //    break;
+                //case TimeFrameUnit.Tick:
+                //    break;
+                case TimeFrameUnit.Second:
+                    if ((60 / this.TimeFrameValue) % 1.0 == 0.0)
+                    {
+                        var second = (time.Minute / this.TimeFrameValue) * TimeFrameValue;
+                        return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, second);
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("GetPeriodStart for " + Name);
+                    }
+                case TimeFrameUnit.Minute:
+                    if ((60 / this.TimeFrameValue) % 1.0 == 0.0)
+                    {
+                        var minute = (time.Minute / this.TimeFrameValue) * TimeFrameValue;
+                        return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("GetPeriodStart for " + Name);
+                    }
+                case TimeFrameUnit.Hour:
+                    if ((24 / this.TimeFrameValue) % 1.0 == 0.0)
+                    {
+                        var hour = (time.Hour / this.TimeFrameValue) * TimeFrameValue;
+                        return new DateTime(time.Year, time.Month, time.Day, hour, 0, 0);
+                    }
+                    else
+                    {
+                        throw new NotImplementedException("GetPeriodStart for " + Name);
+                    }
+                //case TimeFrameUnit.Day:
+                        
+                //    break;
+                //case TimeFrameUnit.Week:
+                //    break;
+                //case TimeFrameUnit.Month:
+                //    break;
+                //case TimeFrameUnit.Year:
+                //    break;
+                default:
+                    throw new NotImplementedException("GetPeriodStart for " + Name);
+            }
+            
+        }
+
+    #endregion
 
     #region Misc
 

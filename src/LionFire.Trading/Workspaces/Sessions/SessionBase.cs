@@ -16,14 +16,14 @@ namespace LionFire.Trading.Sessions
 
         #region DesiredState
 
-        public ExecutionState DesiredState
+        public ExecutionState DesiredExecutionState
         {
             get { return desiredState; }
             set
             {
                 if (desiredState == value) return;
                 desiredState = value;
-                OnPropertyChanged(nameof(DesiredState));
+                OnPropertyChanged(nameof(DesiredExecutionState));
             }
         }
         private ExecutionState desiredState;

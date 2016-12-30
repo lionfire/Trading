@@ -13,10 +13,13 @@ using Newtonsoft.Json;
 using System.IO;
 using LionFire.Trading.Backtesting;
 using LionFire.Assets;
+using System.Collections.ObjectModel;
 using Newtonsoft.Json.Linq;
+using LionFire.Structures;
 
 namespace LionFire.Trading.Workspaces
 {
+
 
 
     /// <summary>
@@ -29,7 +32,7 @@ namespace LionFire.Trading.Workspaces
     ///     - scan
     ///     - paper
     /// </summary>
-    public class Session : TemplateInstanceBase<TSession>, IInitializable, IStartable, IStoppable, IExecutable, INotifyPropertyChanged
+    public class Session : TemplateInstanceBase<TSession>, IInitializable, IStartable, IStoppable, IExecutable, INotifyPropertyChanged, IChanged
     {
 
         #region Properties
@@ -154,45 +157,56 @@ namespace LionFire.Trading.Workspaces
         }
         #region LiveBots
 
-        public List<IBot> LiveBots
+        public ObservableCollection<IBot> LiveBots
         {
             get { return liveBots; }
-            set { liveBots = value; }
+            set {
+                liveBots = value;
+            }
         }
-        private List<IBot> liveBots;
+        private ObservableCollection<IBot> liveBots;
 
         #endregion
 
         #region DemoBots
 
-        public List<IBot> DemoBots
+        public ObservableCollection<IBot> DemoBots
         {
             get { return demoBots; }
-            set { demoBots = value; }
+            set {
+                demoBots = value;
+            }
         }
-        private List<IBot> demoBots;
+
+        
+
+        private ObservableCollection<IBot> demoBots;
 
         #endregion
 
         #region Scanners
 
-        public List<IBot> Scanners
+        public ObservableCollection<IBot> Scanners
         {
             get { return scanners; }
-            set { scanners = value; }
+            set {
+                scanners = value;
+            }
         }
-        private List<IBot> scanners;
+        private ObservableCollection<IBot> scanners;
 
         #endregion
 
         #region PaperBots
 
-        public List<IBot> PaperBots
+        public ObservableCollection<IBot> PaperBots
         {
             get { return paperBots; }
-            set { paperBots = value; }
+            set {
+                paperBots = value;
+            }
         }
-        private List<IBot> paperBots;
+        private ObservableCollection<IBot> paperBots;
 
         #endregion
 
@@ -244,7 +258,7 @@ namespace LionFire.Trading.Workspaces
             LiveAccount = Workspace.GetAccount(Template.LiveAccount);
             DemoAccount = Workspace.GetAccount(Template.DemoAccount);
 
-            await InitializeBots(Scanners, ScannerAccount, Template.Scanners).ConfigureAwait(false);
+            await InitializeBots().ConfigureAwait(false);
 
             state.OnNext(ExecutionState.Ready);
 
@@ -252,9 +266,9 @@ namespace LionFire.Trading.Workspaces
         }
 
         //[Idempotent] -- TODO make this idempotent by checking for existing bots
-        private async Task<bool> InitializeBots(List<IBot> bots, IAccount account, List<string> botNames)
+        private async Task<bool> InitializeBots()
         {
-            if (account == null) { return false; }
+            //if (account == null) { return false; }
 
             //account.StatusTextChanged += OnAccountStatusTextChanged;
             //StatusText = account.StatusText;
@@ -271,15 +285,9 @@ namespace LionFire.Trading.Workspaces
 
 
             if (Mode.HasFlag(BotMode.Live)) { await LoadBots(Template.LiveBots, ref liveBots, BotMode.Live); }
-
-            if (Mode.HasFlag(BotMode.Demo))
-            { await LoadBots(Template.DemoBots, ref demoBots, BotMode.Demo); }
-
-            if (Mode.HasFlag(BotMode.Scanner))
-            { await LoadBots(Template.Scanners, ref scanners, BotMode.Scanner); }
-
-            if (Mode.HasFlag(BotMode.Paper))
-            { await LoadBots(Template.PaperBots, ref paperBots, BotMode.Paper); }
+            if (Mode.HasFlag(BotMode.Demo)) { await LoadBots(Template.DemoBots, ref demoBots, BotMode.Demo); }
+            if (Mode.HasFlag(BotMode.Scanner)) { await LoadBots(Template.Scanners, ref scanners, BotMode.Scanner); }
+            if (Mode.HasFlag(BotMode.Paper)) { await LoadBots(Template.PaperBots, ref paperBots, BotMode.Paper); }
 
             foreach (var bot in AllBots.OfType<IInitializable>().ToArray())
             {
@@ -294,16 +302,18 @@ namespace LionFire.Trading.Workspaces
 
         #region Load Bots
 
-        private Task LoadBots(List<string> botIds, ref List<IBot> target, BotMode mode)
+        private Task LoadBots(IEnumerable<string> botIds, ref ObservableCollection<IBot> target, BotMode mode)
         {
-            if (target == null) target = new List<IBot>();
+            if (target == null) target = new ObservableCollection<IBot>();
+            target.CollectionChanged += (s, e) => Changed?.Invoke(this);
+
             var target2 = target;
             if (botIds == null) return Task.CompletedTask;
             return Task.Run(() => LoadBots2(botIds, target2, mode));
         }
-        private void LoadBots2(List<string> botIds, List<IBot> target, BotMode mode)
+        private void LoadBots2(IEnumerable<string> botIds, ObservableCollection<IBot> target, BotMode mode)
         {
-            foreach (var botId in botIds)
+            foreach (var botId in botIds.ToArray())
             {
                 foreach (var assetName in $"*id={botId}*".Find<BacktestResult>())
                 {
@@ -315,7 +325,7 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-        public  Task Start()
+        public Task Start()
         {
             symbolsAvailable = null;
             LiveAccount?.TryAdd(this);
@@ -325,7 +335,7 @@ namespace LionFire.Trading.Workspaces
             return Task.CompletedTask;
         }
 
-        public  Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
+        public Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
         {
             this.state.OnNext(ExecutionState.Stopping);
 
@@ -413,8 +423,9 @@ namespace LionFire.Trading.Workspaces
                 throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
             }
 
-            var config = (ITemplate)((JObject)backtestResult.Config).ToObject(templateType);
-            var bot = (IBot)config.Create();
+            var tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
+
+            var bot = (IBot)tBot.Create();
             bot.Mode = BotMode.Scanner | BotMode.Paper;
             //var botVM = new BotVM() { Bot = bot };
             //botVM.State = SupervisorBotState.Scanner;
@@ -428,10 +439,10 @@ namespace LionFire.Trading.Workspaces
 
             bool hasPaper = mode.HasFlag(BotMode.Paper);
             mode = mode & ~BotMode.Paper;
-            if (mode.HasFlag(BotMode.Live)) LiveBots.Add(bot);
-            if (mode.HasFlag(BotMode.Demo)) DemoBots.Add(bot);
-            if (mode.HasFlag(BotMode.Scanner)) Scanners.Add(bot);
-            if (mode.HasFlag(BotMode.Paper)) PaperBots.Add(bot);
+            if (mode.HasFlag(BotMode.Live)) { LiveBots.Add(bot); Template.LiveBots.Add(tBot.Id); }
+            if (mode.HasFlag(BotMode.Demo)) { DemoBots.Add(bot); Template.DemoBots.Add(tBot.Id); }
+            if (mode.HasFlag(BotMode.Scanner)) { Scanners.Add(bot); Template.Scanners.Add(tBot.Id); }
+            if (mode.HasFlag(BotMode.Paper)) { PaperBots.Add(bot); Template.PaperBots.Add(tBot.Id); }
             //switch (mode)
             //{
             //    case BotMode.Live:
@@ -475,6 +486,8 @@ namespace LionFire.Trading.Workspaces
 
         #region Misc
 
+        
+        public event Action<object> Changed;
 
         #region INotifyPropertyChanged Implementation
 
@@ -483,6 +496,7 @@ namespace LionFire.Trading.Workspaces
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            Changed?.Invoke(this);
         }
 
         #endregion
@@ -511,17 +525,5 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
     }
-    /*
-    public class LiveSession : SessionBase
-    {
-    }
-    public class DemoSession : SessionBase
-    {
-    }
-    public class PaperSession : SessionBase
-    {
-    }
-    public class ScannerSession : SessionBase
-    {
-    }*/
+    
 }

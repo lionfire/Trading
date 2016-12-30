@@ -9,7 +9,7 @@ using LionFire.Execution;
 namespace LionFire.Trading.Accounts
 {
     [AssetPath(@"Accounts")]
-    public abstract class TAccount : IHierarchicalTemplate, ITemplate
+    public abstract class TAccount : IHierarchicalTemplate, ITemplate, IControllableExecutable
     {
         public string AccountId { get; set; }
         public string AccessToken { get; set; }

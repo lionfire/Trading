@@ -54,6 +54,9 @@ namespace LionFire.Trading
         MarketTickSeries MarketTickSeries { get; }
 
         IAccount Account { get; }
+        Task EnsureHasLatestTick();
+        double GetStopLossFromPips(TradeType tradeType, double stopLossInPips);
+        double GetTakeProfitFromPips(TradeType tradeType, double takeProfitInPips);
     }
 
     public interface ISymbolInternal : Symbol
@@ -75,7 +78,6 @@ namespace LionFire.Trading
         {
             throw new NotImplementedException();
         }
-
     }
 
     public abstract class SymbolImplBase : Symbol, ISymbolInternal
@@ -141,9 +143,12 @@ namespace LionFire.Trading
         {
             get
             {
-                if (double.IsNaN(ask ) && isSubscribed)
+                if (double.IsNaN(ask))
                 {
-                    LoadLatestTicks();
+                    if (isSubscribed)
+                    {
+                        LoadLatestTicks();
+                    }
                 }
                 return ask;
             }
@@ -173,10 +178,40 @@ namespace LionFire.Trading
 
         public void LoadLatestTicks()
         {
-            MarketTickSeries.EnsureDataAvailable(null, DateTime.UtcNow, DefaultTicks);
+            MarketTickSeries.EnsureDataAvailable(null, DateTime.UtcNow, DefaultTicks).Wait();
+            UpdateBidAsk();
         }
-        public static readonly int DefaultTicks = 30;
+        public static readonly int DefaultTicks = 300; // Try a large enough number to get both bid/ask
 
+        private void UpdateBidAsk()
+        {
+            var index = MarketTickSeries.LastIndex;
+
+            bool gotBid = false;
+            bool gotAsk = false;
+
+
+            for (int i = 500; i > 0 && (!gotBid || !gotAsk) && index > MarketTickSeries.FirstIndex; i--, index--)
+            {
+                if (!gotBid)
+                {
+                    if (MarketTickSeries[index].HasBid)
+                    {
+                        this.Bid = MarketTickSeries[index].Bid;
+                        gotBid = true;
+                    }
+                }
+                if (!gotAsk)
+                {
+                    if (MarketTickSeries[index].HasAsk)
+                    {
+                        this.Ask = MarketTickSeries[index].Ask;
+                        gotAsk = true;
+                    }
+                }
+            }
+            Debug.WriteLine($"[{Code} last aggregated tick] b:{Bid} a:{Ask} s:{Spread}");
+        }
 
         public double Spread
         {
@@ -449,6 +484,35 @@ namespace LionFire.Trading
 
         #endregion
 
+        public double GetStopLossFromPips(TradeType tradeType, double stopLossInPips)
+        {
+            if (double.IsNaN(stopLossInPips)) return double.NaN;
+
+            if (tradeType == TradeType.Buy)
+            {
+                // TOVERIFY
+                return Bid - PipValue * stopLossInPips;
+            }
+            else
+            {
+                // TOVERIFY
+                return Ask + PipValue * stopLossInPips;
+            }
+        }
+        public double GetTakeProfitFromPips(TradeType tradeType, double takeProfitInPips)
+        {
+            if (double.IsNaN(takeProfitInPips)) return double.NaN;
+            if (tradeType == TradeType.Buy)
+            {
+                // TOVERIFY
+                return Ask  + PipValue * takeProfitInPips;
+            }
+            else
+            {
+                // TOVERIFY
+                return Bid - PipValue * takeProfitInPips;
+            }
+        }
 
         public abstract Task<TimedBar> GetLastBar(TimeFrame timeFrame);
         public abstract Task<Tick> GetLastTick();
@@ -464,7 +528,11 @@ namespace LionFire.Trading
         }
 
         #endregion
-
+        public async Task EnsureHasLatestTick()
+        {
+            await MarketTickSeries.EnsureDataAvailable(null, DateTime.UtcNow, 1);
+            UpdateBidAsk();
+        }
     }
 
 }

@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Trading.Workspaces;
+using LionFire.Trading.Statistics;
 
 namespace LionFire.Trading.Accounts
 {
@@ -50,8 +51,40 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
+        #region Lifecycle State
+
+        #region IsTradeApiEnabled
+
+        /// <summary>
+        /// Get live updates
+        /// </summary>
+        public bool IsTradeApiEnabled
+        {
+            get { return isTradeApiEnabled; }
+            set
+            {
+                if (isTradeApiEnabled == value) return;
+                OnTradeApiEnabledChanging();
+                isTradeApiEnabled = value;
+                OnTradeApiEnabledChanged();
+                OnPropertyChanged(nameof(IsTradeApiEnabled));
+            }
+        }
+        private bool isTradeApiEnabled = false;
+
+        #endregion
+        protected virtual void OnTradeApiEnabledChanging()
+        {
+        }
+        protected virtual void OnTradeApiEnabledChanged()
+        {
+        }
+
+        #endregion
+
         #region State
 
+        public AccountStats AccountStats { get; } = new AccountStats();
         public PositionStats PositionStats
         {
             get

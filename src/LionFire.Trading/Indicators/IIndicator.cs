@@ -29,4 +29,9 @@ namespace LionFire.Trading.Indicators
 
     }
 
+    public interface IMovingAverageIndicator : IIndicator
+    {
+        DoubleDataSeries Result { get; }
+    }
+
 }

@@ -7,5 +7,6 @@ namespace LionFire.Trading
 {
     public interface IPositions : IReadOnlyList<Position>
     {
+        Position Find(string label, Symbol symbol);
     }
 }

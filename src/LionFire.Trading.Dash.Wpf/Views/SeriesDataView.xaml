@@ -11,9 +11,7 @@
         x:Name="uc"
              xmlns:cal="http://www.caliburnproject.org"
              d:DesignHeight="600" d:DesignWidth="700">
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="bvc"/>
-    </UserControl.Resources>
+    
     <DockPanel >
 
         <DockPanel DockPanel.Dock="Top" LastChildFill="False">

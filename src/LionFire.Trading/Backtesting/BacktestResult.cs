@@ -55,11 +55,21 @@ namespace LionFire.Trading.Backtesting
         public string BotConfigType { get; set; }
         public object Config { get; set; }
 
+        public string TimeFrame
+        {
+            get
+            {
+                dynamic tbot = Config;
+                //var tbot = Config as Bots.TBot;
+                return tbot?.TimeFrame;
+            }
+        }
+
         /// <summary>
         /// Computed at backtest time
         /// </summary>
         public double Fitness { get; set; }
-        
+
         public double InitialBalance { get; set; }
 
         /// <summary>
@@ -73,7 +83,7 @@ namespace LionFire.Trading.Backtesting
 
 #if !cAlgo
 
-    public class BacktestResultHandle :IReadHandle<BacktestResult> // TODO: Use IReadHandle or something
+    public class BacktestResultHandle : IReadHandle<BacktestResult> // TODO: Use IReadHandle or something
     {
         public static implicit operator BacktestResultHandle(BacktestResult r)
         {
@@ -111,6 +121,9 @@ namespace LionFire.Trading.Backtesting
 
         [Unit("sym=")]
         public string Symbol { get; set; }
+
+        [Unit("tf=")]
+        public string TimeFrame { get { return Object?.TimeFrame; } }
 
         /// <summary>
         /// AROI vs Max Equity Drawdown

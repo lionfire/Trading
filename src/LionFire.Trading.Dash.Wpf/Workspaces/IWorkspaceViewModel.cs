@@ -9,7 +9,7 @@ namespace LionFire.Trading.Dash.Wpf
 {
     public interface IWorkspaceViewModel : IScreen
     {
-         SessionViewModel Session { get; set; }
+         SessionViewModel SessionViewModel { get; set; }
         WorkspaceViewModel WorkspaceViewModel { get; set; }
     }
 }

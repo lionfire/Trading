@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     public abstract partial class SignalIndicatorBase<TConfig> : SingleSeriesIndicatorBase<TConfig>, ISignalIndicator
-        where TConfig : ITSignalIndicator, new()
+        where TConfig : ITSignalIndicator, ITSingleSeriesIndicator, new()
     {
         #region Construction
 
@@ -19,30 +19,46 @@ namespace LionFire.Trading.Indicators
 
         #endregion
 
+        //protected override int CalculatedCount
+        //{
+        //    get
+        //    {
+        //        if (OpenLongPoints != null) return OpenLongPoints.Count;
+        //        if (OpenShortPoints != null) return OpenShortPoints.Count;
+        //        return 0;
+        //    }
+        //}
 
-        public IndicatorDataSeries CloseLongPoints {
+        public IndicatorDataSeries CloseLongPoints
+        {
             get; protected set;
         }
 
-        public IndicatorDataSeries CloseShortPoints {
+        public IndicatorDataSeries CloseShortPoints
+        {
             get; protected set;
         }
 
-        public IndicatorDataSeries LongStopLoss {
+        public IndicatorDataSeries LongStopLoss
+        {
             get; protected set;
         }
 
-        public IndicatorDataSeries OpenLongPoints {
+        public IndicatorDataSeries OpenLongPoints
+        {
             get; protected set;
         }
 
-        public IndicatorDataSeries OpenShortPoints {
+        public IndicatorDataSeries OpenShortPoints
+        {
             get; protected set;
         }
 
-        public IndicatorDataSeries ShortStopLoss {
+        public IndicatorDataSeries ShortStopLoss
+        {
             get; protected set;
         }
+
 
 
     }

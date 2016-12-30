@@ -61,7 +61,7 @@ namespace LionFire.Trading.Agent.Program
                     .Add<TCTraderAccount>("IC Markets.Live.Manual")
 #else
                     .AddTrading(TradingOptions.Auto, AccountMode.Demo)
-                    .Add<TCTraderAccount>("IC Markets.Demo3")
+                    .Add<TCTraderAccount>("IC Markets.Demo")
 #endif
                    //.AddConfig(app => 
                    //    app.ServiceCollection

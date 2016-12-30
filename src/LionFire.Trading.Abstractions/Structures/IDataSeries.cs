@@ -26,5 +26,26 @@ namespace LionFire.Trading
         T LastValue { get; }
 
         T Last(int index);
+
+        /// <summary>
+        /// Returns int.MinValue if no items
+        /// </summary>
+        int LastIndex { get; }
+
+        T UnsetValue { get; }
+    }
+
+    public static class ISeriesExtensions
+    {
+        public static void SetBlank<T>(this ISeries<T> s, int index)
+        {
+            s[index] = s.UnsetValue;
+        }
+        public static bool IsUnsetOrDefault<T>(this ISeries<T> s, int index)
+        {
+            var val = s[index];
+            
+            return val == null || val.Equals(s.UnsetValue) || val.Equals(default(T));
+        }
     }
 }

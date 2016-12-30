@@ -14,7 +14,6 @@
              >
     <UserControl.Resources>
 
-        <BooleanToVisibilityConverter x:Key="bvc" ></BooleanToVisibilityConverter>
 
         <DataTemplate x:Key="TimelinePanelItem">
             <StackPanel>

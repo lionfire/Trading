@@ -20,7 +20,11 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         public static string GetRoot(bool isSandbox) { return isSandbox ? SandboxUriRoot : UriRoot; }
 
         // requestTimeFrame: h1 or m1
+        // Max bars according to docs: 5000
         public const string TrendBarsUri = @"/connect/tradingaccounts/{id}/symbols/{symbolName}/trendbars/{requestTimeFrame}?access_token={oauth_token}&from={from}&to={to}";
+
+        // Max ticks according to docs: 5000
+        public const string TicksUri = @"/connect/tradingaccounts/{id}/symbols/{symbolName}/{bidOrAsk}?access_token={oauth_token}&date={date}&from={from}&to={to}";
         public const string PositionsUri = @"/connect/tradingaccounts/{id}/positions?access_token={access_token}&limit={limit}";
         public const string AllPositionsUri = @"/connect/tradingaccounts/{id}/deals?access_token={access_token}&limit={limit}";
 
@@ -28,6 +32,11 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         {
             return time.ToString("yyyyMMddHHmmss");
         }
+        public static string ToSpotwareTimeUriParameter(this DateTime time)
+        {
+            return time.ToString("HHmmss");
+        }
+
 
         public static DateTime ToDateTime(this long timestamp)
         {

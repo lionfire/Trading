@@ -23,7 +23,7 @@ namespace LionFire.Trading.Spotware.Connect
 {
     public class TradingApiTest
     {
-#region Settings...
+        #region Settings...
 
         static string apiHost => ConnectionSettings?.ApiHost ?? "sandbox-tradeapi.spotware.com";
         static int apiPort => ConnectionSettings?.ApiPort ?? 5032;
@@ -39,14 +39,16 @@ namespace LionFire.Trading.Spotware.Connect
         static long testAccountId => ConnectionSettings?.AccountId ?? 62002; // login 3000041 pass:123456 on http://sandbox-ct.spotware.com
         static string testAccessToken = ConnectionSettings?.AccessToken ?? "test002_access_token";
 
-        public static SpotwareConnectSettings ConnectionSettings {
-            get {
+        public static SpotwareConnectSettings ConnectionSettings
+        {
+            get
+            {
 
                 if (connectionSettings == null)
                 {
 #if true
-                    //var path = @"c:\Trading\Accounts\spotware-lfdev.json";
-                    var path = @"c:\Trading\Accounts\spotware-lionprowl.json";
+                    // spotware-lfdev.json
+                    var path = Path.Combine(LionFireEnvironment.AppProgramDataDir, @"Accounts\spotware-lionprowl.json");
 
                     using (var sr = new StreamReader(new FileStream(path, FileMode.Open)))
                     {
@@ -74,9 +76,9 @@ namespace LionFire.Trading.Spotware.Connect
         static int MaxMessageSize = 1000000;
         static bool isDebugIsOn = true;
 
-#endregion Settings...
+        #endregion Settings...
 
-#region Internal fields
+        #region Internal fields
         static SslStream apiSocket;
 
         volatile static bool isShutdown;
@@ -91,9 +93,9 @@ namespace LionFire.Trading.Spotware.Connect
         static OpenApiMessagesFactory outgoingMsgFactory = new OpenApiMessagesFactory();
 
         static Random rndGenerator = new Random();
-#endregion Internal fields
+        #endregion Internal fields
 
-#region Threads
+        #region Threads
         // timer thread
         static void Timer(OpenApiMessagesFactory msgFactory, Queue messagesQueue)
         {
@@ -194,9 +196,9 @@ namespace LionFire.Trading.Spotware.Connect
                 ProcessIncomingDataStream(msgFactory, _message);
             }
         }
-#endregion Threads
+        #endregion Threads
 
-#region Handlers
+        #region Handlers
         static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             if (sslPolicyErrors == SslPolicyErrors.None)
@@ -204,14 +206,14 @@ namespace LionFire.Trading.Spotware.Connect
             Console.WriteLine("Certificate error: {0}", sslPolicyErrors);
             return false;
         }
-#endregion Handlers
+        #endregion Handlers
 
         public static void Main(string[] args)
         {
             do
             {
                 isRestart = false;
-#region open ssl connection
+                #region open ssl connection
                 Console.WriteLine("Establishing trading SSL connection to {0}:{1}...", apiHost, apiPort);
                 try
                 {
@@ -226,9 +228,9 @@ namespace LionFire.Trading.Spotware.Connect
                     return;
                 }
                 Console.WriteLine("The connection is established successfully.");
-#endregion open ssl connection
+                #endregion open ssl connection
 
-#region start incoming data processing thread
+                #region start incoming data processing thread
                 Thread p = new Thread(() =>
                 {
                     Thread.CurrentThread.IsBackground = true;
@@ -242,9 +244,9 @@ namespace LionFire.Trading.Spotware.Connect
                     }
                 });
                 p.Start();
-#endregion start incoming data processing thread
+                #endregion start incoming data processing thread
 
-#region start listener
+                #region start listener
                 Thread tl = new Thread(() =>
                 {
                     Thread.CurrentThread.IsBackground = true;
@@ -258,9 +260,9 @@ namespace LionFire.Trading.Spotware.Connect
                     }
                 });
                 tl.Start();
-#endregion start listener
+                #endregion start listener
 
-#region start sender
+                #region start sender
                 Thread ts = new Thread(() =>
                 {
                     Thread.CurrentThread.IsBackground = true;
@@ -274,9 +276,9 @@ namespace LionFire.Trading.Spotware.Connect
                     }
                 });
                 ts.Start();
-#endregion start sender
+                #endregion start sender
 
-#region start timer
+                #region start timer
                 Thread t = new Thread(() =>
                 {
                     Thread.CurrentThread.IsBackground = true;
@@ -290,12 +292,12 @@ namespace LionFire.Trading.Spotware.Connect
                     }
                 });
                 t.Start();
-#endregion start timer
+                #endregion start timer
 
-#region main loop
+                #region main loop
                 while (tl.IsAlive || t.IsAlive || p.IsAlive || ts.IsAlive)
                 {
-#region display menu
+                    #region display menu
                     Console.WriteLine();
                     Console.WriteLine("List of actions");
                     foreach (var m in menuItems)
@@ -303,9 +305,9 @@ namespace LionFire.Trading.Spotware.Connect
                     Console.WriteLine("----------------------------");
                     Console.WriteLine("R: reconnect");
                     Console.WriteLine("Q: quit");
-#endregion display menu
+                    #endregion display menu
 
-#region process menu actions
+                    #region process menu actions
                     Thread.Sleep(300);
                     Console.WriteLine("Enter the action to perform:");
                     char cmd = Console.ReadKey().KeyChar;
@@ -324,26 +326,26 @@ namespace LionFire.Trading.Spotware.Connect
                             if (string.Join("", cmd).ToUpper() == string.Join("", m.cmdKey).ToUpper())
                                 m.itemHandler(outgoingMsgFactory, writeQueueSync);
                     Thread.Sleep(700);
-#endregion process menu actions
+                    #endregion process menu actions
                 }
-#endregion main loop
+                #endregion main loop
 
-#region close ssl connection
+                #region close ssl connection
                 isShutdown = true;
                 apiSocket.Close();
-#endregion close ssl connection
+                #endregion close ssl connection
 
-#region wait for shutting down threads
+                #region wait for shutting down threads
                 Console.WriteLine("Shutting down connection...");
                 while (tl.IsAlive || t.IsAlive || p.IsAlive || ts.IsAlive)
                 {
                     Thread.Sleep(100);
                 }
-#endregion wait for shutting down threads
+                #endregion wait for shutting down threads
             } while (isRestart);
         }
 
-#region Auxilary functions
+        #region Auxilary functions
         public static string GetHexadecimal(byte[] byteArray)
         {
             var hex = new StringBuilder(byteArray.Length * 2);
@@ -351,9 +353,9 @@ namespace LionFire.Trading.Spotware.Connect
                 hex.AppendFormat("{0:X2} ", b);
             return hex.ToString();
         }
-#endregion Auxilary functions
+        #endregion Auxilary functions
 
-#region Incoming data stream processing...
+        #region Incoming data stream processing...
         static void ProcessIncomingDataStream(OpenApiMessagesFactory msgFactory, byte[] rawData)
         {
             var _msg = msgFactory.GetMessage(rawData);
@@ -385,10 +387,10 @@ namespace LionFire.Trading.Spotware.Connect
                     break;
             };
         }
-#endregion Incoming data stream processing...
+        #endregion Incoming data stream processing...
 
-#region Outgoing ProtoBuffer objects to Raw data...
-#region Main Menu
+        #region Outgoing ProtoBuffer objects to Raw data...
+        #region Main Menu
         struct MenuItem
         {
             public delegate void ItemAction(OpenApiMessagesFactory msgFactory, Queue _writeQueue);
@@ -426,7 +428,7 @@ namespace LionFire.Trading.Spotware.Connect
             new MenuItem('M', "set/clear client message ID", SetClientMessageId),
             new MenuItem('0', "subscribe for EURUSD quites", SendSubscribeForSpotsRequest),
         };
-#endregion Main Menu
+        #endregion Main Menu
 
         static void SendPingRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
@@ -537,7 +539,7 @@ namespace LionFire.Trading.Spotware.Connect
         {
             Console.WriteLine("Action is NOT IMPLEMENTED!");
         }
-#endregion Outgoing ProtoBuffer objects to Raw data...
+        #endregion Outgoing ProtoBuffer objects to Raw data...
     }
 }
 

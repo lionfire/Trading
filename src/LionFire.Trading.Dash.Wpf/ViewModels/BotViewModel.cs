@@ -12,23 +12,22 @@ using System.Collections.ObjectModel;
 using System.IO;
 using Newtonsoft.Json;
 using LionFire.Execution;
+using LionFire.Avalon;
 
 namespace LionFire.Trading
 {
 
 
-    public class BotViewModel : System.ComponentModel.INotifyPropertyChanged
+    public class BotViewModel : System.ComponentModel.INotifyPropertyChanged, IViewModel
     {
 
         #region Relationships
 
         public BotViewModel Self { get { return this; } }
-
-
-        //public IBot Bot { get; set; }
+        public BotViewModel Self2 { get { return this; } }
 
         #region Bot
-
+        
         public IBot Bot
         {
             get { return bot; }
@@ -45,9 +44,11 @@ namespace LionFire.Trading
 
             }
         }
+        object IViewModel.Model { get { return Bot; } set { Bot = (IBot)value; } }
         private void OnEvaluated()
         {
             OnPropertyChanged("Bot");
+            UpdateSignalText();
         }
 
         private void Bot_PositionChanged(PositionEvent obj)
@@ -83,6 +84,7 @@ namespace LionFire.Trading
         #region Parameters
 
         public string Symbol { get { return TBot?.Symbol; } }
+        public string TimeFrame { get { return TBot?.TimeFrame; } }
 
         #endregion
 
@@ -92,6 +94,11 @@ namespace LionFire.Trading
         public SupervisorBotState State { get; set; }
         //<xcdg:Column FieldName = "State" />
 
+
+        public bool CanLive => false;
+        public bool CanDemo => false;
+        public bool CanScanner => true;
+        public bool CanPaper => false;
 
         #region IsScanEnabled
 
@@ -124,6 +131,8 @@ namespace LionFire.Trading
         private bool isScanEnabled;
 
         #endregion
+
+
 
         #region IsLiveEnabled
 
@@ -169,6 +178,7 @@ namespace LionFire.Trading
         public BotViewModel(IBot bot) : this()
         {
             this.Bot = bot;
+
         }
 
         #endregion
@@ -280,6 +290,125 @@ namespace LionFire.Trading
 
 
         public ISignalIndicator Indicator { get { return SignalBot?.Indicator; } }
+
+
+        #region LongSignalText
+
+        public string LongSignalText
+        {
+            get { return longSignalText; }
+            set
+            {
+                if (longSignalText == value) return;
+                longSignalText = value;
+                OnPropertyChanged(nameof(LongSignalText));
+            }
+        }
+        private string longSignalText;
+
+        #endregion
+
+
+        #region ShortSignalText
+
+        public string ShortSignalText
+        {
+            get { return shortSignalText; }
+            set
+            {
+                if (shortSignalText == value) return;
+                shortSignalText = value;
+                OnPropertyChanged(nameof(ShortSignalText));
+            }
+        }
+        private string shortSignalText;
+
+        #endregion
+
+        public void Update()
+        {
+            OnPropertyChanged(nameof(Indicator));
+
+        }
+
+        public void UpdateNetPositionSize()
+        {
+            var vol = Bot.BotPositions.GetNetVolume();
+            if (vol > 0)
+            {
+                NetPositionSizeText = "LONG " + Math.Abs(vol);
+            }
+            else if (vol < 0)
+            {
+                NetPositionSizeText = "SHORT " + Math.Abs(vol);
+            }
+            else
+            {
+                NetPositionSizeText = "";
+            }
+        }
+
+        #region NetPositionSizeText
+
+        public string NetPositionSizeText
+        {
+            get { return netPositionSizeText; }
+            set
+            {
+                if (netPositionSizeText == value) return;
+                netPositionSizeText = value;
+                OnPropertyChanged(nameof(NetPositionSizeText));
+            }
+        }
+        private string netPositionSizeText;
+
+        #endregion
+
+        public void UpdateSignalText()
+        {
+            if (CloseLong < -Threshold)
+            {
+                //LongSignalText = "";
+                LongSignalText = "CLOSE Long";
+                hasLong = false;
+            }
+            else if (OpenLong > Threshold && CloseLong > -Threshold)
+            {
+                LongSignalText = "L@" + this.SignalBot.Indicator.Symbol.Bid;
+                LongSignalText = "LONG";
+                hasLong = true;
+            }
+            else if (hasLong)
+            {
+                LongSignalText = "Hold LONG";
+            }
+            else
+            {
+                LongSignalText = "";
+            }
+
+            if (OpenShort < Threshold-1 && CloseShort < -1+Threshold)
+            {
+                ShortSignalText = "SHORT";
+                hasShort = true;
+            }
+            else if (CloseShort > -1+Threshold)
+            {
+                ShortSignalText = "CLOSE Short";
+                hasShort = false;
+            }
+            else if (hasShort)
+            {
+                ShortSignalText = "HOLD Short";
+            }
+            else
+            {
+                ShortSignalText = "";
+            }
+        }
+        private bool hasLong;
+        private bool hasShort;
+        public double Threshold = 0.9;
 
 
         public double OpenLong { get { return Indicator.OpenLongPoints.LastValue; } }

@@ -46,11 +46,12 @@ Background="White"
                             </DataTemplate>
                         </xcdg:Column.CellContentTemplate>
                     </xcdg:Column>
-                    <xcdg:Column FieldName="AD"  Title="A/DD"  AllowGroup="False" Width="40"   />
-                    <xcdg:Column FieldName="TPM"  Title="TPM" ToolTipService.ToolTip="Trades Per Month"  AllowGroup="False"  Width="40"/>
+                <xcdg:Column FieldName="AD"  Title="A/DD"  AllowGroup="False" Width="40"   />
+                <xcdg:Column FieldName="TPM"  Title="TPM" ToolTipService.ToolTip="Trades Per Month"  AllowGroup="False"  Width="40"/>
                     <xcdg:Column FieldName="Days"  Title="Days" ToolTipService.ToolTip="Backtest Days"  AllowGroup="False" Width="40" />
-                    <xcdg:Column FieldName="Symbol"  Title="Symbol"  AllowGroup="True" Width="65" />
-                    <xcdg:Column FieldName="Bot"  Title="Bot"  AllowGroup="True"  />
+                <xcdg:Column FieldName="Symbol"   Title="Symbol"  AllowGroup="True" Width="65" />
+                <xcdg:Column FieldName="TimeFrame"  Title="TF"  AllowGroup="True" Width="25" />
+                <xcdg:Column FieldName="Bot"  Title="Bot"  AllowGroup="True"  />
                     <xcdg:Column FieldName="Id"  Title="Id"  AllowGroup="False" IsMainColumn="True"/>
                 </xcdg:DataGridControl.Columns>
             </xcdg:DataGridControl>

@@ -224,7 +224,7 @@ namespace LionFire.Trading
         //public event Action<TimedBar> InterimBarReceived;
         #endregion
 
-        
+
         #region Methods
 
         // OLD - this is also in base class
@@ -790,13 +790,33 @@ namespace LionFire.Trading
 
         #endregion
 
+        public IDataSeries GetDataSeries(BarComponent source)
+        {
+            switch (source)
+            {
+                case BarComponent.Open:
+                    return Open;
+                case BarComponent.High:
+                    return High;
+                case BarComponent.Low:
+                    return Low;
+                case BarComponent.Close:
+                    return Close;
+                default:
+                    throw new ArgumentException();
+            }
+        }
+
         #region Misc
 
         public override string DataPointName { get { return "bars"; } }
 
-        
+
 
         #endregion
     }
+
+
+
 
 }

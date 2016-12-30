@@ -391,7 +391,7 @@ namespace LionFire.Trading.Spotware.Connect
                 Console.WriteLine("WARNING TODO: download historical trendbars - timeSpan.TotalDays > daysPageSize.  TimeSpan: " + timeSpan);
             }
 
-            var downloadedTickSets = new Stack<SpotwareTick[]>();
+            var downloadedTickSets = new Stack<List<Tick>>();
             var downloadedBarSets = new Stack<SpotwareTrendbar[]>();
 
             int totalItemsDownloaded = 0;
@@ -403,11 +403,28 @@ namespace LionFire.Trading.Spotware.Connect
                 throw new ArgumentException("startTime == default(DateTime)");
             }
 
-            var from = startTime.ToSpotwareUriParameter();
+            string from, to, date, bidOrAsk;
+            if (useTicks)
+            {
+                from = startTime.ToSpotwareTimeUriParameter();
+                to = GetEffectiveEndTime(endTimeIterator).ToSpotwareTimeUriParameter();
+                date = startTime.Date.ToString("yyyyMMdd");
 
-            var to = GetEffectiveEndTime(endTimeIterator).ToSpotwareUriParameter();
+                if (startTime.Date != EndTime.Date)
+                {
+                    throw new NotSupportedException("startTime.Date != EndTime.Date for ticks");
+                }
+            }
+            else
+            {
+                from = startTime.ToSpotwareUriParameter();
+                to = GetEffectiveEndTime(endTimeIterator).ToSpotwareUriParameter();
+                date = "";
+                bidOrAsk = "";
+            }
 
-            var uri = SpotwareAccountApi.TrendBarsUri;
+
+            var uri = useTicks ? SpotwareAccountApi.TicksUri : SpotwareAccountApi.TrendBarsUri;
             uri = uri
                 .Replace("{symbolName}", Symbol)
                 .Replace("{requestTimeFrame}", requestTimeFrame)
@@ -415,6 +432,7 @@ namespace LionFire.Trading.Spotware.Connect
                 .Replace("{oauth_token}", System.Uri.EscapeDataString(AccessToken))
                 .Replace("{from}", from)
                 .Replace("{to}", to)
+                .Replace("{date}", date)
                 ;
 
             // Read from stream: see http://stackoverflow.com/questions/26601594/what-is-the-correct-way-to-use-json-net-to-parse-stream-of-json-objects
@@ -422,21 +440,29 @@ namespace LionFire.Trading.Spotware.Connect
             DateTime queryDate = DateTime.UtcNow;
             UpdateProgress(0.11, $"Sending request: {from}-{to}");
 
-            var response = await client.GetAsyncWithRetries(uri, retryDelayMilliseconds: 10000);
+            var response1 = await client.GetAsyncWithRetries(uri.Replace("{bidOrAsk}", "bid"), retryDelayMilliseconds: 10000);
+            HttpResponseMessage response2 = null;
+            if (useTicks)
+            {
+                response2 = await client.GetAsyncWithRetries(uri.Replace("{bidOrAsk}", "ask"), retryDelayMilliseconds: 10000);
+            }
 
             UpdateProgress(0.12, "Receiving response");
-            var receiveStream = await response.Content.ReadAsStreamAsync();
-            System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
-            var json = readStream.ReadToEnd();
-
-            if (string.IsNullOrWhiteSpace(json))
+            string json = null;
             {
-                if ((int)response.StatusCode == 429)
-                {
-                    Debug.WriteLine("429 - Too Many Requests.");
-
-                }
+                var receiveStream = await response1.Content.ReadAsStreamAsync();
+                System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
+                json = readStream.ReadToEnd();
             }
+
+            string askJson = null;
+            if (useTicks)
+            {
+                var receiveStream = await response2.Content.ReadAsStreamAsync();
+                System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
+                askJson = readStream.ReadToEnd();
+            }
+
 
             UpdateProgress(0.95, "Deserializing");
             var error = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareErrorContainer>(json);
@@ -446,31 +472,44 @@ namespace LionFire.Trading.Spotware.Connect
             }
             if (String.IsNullOrWhiteSpace(json))
             {
-                throw new Exception($"API returned empty response.  StatusCode:  {response.StatusCode}");
+                throw new Exception($"API returned empty response.  StatusCode:  {response1.StatusCode}");
             }
 
-            ISpotwareItemsResult data2;
+            //ISpotwareItemsResult data2;
 
 
             if (useTicks)
             {
-                var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTicksResult>(json);
-                data2 = data;
-                if (data.data == null)
+                var bidData = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTicksResult>(json);
+                var askData = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTicksResult>(askJson);
+
+                if (bidData.data == null)
                 {
-                    throw new Exception($"API returned no data.  StatusCode:  {response.StatusCode}");
+                    throw new Exception($"API returned no bid data.  StatusCode:  {response1.StatusCode}");
+                }
+                if (askData.data == null)
+                {
+                    throw new Exception($"API returned no ask data.  StatusCode:  {response2.StatusCode}");
+                }
+                if (bidData.data.Length >= 4999)
+                {
+                    throw new Exception("probably didn't load all from Spotware.  Max: 5000.  TODO: repeat request, asking for next set of ticks.");
+                }
+                if (askData.data.Length >= 4999)
+                {
+                    throw new Exception("probably didn't load all from Spotware.  Max: 5000.  TODO: repeat request, asking for next set of ticks.");
                 }
 
-                downloadedTickSets.Push(data.data);
-                totalItemsDownloaded += data.data.Length;
+                var ticks = AggregateTicks(bidData, askData);
+                downloadedTickSets.Push(ticks);
+                totalItemsDownloaded += ticks.Count;
             }
             else
             {
                 var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareTrendbarsResult>(json);
-                data2 = data;
                 if (data.data == null)
                 {
-                    throw new Exception($"API returned no data.  StatusCode:  {response.StatusCode}");
+                    throw new Exception($"API returned no data.  StatusCode:  {response1.StatusCode}");
                 }
 
                 downloadedBarSets.Push(data.data);
@@ -479,7 +518,8 @@ namespace LionFire.Trading.Spotware.Connect
 
             if (MinItems > 0 && totalItemsDownloaded < MinItems)
             {
-                int lessThanExpectedAmount = MinItems - data2.Count;
+                //int lessThanExpectedAmount = MinItems - data2.Count; // OLD
+                int lessThanExpectedAmount = MinItems - totalItemsDownloaded;
 
                 if (tryAgainCount > MaxTryAgainCount)
                 {
@@ -524,19 +564,11 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     var set = sets.Pop();
 
-                    // TOSANITYCHECK: verify contiguous
-                    if (set.Length > 0)
+                    if (set.Count > 0)
                     {
-                        Debug.WriteLine($"[data] {Symbol} {TimeFrame.Name} Loading {set.Length} bars {set[0].timestamp.ToDateTime().ToString(DateFormat)} to {set[set.Length - 1].timestamp.ToDateTime().ToString(DateFormat)}");
-                        foreach (var b in set)
-                        {
-                            ResultTicks.Add(new Tick()
-                            {
-                                Time = b.timestamp.ToDateTime(),
-                                Bid = b.bid,
-                                Ask = b.ask,
-                            });
-                        }
+                        Debug.WriteLine($"[data] {Symbol} {TimeFrame.Name} Loading {set.Count} bars {set[0].Time.ToString(DateFormat)} to {set[set.Count - 1].Time.ToString(DateFormat)}");
+
+                        ResultTicks.AddRange(set);
                     }
                 }
             }
@@ -569,6 +601,39 @@ namespace LionFire.Trading.Spotware.Connect
             }
 
             UpdateProgress(1, "Done");
+        }
+
+        private List<Tick> AggregateTicks(SpotwareTicksResult bidData, SpotwareTicksResult askData)
+        {
+            List<Tick> ticks = new List<Tick>();
+            int bidIndex = bidData.data.Length-1;
+            int askIndex = askData.data.Length - 1;
+            for (; true;)
+            {
+                var bid = bidIndex < 0 ? SpotwareTick.Invalid : bidData.data[bidIndex];
+                var ask = askIndex < 0 ? SpotwareTick.Invalid : askData.data[askIndex];
+
+                if (!bid.IsValid && !ask.IsValid) break;
+
+                if (bid.timestamp < ask.timestamp)
+                {
+                    ticks.Add(new Tick(bid.timestamp.ToDateTime(), bid: bid.tick));
+                    bidIndex--;
+
+                }
+                else if (bid.timestamp > ask.timestamp)
+                {
+                    ticks.Add(new Tick(ask.timestamp.ToDateTime(), ask: ask.tick));
+                    askIndex--;
+                }
+                else
+                {
+                    ticks.Add(new Tick(bid.timestamp.ToDateTime(), bid: bid.tick, ask: ask.tick));
+                    bidIndex--;
+                    askIndex--;
+                }
+            }
+            return ticks;
         }
 
         public const string DateFormat = "yyyy-MM-dd HH:mm:ss";

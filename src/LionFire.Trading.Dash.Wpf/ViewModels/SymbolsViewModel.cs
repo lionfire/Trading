@@ -21,9 +21,9 @@ namespace LionFire.Trading.Dash.Wpf
 
             base.OnActivate();
 
-            foreach (var symbol in this.Session.Session.SymbolsAvailable)
+            foreach (var symbol in this.SessionViewModel.Session.SymbolsAvailable)
             {
-                Items.Add(new SymbolViewModel( this.Session.Session.Account.GetSymbol(symbol)));
+                Items.Add(new SymbolViewModel( this.SessionViewModel.Session.Account.GetSymbol(symbol)));
             }
         }
     }

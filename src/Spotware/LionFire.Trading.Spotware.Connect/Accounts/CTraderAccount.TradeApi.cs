@@ -31,6 +31,7 @@ using System.Reactive.Linq;
 using LionFire.Structures;
 using OpenApiLib;
 using LionFire.Trading;
+using LionFire.Trading.Statistics;
 using System.Diagnostics;
 
 namespace LionFire.Trading.Spotware.Connect
@@ -39,23 +40,23 @@ namespace LionFire.Trading.Spotware.Connect
 
     public partial class CTraderAccount
     {
-        #region Derived (Convenience)
+#region Derived (Convenience)
 
         string TradeApiHost => ApiInfo.TradeApiHost ?? SpotwareConnectAppInfo.DefaultTradeApiHost;
         int TradeApiPort => ApiInfo.TradeApiPort ?? SpotwareConnectAppInfo.DefaultTradeApiPort;
         string ClientPublicId => ApiInfo.ClientPublicId;
         string ClientSecret => ApiInfo.ClientSecret;
 
-        #endregion
+#endregion
 
-        #region TradeApi Settings
+#region TradeApi Settings
 
         int MaxMessageSize = 1000000;
         uint sendMsgTimeout = 20;
 
-        #endregion
+#endregion
 
-        #region Testing
+#region Testing
 
         bool isDebugIsOn = true;
 
@@ -68,9 +69,9 @@ namespace LionFire.Trading.Spotware.Connect
         //Dictionary<long, string> testOrdersMap = new Dictionary<long,string>();
         long testVolume = 1000000; // TEMP
 
-        #endregion
+#endregion
 
-        #region Construction
+#region Construction
 
         partial void CTraderAccount_NetFramework()
         {
@@ -78,9 +79,9 @@ namespace LionFire.Trading.Spotware.Connect
             readQueueSync = Queue.Synchronized(__readQueue);
         }
 
-        #endregion
+#endregion
 
-        #region Internal fields
+#region Internal fields
 
         SslStream apiSocket;
 
@@ -99,9 +100,9 @@ namespace LionFire.Trading.Spotware.Connect
 
         Random rndGenerator = new Random();
 
-        #endregion
+#endregion
 
-        #region Threads
+#region Threads
 
         Thread handlerThread;
         Thread listenerThread;
@@ -212,11 +213,11 @@ namespace LionFire.Trading.Spotware.Connect
             }
         }
 
-        #endregion
+#endregion
 
         private bool Connect()
         {
-            #region open ssl connection
+#region open ssl connection
 
             logger.LogInformation("Establishing trading SSL connection to {0}:{1}...", TradeApiHost, TradeApiPort);
             try
@@ -233,9 +234,9 @@ namespace LionFire.Trading.Spotware.Connect
             }
             logger.LogInformation("The connection is established successfully.");
 
-            #endregion open ssl connection
+#endregion open ssl connection
 
-            #region start incoming data processing thread
+#region start incoming data processing thread
 
             handlerThread = new Thread(() =>
             {
@@ -251,9 +252,9 @@ namespace LionFire.Trading.Spotware.Connect
             });
             handlerThread.Start();
 
-            #endregion
+#endregion
 
-            #region start listener
+#region start listener
 
             listenerThread = new Thread(() =>
             {
@@ -269,9 +270,9 @@ namespace LionFire.Trading.Spotware.Connect
             });
             listenerThread.Start();
 
-            #endregion
+#endregion
 
-            #region start sender
+#region start sender
 
             senderThread = new Thread(() =>
             {
@@ -287,9 +288,9 @@ namespace LionFire.Trading.Spotware.Connect
             });
             senderThread.Start();
 
-            #endregion
+#endregion
 
-            #region start timer
+#region start timer
 
             heartbeatThread = new Thread(() =>
             {
@@ -305,7 +306,7 @@ namespace LionFire.Trading.Spotware.Connect
             });
             heartbeatThread.Start();
 
-            #endregion
+#endregion
 
             SendAuthorizationRequest();
 
@@ -319,7 +320,7 @@ namespace LionFire.Trading.Spotware.Connect
             return true;
         }
 
-        #region Handlers
+#region Handlers
 
         bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
@@ -329,7 +330,7 @@ namespace LionFire.Trading.Spotware.Connect
             return false;
         }
 
-        #endregion Handlers
+#endregion Handlers
 
         public bool IsAuthorized
         {
@@ -361,7 +362,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         partial void CloseConnection()
         {
-            #region close ssl connection
+#region close ssl connection
 
             isShutdown = true;
             if (apiSocket != null)
@@ -370,9 +371,9 @@ namespace LionFire.Trading.Spotware.Connect
                 apiSocket = null; 
             }
 
-            #endregion
+#endregion
 
-            #region wait for shutting down threads
+#region wait for shutting down threads
 
             Console.Write("Shutting down connection...");
             while (IsTradeConnectionAlive)
@@ -382,7 +383,7 @@ namespace LionFire.Trading.Spotware.Connect
             }
             Console.WriteLine(" Done.");
 
-            #endregion
+#endregion
         }
 
         public bool IsTradeConnectionAlive
@@ -444,7 +445,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         }
 
-        #region Auxilary functions
+#region Auxilary functions
 
         public string GetHexadecimal(byte[] byteArray)
         {
@@ -454,9 +455,9 @@ namespace LionFire.Trading.Spotware.Connect
             return hex.ToString();
         }
 
-        #endregion
+#endregion
 
-        #region Incoming data stream processing
+#region Incoming data stream processing
 
         DateTime lastHeartBeatReceived = default(DateTime);
 
@@ -560,6 +561,17 @@ namespace LionFire.Trading.Spotware.Connect
                             foreach (var bar in payload.TrendbarList)
                             {
                                 Console.WriteLine($"*********************** TRENDBAR: {bar.Period} o:{bar.Open} h:{bar.High} l:{bar.Low} c:{bar.Close} [v:{bar.Volume}]");
+                                if(bar.Period == ProtoOATrendbarPeriod.H1)
+{
+AccountStats.Increment(StatEventType.H1Bar);
+}
+else if(bar.Period == ProtoOATrendbarPeriod.H1)
+{
+AccountStats.Increment(StatEventType.H1Bar);
+}
+else{
+AccountStats.Increment(StatEventType.Other);
+}
                                 throw new Exception("***** got a trendbar!  Celebrate!");
                             }
                         }
@@ -570,6 +582,16 @@ namespace LionFire.Trading.Spotware.Connect
                             Bid = payload.HasBidPrice ? payload.BidPrice : double.NaN,
                             Time = time
                         };
+                        if(payload.HasAskPrice  || payload.HasBidPrice )
+{
+AccountStats.Increment(StatEventType.Tick);
+#if DEBUG
+if(AccountStats.Totals.Ticks % 100 == 0)
+{
+Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
+}
+#endif
+}
 
                         var symbol = (ISymbolInternal)GetSymbol(payload.SymbolName);
                         
@@ -663,11 +685,11 @@ namespace LionFire.Trading.Spotware.Connect
             }
         }
 
-        #endregion
+#endregion
 
 
 
-        #region Outgoing ProtoBuffer objects to Raw data
+#region Outgoing ProtoBuffer objects to Raw data
 
         void SendPingRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
@@ -800,7 +822,7 @@ namespace LionFire.Trading.Spotware.Connect
             Console.WriteLine("Action is NOT IMPLEMENTED!");
         }
 
-        #region Request Messages
+#region Request Messages
 
         Dictionary<string, HashSet<ProtoOATrendbarPeriod>> subscribedSymbols = new Dictionary<string, HashSet<ProtoOATrendbarPeriod>>();
 
@@ -887,11 +909,11 @@ namespace LionFire.Trading.Spotware.Connect
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
 
-        #endregion
+#endregion
 
-        #endregion Outgoing ProtoBuffer objects to Raw data...
+#endregion Outgoing ProtoBuffer objects to Raw data...
 
-        #region Command line interface
+#region Command line interface
 
 
         private void DisplayMenu()
@@ -935,10 +957,10 @@ namespace LionFire.Trading.Spotware.Connect
             return true;
         }
 
-        #endregion
+#endregion
 
 
-        #region Main Menu
+#region Main Menu
 
         struct MenuItem
         {
@@ -992,7 +1014,7 @@ namespace LionFire.Trading.Spotware.Connect
         }
         List<MenuItem> menuItems;
 
-        #endregion Main Menu
+#endregion Main Menu
 
     }
 }

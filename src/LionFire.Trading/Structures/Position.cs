@@ -35,6 +35,7 @@ namespace LionFire.Trading
                 return kind;
             }
         }
+        public bool IsPaper { get { return Kind == PositionKind.Paper; } }
 
         public string Comment { get; set; }
         public double Commissions { get; set; } // REVEW - verify this is getting set

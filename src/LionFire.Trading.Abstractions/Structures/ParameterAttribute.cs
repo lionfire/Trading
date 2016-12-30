@@ -13,6 +13,9 @@ namespace LionFire.Trading
         {
             this.Description = description;
         }
+        public ParameterAttribute()
+        {
+        }
 
         public string Description {
             get; private set;
@@ -22,5 +25,9 @@ namespace LionFire.Trading
         public object MinValue { get; set; }
         public object MaxValue { get; set; }
         public object Step { get; set; }
+
+        public object DefaultMin { get; set; }
+        public object DefaultMax { get; set; }
+        
     }
 }

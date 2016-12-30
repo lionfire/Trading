@@ -58,7 +58,20 @@ namespace LionFire.Trading
         public DateTime OpenTime { get; set; }
         public double High { get; set; }
         public double Low { get; set; }
-        public double Open { get; set; }
+        //public double Open { get; set; }
+
+        #region Open
+
+        public double Open
+        {
+            get { return open; }
+            set { open = value; if (open == 0) { System.Diagnostics.Debug.WriteLine("Warning: Open == 0"); } }
+        }
+        private double open;
+
+        #endregion
+
+
         public double Close { get; set; }
         public double Volume { get; set; }
 
@@ -102,11 +115,22 @@ namespace LionFire.Trading
         public TimedBar(DateTime date, double open, double high, double low, double close, double volume)
         {
             this.OpenTime = date;
-            this.Open = open;
+            this.open = open;
             this.High = high;
             this.Low = low;
             this.Close = close;
             this.Volume = volume;
+            Validate();
+        }
+        public TimedBar(DateTime date)
+        {
+            this.OpenTime = date;
+            this.open = double.NaN;
+            this.High = double.NaN;
+            this.Low = double.NaN;
+            this.Close = double.NaN;
+            this.Volume = double.NaN;
+            Validate();
         }
 
         public TimedBar(SymbolBar b)
@@ -114,16 +138,28 @@ namespace LionFire.Trading
             this.OpenTime = b.Time;
             this.High = b.Bar.High;
             this.Low = b.Bar.Low;
-            this.Open = b.Bar.Open;
+            this.open = b.Bar.Open;
             this.Close = b.Bar.Close;
             this.Volume = b.Bar.Volume;
+            Validate();
         }
+
+        [System.Diagnostics.Conditional("DEBUG")]
+        private void Validate()
+        {
+            if (Open == 0) throw new ArgumentException(nameof(Open));
+            if (High == 0) throw new ArgumentException(nameof(High));
+            if (Low == 0) throw new ArgumentException(nameof(Low));
+            if (Close == 0) throw new ArgumentException(nameof(Close));
+
+        }
+
         public TimedBar(ITimedBar b)
         {
             this.OpenTime = b.OpenTime;
             this.High = b.High;
             this.Low = b.Low;
-            this.Open = b.Open;
+            this.open = b.Open;
             this.Close = b.Close;
             this.Volume = b.Volume;
         }

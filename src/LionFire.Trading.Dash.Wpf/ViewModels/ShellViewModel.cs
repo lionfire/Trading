@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Caliburn.Micro;
 using LionFire.Trading.Workspaces;
 using LionFire.Templating;
+using LionFire.Assets;
+using LionFire.Structures;
 
 namespace LionFire.Trading.Dash.Wpf
 {
@@ -14,10 +16,15 @@ namespace LionFire.Trading.Dash.Wpf
 
     //}
 
-    
-    
+
+    public class ShellApp
+    {
+        public DashSettings Settings = new DashSettings();
+    }
+
     public class ShellViewModel : Conductor<IScreen>.Collection.OneActive
     {
+        public ShellApp App { get; set; } = new ShellApp();
 
         #region Workspaces
 
@@ -31,7 +38,7 @@ namespace LionFire.Trading.Dash.Wpf
                 NotifyOfPropertyChange(() => Workspaces);
             }
         }
-        private BindableCollection< WorkspaceViewModel> workspaces = new BindableCollection<WorkspaceViewModel>();
+        private BindableCollection<WorkspaceViewModel> workspaces = new BindableCollection<WorkspaceViewModel>();
 
         #endregion
 
@@ -68,25 +75,26 @@ namespace LionFire.Trading.Dash.Wpf
 
         #endregion
 
-        public ShellViewModel()
-        {
-            
-        }
-
-        DashSettings Settings = new DashSettings();
+        public DashSettings Settings { get { return App.Settings; } }
 
         protected override void OnActivate()
         {
             base.OnActivate();
 
-            // TODO: 
+
+            // TODO: UI for
             // - Load last workspace option
             // - Load last workspace
             // - Show welcome tab if nothing loaded
 
+            var lastActiveWorkspace = Settings.LastWorkspace;
             if (Settings.LoadLastActiveWorkspaces)
             {
-                // TODO
+                var tWorkspace = lastActiveWorkspace.Load<TWorkspace>();
+                if (tWorkspace != null)
+                {
+                    workspaces.Add(new WorkspaceViewModel(tWorkspace.Create()));
+                }
             }
 
             if (workspaces.Count == 0)
@@ -101,9 +109,26 @@ namespace LionFire.Trading.Dash.Wpf
                 }
             }
 
+            this.IsAutoSaveEnabled = Settings.IsAutoSaveEnabled;
+
             ActiveItem = workspaces.FirstOrDefault();
-            
         }
+
+        public bool IsAutoSaveEnabled
+        {
+            get { return isAutoSaveEnabled; }
+            set
+            {
+                isAutoSaveEnabled = value;
+                foreach (var workspace in workspaces)
+                {
+                    // FUTURE: Move this to a global autosave manager that autosaves all asset types (unless turned off for that type, or globally)
+                    workspace.Workspace.Template.EnableAutoSave(isAutoSaveEnabled);
+                }
+            }
+        }
+        private bool isAutoSaveEnabled;
+
 
         public void Exit()
         {
@@ -118,6 +143,6 @@ namespace LionFire.Trading.Dash.Wpf
         }
     }
 
-    
+
 
 }

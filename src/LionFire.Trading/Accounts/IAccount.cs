@@ -7,13 +7,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Trading.Workspaces;
+using LionFire.Trading.Statistics;
 
 namespace LionFire.Trading
 {
-
+  
     public interface IAccount
     //: ITemplateInstance<TAccount>
     {
+
+        AccountStats AccountStats { get; }
+
         #region Relationships
 
         TAccount Template { get; }
@@ -102,6 +106,7 @@ namespace LionFire.Trading
 
         IHistoricalDataProvider HistoricalDataProvider { get; }
 
+        bool IsTradeApiEnabled { get; set; }
 #endif
 
         //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);

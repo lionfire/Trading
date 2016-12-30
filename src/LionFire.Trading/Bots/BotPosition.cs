@@ -2,6 +2,8 @@
 using cAlgo.API;
 using cAlgo.API.Internals;
 #endif
+using System.Diagnostics;
+
 using LionFire.Trading.Bots;
 using System;
 using System.Collections.Generic;
@@ -12,41 +14,45 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    
+
     public class BotPosition : IOnBar
     {
 
         #region Ontology
 
-        public IBot Bot {
+        public IBot Bot
+        {
             get { return bot; }
         }
         IBot bot;
-public ISingleChartBot SingleChartBot{get{return bot as ISingleChartBot; } }
-        public ISingleChartBotEx BotEx {
+        public ISingleChartBot SingleChartBot { get { return bot as ISingleChartBot; } }
+        public ISingleChartBotEx BotEx
+        {
             get { return bot as ISingleChartBotEx; }
         }
-        
-        public Position Position {
+
+        public Position Position
+        {
             get { return position; }
         }
         Position position;
 
-        public Symbol Symbol {
+        public Symbol Symbol
+        {
             get { return symbol; }
         }
-        Symbol symbol {
-            get { return SingleChartBot?.Symbol; }
-        }
+        Symbol symbol;
 
         #endregion
 
         #region State
 
 
-        public double? MinStopLoss {
+        public double? MinStopLoss
+        {
             get { return minStopLoss; }
-            set {
+            set
+            {
                 if (minStopLoss == value)
                     return;
                 minStopLoss = value;
@@ -59,8 +65,9 @@ public ISingleChartBot SingleChartBot{get{return bot as ISingleChartBot; } }
         public double? MaxTakeProfit;
 
         public int DefaultBarsSinceOpen = 0;
-        public TimeFrame DefaultTimeFrame {
-            get;set;
+        public TimeFrame DefaultTimeFrame
+        {
+            get; set;
         }
 
         public double NewStopLoss = double.NaN;
@@ -85,12 +92,26 @@ public ISingleChartBot SingleChartBot{get{return bot as ISingleChartBot; } }
         #endregion
 
 
-
-
-        public BotPosition(Position position, IBot bot)
+        public BotPosition(Position position, IBot bot, Symbol symbol, TradeType tradeType, double stopLossInPips, double takeProfitInPips, long volumeInUnits)
         {
             this.bot = bot;
             this.position = position;
+            this.symbol = symbol;
+#if !cAlgo
+            if (position == null)
+            {
+                double sl = symbol.GetStopLossFromPips(tradeType, stopLossInPips);
+                double tp = symbol.GetTakeProfitFromPips(tradeType, takeProfitInPips);
+                position = new Position()
+                {
+                    TradeType = tradeType,
+                    StopLoss = sl,
+                    TakeProfit = tp,
+                    Volume = volumeInUnits,
+                };
+                Debug.WriteLine($"[BOT POSITION] {this}");
+            }
+#endif
             this.DefaultTimeFrame = (bot as ISingleChartBot)?.TimeFrame;
             this.onBars = new List<IOnBar>();
             this.MinStopLoss = position.StopLoss;
@@ -136,10 +157,12 @@ public ISingleChartBot SingleChartBot{get{return bot as ISingleChartBot; } }
         public double? StopLoss;
         public double? TakeProfit;
 
-        
 
-        public double? StopLoss_ {
-            get {
+
+        public double? StopLoss_
+        {
+            get
+            {
                 var val = TradeMath.Constrain(position.StopLoss, MinStopLoss, MaxStopLoss, position.TradeType);
 
                 if (val.HasValue && double.IsNaN(val.Value))
@@ -157,8 +180,10 @@ public ISingleChartBot SingleChartBot{get{return bot as ISingleChartBot; } }
                 return val;
             }
         }
-        public double? TakeProfit_ {
-            get {
+        public double? TakeProfit_
+        {
+            get
+            {
                 var val = TradeMath.Constrain(position.TakeProfit, MinTakeProfit, MaxTakeProfit, position.TradeType);
                 if (val.HasValue && double.IsNaN(val.Value))
                 {

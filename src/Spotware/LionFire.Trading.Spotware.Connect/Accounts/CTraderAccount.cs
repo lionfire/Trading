@@ -27,6 +27,7 @@ using OpenApiLib;
 #endif
 using LionFire.Structures;
 using LionFire.Trading;
+
 using LionFire.Trading.Spotware.Connect.AccountApi;
 using LionFire.Trading.Accounts;
 using LionFire.Reactive;
@@ -43,6 +44,8 @@ namespace LionFire.Trading.Spotware.Connect
     public partial class CTraderAccount : LiveAccountBase<TCTraderAccount>,
         //IRequiresServices,
         IStartable, IHasExecutionFlags, IHasRunTask, IConfigures<IServiceCollection>
+        , IStoppable
+        , IExecutable
     //, IHandler<SymbolTick>
     //, IDataSource
     //, IHasExecutionState, IChangesExecutionState
@@ -154,13 +157,26 @@ namespace LionFire.Trading.Spotware.Connect
         BehaviorObservable<ExecutionState> state = new BehaviorObservable<ExecutionState>(ExecutionState.Unspecified);
 
 
+        public async Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
+        {
+            if (this.IsStarted())
+            {
+                state.OnNext(ExecutionState.Stopping);
+                if (IsTradeApiEnabled)
+                {
+                    await Task.Run(() => Stop_TradeApi());
+                }
+                state.OnNext(ExecutionState.Stopped);
+            }
+        }
 
         public async Task Start()
         {
             state.OnNext(ExecutionState.Starting);
             await OnStarting();
 
-            RunTask = Task.Factory.StartNew(Run);
+            RunTask = Task.Run(() => Run());
+            //RunTask = Task.Factory.StartNew(Run);
         }
 
         public Task RunTask
@@ -199,28 +215,17 @@ namespace LionFire.Trading.Spotware.Connect
         public override IHistoricalDataProvider HistoricalDataProvider { get { return historicalDataProvider; } }
         SpotwareConnectLoadHistoricalDataProvider historicalDataProvider;
 
-        #region IsTradeApiEnabled
 
-        public bool IsTradeApiEnabled
+        protected override async void OnTradeApiEnabledChanging()
         {
-            get { return isTradeApiEnabled; }
-            set
-            {
-                if (isTradeApiEnabled == value) return;
-                isTradeApiEnabled = value;
-                if (isTradeApiEnabled)
-                {
-                    // TODO
-                }
-                else
-                {
-                }
-                OnPropertyChanged(nameof(IsTradeApiEnabled));
-            }
+            await Task.Run(()=>Stop());
         }
-        private bool isTradeApiEnabled = false;
-
-        #endregion
+        protected override void OnTradeApiEnabledChanged()
+        {
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+            Start();
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
+        }
 
         public void Run()
         {
@@ -385,7 +390,7 @@ namespace LionFire.Trading.Spotware.Connect
 #endif
         }
 
-        
+
         ConcurrentDictionary<string, BarToOtherBarHandler> BarToOtherBarHandlers = new ConcurrentDictionary<string, BarToOtherBarHandler>();
 
 
@@ -489,10 +494,7 @@ namespace LionFire.Trading.Spotware.Connect
             {
                 var minuteBarOpen = new DateTime(obj.Time.Year, obj.Time.Month, obj.Time.Day, obj.Time.Hour, obj.Time.Minute, 0);
 
-                bar = new TimedBar()
-                {
-                    OpenTime = minuteBarOpen,
-                };
+                bar = new TimedBar(minuteBarOpen);
             }
 
             if (!double.IsNaN(obj.Bid))
@@ -647,7 +649,9 @@ namespace LionFire.Trading.Spotware.Connect
                 throw new NotImplementedException();
             }
 
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             Data.EnsureDataAvailable(series, null, ExtrapolatedServerTime, barCount);
+#pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             ////barCount = 0; // TEMP DISABLE
             //var task = new SpotwareLoadHistoricalDataJob(symbol, timeFrame)
             //{

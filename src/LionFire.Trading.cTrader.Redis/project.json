@@ -5,7 +5,7 @@
     "LionFire.Applications.Abstractions": "1.0.0-*",
     "LionFire.Extensions.Logging": "1.0.0-*",
     "LionFire.Trading.Abstractions": "1.0.0-*",
-    "Microsoft.Extensions.Logging.Abstractions": "1.0.0",
+    "Microsoft.Extensions.Logging.Abstractions": "1.*",
     "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
     "StackExchange.Redis": "1.1.605",

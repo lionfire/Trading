@@ -8,7 +8,7 @@
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>LionFire.Trading.Dash.Wpf</RootNamespace>
-    <AssemblyName>LionFire.Trading.Dash.Wpf</AssemblyName>
+    <AssemblyName>TradingDash</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
@@ -123,9 +123,6 @@
     </Reference>
     <Reference Include="LionFire.Trading.Spotware.Connect">
       <HintPath>..\Spotware\LionFire.Trading.Spotware.Connect\bin\Debug\net462\LionFire.Trading.Spotware.Connect.dll</HintPath>
-    </Reference>
-    <Reference Include="LionFire.Utility">
-      <HintPath>..\..\..\Bin\LionFire.Utility.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.Extensions.DependencyInjection, Version=1.1.0.0, Culture=neutral, PublicKeyToken=adb9793829ddae60, processorArchitecture=MSIL">
       <HintPath>..\..\..\Trading.Proprietary\packages\Microsoft.Extensions.DependencyInjection.1.1.0\lib\netstandard1.1\Microsoft.Extensions.DependencyInjection.dll</HintPath>
@@ -292,40 +289,41 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Application\DashSettings.cs" />
-    <Compile Include="BacktestingView.xaml.cs">
+    <Compile Include="Application\EventMessages\WorkspaceDataChanged.cs" />
+    <Compile Include="Views\BacktestingView.xaml.cs">
       <DependentUpon>BacktestingView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Bootstrapper.cs" />
-    <Compile Include="BotsView.xaml.cs">
+    <Compile Include="Application\Bootstrapper.cs" />
+    <Compile Include="Views\BotsView.xaml.cs">
       <DependentUpon>BotsView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="BotsViewModel.cs" />
+    <Compile Include="ViewModels\BotsViewModel.cs" />
     <Compile Include="Caliburn.Micro\LionFireScreen.cs" />
-    <Compile Include="HistoricalDataView.xaml.cs">
+    <Compile Include="Views\HistoricalDataView.xaml.cs">
       <DependentUpon>HistoricalDataView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="IWorkspaceViewModel.cs" />
-    <Compile Include="JobsViewModel.cs" />
-    <Compile Include="LayoutItemTemplateSelector.cs" />
+    <Compile Include="Workspaces\IWorkspaceViewModel.cs" />
+    <Compile Include="ViewModels\JobsViewModel.cs" />
+    <Compile Include="Utilities\LayoutItemTemplateSelector.cs" />
     <Compile Include="Move\VmCollection.cs" />
-    <Compile Include="SeriesDataView.xaml.cs">
+    <Compile Include="Views\SeriesDataView.xaml.cs">
       <DependentUpon>SeriesDataView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="SessionView.xaml.cs">
+    <Compile Include="Views\SessionView.xaml.cs">
       <DependentUpon>SessionView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ShellView.xaml.cs">
+    <Compile Include="Views\ShellView.xaml.cs">
       <DependentUpon>ShellView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="ShellViewModel.cs" />
-    <Compile Include="SymbolsView.xaml.cs">
+    <Compile Include="ViewModels\ShellViewModel.cs" />
+    <Compile Include="Views\SymbolsView.xaml.cs">
       <DependentUpon>SymbolsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utilities\NewMenuItemTemplateSelector.cs" />
     <Compile Include="Utilities\TypeToDisplayName.cs" />
     <Compile Include="ViewModels\SeriesDataViewModel.cs" />
     <Compile Include="ViewModels\SymbolsViewModel.cs" />
-    <Compile Include="TypeResolver.cs" />
+    <Compile Include="Utilities\TypeResolver.cs" />
     <Compile Include="Caliburn.Micro\AddNewViewModelMenuItemViewModel.cs" />
     <Compile Include="ViewModels\BacktestingViewModel.cs" />
     <Compile Include="ViewModels\BotViewModel.cs" />
@@ -334,44 +332,44 @@
     <Compile Include="ViewModels\SessionViewModel.cs" />
     <Compile Include="ViewModels\SymbolViewModel.cs" />
     <Compile Include="ViewModels\ViewModelResolver.cs" />
-    <Compile Include="WorkspaceExplorerView.xaml.cs">
+    <Compile Include="Views\WorkspaceExplorerView.xaml.cs">
       <DependentUpon>WorkspaceExplorerView.xaml</DependentUpon>
     </Compile>
-    <Compile Include="WorkspaceExplorerViewModel.cs" />
+    <Compile Include="ViewModels\WorkspaceExplorerViewModel.cs" />
     <Compile Include="ViewModels\WorkspaceViewModel.cs" />
-    <Page Include="BacktestingView.xaml">
+    <Page Include="Views\BacktestingView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="BotsView.xaml">
+    <Page Include="Views\BotsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="HistoricalDataView.xaml">
+    <Page Include="Views\HistoricalDataView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="SeriesDataView.xaml">
+    <Page Include="Views\SeriesDataView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="SessionView.xaml">
+    <Page Include="Views\SessionView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ShellView.xaml">
+    <Page Include="Views\ShellView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="SymbolsView.xaml">
+    <Page Include="Views\SymbolsView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="WorkspaceExplorerView.xaml">
+    <Page Include="Views\WorkspaceExplorerView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="WorkspaceView.xaml">
+    <Page Include="Views\WorkspaceView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -379,18 +377,18 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="WorkspaceScreen.cs" />
-    <Compile Include="WorkspaceView.xaml.cs">
+    <Compile Include="Workspaces\WorkspaceScreen.cs" />
+    <Compile Include="Views\WorkspaceView.xaml.cs">
       <DependentUpon>WorkspaceView.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Page Include="NewAlert.xaml">
+    <Page Include="Views\NewAlert.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="NewAlert.xaml.cs">
+    <Compile Include="Views\NewAlert.xaml.cs">
       <DependentUpon>NewAlert.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs">

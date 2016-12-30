@@ -53,7 +53,72 @@
 
     <DockPanel>
 
-        <DockPanel DockPanel.Dock="Bottom">
+        <DockPanel DockPanel.Dock="Bottom" LastChildFill="False">
+            <DockPanel.Resources>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="#CCC"/>
+                    <Setter Property="BorderThickness" Value="1.5"/>
+                    <Setter Property="Padding" Value="3"/>
+                    <Setter Property="DockPanel.Dock" Value="Right"/>
+                </Style>
+                <Style TargetType="StackPanel">
+                    <Setter Property="Orientation" Value="Horizontal"/>
+                </Style>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Padding" Value="1"/>
+                    <Setter Property="FontFamily" Value="Novecento Wide"/>
+                    <Setter Property="FontSize" Value="9"/>
+                    <Setter Property="VerticalAlignment" Value="Center"/>
+                    <Setter Property="Foreground" Value="#777"/>
+                </Style>
+
+            </DockPanel.Resources>
+
+            <Border>
+                <TextBlock Text="{Binding Workspace.StatusText}"></TextBlock>
+            </Border>
+            <Border DockPanel.Dock="Left">
+                <Border.Resources>
+                    <Style TargetType="ToggleButton">
+                        <Setter Property="FontFamily" Value="WebHostingHub-Glyphs"/>
+                        <Setter Property="Margin" Value="0 0 3 0"/>
+                        <Setter Property="Padding" Value="3 1.5"/>
+                        <Setter Property="BorderBrush" Value="Transparent"/>
+                    </Style>
+                </Border.Resources>
+                <StackPanel>
+                    <Grid Margin="3 0"></Grid>
+                    <TextBlock  >Master</TextBlock>
+                    <Grid Margin="1 0"></Grid>
+                    <ToggleButton IsChecked="{Binding Workspace.Template.AllowAny}">&#xF11D;</ToggleButton>
+                    <ToggleButton IsChecked="{Binding Workspace.Template.AllowConnect}">&#xF0A6;</ToggleButton>
+                    <ToggleButton IsChecked="{Binding Workspace.Template.AllowDownload}">&#xF11A;</ToggleButton>
+                    <Grid Margin="3 0"></Grid>
+                    <ToggleButton IsChecked="{Binding Workspace.Template.AllowLive}">&#xF21F;</ToggleButton>
+                    <ToggleButton IsChecked="{Binding Workspace.Template.AllowDemo}">&#xF223;</ToggleButton>
+                    <ToggleButton IsChecked="{Binding Workspace.Template.AllowScanners}">&#xF0F1;</ToggleButton>
+                    <ToggleButton IsChecked="{Binding Workspace.Template.AllowPaper}">&#xF27E;</ToggleButton>
+                </StackPanel>
+            </Border>
+
+            <Border>
+                <StackPanel>
+                    <TextBlock Text="{Binding TotalOther}" />
+                    <TextBlock Text=" events ("/>
+                    <TextBlock Text="{Binding OtherPerMinute}" />
+                    <TextBlock Text="/min)"/>
+                </StackPanel>
+            </Border>
+            <Border>
+                <StackPanel>
+                    <TextBlock Text="{Binding TotalTicks}" />
+                    <TextBlock Text=" ticks ("/>
+                    <TextBlock Text="{Binding TicksPerMinute}" />
+                    <TextBlock Text="/min)"/>
+                </StackPanel>
+            </Border>
+        </DockPanel>
+        <DockPanel DockPanel.Dock="Top">
             <DockPanel LastChildFill="False" VerticalAlignment="Center" Margin="5">
                 <DockPanel.Resources>
                     <Style TargetType="CheckBox">
@@ -71,12 +136,21 @@
                             </Menu.ItemsPanel>
                         </Menu>
                     </xctk:DropDownButton.DropDownContent>
-                    New
+                    <!--<TextBlock FontFamily="WebHostingHub-Glyphs" FontSize="10" Margin="3">&#x002B;</TextBlock>-->
+                    <TextBlock FontFamily="WebHostingHub-Glyphs" FontSize="12" Margin="3">&#xF0C6;</TextBlock>
                 </xctk:DropDownButton>
 
-                <TextBlock Text="{Binding Workspace.StatusText}" DockPanel.Dock="Right"></TextBlock>
-                <CheckBox IsChecked="{Binding Workspace.IsTradeApiEnabled}" DockPanel.Dock="Right">Trade API</CheckBox>
-                <CheckBox IsChecked="{Binding Workspace.IsLiveEnabled}" DockPanel.Dock="Right">Live</CheckBox>
+                <ToolBarTray x:Name="ToolbarTray">
+                    <!--<ToolBar>
+                        <Button>asdf</Button>
+                    </ToolBar>-->
+                </ToolBarTray>
+
+                <!--<CheckBox IsChecked="{Binding Workspace.IsTradeApiEnabled}" DockPanel.Dock="Right">Trade API</CheckBox>-->
+                <!--<CheckBox IsChecked="{Binding Workspace.IsLiveEnabled}" DockPanel.Dock="Right">
+                    
+                </CheckBox>-->
+
             </DockPanel>
         </DockPanel>
 
@@ -151,7 +225,7 @@
                 <xcad:LayoutRoot.RightSide >
                     <xcad:LayoutAnchorSide >
                         <xcad:LayoutAnchorGroup  >
-                            <xcad:LayoutAnchorable Title="Workspace Explorer" ContentId="WorkspaceExplorer" CanClose="False"  AutoHideWidth="200" >
+                            <xcad:LayoutAnchorable Title="Workspace Explorer" ContentId="WorkspaceExplorer" CanClose="False" IsEnabled="True" IsActive="True" IsSelected="True"  AutoHideWidth="200" >
                                 <local:WorkspaceExplorerView></local:WorkspaceExplorerView>
                             </xcad:LayoutAnchorable>
 

@@ -54,6 +54,7 @@ namespace LionFire.Trading.Bots
 
         public BotBase()
         {
+            LionFireEnvironment.ProgramName = "Trading"; // MOVE
             InitExchangeRates();
         }
 
@@ -112,20 +113,20 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Event Handling
+        #region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-#endregion
+        #endregion
 
-#region Derived
+        #region Derived
 
         public bool CanOpenLong
         {
@@ -176,9 +177,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#region Backtesting
+        #region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.001;
@@ -192,102 +193,111 @@ namespace LionFire.Trading.Bots
 #endif
          double GetFitness(GetFitnessArgs args)
         {
-            var dd = args.MaxEquityDrawdownPercentages;
-            dd = Math.Max(FitnessMinDrawdown, dd);
+            try
+            {
+                var dd = args.MaxEquityDrawdownPercentages;
+                dd = Math.Max(FitnessMinDrawdown, dd);
 
-            if (dd > FitnessMaxDrawdown) { return -dd; }
-            var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
+                if (dd > FitnessMaxDrawdown) { return -dd; }
+                var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
 
-            var botType = this.GetType().FullName;
+                var botType = this.GetType().FullName;
 #if cAlgo
-            if (this.GetType().FullName.StartsWith("cAlgo."))
-            {
-                botType = this.GetType().GetTypeInfo().BaseType.FullName;
-            }
-            if (Template.TimeFrame == null)
-            {
-                Template.TimeFrame = this.TimeFrame.ToShortString();
-            }
-            if (Template.Symbol == null)
-            {
-                Template.Symbol = this.Symbol.Code;
-            }
-#endif
-            var backtestResult = new BacktestResult()
-            {
-                BacktestDate = DateTime.UtcNow,
-                BotType = botType,
-                BotConfigType = this.Template.GetType().AssemblyQualifiedName,
-                Config = this.Template,
-                InitialBalance = initialBalance,
-                //Start = this.MarketSeries?.OpenTime?[0],
-                //End = this.MarketSeries?.OpenTime?.LastValue,
-                Start = StartDate.Value,
-                End = EndDate.Value,
-
-                AverageTrade = args.AverageTrade,
-                Equity = args.Equity,
-                //History
-                LosingTrades = args.LosingTrades,
-                MaxBalanceDrawdown = args.MaxBalanceDrawdown,
-                MaxBalanceDrawdownPercentages = args.MaxBalanceDrawdownPercentages,
-                MaxEquityDrawdown = args.MaxEquityDrawdown,
-                MaxEquityDrawdownPercentages = args.MaxEquityDrawdownPercentages,
-                NetProfit = args.NetProfit,
-                //PendingOrders
-                //Positions
-                ProfitFactor = args.ProfitFactor,
-                SharpeRatio = args.SharpeRatio,
-                SortinoRatio = args.SortinoRatio,
-                TotalTrades = args.TotalTrades,
-                WinningTrades = args.WinningTrades,
-            };
-
-            double fitness;
-            if (!EndDate.HasValue || !StartDate.HasValue)
-            {
-                fitness = 0.0;
-            }
-            else
-            {
-                var timeSpan = EndDate.Value - StartDate.Value;
-                var totalMonths = timeSpan.TotalDays / 31;
-                var tradesPerMonth = backtestResult.TradesPerMonth;
-
-                //var aroi = (args.NetProfit / initialBalance) / (timeSpan.TotalDays / 365);
-                var aroi = backtestResult.Aroi;
-
-                if (args.LosingTrades == 0)
+                if (this.GetType().FullName.StartsWith("cAlgo."))
                 {
-                    fitness = aroi;
+                    botType = this.GetType().GetTypeInfo().BaseType.FullName;
+                }
+                if (Template.TimeFrame == null)
+                {
+                    Template.TimeFrame = this.TimeFrame.ToShortString();
+                }
+                if (Template.Symbol == null)
+                {
+                    Template.Symbol = this.Symbol.Code;
+                }
+#endif
+                var backtestResult = new BacktestResult()
+                {
+                    BacktestDate = DateTime.UtcNow,
+                    BotType = botType,
+                    BotConfigType = this.Template.GetType().AssemblyQualifiedName,
+                    Config = this.Template,
+                    InitialBalance = initialBalance,
+                    //Start = this.MarketSeries?.OpenTime?[0],
+                    //End = this.MarketSeries?.OpenTime?.LastValue,
+                    Start = StartDate.Value,
+                    End = EndDate.Value,
+
+                    AverageTrade = args.AverageTrade,
+                    Equity = args.Equity,
+                    //History
+                    LosingTrades = args.LosingTrades,
+                    MaxBalanceDrawdown = args.MaxBalanceDrawdown,
+                    MaxBalanceDrawdownPercentages = args.MaxBalanceDrawdownPercentages,
+                    MaxEquityDrawdown = args.MaxEquityDrawdown,
+                    MaxEquityDrawdownPercentages = args.MaxEquityDrawdownPercentages,
+                    NetProfit = args.NetProfit,
+                    //PendingOrders
+                    //Positions
+                    ProfitFactor = args.ProfitFactor,
+                    SharpeRatio = args.SharpeRatio,
+                    SortinoRatio = args.SortinoRatio,
+                    TotalTrades = args.TotalTrades,
+                    WinningTrades = args.WinningTrades,
+                };
+
+                double fitness;
+                if (!EndDate.HasValue || !StartDate.HasValue)
+                {
+                    fitness = 0.0;
                 }
                 else
                 {
-                    fitness = aroi / dd;
+                    var timeSpan = EndDate.Value - StartDate.Value;
+                    var totalMonths = timeSpan.TotalDays / 31;
+                    var tradesPerMonth = backtestResult.TradesPerMonth;
+
+                    //var aroi = (args.NetProfit / initialBalance) / (timeSpan.TotalDays / 365);
+                    var aroi = backtestResult.Aroi;
+
+                    if (args.LosingTrades == 0)
+                    {
+                        fitness = aroi;
+                    }
+                    else
+                    {
+                        fitness = aroi / dd;
+                    }
+
+                    var minTrades = Template.BacktestMinTradesPerMonth;
+
+                    //#if cAlgo
+                    //                logger.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
+                    //#endif
+
+                    if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
+                    {
+                        fitness *= tradesPerMonth / minTrades;
+                    }
+
+                    //#if cAlgo
+                    //            Print($"Fitness: {StartDate.Value} - {EndDate.Value} profit: {args.NetProfit} years: {((EndDate.Value - StartDate.Value).TotalDays / 365)} constrained eqDD:{dd} aroi:{aroi} aroi/DD:{aroiVsDD}");
+                    //#endif
+
+                    fitness *= 100.0;
+
+                    backtestResult.Fitness = fitness;
+                    DoLogBacktest(args, backtestResult);
                 }
 
-                var minTrades = Template.BacktestMinTradesPerMonth;
+                return fitness;
 
-                //#if cAlgo
-                //                logger.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
-                //#endif
-
-                if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
-                {
-                    fitness *= tradesPerMonth / minTrades;
-                }
-
-                //#if cAlgo
-                //            Print($"Fitness: {StartDate.Value} - {EndDate.Value} profit: {args.NetProfit} years: {((EndDate.Value - StartDate.Value).TotalDays / 365)} constrained eqDD:{dd} aroi:{aroi} aroi/DD:{aroiVsDD}");
-                //#endif
-
-                fitness *= 100.0;
-
-                backtestResult.Fitness = fitness;
-                DoLogBacktest(args, backtestResult);
             }
-
-            return fitness;
+            catch (Exception ex)
+            {
+                Logger.LogError("GetFitness threw exception: " + ex);
+                return 0;
+            }
         }
 
         protected virtual void DoLogBacktest(GetFitnessArgs args, BacktestResult backtestResult)
@@ -323,7 +333,8 @@ namespace LionFire.Trading.Bots
 
         private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan)
         {
-            var dir = Path.Combine(LionFireEnvironment.ProgramDataDir, "Results");
+            
+            var dir = Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results");
 
             //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
             var sym =
@@ -333,8 +344,15 @@ namespace LionFire.Trading.Bots
             Template.Symbol;
 #endif
 
+            var tf =
+#if cAlgo
+                TimeFrame.ToShortString();
+#else
+            (this as IHasSingleSeries)?.MarketSeries?.TimeFrame?.Name;
+#endif
+
             var tradesPerMonth = (args.TotalTrades / (timeSpan.TotalDays / 31)).ToString("F1");
-            var filename = fitness.ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  bot={this.GetType().Name} sym={sym} id={id}";
+            var filename = fitness.ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
             var ext = ".json";
             int i = 0;
             var path = Path.Combine(dir, filename + ext);
@@ -464,7 +482,7 @@ namespace LionFire.Trading.Bots
 
                 var quantity = (long)equityRiskAmount;
                 quantity = VolumeToStep(quantity);
-                volume_PositionPercentOfEquity = (long)(quantity) ;
+                volume_PositionPercentOfEquity = (long)(quantity);
 
 
 #if TRACE_RISK

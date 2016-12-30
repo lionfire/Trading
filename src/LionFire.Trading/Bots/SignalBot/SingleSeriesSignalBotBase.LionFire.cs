@@ -17,9 +17,9 @@ namespace LionFire.Trading.Bots
         protected override void OnStarting()
         {
             this.Validate()
-                .PropertyNonDefault(nameof(Template.Symbol), Template.Symbol)
-                .PropertyNonDefault(nameof(Template.TimeFrame), Template.TimeFrame)
-                .EnsureValid();
+            .PropertyNonDefault(nameof(Template.Symbol), Template.Symbol)
+            .PropertyNonDefault(nameof(Template.TimeFrame), Template.TimeFrame)
+            .EnsureValid();
 
             if (!Account.Started.Value)
             {
@@ -36,7 +36,7 @@ namespace LionFire.Trading.Bots
             CreateIndicator();
 
             //this.Indicator.Template = this.Template.Indicator;
-            
+
             this.Indicator.Account = Account; // 
 
             Indicator.Start();
@@ -52,14 +52,37 @@ namespace LionFire.Trading.Bots
             {
                 this.MarketSeries.Bar += MarketSeries_Bar;
             }
-            this.Symbol.GetLastBar(TimeFrame.m1).Wait(); // Gets server time
+            //this.Symbol.GetLastBar(TimeFrame.m1).Wait(); // Gets server time
+
+            this.Symbol.Ticked += Symbol_Tick;
+
             Evaluate();
+
         }
 
         private void Market_Ticked()
         {
             // Unlikely OPTIMIZE: convey which symbols/tf's ticked and only evaluate here if relevant?  Backtests are usually focused on one bot though.
             Evaluate();
+        }
+
+        public DateTime End = default(DateTime);
+
+        private void Symbol_Tick(SymbolTick obj) // MOVE unsubscribe logic  to Base
+        {
+            if (End == default(DateTime))  // REFACTOR to base
+            {
+                End = DateTime.Now + TimeSpan.FromSeconds(150);
+            }
+            //Console.WriteLine($"[liontrender] [tick] {z} {obj}    (Test time remaining: {(End-DateTime.Now).TotalSeconds.ToString("N")} seconds)");
+
+#if !cAlgo
+            if (End <= DateTime.Now)
+            {
+                Console.WriteLine("[test] Test complete.  Unsubscribing from tick events.");
+                this.Symbol.Ticked -= Symbol_Tick;
+            }
+#endif
         }
 
         private void MarketSeries_Bar(SymbolBar obj)

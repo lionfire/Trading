@@ -15,14 +15,14 @@ namespace LionFire.Trading.Dash.Wpf
 
         #region Session
 
-        public SessionViewModel Session
+        public SessionViewModel SessionViewModel
         {
             get { return session; }
             set
             {
                 if (session == value) return;
                 session = value;
-                NotifyOfPropertyChange(() => Session);
+                NotifyOfPropertyChange(() => SessionViewModel);
                 NotifyOfPropertyChange(() => SelectedSessionName);
             }
         }
@@ -38,7 +38,7 @@ namespace LionFire.Trading.Dash.Wpf
             get { return session?.Session.Name; }
             set
             {
-                Session = WorkspaceViewModel?.Sessions?.Where(s => s.Session.Name == value).FirstOrDefault();
+                SessionViewModel = WorkspaceViewModel?.Sessions?.Where(s => s.Session.Name == value).FirstOrDefault();
             }
         }
 
@@ -46,7 +46,7 @@ namespace LionFire.Trading.Dash.Wpf
 
         public IEnumerable<string> SessionsAvailable
         {
-            get { return Session?.Workspace?.Sessions?.Select(s => s.Name); }
+            get { return SessionViewModel?.Workspace?.Sessions?.Select(s => s.Name); }
         }
     }
 }

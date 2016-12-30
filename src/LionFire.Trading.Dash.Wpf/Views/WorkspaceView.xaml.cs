@@ -71,10 +71,12 @@ namespace LionFire.Trading.Dash.Wpf
 
         #region Construction
 
+        
          public WorkspaceView()
         {
             InitializeComponent();
-            
+
+
 
             // TODO
             //foreach (var b in SymbolFilterButtons.Children.OfType<ToggleButton>())
@@ -84,8 +86,10 @@ namespace LionFire.Trading.Dash.Wpf
             //}
         }
 
-        #endregion
         
+
+        #endregion
+
 
         private void WorkspaceTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
@@ -102,6 +106,7 @@ namespace LionFire.Trading.Dash.Wpf
             //        RefreshBacktestResults();
             //    }
             //}
+            
         }
 
        

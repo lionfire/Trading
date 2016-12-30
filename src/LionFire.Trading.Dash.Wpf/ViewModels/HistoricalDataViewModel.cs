@@ -1,5 +1,5 @@
 ﻿using Caliburn.Micro;
-using LionFire.Extensions.AssignFrom;
+using LionFire.ExtensionMethods;
 using LionFire.Templating;
 using System;
 using System.Collections.Generic;
@@ -136,7 +136,7 @@ namespace LionFire.Trading.Dash.Wpf
         {
             get
             {
-                return "(All)".Yield().Concat(this.Session.Session.Account.SymbolsAvailable);
+                return "(All)".Yield().Concat(this.SessionViewModel.Session.Account.SymbolsAvailable);
             }
         }
 
@@ -342,9 +342,9 @@ namespace LionFire.Trading.Dash.Wpf
         {
             return true;
         }
-        public MarketSeriesBase MarketSeries => this.Session.Session.Account.GetSymbol(SelectedSymbolCode).GetMarketSeriesBase(this.SelectedTimeFrame);
+        public MarketSeriesBase MarketSeries => this.SessionViewModel.Session.Account.GetSymbol(SelectedSymbolCode).GetMarketSeriesBase(this.SelectedTimeFrame);
         //public BindableCollection<MarketSeriesBase> MarketSerieses => (MarketSeriesBase)this.Session.Session.Account.GetSymbol(SelectedSymbol).GetMarketSeries(this.SelectedTimeFrame);
-        public IAccount Account => Session?.Session?.Account;
+        public IAccount Account => SessionViewModel?.Session?.Account;
 
         public void Load()
         {
@@ -354,9 +354,9 @@ namespace LionFire.Trading.Dash.Wpf
             {
                 if (SelectedSymbolCode == "(All)")
                 {
-                    Parallel.ForEach(Session.Session.Account.SymbolsAvailable, symbolCode =>
+                    Parallel.ForEach(SessionViewModel.Session.Account.SymbolsAvailable, symbolCode =>
                     {
-                        var series = (MarketSeriesBase)this.Session.Session.Account.GetSymbol(symbolCode).GetMarketSeriesBase(this.SelectedTimeFrame);
+                        var series = (MarketSeriesBase)this.SessionViewModel.Session.Account.GetSymbol(symbolCode).GetMarketSeriesBase(this.SelectedTimeFrame);
                         //Account.HistoricalDataProvider.GetData(MarketSeries, From, To, cacheOnly: this.CacheOnly);
                         _Load(series);
                     });

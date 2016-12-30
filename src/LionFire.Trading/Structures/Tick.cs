@@ -22,8 +22,8 @@ namespace LionFire.Trading
         public bool HasBid { get { return !double.IsNaN(Bid); } }
         public bool HasAsk { get { return !double.IsNaN(Ask); } }
 
-        public static Tick Invalid { get; set; }
-        private static readonly Tick invalid = new Tick { Time = default(DateTime), Bid=double.NaN, Ask = double.NaN  };
+        //public static Tick Invalid { get; set; }
+        public static readonly Tick Invalid = new Tick { Time = default(DateTime), Bid=double.NaN, Ask = double.NaN  };
 
         public override string ToString()
         {

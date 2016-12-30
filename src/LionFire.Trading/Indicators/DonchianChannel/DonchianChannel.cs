@@ -3,11 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Indicators
 {
 
-    public class TDonchianChannel : TIndicator
+    public class TDonchianChannel : TSingleSeriesIndicator
     {
         public int Periods { get; set; } = 21;
     }
@@ -16,12 +17,22 @@ namespace LionFire.Trading.Indicators
     public class DonchianChannel : SingleSeriesIndicatorBase<TDonchianChannel>
     {
 
-        #region Outpouts
+        #region Outputs
 
         public DoubleDataSeries Top { get; private set; } = new DoubleDataSeries();
         public DoubleDataSeries Middle { get; private set; } = new DoubleDataSeries();
         public DoubleDataSeries Bottom { get; private set; } = new DoubleDataSeries();
 
+        public override IEnumerable<IDataSeries> Outputs
+        {
+            get
+            {
+                yield return Top;
+                yield return Middle;
+                yield return Bottom;
+            }
+        }
+        
         #endregion
 
         #region Construction
@@ -31,71 +42,36 @@ namespace LionFire.Trading.Indicators
         }
 
         #endregion
-
-        #region Convenience
-
-        public int Periods { get { return Template.Periods; } }
-
-        #endregion
-
-        protected override int CalculatedCount {
-            get {
-                return Top == null ? 0 : Top.Count;
-            }
-        }
-
         
 
-        public override void Calculate(int upToIndex)
+        protected  override void CalculateIndex(int index)
         {
-            bool failedToGetHistoricalData = false;
-            for (int index = Top.Count; index <= upToIndex; index++)
+            double high = double.NaN;
+            double low = double.NaN;
+            var lookbackIndex = index - Template.Periods;
+
+            for (; lookbackIndex < index; lookbackIndex++)
             {
-                double high = double.NaN;
-                double low = double.NaN;
-
-                var lookbackIndex = index - Periods;
-
-                if (lookbackIndex < MarketSeries.MinIndex)
+                if (double.IsNaN(high))
                 {
-                    if (!failedToGetHistoricalData) { MarketSeries.EnsureDataAvailable(null, MarketSeries.OpenTime.First(), 2 + MarketSeries.MinIndex - lookbackIndex).Wait(); }
-                    if (lookbackIndex < MarketSeries.MinIndex)
-                    {
-                        failedToGetHistoricalData = true; // REVIEW
-                        // Market data not available
-                        Top[index] = double.NaN;
-                        Bottom[index] = double.NaN;
-                        Middle[index] = double.NaN;
-                        continue;
-                    }
+                    high = MarketSeries.High[lookbackIndex];
+                    low = MarketSeries.Low[lookbackIndex];
                 }
-
-                for (; lookbackIndex < index; lookbackIndex++)
+                else
                 {
-                    if (double.IsNaN(high))
+                    high = Math.Max(high, MarketSeries.High[index]);
+                    low = Math.Min(low, MarketSeries.Low[index]);
+#if DEBUG
+                    if (double.IsNaN(high) || double.IsNaN(low))
                     {
-                        high = MarketSeries.High[lookbackIndex];
-                        low = MarketSeries.Low[lookbackIndex];
+                        Debug.WriteLine("NaN detected in indicator at " + index);
                     }
-                    else
-                    {
-                        high = Math.Max(high, MarketSeries.High[index]);
-                        low = Math.Min(low, MarketSeries.Low[index]);
-                    }
+#endif
                 }
-                Top[index] = high;
-                Bottom[index] = low;
-                Middle[index] = (high + low) / 2.0;
             }
-        }
-
-        long i = 0;
-        public override void OnBar(string symbolCode, TimeFrame timeFrame, TimedBar bar)
-        {
-            if (i++ % 111 == 0)
-            {
-                l.LogInformation($"{this.GetType().Name} [{timeFrame.Name}] {symbolCode} {bar}");
-            }
+            Top[index] = high;
+            Bottom[index] = low;
+            Middle[index] = (high + low) / 2.0;
         }
     }
 }

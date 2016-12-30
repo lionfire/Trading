@@ -69,7 +69,7 @@ namespace LionFire.Trading
                 var desiredBars = GetDesiredBars(s.SymbolCode, s.TimeFrame);
                 var index = s.FindIndex(Account.ExtrapolatedServerTime);
 
-                if (index == -1 || index - desiredBars < s.MinIndex)
+                if (index == -1 || index - desiredBars < s.FirstIndex)
                 {
                     var task = Account.Data.EnsureDataAvailable(s, null, startDate /* yes, supplying startDate as endDate */, desiredBars); // TODO: Reorder  parameters to move startdate to end and default to null
                     if (task != null)
@@ -186,6 +186,8 @@ namespace LionFire.Trading
 
         #region Relationships
 
+        public virtual IEnumerable<IAccountParticipant> Children { get { yield break; } }
+
         [Dependency]
         public IAccount Account
         {
@@ -231,6 +233,11 @@ namespace LionFire.Trading
         }
         protected virtual void OnAttached()
         {
+            foreach (var child in Children)
+            {
+                child.Account = this.Account;
+            }
+
             Account.Started.Subscribe(started => { if (started) { OnMarketStarted().Wait(); } });
             //Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
         }

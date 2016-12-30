@@ -45,9 +45,9 @@ namespace LionFire.Trading.Dash.Wpf
         public MarketTickSeries MarketTickSeries => MarketSeriesBase as MarketTickSeries;
 
         [Browsable(false)]
-        public IEnumerable<string> SymbolsAvailable => Session.Session.SymbolsAvailable;
+        public IEnumerable<string> SymbolsAvailable => SessionViewModel.Session.SymbolsAvailable;
         [Browsable(false)]
-        public IEnumerable<string> TimeFramesAvailable => Session.Session.TimeFramesAvailable;
+        public IEnumerable<string> TimeFramesAvailable => SessionViewModel.Session.TimeFramesAvailable;
         
 
         #region SymbolCode
@@ -59,7 +59,7 @@ namespace LionFire.Trading.Dash.Wpf
             {
                 if (symbolCode == value) return;
                 symbolCode = value;
-                MarketSeriesBase = Session.Session.Account.GetMarketSeries(SymbolCode, timeFrameName);
+                MarketSeriesBase = SessionViewModel.Session.Account.GetMarketSeries(SymbolCode, timeFrameName);
                 NotifyOfPropertyChange(() => SymbolCode);
                 RaiseSeriesChanged();
             }
@@ -83,7 +83,7 @@ namespace LionFire.Trading.Dash.Wpf
             {
                 if (timeFrameName == value) return;
                 timeFrameName = value;
-                MarketSeriesBase = Session.Session.Account.GetMarketSeries(SymbolCode, timeFrameName);
+                MarketSeriesBase = SessionViewModel.Session.Account.GetMarketSeries(SymbolCode, timeFrameName);
                 NotifyOfPropertyChange(() => TimeFrame);
                 RaiseSeriesChanged();
             }

@@ -7,5 +7,9 @@ namespace LionFire.Trading
 {
     public class Positions : List<Position>, IPositions
     {
+        public Position Find(string label, Symbol symbol)
+        {
+            return this.Where(p => p.Label == label && p.SymbolCode == symbol.Code).FirstOrDefault();
+        }
     }
 }

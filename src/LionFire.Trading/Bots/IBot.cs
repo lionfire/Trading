@@ -62,6 +62,7 @@ namespace LionFire.Trading.Bots
 #endif
     }
 
+
     public static class VersionUtils
     {
         public static string GetMinorCompatibilityVersion(this string version)

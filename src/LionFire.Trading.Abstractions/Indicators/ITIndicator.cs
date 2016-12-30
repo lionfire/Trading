@@ -8,11 +8,12 @@ namespace LionFire.Trading
 {
     public interface ITIndicator : ITemplate
     {
-        string Symbol { get; set; }
-        string TimeFrame { get; set; }
+        string Symbol { get; set; } // Move to ITSingleSeriesIndicator?
+        string TimeFrame { get; set; } // Move to ITSingleSeriesIndicator?
 
         bool Log { get; set; }
 
-        double SignalThreshold { get; set; }
+        double SignalThreshold { get; set; } // // Move to ITSignalIndicator?
     }
+    
 }

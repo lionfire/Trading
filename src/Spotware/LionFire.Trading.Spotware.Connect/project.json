@@ -5,11 +5,11 @@
     "Flurl.Http": "1.0.3",
     "LionFire.Extensions.Logging": "1.0.0-*",
     "LionFire.Trading": "1.0.1-*",
-    "Microsoft.Extensions.DependencyInjection.Abstractions": "1.0.0",
+    "Microsoft.Extensions.DependencyInjection.Abstractions": "1.*",
     "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
-    "System.Reactive.Linq": "3.0.0",
-    "System.Threading.Thread": "4.0.0"
+    "System.Reactive.Linq": "3.*",
+    "System.Threading.Thread": "4.*"
   },
   "frameworks": {
     "netstandard1.5": {

@@ -17,6 +17,62 @@ namespace LionFire.Trading.Indicators
     public abstract partial class IndicatorBase<TIndicator> : IIndicator
         where TIndicator : ITIndicator, new()
     {
+        #region Relationships
+
+        public virtual IEnumerable<IDataSeries> Outputs
+        {
+            get
+            {
+                yield break;
+            }
+        }
+
+        public void SetBlank(int index)
+        {
+#if !cAlgo
+            foreach (var o in Outputs)
+            {
+                o.SetBlank(index);
+            }
+#else
+            foreach (var o in Outputs.OfType<IndicatorDataSeries>())
+            {
+                o[index] = double.NaN;
+            }
+#endif
+        }
+
+        protected int CalculatedCount // REVIEW - use this or LastIndex FIXME
+        {
+            get
+            {
+                var output = Outputs.FirstOrDefault();
+                return output == null ? 0 : output.Count;
+            }
+        }
+        public int LastIndex
+        {
+            get
+            {
+#if cAlgo
+                foreach (var o in Outputs)
+                {
+                    return o.Count - 1;
+                }
+                return int.MinValue;
+#else
+                foreach (var o in Outputs)
+                {
+                    return o.LastIndex;
+                }
+                return int.MinValue;
+#endif
+            }
+        }
+
+
+        #endregion
+
         #region Configuration
 
         #region Template
@@ -40,12 +96,15 @@ namespace LionFire.Trading.Indicators
         #endregion
 
 
+        
+
         //#region Identity
 
         //ITemplate ITemplateInstance Tempalte{get{}}
 
         //#endregion
 
+        
 
         #region Construction and Init
 
@@ -81,11 +140,35 @@ namespace LionFire.Trading.Indicators
             {
                 throw new Exception("_InitPartial threw", ex);
             }
+
+            ValidateConfiguration();
+
+#if cAlgo
+            //if (Bot == null)
+            //{
+            //    throw new Exception("TEMP - Bot == null in OnInitializing()");
+            //}
+            if (Bot != null && Bot.Indicators == null)
+            {
+                throw new Exception("Bot != null && Bot.Indicators == null in OnInitializing()");
+            }
+#endif
+            if (EffectiveIndicators == null)
+            {
+                throw new Exception("EffectiveIndicators == null");
+            }
+
         }
+
+        protected virtual void ValidateConfiguration()
+        {
+        }
+        
 
         protected virtual void OnInitialized()
         {
             OnInitialized_();
+            
         }
         partial void OnInitialized_();
 
@@ -118,7 +201,7 @@ namespace LionFire.Trading.Indicators
 
         public
 #if !cAlgo
-            async 
+            async
 #endif
             Task Start()
         {
@@ -164,7 +247,7 @@ namespace LionFire.Trading.Indicators
             }
         }
 
-#endregion
+        #endregion
 
         //protected SortedList<KeyValuePair<DateTime, TimeSpan>, int> indexOffsets = new SortedList<KeyValuePair<DateTime, TimeSpan>, int>();
 
@@ -177,7 +260,7 @@ namespace LionFire.Trading.Indicators
         }
 
 
-#region Misc
+        #region Misc
 
         public virtual string ToStringDescription()
         {
@@ -186,7 +269,7 @@ namespace LionFire.Trading.Indicators
 
         protected Microsoft.Extensions.Logging.ILogger l;
 
-#endregion
+        #endregion
 
 
     }

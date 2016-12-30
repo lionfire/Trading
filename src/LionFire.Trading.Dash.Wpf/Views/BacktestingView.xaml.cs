@@ -243,7 +243,7 @@ namespace LionFire.Trading.Dash.Wpf
         {
             try
             {
-                VM.Session.Session.AddScanner(ResultsGrid.SelectedItem as BacktestResultHandle);
+                VM.SessionViewModel.Session.AddScanner(ResultsGrid.SelectedItem as BacktestResultHandle);
             }
             catch (NotSupportedException ex)
             {
@@ -259,7 +259,7 @@ namespace LionFire.Trading.Dash.Wpf
         {
             try
             {
-                VM.Session.Session.AddDemoBot(ResultsGrid.SelectedItem as BacktestResultHandle);
+                VM.SessionViewModel.Session.AddDemoBot(ResultsGrid.SelectedItem as BacktestResultHandle);
             }
             catch (NotSupportedException ex)
             {

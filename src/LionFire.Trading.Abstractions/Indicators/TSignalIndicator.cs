@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public class TSignalIndicator : TIndicator, ITSignalIndicator
+    public class TSignalIndicator : TSingleSeriesIndicator, ITSignalIndicator
     {
 
         #region Construction

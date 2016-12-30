@@ -11,7 +11,7 @@ namespace LionFire.Trading.Bots
 {
     public class BotConfigRepository
     {
-        public static string ConfigDir { get { return @"c:\Trading\Algos\"; } } // HARDPATH
+        public static string ConfigDir { get { return Path.Combine(LionFireEnvironment.AppProgramDataDir, @"Algos"); } } 
 
         public static async Task<string> SaveConfig(IBot bot)
         {
