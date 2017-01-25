@@ -109,6 +109,7 @@ namespace LionFire.Parsing.String
                 object val;
                 if (chunk.ParseUnitValue(type, out unit, out val, out pi))
                 {
+                    if (!pi.CanWrite) continue;
                     pi.SetValue(obj, val);
                 }
             }

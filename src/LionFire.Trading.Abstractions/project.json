@@ -2,9 +2,10 @@
   "version": "1.0.0-*",
 
   "dependencies": {
+    "LionFire.Assets": "1.0.0-*",
     "LionFire.Assets.Abstractions": "1.0.0-*",
     "LionFire.Extensions.Logging": "1.0.0-*",
-    "LionFire.Templating": "1.0.0-*",
+    "LionFire.Instantiating.Abstractions": "1.0.0-*",
     "Microsoft.Extensions.Logging.Abstractions": "1.*",
     "NETStandard.Library": "1.6.1"
   },

@@ -11,11 +11,14 @@ namespace LionFire.Trading.Indicators
 
     public class TRelativeStrengthIndex : TSingleSeriesIndicator
     {
-        public int Periods { get; set; } = 14;
+        public TRelativeStrengthIndex()
+        {
+            Periods = 14;
+        }
 
         //public double OverBoughtLevel { get; set; } = 70;
         //public double OverSoldLevel { get; set; } = 30;
-        public BarComponent IndicatorBarSource { get; set; } = BarComponent.Close;
+
     }
 
 
@@ -24,14 +27,14 @@ namespace LionFire.Trading.Indicators
 
         #region Outputs
 
-        public DoubleDataSeries Result { get; private set; } = new DoubleDataSeries();
+        public DataSeries Result { get; private set; } = new DataSeries();
 
 #if OptimizeSpeed
         public DoubleDataSeries AvgGain { get; private set; } = new DoubleDataSeries();
         public DoubleDataSeries AvgLoss { get; private set; } = new DoubleDataSeries();
 #endif
 
-        public override IEnumerable<IDataSeries> Outputs
+        public override IEnumerable<IndicatorDataSeries> Outputs
         {
             get
             {
@@ -41,16 +44,17 @@ namespace LionFire.Trading.Indicators
 
         #endregion
 
+
         #region Lifecycle
 
         public RelativeStrengthIndex(TRelativeStrengthIndex config) : base(config)
         {
         }
-      
-        #endregion
-     
 
-        protected override void CalculateIndex(int index)
+        #endregion
+
+
+        public override Task CalculateIndex(int index)
         {
             /*
                                        100
@@ -139,6 +143,7 @@ namespace LionFire.Trading.Indicators
             //            Top[index] = high;
             //            Bottom[index] = low;
             //            Middle[index] = (high + low) / 2.0;
+            return Task.CompletedTask;
         }
 
 

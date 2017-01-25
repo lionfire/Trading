@@ -17,7 +17,7 @@ using LionFire.Extensions.Logging;
 using LionFire.Trading.Spotware.Connect;
 using LionFire.Trading.Applications;
 using LionFire.Execution;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire.Trading.Bots;
 
 namespace LionFire.Trading.Agent.Program

@@ -22,7 +22,7 @@
     "LionFire.Execution": "1.0.0-*",
     "LionFire.Extensions.Logging": "1.0.0-*",
     "LionFire.Runtime.Extensions": "1.0.2",
-    "LionFire.Templating": "1.0.0-*",
+    "LionFire.Instantiating.Abstractions": "1.0.0-*",
     "LionFire.Trading.Abstractions": "1.0.0-*",
     "Microsoft.Extensions.Logging.Abstractions": "1.*",
     "NETStandard.Library": "1.6.1",
@@ -32,7 +32,8 @@
     "Microsoft.Extensions.Options": "1.*",
     "Microsoft.Extensions.Configuration.Abstractions": "1.*",
     "Microsoft.Extensions.Configuration.Binder": "1.*",
-    "LionFire.Environment": "0.0.4-*"
+    "LionFire.Environment": "0.0.4-*",
+    "LionFire.Assets": "1.0.0-*"
   },
 
   "frameworks": {

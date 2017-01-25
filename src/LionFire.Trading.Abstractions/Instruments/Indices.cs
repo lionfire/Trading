@@ -7,6 +7,7 @@ namespace LionFire.Trading.Instruments
 {
     public class Indices
     {
+        // FUTURE: Set these symbols up per broker. 
         public static Dictionary<string, string> Symbols = new Dictionary<string, string>()
         {
             ["AUS200"] = "AUD",

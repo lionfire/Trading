@@ -1,5 +1,5 @@
 ﻿using LionFire.Assets;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +9,7 @@ using LionFire.Execution;
 namespace LionFire.Trading.Accounts
 {
     [AssetPath(@"Accounts")]
-    public abstract class TAccount : IHierarchicalTemplate, ITemplate, IControllableExecutable
+    public abstract class TAccount : IHierarchicalTemplate, ITemplate
     {
         public string AccountId { get; set; }
         public string AccessToken { get; set; }

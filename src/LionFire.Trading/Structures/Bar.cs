@@ -29,7 +29,7 @@ namespace LionFire.Trading
 
 
     }
-    public static class StringExtensions
+    public static class StringNumberExtensions
     {
         private static string PadNumberWithDecimal(this string str, int chars)
         {

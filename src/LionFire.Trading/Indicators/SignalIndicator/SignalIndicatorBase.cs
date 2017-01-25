@@ -29,6 +29,20 @@ namespace LionFire.Trading.Indicators
         //    }
         //}
 
+        public override IEnumerable<IndicatorDataSeries> Outputs
+        {
+            get
+            {
+                yield return CloseLongPoints;
+                yield return CloseShortPoints;
+                yield return LongStopLoss;
+                yield return OpenLongPoints;
+                yield return OpenShortPoints;
+                yield return ShortStopLoss;
+                
+            }
+        }
+
         public IndicatorDataSeries CloseLongPoints
         {
             get; protected set;

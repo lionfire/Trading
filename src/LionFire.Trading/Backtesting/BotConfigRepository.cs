@@ -1,4 +1,4 @@
-﻿using LionFire.Templating;
+﻿using LionFire.Instantiating;
 using LionFire.Trading.Bots;
 using Newtonsoft.Json;
 using System;

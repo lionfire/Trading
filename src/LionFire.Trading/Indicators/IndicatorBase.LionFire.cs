@@ -92,12 +92,12 @@ namespace LionFire.Trading.Indicators
 
         #endregion
 
-        #region (Public) Methods
+        //#region (Public) Methods
 
-        // Nothing here yet
-        public abstract void Calculate(int index);
+        //// Nothing here yet
+        //public abstract Task CalculateIndex(int index);
         
-        #endregion
+        //#endregion
 
         
 

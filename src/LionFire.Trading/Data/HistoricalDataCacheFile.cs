@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using LionFire.ExtensionMethods;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -17,6 +18,24 @@ namespace LionFire.Trading.Data
         public DateTime QueryDate { get; set; }
     }
 
+
+    /*
+     * TODO: Load from zip files to reduce filesystem footprint:
+     * 
+     * http://stackoverflow.com/a/36762855/208304
+     * http://stackoverflow.com/a/14753848/208304
+     * string zipFileFullPath = "{{TypeYourZipFileFullPathHere}}";
+string targetFileName = "{{TypeYourTargetFileNameHere}}";
+string text = new string(
+            (new System.IO.StreamReader(
+             System.IO.Compression.ZipFile.OpenRead(zipFileFullPath)
+             .Entries.Where(x => x.Name.Equals(targetFileName,
+                                          StringComparison.InvariantCulture))
+             .FirstOrDefault()
+             .Open(), Encoding.UTF8)
+             .ReadToEnd())
+             .ToArray());
+     */
     public class HistoricalDataCacheFile
     {
 
@@ -109,6 +128,21 @@ namespace LionFire.Trading.Data
         #endregion
         public DateTime QueryDate { get; set; }
 
+        public DateTime LastDataDate
+        {
+            get
+            {
+                if (Bars != null && Bars.Count > 0)
+                {
+                    return Bars[Bars.Count - 1].OpenTime;
+                }
+                if (Ticks != null && Ticks.Count > 0)
+                {
+                    return Ticks[Ticks.Count - 1].Time;
+                }
+                return default(DateTime);
+            }
+        }
         public string Key
         {
             get
@@ -179,6 +213,7 @@ namespace LionFire.Trading.Data
             this.QueryDate = queryDate;
             this.FilePath = GetFilePath();
         }
+
 
 
         public static async Task<HistoricalDataCacheFile> GetCacheFile(MarketSeriesBase marketSeries, DateTime chunkDate)
@@ -277,7 +312,7 @@ namespace LionFire.Trading.Data
             get
             {
                 if (!IsPartial) return TimeSpan.MinValue;
-                return DateTime.UtcNow - QueryDate;
+                return DateTime.UtcNow - new DateTime(Math.Max(LastDataDate.Ticks, QueryDate.Ticks));
             }
         }
 
@@ -296,9 +331,11 @@ namespace LionFire.Trading.Data
             }
         }
 
+        public const bool KeepOldData = false;
+
         #region Save
 
-        public static void SaveCacheFile(DataLoadResult result)
+        public static async Task SaveCacheFile(DataLoadResult result)
         {
             var cacheFile = new HistoricalDataCacheFile(result.MarketSeriesBase, result.StartDate, result.EndDate, result.QueryDate)
             {
@@ -306,106 +343,141 @@ namespace LionFire.Trading.Data
                 Ticks = result.Ticks,
             };
 
-            cacheFile.Save();
+            cache.AddOrUpdate(cacheFile.Key, cacheFile, (k, f) => cacheFile);
+
+            await cacheFile.Save();
         }
 
-        public void Save()
+        public async Task Save()
         {
-            // TODO: end time calculation
-            // - only respect EndTime if current time is after end date by a certain amount:  
-            // t1: 2min
-            // m1: Last expected + 2,
-            // h1: Last expected + 2h
-
-            var path = IsPartial ? PartFilePath : FilePath;
-            if (!Directory.Exists(System.IO.Path.GetDirectoryName(path))) { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); }
-
-            if (File.Exists(path))
+            await Task.Factory.StartNew(() =>
             {
-                int i = 1;
-                do
+                // TODO: end time calculation
+                // - only respect EndTime if current time is after end date by a certain amount:  
+                // t1: 2min
+                // m1: Last expected + 2,
+                // h1: Last expected + 2h
+
+                var path = IsPartial ? PartFilePath : FilePath;
+                if (!Directory.Exists(System.IO.Path.GetDirectoryName(path))) { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); }
+
+                if (File.Exists(path))
                 {
-                    var bakPath = path + "-" + i++ + ".old.dat";
-                    if (!File.Exists(bakPath))
+                    if (!KeepOldData)
                     {
-                        File.Move(path, bakPath);
-                        break;
+                        File.Delete(path);
+                    }
+                    else
+                    {
+
+                        int i = 1;
+                        do
+                        {
+                            var suffix = ".dat";
+                            var oldSuffix = ".old";
+
+                            var oldDatSuffix = oldSuffix + suffix;
+                            var bakPath = path.TryRemoveFromEnd(suffix) + "-" + i++ + oldDatSuffix;
+                            if (!File.Exists(bakPath))
+                            {
+                                File.Move(path, bakPath);
+                                break;
+                            }
+                        }
+                        while (true);
                     }
                 }
-                while (true);
-            }
 
-            int versionNumber = 1;
-            using (var sw = new BinaryWriter(new FileStream(path, FileMode.Create)))
-            {
-                //var json = JsonConvert.SerializeObject(Header);
-                //sw.Write(json);
-                sw.Write(versionNumber);
-                sw.Write(Header.StartDate.ToBinary());
-                sw.Write(Header.EndDate.ToBinary());
-                sw.Write(Header.QueryDate.ToBinary());
-
-                if (TimeFrame == TimeFrame.t1)
+                int versionNumber = 1;
+                using (var sw = new BinaryWriter(new FileStream(path, FileMode.Create)))
                 {
-                    if (Ticks != null)
+                    //var json = JsonConvert.SerializeObject(Header);
+                    //sw.Write(json);
+                    sw.Write(versionNumber);
+                    sw.Write(Header.StartDate.ToBinary());
+                    sw.Write(Header.EndDate.ToBinary());
+                    sw.Write(Header.QueryDate.ToBinary());
+
+                    if (TimeFrame == TimeFrame.t1)
                     {
-                        foreach (var tick in Ticks)
+                        if (Ticks != null)
                         {
-                            sw.Write(tick.Time.ToBinary());
-                            sw.Write(tick.Bid);
-                            sw.Write(tick.Ask);
+                            foreach (var tick in Ticks)
+                            {
+                                sw.Write(tick.Time.ToBinary());
+                                sw.Write(tick.Bid);
+                                sw.Write(tick.Ask);
+                            }
+                        }
+                        else
+                        {
+                            var series = MarketTickSeries;
+                            int startIndex = series.FindIndex(StartDate);
+                            int endIndex = series.FindIndex(EndDate);
+                            for (int i = startIndex; i <= endIndex; i++)
+                            {
+                                var tick = series[i];
+                                if (tick.Time < StartDate || tick.Time > EndDate) continue;
+                                sw.Write(tick.Time.ToBinary());
+                                sw.Write(tick.Bid);
+                                sw.Write(tick.Ask);
+                            }
                         }
                     }
                     else
                     {
-                        var series = MarketTickSeries;
-                        int startIndex = series.FindIndex(StartDate);
-                        int endIndex = series.FindIndex(EndDate);
-                        for (int i = startIndex; i <= endIndex; i++)
+                        if (Bars != null)
                         {
-                            var tick = series[i];
-                            if (tick.Time < StartDate || tick.Time > EndDate) continue;
-                            sw.Write(tick.Time.ToBinary());
-                            sw.Write(tick.Bid);
-                            sw.Write(tick.Ask);
+                            foreach (var bar in Bars)
+                            {
+                                sw.Write(bar.OpenTime.ToBinary());
+                                sw.Write(bar.Open);
+                                sw.Write(bar.High);
+                                sw.Write(bar.Low);
+                                sw.Write(bar.Close);
+                                sw.Write(bar.Volume);
+                            }
+                        }
+                        else
+                        {
+                            var series = MarketSeries;
+                            int startIndex = series.FindIndex(StartDate);
+                            int endIndex = series.FindIndex(EndDate);
+                            for (int i = startIndex; i <= endIndex; i++)
+                            {
+                                var bar = series[i];
+                                if (bar.OpenTime < StartDate || bar.OpenTime > EndDate) continue;
+                                sw.Write(bar.OpenTime.ToBinary());
+                                sw.Write(bar.Open);
+                                sw.Write(bar.High);
+                                sw.Write(bar.Low);
+                                sw.Write(bar.Close);
+                                sw.Write(bar.Volume);
+                            }
                         }
                     }
+                    Debug.WriteLine($"[{MarketSeriesBase} - cache saved]  - Info: {this.ToString()}");
                 }
-                else
+
+                if (!KeepOldData && !IsPartial)
                 {
-                    if (Bars != null)
+                    try
                     {
-                        foreach (var bar in Bars)
+                        var partialPath = PartFilePath;
+                        if (File.Exists(partialPath))
                         {
-                            sw.Write(bar.OpenTime.ToBinary());
-                            sw.Write(bar.Open);
-                            sw.Write(bar.High);
-                            sw.Write(bar.Low);
-                            sw.Write(bar.Close);
-                            sw.Write(bar.Volume);
+                            File.Delete(partialPath);
                         }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        var series = MarketSeries;
-                        int startIndex = series.FindIndex(StartDate);
-                        int endIndex = series.FindIndex(EndDate);
-                        for (int i = startIndex; i <= endIndex; i++)
-                        {
-                            var bar = series[i];
-                            if (bar.OpenTime < StartDate || bar.OpenTime > EndDate) continue;
-                            sw.Write(bar.OpenTime.ToBinary());
-                            sw.Write(bar.Open);
-                            sw.Write(bar.High);
-                            sw.Write(bar.Low);
-                            sw.Write(bar.Close);
-                            sw.Write(bar.Volume);
-                        }
+                        Debug.WriteLine(ex.ToString());
                     }
+
                 }
-                Debug.WriteLine($"[{MarketSeriesBase} - cache saved]  - Info: {this.ToString()}");
-            }
-            IsPersisted = true;
+
+                IsPersisted = true;
+            });
         }
 
         #endregion
@@ -491,8 +563,8 @@ namespace LionFire.Trading.Data
                     }
                 }
 
-                Debug.WriteLine($"[{MarketSeriesBase} - cache loaded] Loaded {StartDate} - {EndDate} @ {QueryDate}, {Count} items");
-                Debug.WriteLine($"[{MarketSeriesBase} - cache loaded]  - Info: {this.ToString()}");
+                //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded] Loaded {StartDate} - {EndDate} @ {QueryDate}, {Count} items");
+                //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded]  - Info: {this.ToString()}");
             });
 
             IsPersisted = true;

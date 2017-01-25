@@ -1,4 +1,5 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -33,6 +34,8 @@ namespace LionFire.ExtensionMethods
         public const int DefaultRetryDelayMilliseconds = 2000;
         public const int DefaultRetryCount = 30;
 
+        public static bool DebugHttpSuccess = true;
+
         public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount)
         {
             if (retryCondition == null) { retryCondition = IsTimeError; }
@@ -50,6 +53,7 @@ namespace LionFire.ExtensionMethods
                     Thread.Sleep(retryDelayMilliseconds + RetryIncreaseMilliseconds * failCount);
                     failCount++;
                 }
+                if(DebugHttpSuccess) Debug.WriteLine($"[http] {response.StatusCode} {uri}");
             }
             return response;
         }

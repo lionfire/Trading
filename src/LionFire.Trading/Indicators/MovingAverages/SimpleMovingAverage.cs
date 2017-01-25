@@ -9,23 +9,24 @@ using System.Diagnostics;
 namespace LionFire.Trading.Indicators
 {
 
-    public class TSimpleMovingAverage : TSingleSeriesIndicator
+    public sealed class TSimpleMovingAverage : TSingleSeriesIndicator
     {
-        public int Periods { get; set; } = 14;
-
-        public BarComponent IndicatorBarSource { get; set; } = BarComponent.Close;
+        public TSimpleMovingAverage()
+        {
+            Periods = 14;
+        }
     }
-
-
     
-    public class SimpleMovingAverage : SingleSeriesIndicatorBase<TSimpleMovingAverage>, IMovingAverageIndicator
+    public sealed class SimpleMovingAverage : SingleSeriesIndicatorBase<TSimpleMovingAverage>, IMovingAverageIndicator
     {
+
+        public MovingAverageType Kind { get { return MovingAverageType.Simple; } }
 
         #region Outputs
 
-        public DoubleDataSeries Result { get; private set; } = new DoubleDataSeries();
+        public DataSeries Result { get; private set; } = new DataSeries();
 
-        public override IEnumerable<IDataSeries> Outputs
+        public override IEnumerable<IndicatorDataSeries> Outputs
         {
             get
             {
@@ -39,26 +40,15 @@ namespace LionFire.Trading.Indicators
 
         public SimpleMovingAverage(TSimpleMovingAverage config) : base(config)
         {
+            periodsD = periods = config.Periods;
         }
-
-        protected override void OnInitialized()
-        {
-            base.OnInitialized();
-
-            
-            
-        }
-
 
         #endregion
 
-        #region Derived Configuration
+        readonly int periods;
+        readonly double periodsD;
 
-        
-
-        #endregion
-
-        protected override void CalculateIndex(int index)
+        public override Task CalculateIndex(int index)
         {
             var periods = Template.Periods;
 
@@ -76,10 +66,11 @@ namespace LionFire.Trading.Indicators
                     {
                         avg += DataSeries.Last(i);
                     }
-                    avg /= periods;
+                    avg /= periodsD;
                 }
             }
             Result[index] = avg;
+            return Task.CompletedTask;
         }
     }
 }

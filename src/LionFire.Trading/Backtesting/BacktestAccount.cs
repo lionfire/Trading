@@ -4,7 +4,7 @@ using LionFire.Assets;
 using LionFire.Execution;
 using LionFire.ExtensionMethods;
 using LionFire.Extensions.Logging;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire.Trading;
 using LionFire.Trading.Accounts;
 using LionFire.Trading.Bots;

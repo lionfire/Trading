@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Reactive.Subjects;
 using LionFire.Validation;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire;
 using System.Collections.Concurrent;
 using LionFire.Execution;
@@ -95,6 +95,7 @@ namespace LionFire.Trading
                 return this[FirstIndex];
             }
         }
+                
         public DataType Last
         {
             get
@@ -123,6 +124,8 @@ namespace LionFire.Trading
 
         public void Add(List<DataType> dataPoints, DateTime? startDate = null, DateTime? endDate = null)
         {
+            var lastDataEndDate = this[LastIndex].Time;
+
             // TODO: Fill range from startDate to endDate with "NoData" and if a range is loaded that creates a gap with existing ranges, fill that with "MissingData"
 
             //if (bars.Count == 0) return;
@@ -217,7 +220,12 @@ namespace LionFire.Trading
                 DataStartDate = startDate.Value;
             }
 
-            Debug.WriteLine($"[{this}] New data range: {DataStartDate} - {DataEndDate}  (was {oldStart} - {oldEnd})");
+            var addedSpan = this[LastIndex].Time - (lastDataEndDate == default(DateTime) ? this[FirstIndex].Time : lastDataEndDate);
+            if (addedSpan > TimeSpan.Zero)
+            {
+                Debug.WriteLine($"[{this}] ADDED DATA: {addedSpan}");
+            }
+            //Debug.WriteLine($"[{this} - new range] {DataStartDate} - {DataEndDate} (last data: {this[LastIndex].Time})           (was {oldStart} - {oldEnd} (last data: {lastDataEndDate}))");
 #if DEBUG_BARSCOPIED
             Debug.WriteLine($"{SymbolCode}-{TimeFrame.Name} Imported {dataPointsCopied} bars");
 #endif

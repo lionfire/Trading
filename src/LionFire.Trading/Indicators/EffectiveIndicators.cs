@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Indicators
 {
     // For compatibility with cAlgo, and for convenience
-    public class EffectiveIndicators
+    public partial class EffectiveIndicators
     {
         IndicatorBase owner;
         public EffectiveIndicators(IndicatorBase owner)
@@ -14,7 +14,7 @@ namespace LionFire.Trading.Indicators
             this.owner = owner;
         }
 
-        public IMovingAverageIndicator MovingAverage(MovingAverageType movingAverageType, int periods, BarComponent indicatorBarSource = BarComponent.Close)
+        public IMovingAverageIndicator MovingAverage(MovingAverageType movingAverageType, int periods, BarComponent indicatorBarComponent = BarComponent.Close, DataSeries indicatorBarSource = null)
         {
             switch (movingAverageType)
             {
@@ -24,51 +24,90 @@ namespace LionFire.Trading.Indicators
                         TimeFrame = owner.TimeFrame,
                         Symbol = owner.Symbol.Code,
                         Periods = periods,
+                        IndicatorBarComponent = indicatorBarComponent,
                         IndicatorBarSource = indicatorBarSource,
                     });
-                //case MovingAverageType.Exponential:
-                //    break;
-                //case MovingAverageType.Wilder:
-                //    break;
-                //case MovingAverageType.TimeSeries:
-                //    break;
-                //case MovingAverageType.Triangular:
-                //    break;
-                //case MovingAverageType.VIDYA:
-                //    break;
-                //case MovingAverageType.Weighted:
-                //    break;
-                //case MovingAverageType.WilderSmoothing:
-                //    break;
+                case MovingAverageType.Exponential:
+                    return new ExponentialMovingAverage(new TExponentialMovingAverage
+                    {
+                        TimeFrame = owner.TimeFrame,
+                        Symbol = owner.Symbol.Code,
+                        Periods = periods,
+                        IndicatorBarComponent = indicatorBarComponent,
+                        IndicatorBarSource = indicatorBarSource,
+                    });
+                case MovingAverageType.TimeSeries:
+                    return new TimeSeriesMovingAverage(new TTimeSeriesMovingAverage
+                    {
+                        TimeFrame = owner.TimeFrame,
+                        Symbol = owner.Symbol.Code,
+                        Periods = periods,
+                        IndicatorBarComponent = indicatorBarComponent,
+                        IndicatorBarSource = indicatorBarSource,
+                    });
+                case MovingAverageType.Triangular:
+                    return new TriangleMovingAverage(new TTriangleMovingAverage
+                    {
+                        TimeFrame = owner.TimeFrame,
+                        Symbol = owner.Symbol.Code,
+                        Periods = periods,
+                        IndicatorBarComponent = indicatorBarComponent,
+                        IndicatorBarSource = indicatorBarSource,
+                    });
+                case MovingAverageType.VIDYA:
+                    return new VidyaMovingAverage(new TVidyaMovingAverage
+                    {
+                        TimeFrame = owner.TimeFrame,
+                        Symbol = owner.Symbol.Code,
+                        Periods = periods,
+                        IndicatorBarComponent = indicatorBarComponent,
+                        IndicatorBarSource = indicatorBarSource,
+                    });
+                case MovingAverageType.Weighted:
+                    return new WeightedMovingAverage(new TWeightedMovingAverage
+                    {
+                        TimeFrame = owner.TimeFrame,
+                        Symbol = owner.Symbol.Code,
+                        Periods = periods,
+                        IndicatorBarComponent = indicatorBarComponent,
+                        IndicatorBarSource = indicatorBarSource,
+                    });
+                case MovingAverageType.WilderSmoothing:
+                    return new WilderSmoothingMovingAverage(new TWilderSmoothingMovingAverage
+                    {
+                        TimeFrame = owner.TimeFrame,
+                        Symbol = owner.Symbol.Code,
+                        Periods = periods,
+                        IndicatorBarComponent = indicatorBarComponent,
+                        IndicatorBarSource = indicatorBarSource,
+                    });
                 default:
                     throw new NotImplementedException("Only SimpleMovingAverage currently supported");
-            }
-
-            
+            }            
         }
 
-        public BollingerBands BollingerBands(BarComponent indicatorBarSource, int periods, double standardDeviation, MovingAverageType movingAverageType)
-        {
+        //public BollingerBands BollingerBands(DataSeries series, int periods, double standardDeviation, MovingAverageType movingAverageType)  MOVED
+        //{
             
-            return new BollingerBands(new TBollingerBands
-            {
-                TimeFrame = owner.TimeFrame,
-                Symbol = owner.Symbol.Code,
-                Periods = periods,
-                StandardDev = standardDeviation,
-                MovingAverageType = movingAverageType,
-                IndicatorBarSource = indicatorBarSource,
-            });
-        }
+        //    return new BollingerBands(new TBollingerBands
+        //    {
+        //        TimeFrame = owner.TimeFrame,
+        //        Symbol = owner.Symbol.Code,
+        //        Periods = periods,
+        //        StandardDev = standardDeviation,
+        //        MovingAverageType = movingAverageType,
+        //        IndicatorBarSource = series,
+        //    });
+        //}
 
-        public RelativeStrengthIndex RelativeStrengthIndex(BarComponent indicatorBarSource, int periods)
+        public RelativeStrengthIndex RelativeStrengthIndex(DataSeries series, int periods)
         {
             return new RelativeStrengthIndex(new TRelativeStrengthIndex
             {
                 TimeFrame = owner.TimeFrame,
                 Symbol = owner.Symbol.Code,
                 Periods = periods,
-                IndicatorBarSource = indicatorBarSource,
+                IndicatorBarSource = series,
             });
         }
 

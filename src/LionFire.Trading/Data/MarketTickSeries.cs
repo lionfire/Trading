@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Reactive.Subjects;
 using LionFire.Validation;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire;
 using System.Collections.Concurrent;
 using LionFire.Execution;
@@ -87,16 +87,16 @@ namespace LionFire.Trading
             }
         }
 
-        public IDataSeries Bid
+        public DataSeries Bid
         {
             get { return bid; }
         }
-        private DoubleDataSeries bid = new DoubleDataSeries();
-        public IDataSeries Ask
+        private DataSeries bid = new DataSeries();
+        public DataSeries Ask
         {
             get { return ask; }
         }
-        private DoubleDataSeries ask = new DoubleDataSeries();
+        private DataSeries ask = new DataSeries();
 
         #endregion
 

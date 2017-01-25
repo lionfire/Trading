@@ -8,7 +8,7 @@ using LionFire.Trading.Spotware.Connect.AccountApi;
 using System.Diagnostics;
 using System.Threading;
 using LionFire.ExtensionMethods;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using System.IO;
 using Newtonsoft.Json;
 using System.Collections.Concurrent;
@@ -151,7 +151,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region Performance Tweaks
 
-        int maxBarsPerRequest = 500; // TODO MOVE TOCONFIG
+        int maxBarsPerRequest = 4000; // TODO MOVE TOCONFIG  // REVIEW - what is the spotware max? Did I see 5000?
 
         #endregion
 
@@ -388,7 +388,7 @@ namespace LionFire.Trading.Spotware.Connect
 
             if (timeSpan.TotalDays > daysPageSize)
             {
-                Console.WriteLine("WARNING TODO: download historical trendbars - timeSpan.TotalDays > daysPageSize.  TimeSpan: " + timeSpan);
+                Debug.WriteLine("WARNING TODO: download historical trendbars - timeSpan.TotalDays > daysPageSize.  TimeSpan: " + timeSpan);
             }
 
             var downloadedTickSets = new Stack<List<Tick>>();
@@ -403,7 +403,7 @@ namespace LionFire.Trading.Spotware.Connect
                 throw new ArgumentException("startTime == default(DateTime)");
             }
 
-            string from, to, date, bidOrAsk;
+            string from, to, date;
             if (useTicks)
             {
                 from = startTime.ToSpotwareTimeUriParameter();
@@ -420,7 +420,7 @@ namespace LionFire.Trading.Spotware.Connect
                 from = startTime.ToSpotwareUriParameter();
                 to = GetEffectiveEndTime(endTimeIterator).ToSpotwareUriParameter();
                 date = "";
-                bidOrAsk = "";
+                //bidOrAsk = "";
             }
 
 
@@ -557,6 +557,9 @@ namespace LionFire.Trading.Spotware.Connect
 
             UpdateProgress(0.96, "Processing data");
 
+            DateTime firstDownloaded = new DateTime(9999, 12, 31, 23, 59, 59, 999, DateTimeKind.Utc);
+            DateTime lastDownloaded = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+
             if (useTicks)
             {
                 var sets = downloadedTickSets;
@@ -567,6 +570,9 @@ namespace LionFire.Trading.Spotware.Connect
                     if (set.Count > 0)
                     {
                         Debug.WriteLine($"[data] {Symbol} {TimeFrame.Name} Loading {set.Count} bars {set[0].Time.ToString(DateFormat)} to {set[set.Count - 1].Time.ToString(DateFormat)}");
+
+                        firstDownloaded = firstDownloaded.Min(set[0].Time);
+                        lastDownloaded = lastDownloaded.Max(set[set.Count - 1].Time);
 
                         ResultTicks.AddRange(set);
                     }
@@ -583,7 +589,11 @@ namespace LionFire.Trading.Spotware.Connect
                     // TOSANITYCHECK: verify contiguous
                     if (set.Length > 0)
                     {
-                        Debug.WriteLine($"[data] {Symbol} {TimeFrame.Name} Loading bars {set[0].timestamp.ToDateTime().ToString(DateFormat)} to {set[set.Length - 1].timestamp.ToDateTime().ToString(DateFormat)}");
+                        //Debug.WriteLine($"[{Symbol}-{TimeFrame.Name} Loading bars {set[0].timestamp.ToDateTime().ToString(DateFormat)} to {set[set.Length - 1].timestamp.ToDateTime().ToString(DateFormat)}");
+
+                        firstDownloaded = firstDownloaded.Min(set[0].timestamp.ToDateTime());
+                        lastDownloaded = lastDownloaded.Max(set[set.Length - 1].timestamp.ToDateTime());
+
                         foreach (var b in set)
                         {
                             ResultBars.Add(new TimedBar()
@@ -600,13 +610,15 @@ namespace LionFire.Trading.Spotware.Connect
                 }
             }
 
+            Debug.WriteLine($"[{Symbol}-{TimeFrame.Name} - DOWNLOADED] {firstDownloaded} to {lastDownloaded}");
+
             UpdateProgress(1, "Done");
         }
 
         private List<Tick> AggregateTicks(SpotwareTicksResult bidData, SpotwareTicksResult askData)
         {
             List<Tick> ticks = new List<Tick>();
-            int bidIndex = bidData.data.Length-1;
+            int bidIndex = bidData.data.Length - 1;
             int askIndex = askData.data.Length - 1;
             for (; true;)
             {
@@ -668,4 +680,17 @@ namespace LionFire.Trading.Spotware.Connect
     }
 
 
+    public static class DateTimeExtensions
+    {
+        public static DateTime Min(this DateTime v1, DateTime v2)
+        {
+            if (v1.Kind != v2.Kind) throw new ArgumentException("DateTime.Kind must match");
+            return new DateTime(Math.Min(v1.Ticks, v2.Ticks), v1.Kind);
+        }
+        public static DateTime Max(this DateTime v1, DateTime v2)
+        {
+            if (v1.Kind != v2.Kind) throw new ArgumentException("DateTime.Kind must match");
+            return new DateTime(Math.Max(v1.Ticks, v2.Ticks), v1.Kind);
+        }
+    }
 }

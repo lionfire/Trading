@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.Data;
+﻿using LionFire.Threading.Tasks;
+using LionFire.Trading.Data;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -26,7 +27,7 @@ namespace LionFire.Trading
                 if (!startDate.HasValue) { startDate = endDate; }
                 if (!maxOutOfDate.HasValue)
                 {
-                    maxOutOfDate = HistoricalDataUtils.GetDefaultMaxOutOfDate(series.TimeFrame);
+                    maxOutOfDate = HistoricalDataUtils.GetDefaultMaxOutOfDate(series);
                 }
 
                 List<DataLoadResult> results = new List<DataLoadResult>();
@@ -120,7 +121,7 @@ namespace LionFire.Trading
         {
             if (!maxOutOfDate.HasValue)
             {
-                maxOutOfDate = HistoricalDataUtils.GetDefaultMaxOutOfDate(series.TimeFrame);
+                maxOutOfDate = HistoricalDataUtils.GetDefaultMaxOutOfDate(series);
             }
 
             if (chunkStart >= series.DataStartDate && chunkEnd <= series.DataEndDate)
@@ -145,9 +146,11 @@ namespace LionFire.Trading
             var cacheFile = await HistoricalDataCacheFile.GetCacheFile(series, chunkStart);
             DataLoadResult result = cacheFile.DataLoadResult;
 
-            if (!forceRetrieve && cacheFile.IsPersisted && cacheFile.OutOfDateTimeSpan < maxOutOfDate.Value)
+            if (!forceRetrieve && cacheFile.IsPersisted && cacheFile.OutOfDateTimeSpan < maxOutOfDate.Value
+                //&& (chunkEnd > DateTime.UtcNow || !result.IsPartial)
+                )
             {
-                Debug.WriteLine($"[cache available {series}] Chunk {chunkStart}");
+                //Debug.WriteLine($"[cache available {series}] Chunk {chunkStart}");
                 if (!cacheOnly)
                 {
                     ImportData(series, result);
@@ -190,7 +193,11 @@ namespace LionFire.Trading
                 if (writeCache)
                 {
                     //UpdateProgress(0.98, "Writing data into cache"); // FUTURE: Async?
-                    HistoricalDataCacheFile.SaveCacheFile(result);
+                    TaskManager.OnFireAndForget(HistoricalDataCacheFile.SaveCacheFile(result), name: $"Save cache for {series.SymbolCode} from {chunkStart} - {chunkEnd}");
+                }
+                else
+                {
+                    Debug.WriteLine("WRITECACHE OFF");
                 }
                
             }
@@ -211,7 +218,7 @@ namespace LionFire.Trading
                 barSeries.Add(result.Bars, result.StartDate, result.EndDate);
             }
             series.RaiseLoadHistoricalDataCompleted(result.StartDate, result.EndDate);
-            Debug.WriteLine($"[{series} - data imported]  {result} with {result.Count} items: now has {series.Count} items total");
+            //Debug.WriteLine($"[{series} - data imported]  {result} with {result.Count} items: now has {series.Count} items total");
         }
     }
 }

@@ -11,5 +11,6 @@ namespace LionFire.Trading.Bots
     {
         ISignalIndicator Indicator { get; }
         event Action Evaluated;
+        void Evaluate(); // TEMP? Or keep for manual evaluation?
     }
 }

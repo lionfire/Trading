@@ -6,16 +6,17 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Indicators
 {
-    public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries
+    public abstract partial class SingleSeriesIndicatorBase<TConfig> : IndicatorBase<TConfig>, IHasSingleSeries, ISingleSeriesIndicator
         where TConfig : ITSingleSeriesIndicator, new()
     {
+
         public MarketSeries MarketSeries
         {
             get
             {
                 if (marketSeries == null && Template != null && Account != null && Template.Symbol != null && Template.TimeFrame != null)
                 {
-                    marketSeries = (MarketSeries)Account.GetMarketSeries(Template.Symbol, TimeFrame.TryParse(Template.TimeFrame));                    
+                    marketSeries = (MarketSeries)Account.GetMarketSeries(Template.Symbol, TimeFrame.TryParse(Template.TimeFrame));
                 }
                 return marketSeries;
             }
@@ -39,7 +40,7 @@ namespace LionFire.Trading.Indicators
             if (MarketSeries == null) throw new Exception("MarketSeries not resolved at Initialize time.");
 
             //marketSeriesSubscription = this.MarketSeries.LatestBar.Subscribe(bar => OnBar(MarketSeries, bar));
-            MarketSeries.Bar += bar => OnBar(MarketSeries.SymbolCode, MarketSeries.TimeFrame, new TimedBar(bar));
+            MarketSeries.Bar += bar => OnBar(MarketSeries.SymbolCode, MarketSeries.TimeFrame, bar);
         }
 
 
@@ -68,7 +69,7 @@ namespace LionFire.Trading.Indicators
             if (Account != null)
             {
                 Symbol = Account.GetSymbol(Template.Symbol);
-                Account.Started.Subscribe(started => { if (started) { OnStarting(); } });
+                Account.Started.Subscribe(async started => { if (started) { await OnStarting(); } });
             }
         }
     }

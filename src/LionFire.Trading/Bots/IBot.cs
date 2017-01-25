@@ -8,13 +8,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire.Execution;
 using System.Collections.ObjectModel;
 
 namespace LionFire.Trading.Bots
 {
-    public enum PositionEventKind
+    public enum PositionEventKind // MOVE
     {
         Unspecified,
         Opened = 1 << 0,
@@ -24,13 +24,13 @@ namespace LionFire.Trading.Bots
         PartialPosition = 1 << 4,
     }
 
-    public class PositionEvent
+    public class PositionEvent // MOVE
     {
         public Position Position { get; set; }
         public PositionEventKind Kind { get; set; }
     }
 
-    public interface IHasCustomFitness
+    public interface IHasCustomFitness // MOVE
     {
 #if !cAlgo
         double GetFitness(GetFitnessArgs args);
@@ -41,7 +41,7 @@ namespace LionFire.Trading.Bots
         , IStartable
         , IStoppable
         , IAccountParticipant
-        , IExecutable
+        , IControllableExecutable
 #endif
     {
 
@@ -54,7 +54,10 @@ namespace LionFire.Trading.Bots
 
         Microsoft.Extensions.Logging.ILogger Logger { get; }
 
-        BotMode Mode { get; set; }
+        /// <summary>
+        /// Can have multiple modes set
+        /// </summary>
+        BotMode Modes { get; set; }
 
 #if !cAlgo
         Positions BotPositions { get; }
@@ -62,8 +65,23 @@ namespace LionFire.Trading.Bots
 #endif
     }
 
+    public static class IBotExtensions
+    {
+        public static void SetMode(this IBot bot, BotMode modeFlag, bool isEnabled = true)
+        {
+            if (isEnabled)
+            {
+                bot.Modes |= modeFlag;
+            }
+            else
+            {
+                bot.Modes &= ~modeFlag;
+            }
+        }
+    }
 
-    public static class VersionUtils
+
+    public static class VersionUtils  // MOVE
     {
         public static string GetMinorCompatibilityVersion(this string version)
         {

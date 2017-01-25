@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public interface IDataSeries : ISeries<double>
+    public interface IDoubleDataSeries : ISeries<double>
     {
     }
     public interface ITimeSeries : ISeries<DateTime>
@@ -31,6 +31,8 @@ namespace LionFire.Trading
         /// Returns int.MinValue if no items
         /// </summary>
         int LastIndex { get; }
+
+        int FirstIndex { get; }
 
         T UnsetValue { get; }
     }

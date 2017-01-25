@@ -10,7 +10,7 @@ using System.Threading;
 using System.Collections.Concurrent;
 using System.IO;
 using Newtonsoft.Json;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire.Assets;
 using LionFire.Applications;
 using System.Threading.Tasks;
@@ -170,9 +170,18 @@ namespace LionFire.Trading.Spotware.Connect
             }
         }
 
+
+
         public async Task Start()
         {
-            state.OnNext(ExecutionState.Starting);
+            if (this.IsStarted()) return;
+
+            lock (connectLock)
+            {
+                if (this.IsStarted()) return;
+
+                state.OnNext(ExecutionState.Starting);
+            }
             await OnStarting();
 
             RunTask = Task.Run(() => Run());
@@ -218,7 +227,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         protected override async void OnTradeApiEnabledChanging()
         {
-            await Task.Run(()=>Stop());
+            await Task.Run(() => Stop());
         }
         protected override void OnTradeApiEnabledChanged()
         {
@@ -226,6 +235,9 @@ namespace LionFire.Trading.Spotware.Connect
             Start();
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
         }
+
+        public object connectLock = new object();
+        
 
         public void Run()
         {
@@ -325,6 +337,8 @@ namespace LionFire.Trading.Spotware.Connect
         ConcurrentDictionary<string, DateTime> subscriptionWaitingForConnection = new ConcurrentDictionary<string, DateTime>();
         ConcurrentDictionary<string, DateTime> subscriptionRequested = new ConcurrentDictionary<string, DateTime>();
         ConcurrentDictionary<string, DateTime> unsubscriptionRequested = new ConcurrentDictionary<string, DateTime>();
+
+        // If false, need to get notified some other way: like if Spotware's protocol actually worked and gave me the bars once they were done
         public bool MinuteBarsFromTicks = true;
         public bool OtherBarsFromMinutes = true;
 
@@ -367,14 +381,18 @@ namespace LionFire.Trading.Spotware.Connect
                     throw new NotImplementedException("MinuteBarsFromTicks == false");
                 }
             }
-            else 
+            else if (timeFrame.StartsWith("t"))
+            {
+                throw new NotImplementedException("tick timeframes other than t1 not supported yet");
+            }
+            else // Derived from m1
             {
                 if (OtherBarsFromMinutes)
                 {
                     MarketSeries series = GetMarketSeries(symbolCode, timeFrame);
 
                     var handler = BarToOtherBarHandlers.GetOrAdd(key, k => new BarToOtherBarHandler(this, series));
-                    handler.IsEnabled = true; 
+                    handler.IsEnabled = true;
                 }
                 else
                 {
@@ -385,16 +403,15 @@ namespace LionFire.Trading.Spotware.Connect
             //{
             //    throw new NotImplementedException();
             //}
-            
+
 #else
 #endif
         }
-
-
+        
         ConcurrentDictionary<string, BarToOtherBarHandler> BarToOtherBarHandlers = new ConcurrentDictionary<string, BarToOtherBarHandler>();
 
 
-        public int WaitForTickToMinuteToFinishInMilliseconds = 2000;
+        #region Server Time from Tick
 
         private DateTime ServerTimeFromTick
         {
@@ -410,11 +427,11 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     ServerTime = value;
                 }
-                if (!IsSameMinute(oldTime, serverTimeFromTick))
+                if (!oldTime.IsSameMinute(serverTimeFromTick))
                 {
-                    Task.Factory.StartNew(() =>
+                    Task.Factory.StartNew(async () =>
                     {
-                        Thread.Sleep(WaitForTickToMinuteToFinishInMilliseconds);
+                        await Task.Delay(TickToM1BarHandler.WaitForTickToMinuteToFinishInMilliseconds);
                         OnMinuteRollover(oldTime);
                         serverTickToMinuteTime = serverTimeFromTick;
                     });
@@ -424,21 +441,28 @@ namespace LionFire.Trading.Spotware.Connect
         DateTime serverTimeFromTick;
         DateTime serverTickToMinuteTime;
 
+        #endregion
+
         private void OnMinuteRollover(DateTime previousMinute)
         {
             lock (TickToMinuteBarLock)
             {
                 foreach (var kvp in tickToMinuteBars.ToArray())
                 {
-                    if (!kvp.Value.IsValid) continue;
-                    if (!IsSameMinute(previousMinute, kvp.Value.OpenTime)
+                    // Skip bars with no data
+                    if (!kvp.Value.IsValid) continue; 
+
+                    // Sanity check: skip if tick to minute bar is later than the minute that just passed
+                    if (!previousMinute.IsSameMinute( kvp.Value.OpenTime)
                         && kvp.Value.OpenTime > previousMinute // Shouldn't happen - TOSANITYCHECK
                         ) continue;
 
                     TickToMinuteBar(kvp.Key, kvp.Value);
                 }
+             
             }
         }
+
         object TickToMinuteBarLock = new object();
         private void TickToMinuteBar(string symbolCode, TimedBar bar)
         {
@@ -449,68 +473,55 @@ namespace LionFire.Trading.Spotware.Connect
 
                 GetMarketSeriesInternal(symbolCode, TimeFrame.m1).OnBar(bar, true);
 
-                tickToMinuteBars[symbolCode] = TimedBar.New;
+                tickToMinuteBars[symbolCode] = TimedBar.Invalid;
             }
         }
 
         Dictionary<string, TimedBar> tickToMinuteBars = new Dictionary<string, TimedBar>();
-
-        private bool IsSameMinute(DateTime time1, DateTime time2)
-        {
-            return time1.Year == time2.Year
-                && time1.Month == time2.Month
-                && time1.Day == time2.Day
-                && time1.Hour == time2.Hour
-                && time1.Minute == time2.Minute;
-        }
-
-        private void OtherBarsFromMinuteBars(SymbolBar obj, TimeFrame tf)
-        {
-            throw new NotImplementedException();
-        }
-
+       
         // Hardcoded to Bid prices
-        private void TickToMinuteHandler(SymbolTick obj)
+        // Move elsewhere, potentially reuse?
+        private void TickToMinuteHandler(SymbolTick tick)
         {
-            if (!IsSameMinute(obj.Time, ServerTimeFromTick) && obj.Time < serverTickToMinuteTime)
+            if (!tick.Time.IsSameMinute(ServerTimeFromTick) && tick.Time < serverTickToMinuteTime)
             {
-                logger.LogWarning($"[TICK] Got old {obj.Symbol} tick for time {obj.Time} when server tick to minute time is {serverTickToMinuteTime} and server time from tick is {ServerTimeFromTick}");
+                logger.LogWarning($"[TICK] Got old {tick.Symbol} tick for time {tick.Time} when server tick to minute time is {serverTickToMinuteTime} and server time from tick is {ServerTimeFromTick}");
             }
 
-            if (obj.Time > ServerTimeFromTick)
+            if (tick.Time > ServerTimeFromTick)
             {
-                ServerTimeFromTick = obj.Time; // May trigger a bar from previous minute, for all symbols, after a delay (to wait for remaining ticks to come in)
+                ServerTimeFromTick = tick.Time; // May trigger a bar from previous minute, for all symbols, after a delay (to wait for remaining ticks to come in)
             }
 
-            TimedBar bar = tickToMinuteBars.TryGetValue(obj.Symbol, TimedBar.Invalid);
-            if (bar.IsValid && !IsSameMinute(bar.OpenTime, obj.Time))
+            TimedBar bar = tickToMinuteBars.TryGetValue(tick.Symbol, TimedBar.Invalid);
+            if (bar.IsValid && !bar.OpenTime.IsSameMinute( tick.Time))
             {
                 // Immediately Trigger a finished bar even after starting the timer above.
-                TickToMinuteBar(obj.Symbol, bar);
+                TickToMinuteBar(tick.Symbol, bar);
                 bar = TimedBar.Invalid;
             }
 
             if (!bar.IsValid)
             {
-                var minuteBarOpen = new DateTime(obj.Time.Year, obj.Time.Month, obj.Time.Day, obj.Time.Hour, obj.Time.Minute, 0);
+                var minuteBarOpen = new DateTime(tick.Time.Year, tick.Time.Month, tick.Time.Day, tick.Time.Hour, tick.Time.Minute, 0);
 
                 bar = new TimedBar(minuteBarOpen);
             }
 
-            if (!double.IsNaN(obj.Bid))
+            if (!double.IsNaN(tick.Bid))
             {
                 if (double.IsNaN(bar.Open))
                 {
-                    bar.Open = obj.Bid;
+                    bar.Open = tick.Bid;
                 }
-                bar.Close = obj.Bid;
-                if (double.IsNaN(bar.High) || bar.High < obj.Bid)
+                bar.Close = tick.Bid;
+                if (double.IsNaN(bar.High) || bar.High < tick.Bid)
                 {
-                    bar.High = obj.Bid;
+                    bar.High = tick.Bid;
                 }
-                if (double.IsNaN(bar.Low) || bar.Low > obj.Bid)
+                if (double.IsNaN(bar.Low) || bar.Low > tick.Bid)
                 {
-                    bar.Low = obj.Bid;
+                    bar.Low = tick.Bid;
                 }
             }
 
@@ -523,13 +534,13 @@ namespace LionFire.Trading.Spotware.Connect
                 bar.Volume++;
             }
 
-            if (tickToMinuteBars.ContainsKey(obj.Symbol))
+            if (tickToMinuteBars.ContainsKey(tick.Symbol))
             {
-                tickToMinuteBars[obj.Symbol] = bar;
+                tickToMinuteBars[tick.Symbol] = bar;
             }
             else
             {
-                tickToMinuteBars.Add(obj.Symbol, bar);
+                tickToMinuteBars.Add(tick.Symbol, bar);
             }
 
         }

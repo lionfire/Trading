@@ -8,8 +8,8 @@
 #if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
-#else 
-
+#else
+using LionFire.Execution;
 #endif
 using System;
 using System.Collections.Generic;
@@ -17,40 +17,53 @@ using System.Linq;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 using LionFire.Trading.Indicators;
+
 using LionFire.Extensions.Logging;
 using LionFire.Trading;
 using System.IO;
 using Newtonsoft.Json;
 using LionFire.Trading.Backtesting;
-using LionFire.Templating;
+using LionFire.Instantiating;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Bots
 {
-    public partial class SingleSeriesSignalBotBase<IndicatorType, TSingleSeriesSignalBotBase, TIndicator> : SignalBotBase<IndicatorType, TSingleSeriesSignalBotBase, TIndicator>, IBot, IHasCustomFitness
+    public interface ISingleSeriesSignalBot : IHasSingleSeries, IBot, ISignalBot
+    {
+#if !cAlgo
+        //IEnumerable<Position> ReversePositions { get; }
+        DateTime LastOpenTime {get;}
+        DateTime LastCloseTime { get; }
+        TradeKind? LastTradeType {get;}
+#endif
+    }
+
+    public partial class SingleSeriesSignalBotBase<IndicatorType, TSingleSeriesSignalBotBase, TIndicator> : SignalBotBase<IndicatorType, TSingleSeriesSignalBotBase, TIndicator>, ISingleSeriesSignalBot, IHasCustomFitness
   where IndicatorType : class, ISignalIndicator, new()
   where TSingleSeriesSignalBotBase : TSingleSeriesSignalBot<TIndicator>, new()
       where TIndicator : class, ITIndicator, new()
     {
 
-        #region Config
+#region Config
 
         public int MinStopLossTimesSpread = 5; // TEMP TODO
         public bool UseTakeProfit = false; // TEMP
 
-        #endregion
+#endregion
 
-        #region Construction
+#region Construction
 
         public SingleSeriesSignalBotBase()
         {
-
             SignalBotBase_();
-
         }
 
         public void CreateIndicator()
         {
-            if (Indicator != null) throw new Exception("Indicator is already created");
+            if (Indicator != null)
+            {
+                Debug.WriteLine($"warn - {this.GetType().Name}.CreateIndicator: Indicator is already created. Replacing");
+            }
             Indicator = (ISignalIndicator)Template.Indicator.Create(typeof(IndicatorType));
             //Indicator = new IndicatorType();
             //var iti = Indicator as ITemplateInstance<ITIndicator>;
@@ -71,32 +84,38 @@ namespace LionFire.Trading.Bots
 
         partial void SignalBotBase_();
 
-        #endregion
+#endregion
 
-        #region Computations by Derived Class
+#region Computations by Derived Class
 
         public virtual double StopLossInPips { get { return 0; } }
         public virtual double TakeProfitInPips { get { return 0; } }
 
-        #endregion
+#endregion
 
-        #region State
+#region State
 
         public int barCount = 0;
 
-        #endregion
+#endregion
 
-        #region Evaluate
+
+
+#region Evaluate
 
         //private int counter = 0;
 
         private object botLock = new object();
-        public void Evaluate()
+        public override void Evaluate() // TOASYNC
         {
-            //lock (botLock)
+#if !cAlgo
+            if(State.Value == ExecutionState.Faulted) return;
+#endif
+
+            try
             {
 #if cAlgo
-            DateTime time = Server.Time;
+                DateTime time = Server.Time;
 #else
                 DateTime time = Account.ExtrapolatedServerTime;
 #endif
@@ -131,6 +150,8 @@ namespace LionFire.Trading.Bots
 #if TRACE_EVALUATE
                 var traceThreshold = 0.0;
 
+                Debug.WriteLineIf(double.IsNaN(Indicator.OpenLongPoints.LastValue), "NaN OpenLongPoints: " + this.ToString());
+
                 if (Indicator.OpenLongPoints.LastValue > traceThreshold
                     || Indicator.CloseLongPoints.LastValue > traceThreshold
                 || Indicator.OpenShortPoints.LastValue > traceThreshold
@@ -158,6 +179,11 @@ namespace LionFire.Trading.Bots
             }
 #endif
 
+                if (double.IsNaN(Indicator.OpenLongPoints.LastValue))
+                {
+                    Debug.WriteLine($"{this} Indicator.OpenLongPoints.LastValue is NaN");
+                }
+
                 if (Template.AllowLong
                     && Indicator.OpenLongPoints.LastValue >=
                     1.0
@@ -175,6 +201,7 @@ namespace LionFire.Trading.Bots
                     0.9
                     && CanOpenShort && CanOpen)
                 {
+
                     _Open(TradeType.Sell, Indicator.ShortStopLoss);
                 }
 
@@ -217,15 +244,25 @@ namespace LionFire.Trading.Bots
                 }
                 OnEvaluated();
             }
-            
+            catch (Exception ex)
+            {
+                LastException = ex;
+#if cAlgo
+                Stop();
+#else
+                SetState(ExecutionState.Faulted);
+#endif
+            }
+
         }
+        public Exception LastException { get; set; }
 
 
-        #endregion
+#endregion
 
         public Dictionary<Position, BotPosition> BotPositionDict = new Dictionary<Position, BotPosition>();
 
-        #region Position Management
+#region Position Management
 
 
         private void _Open(TradeType tradeType, IndicatorDataSeries indicatorSL)
@@ -267,21 +304,24 @@ namespace LionFire.Trading.Bots
             //if (tradeType == TradeType.Sell) { stopLossInPips = -stopLossInPips; }
 
             TradeResult result = null;
-            if (Mode.HasFlag(BotMode.Live) || Mode.HasFlag(BotMode.Demo))
+            if (Modes.HasFlag(BotMode.Live) || Modes.HasFlag(BotMode.Demo) || IsBacktesting)
             {
                 result = ExecuteMarketOrder(tradeType, Symbol, volumeInUnits, Label, stopLossInPips, takeProfitInPips);
             }
 
-            var accountPosition = result?.Position;
-
-            if (accountPosition != null || Mode.HasFlag(BotMode.Paper) || Mode.HasFlag(BotMode.Scanner))
+            if (!IsBacktesting)
             {
-                var botPosition = new BotPosition(accountPosition, this, this.Symbol, tradeType, stopLossInPips, takeProfitInPips, volumeInUnits);
-                if (accountPosition != null)
+                var accountPosition = result?.Position;
+
+                if (accountPosition != null || Modes.HasFlag(BotMode.Paper) || Modes.HasFlag(BotMode.Scanner))
                 {
-                    BotPositionDict.Add(accountPosition, botPosition);
+                    var botPosition = new BotPosition(accountPosition, this, this.Symbol, tradeType, stopLossInPips, takeProfitInPips, volumeInUnits);
+                    if (accountPosition != null)
+                    {
+                        BotPositionDict.Add(accountPosition, botPosition);
+                    }
+                    OnNewPosition(botPosition);
                 }
-                OnNewPosition(botPosition);
             }
         }
 
@@ -309,11 +349,11 @@ p.onBars.Add(new StopLossTrailer(p)
             //p.onBars.Add(new StopLossTrailer(p, closePointsTSL));
         }
 
-        #endregion
+#endregion
 
-        #region Backtesting
+#region Backtesting
 
-        #region Fitness
+#region Fitness
 
 
 
@@ -343,16 +383,16 @@ p.onBars.Add(new StopLossTrailer(p)
         //            return fitness;
         //        }
 
-        #endregion
+#endregion
 
 
 
 
 
 
-        #endregion
+#endregion
 
-        #region Misc
+#region Misc
 
         public string TradeString(TradeType tradeType)
         {
@@ -381,27 +421,27 @@ p.onBars.Add(new StopLossTrailer(p)
 #endif
         }
 
-        #endregion
+#endregion
 
-        #region TOREVIEW
+#region TOREVIEW
 
-        #region Event Handlers
+#region Event Handlers
 
-//#if cAlgo
-//        protected override void OnTick()
-//        {
-//            base.OnTick();
-//            Symbol_Tick(new SymbolTick()); // REFACTOR to base
-//        }
-//#endif
+        //#if cAlgo
+        //        protected override void OnTick()
+        //        {
+        //            base.OnTick();
+        //            Symbol_Tick(new SymbolTick()); // REFACTOR to base
+        //        }
+        //#endif
 
-        
 
-        
 
-        #endregion
 
-        #endregion
+
+#endregion
+
+#endregion
 
     }
 

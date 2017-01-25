@@ -31,11 +31,11 @@ namespace LionFire.Trading
         //IBarSeries Bars { get; }
 
         TimeSeries OpenTime { get; }
-        IDataSeries Open { get; }
-        IDataSeries High { get; }
-        IDataSeries Low { get; }
-        IDataSeries Close { get; }
-        IDataSeries TickVolume { get; }
+        DataSeries Open { get; }
+        DataSeries High { get; }
+        DataSeries Low { get; }
+        DataSeries Close { get; }
+        DataSeries TickVolume { get; }
 
         //IDataSeries Median { get; }
         //IDataSeries Typical { get; }
@@ -65,7 +65,8 @@ namespace LionFire.Trading
 
         //IEnumerable<SymbolBar> GetBars(DateTime fromTimeExclusive, DateTime endTimeInclusive);
 
-        event Action<SymbolBar> Bar;
+        event Action<TimedBar> Bar;
+        //event Action<SymbolBar> SymbolBar;
         bool BarHasObservers { get; }
 
         IObservable<TimedBar> LatestBar { get; }

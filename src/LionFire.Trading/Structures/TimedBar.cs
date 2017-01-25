@@ -197,6 +197,32 @@ namespace LionFire.Trading
             //};
         }
 
+        public TimedBar Merge(SymbolBar nextSymbolBar)
+        {
+            var nextBar = nextSymbolBar.Bar;
+
+            var current = this;
+            if (nextSymbolBar.Time != default(DateTime))
+            {
+                High = Math.Max(current.High, nextBar.High);
+                Low = Math.Min(current.Low, nextBar.Low);
+                Close = nextBar.Close;
+                Volume = current.Volume + nextBar.Volume;
+            }
+
+            return this;
+
+            //return new TimedBar
+            //{
+            //    OpenTime = current.OpenTime,
+            //    Open = current.Open,
+            //    Close = next.Close,
+            //    High = Math.Max(current.High, next.High),
+            //    Low = Math.Min(current.Low, next.Low),
+            //    Volume = current.Volume + next.Volume
+            //};
+        }
+
         public TimedBar Clone()
         {
             return new TimedBar

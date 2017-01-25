@@ -24,7 +24,7 @@
 //            get { return Market?.Config; }
 //            set {
 //                // REVIEW - automatic instantiation
-//                Market = LionFire.Templating.ITemplateExtensions.Create(value);
+//                Market = LionFire.Instantiating.ITemplateExtensions.Create(value);
 //            }
 //        }
 

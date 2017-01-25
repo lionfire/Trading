@@ -42,7 +42,7 @@ namespace LionFire.Trading.Bots
             //    indicator.MarketSeries = Market.Data.LiveDataSources.GetMarketSeries("XAUUSD", TimeFrame.h1);
             //}
 
-            indicator.Calculate(indicator.MarketSeries.Count - 1);
+            indicator.CalculateIndex(indicator.MarketSeries.Count - 1);
 
             if (i++ % 111 == 0)
             {

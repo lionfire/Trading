@@ -8,7 +8,7 @@ using LionFire.Trading.Backtesting;
 using LionFire.Applications;
 using LionFire.Applications.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire.Trading.Bots;
 using System.Diagnostics;
 using Newtonsoft.Json;

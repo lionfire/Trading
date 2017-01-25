@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Reactive.Subjects;
 using LionFire.Validation;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire;
 using System.Collections.Concurrent;
 using LionFire.Execution;
@@ -69,7 +69,7 @@ namespace LionFire.Trading
         #endregion
 
         #region Data
-
+        
         public BarType this[DateTime time]
         {
             get
@@ -87,35 +87,35 @@ namespace LionFire.Trading
         //private BarSeries bars = new BarSeries();
 
 
-        public IDataSeries Open
+        public DataSeries Open
         {
             get { return open; }
         }
-        private DoubleDataSeries open = new DoubleDataSeries();
+        private DataSeries open = new DataSeries();
 
-        public IDataSeries High
+        public DataSeries High
         {
             get { return high; }
         }
-        private DoubleDataSeries high = new DoubleDataSeries();
+        private DataSeries high = new DataSeries();
 
-        public IDataSeries Low
+        public DataSeries Low
         {
             get { return low; }
         }
-        private DoubleDataSeries low = new DoubleDataSeries();
+        private DataSeries low = new DataSeries();
 
-        public IDataSeries Close
+        public DataSeries Close
         {
             get { return close; }
         }
-        private DoubleDataSeries close = new DoubleDataSeries();
+        private DataSeries close = new DataSeries();
 
-        public IDataSeries TickVolume
+        public DataSeries TickVolume
         {
             get { return tickVolume; }
         }
-        private DoubleDataSeries tickVolume = new DoubleDataSeries();
+        private DataSeries tickVolume = new DataSeries();
 
         #region Derived
 
@@ -147,8 +147,7 @@ namespace LionFire.Trading
                 tickVolume[index] = value.Volume;
             }
         }
-
-        private IEnumerable<DoubleDataSeries> AllDataSeries
+        private IEnumerable<DataSeries> AllDataSeries
         {
             get
             {
@@ -172,34 +171,58 @@ namespace LionFire.Trading
 
         #region Events
 
-        public event Action<SymbolBar> Bar
+        public event Action<TimedBar> Bar
         {
             add
             {
-                bool changed = bar == null;
-                bar += value;
-                if (changed)
+                bool last = BarHasObservers;
+                timedBar += value;
+                if (last!=BarHasObservers)
                 {
                     BarHasObserversChanged?.Invoke(this, BarHasObservers);
                 }
             }
             remove
             {
-                bool changed = bar != null;
-                bar -= value;
-                if (bar == null)
+                bool last = BarHasObservers;
+                timedBar -= value;
+                if (last != BarHasObservers)
                 {
                     BarHasObserversChanged?.Invoke(this, BarHasObservers);
                 }
             }
         }
-        event Action<SymbolBar> bar;
+        event Action<TimedBar> timedBar;
+
+        //public event Action<SymbolBar> SymbolBar
+        //{
+        //    add
+        //    {
+        //        bool last = BarHasObservers;
+        //        symbolBar += value;
+        //        if (last != BarHasObservers)
+        //        {
+        //            BarHasObserversChanged?.Invoke(this, BarHasObservers);
+        //        }
+        //    }
+        //    remove
+        //    {
+        //        bool last = BarHasObservers;
+        //        symbolBar -= value;
+        //        if (last != BarHasObservers)
+        //        {
+        //            BarHasObserversChanged?.Invoke(this, BarHasObservers);
+        //        }
+        //    }
+        //}
+        //event Action<SymbolBar> symbolBar;
+        private const object symbolBar = null;
 
         public bool BarHasObservers
         {
             get
             {
-                return bar != null;
+                return symbolBar != null || timedBar != null;
             }
         }
 
@@ -214,9 +237,7 @@ namespace LionFire.Trading
             }
         }
 
-
-        BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(TimedBar.New);
-
+        BehaviorSubject<TimedBar> barSubject = new BehaviorSubject<BarType>(TimedBar.Invalid);
 
         //public event Action<MarketSeries> BarReceived;
         public event Action<MarketSeries, double/*bid*/, double/*ask*/> TickReceived;
@@ -298,7 +319,8 @@ namespace LionFire.Trading
             {
                 //BarReceived?.Invoke(this);
                 this.barSubject.OnNext(bar);
-                this.bar?.Invoke(new SymbolBar(SymbolCode, bar));
+                //this.symbolBar?.Invoke(new SymbolBar(SymbolCode, bar));
+                this.timedBar?.Invoke(bar);
             }
         }
 
@@ -790,33 +812,13 @@ namespace LionFire.Trading
 
         #endregion
 
-        public IDataSeries GetDataSeries(BarComponent source)
-        {
-            switch (source)
-            {
-                case BarComponent.Open:
-                    return Open;
-                case BarComponent.High:
-                    return High;
-                case BarComponent.Low:
-                    return Low;
-                case BarComponent.Close:
-                    return Close;
-                default:
-                    throw new ArgumentException();
-            }
-        }
+        
 
         #region Misc
 
         public override string DataPointName { get { return "bars"; } }
 
-
-
         #endregion
     }
-
-
-
 
 }

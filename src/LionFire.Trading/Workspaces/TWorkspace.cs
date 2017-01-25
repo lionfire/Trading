@@ -1,4 +1,4 @@
-﻿using LionFire.Templating;
+﻿using LionFire.Instantiating;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +10,7 @@ using System.ComponentModel;
 using LionFire.Structures;
 using System.Collections.ObjectModel;
 using LionFire.Trading.Bots;
+using LionFire.Validation;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -24,11 +25,33 @@ namespace LionFire.Trading.Workspaces
         Demo = 1 << 4,
         Scanners = 1 << 5,
         Paper = 1 << 6,
+    }
 
+    public static class TWorkspaceExtensions
+    {
+        public static ValidationContext Validate(this TWorkspace tw)
+        {
+            return ((object)tw).Validate()
+                .NoDuplicateBots();
+        }
+        public static ValidationContext NoDuplicateBots(this ValidationContext ctx)
+        {
+            var tw = (TWorkspace)ctx.Object;
+
+            foreach (var s in tw.Sessions)
+            {
+                //if(s.LiveBots!=null)s.LiveBots = new ObservableCollection<string>(s.LiveBots.Distinct());
+                //if (s.DemoBots != null) s.DemoBots = new ObservableCollection<string>(s.DemoBots.Distinct());
+                if (s.Bots != null) s.Bots = new ObservableCollection<IInstantiator>(s.Bots);
+                //if (s.PaperBots != null) s.PaperBots = new ObservableCollection<string>(s.PaperBots.Distinct());
+            }
+
+            return ctx;
+        }
     }
 
     [AssetPath("Workspaces")]
-    public class TWorkspace : ITemplate<Workspace>, INotifyPropertyChanged, IAsset, IChanged
+    public class TWorkspace : ITemplate<Workspace>, INotifyPropertyChanged, IAsset, IChanged, IValidatable
     {
         #region Identity
 
@@ -42,10 +65,37 @@ namespace LionFire.Trading.Workspaces
         #region Lifecycle
 
         public TWorkspace()
-        {            
+        {
         }
 
         #endregion
+
+        #region Validation
+
+        public ValidationContext Validate(object kind = null)
+        {
+            return TWorkspaceExtensions.Validate(this);
+        }
+
+
+        #endregion
+
+        
+        public bool IsAutoSaveEnabled
+        {
+            get { return isAutoSaveEnabled; }
+            set
+            {
+                isAutoSaveEnabled = value;
+                // FUTURE: Move this to a global autosave manager that autosaves all asset types (unless turned off for that type, or globally)
+                // FUTURE - use Instantiation
+                //this.EnableAutoSave(isAutoSaveEnabled);
+                OnPropertyChanged(nameof(IsAutoSaveEnabled));
+                IsAutoSaveEnabledChanged?.Invoke();
+            }
+        }
+        private bool isAutoSaveEnabled;
+        public event Action IsAutoSaveEnabledChanged;
 
         public ObservableCollection<TWorkspaceItem> Items { get; set; }
 
@@ -75,12 +125,12 @@ namespace LionFire.Trading.Workspaces
         public TradeLimits WorkspaceTradeLimits { get; set; }
         public TradeLimits LiveAccountTradeLimits { get; set; }
 
-        public ObservableCollection<string> LiveAccounts { get;  set; }
+        public ObservableCollection<string> LiveAccounts { get; set; }
 
-        public ObservableCollection<string> DemoAccounts { get;  set; }
-        public ObservableCollection<string> ScannerAccounts { get;  set; }
+        public ObservableCollection<string> DemoAccounts { get; set; }
+        public ObservableCollection<string> ScannerAccounts { get; set; }
 
-        public TradingOptions TradingOptions { get;  set; }
+        public TradingOptions TradingOptions { get; set; }
 
         //public ObservableCollection<TSession> Sessions { get; set; }
         public ObservableCollection<TSession> Sessions
@@ -309,9 +359,11 @@ namespace LionFire.Trading.Workspaces
                         new TSession(BotMode.Scanner)
                         {
                             DemoAccount = "IC Markets.Demo",
-                            Scanners = new ObservableCollection<string>
+                            Bots = new ObservableCollection<IInstantiator>
                             {
-                                "a1ayraigo5l0",
+                                new PBot {
+                                Id = "a1ayraigo5l0",
+                                }
                             },
                             //EnabledSymbols = new HashSet<string>  {
                             //    "XAUUSD",
@@ -331,6 +383,11 @@ namespace LionFire.Trading.Workspaces
 
                     Items = new ObservableCollection<TWorkspaceItem>
                     {
+                        new TWorkspaceItem
+                        {
+                            Session = "Scanner",
+                            View = "Log",
+                        },
                         new TWorkspaceItem
                         {
                             Session = "Scanner",
@@ -374,7 +431,7 @@ namespace LionFire.Trading.Workspaces
         #region Misc
 
         public event Action<object> Changed;
-        
+
         private void RaiseChanged() => Changed?.Invoke(this);
         private void CollectionChangedToChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
@@ -383,7 +440,7 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
     }
-    
+
 
     public class TWorkspaceItem : ITemplate<WorkspaceItem>
     {

@@ -1,5 +1,5 @@
 ﻿using LionFire.Assets;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,68 +7,15 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading
-{
-    [Flags]
-    public enum BotMode
-    {
-        None = 0,
-        Live = 1 << 0,
-        Demo = 1 << 1,
-        Scanner = 1 << 2,
-        Paper = 1 << 3,
-    }
-}
+
 namespace LionFire.Trading.Bots
 {
 
-    //http://stackoverflow.com/a/19271062/208304
-    public static class StaticRandom
-    {
-        static int seed = Environment.TickCount;
-
-        static readonly ThreadLocal<Random> random =
-            new ThreadLocal<Random>(() => new Random(Interlocked.Increment(ref seed)));
-
-        public static int Next(int minValue, int maxValue)
-        {
-            return random.Value.Next(minValue, maxValue);
-        }
-    }
-
-    public static class IdUtils
-    {
-        public static int DefaultIdLength = 12;
-
-
-        public static string GenerateId(int length = 0)
-        {
-            if (length == 0) length = DefaultIdLength;
-
-
-
-            char[] chars = new char[length];
-            for (int i = 0; i < length; i++)
-            {
-                var n = StaticRandom.Next(0, 36);
-                if (n <= 25)
-                {
-                    chars[i] = (char)((int)'a' + n);
-                }
-                else
-                {
-                    chars[i] = (char)((int)'0' + n - 26);
-                }
-            }
-            return new string(chars);
-        }
-    }
-
-    
-
     [AssetPath("Algos")]
-    public class TBot : ITemplate
+    public class TBot : ITemplateAsset
     {
+
+        public string AssetSubPath { get { return Id; } set { Id = value; } }
         public string Id { get; set; } = IdUtils.GenerateId();
 
         public string Account { get; set; }
@@ -77,9 +24,33 @@ namespace LionFire.Trading.Bots
         public string Symbol
         {
             get { return Symbols?.FirstOrDefault(); }
-            set { Symbols = new List<string> { value }; }
+            set
+            {
+                Symbols = new List<string> { value };
+
+            }
         }
-        public List<string> Symbols { get; set; }
+
+        #region Symbols
+
+        public List<string> Symbols
+        {
+            get { return symbols; }
+            set
+            {
+                // TODO - Fix - why are there duplicates in here?
+                if (value != null)
+                {
+                    value = value.Distinct().ToList();
+                }
+                symbols = value;
+            }
+        }
+        private List<string> symbols;
+
+        #endregion
+
+
 
         //[Ignore]
         public string TimeFrame

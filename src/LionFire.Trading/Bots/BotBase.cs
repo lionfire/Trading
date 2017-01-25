@@ -11,16 +11,27 @@ using System.IO;
 using LionFire.Trading.Backtesting;
 using System.ComponentModel;
 using System.Collections.ObjectModel;
+using LionFire.Threading.Tasks;
+using LionFire.ExtensionMethods;
+using LionFire.States;
 #if cAlgo
 using cAlgo.API.Internals;
 using cAlgo.API;
 #endif
-using LionFire.Templating;
+using LionFire.Instantiating;
 
 namespace LionFire.Trading.Bots
 {
     // TODO: Rename BotBase to SingleSeriesBotBase  and make a new BotBase that is more generic
 
+    //public class MBotModeChanged
+    //{
+    //    public IBot Bot { get; set; }
+
+    //}
+ 
+    [InstantiatorType(typeof(PBot))]
+    [State]
     public partial class BotBase<_TBot> : IBot, IInitializable, INotifyPropertyChanged
         // REVIEW OPTIMIZE - eliminate INPC for cAlgo?
         where _TBot : TBot, new()
@@ -40,7 +51,42 @@ namespace LionFire.Trading.Bots
 
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
 
-        public BotMode Mode { get; set; } // REVIEW - disallow change after init?
+
+        #region Modes
+
+        [State]
+        public BotMode Modes
+        {
+            get { return mode; }
+            set
+            {
+                if (mode == value) return;
+
+                if (this.IsStarted())
+                {
+                    this.Restart(actionDuringShutdown: () => mode = value).ConfigureAwait(false).GetAwaiter().GetResult();
+                }
+                else
+                {
+                    mode = value;
+                    if (ExecutionStateFlags.HasFlag(ExecutionStateFlags.Autostart) && mode != BotMode.None)
+                    {
+                        TaskManager.OnNewTask(Start(), TaskFlags.Unowned);
+                    }
+                }
+                if (mode == BotMode.None)
+                {
+                    if (this.IsStarted())
+                    {
+                        TaskManager.OnNewTask(this.Stop(), TaskFlags.Unowned);
+                    }
+                }
+                OnPropertyChanged(nameof(Modes));
+            }
+        }
+        private BotMode mode;
+
+        #endregion
 
         #region Derived
 
@@ -52,48 +98,81 @@ namespace LionFire.Trading.Bots
 
         #region Lifecycle
 
+        //public IInstantiator ToInstantiator(InstantiationContext context = null)
+        //{
+        //    context.Dependencies.TryAdd(Template);
+
+        //    return new InstantiationPipeline
+        //    {
+        //        new PBot
+        //        {
+        //            Id = Template.Id,
+        //            TypeName = Template.GetType().FullName,
+        //            DesiredExecutionState = DesiredExecutionState,
+        //        },
+        //        new StateRestorer(this),
+        //    };
+        //}
+        //public IEnumerable<IInstantiator> Instantiators
+        //{
+        //    get
+        //    {
+        //        //yield return Template.ToInstantiator();
+        //        yield return new PBot(this);
+        //        yield return this.ToStateRestorer();
+        //    }
+        //}
+
         public BotBase()
         {
-            LionFireEnvironment.ProgramName = "Trading"; // MOVE
+#if cAlgo
+            LionFireEnvironment.ProgramName = "Trading";
+#endif
             InitExchangeRates();
         }
 
-        public Task<bool> Initialize()
+        public override async Task<bool> Initialize()
         {
+#if !cAlgo
+            if (!await base.Initialize()) return false;
+#endif
             logger = this.GetLogger(this.ToString().Replace(' ', '.'), Template.Log);
-            return Task.FromResult(true);
+            return true;
         }
 
+        // Handler for LionFire.  Invoked by cAlgo's OnStart
 #if cAlgo
-        protected virtual void OnStarting() // This is the main initialization point for cAlgo
+        protected virtual async Task OnStarting()
 #else
-        protected override void OnStarting()
+        protected override Task OnStarting()
 #endif
         {
+
             StartDate = null;
             EndDate = null;
 #if cAlgo
-            Initialize().Wait();
+            await Initialize();
 #endif
 
             logger.LogInformation($"------- START {this} -------");
+#if cAlgo
+#else
+            return Task.CompletedTask;
+#endif
         }
         partial void OnStarting_();
 
-        protected virtual void OnStopping()
-        {
-            logger.LogInformation($"------- STOP {this} -------");
-        }
-
-#if !cAlgo
-        public  Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
-        {
-            this.state.OnNext(ExecutionState.Stopping);
-
-            this.state.OnNext(ExecutionState.Stopped);
-            return Task.CompletedTask;
-        }
+#if cAlgo
+        protected virtual async Task OnStarted()
+#else
+        protected override Task OnStarted()
 #endif
+        {
+#if cAlgo
+#else
+            return Task.CompletedTask;
+#endif
+        }
 
         #endregion
 
@@ -108,25 +187,25 @@ namespace LionFire.Trading.Bots
 #if cAlgo
                 return Server.Time;
 #else
-            return Account.ExtrapolatedServerTime;
+                return Account.ExtrapolatedServerTime;
 #endif
             }
         }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region Event Handling
+#region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-        #endregion
+#endregion
 
-        #region Derived
+#region Derived
 
         public bool CanOpenLong
         {
@@ -149,11 +228,11 @@ namespace LionFire.Trading.Bots
             get
             {
 #if !cAlgo
-                if (Account.IsDemo && !Mode.HasFlag(BotMode.Demo))
+                if (Account.IsDemo && !Modes.HasFlag(BotMode.Demo))
                 {
                     return false;
                 }
-                if (!Account.IsDemo && !Mode.HasFlag(BotMode.Live))
+                if (!Account.IsDemo && !Modes.HasFlag(BotMode.Live))
                 {
                     return false;
                 }
@@ -177,9 +256,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        #endregion
+#endregion
 
-        #region Backtesting
+#region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.001;
@@ -198,8 +277,8 @@ namespace LionFire.Trading.Bots
                 var dd = args.MaxEquityDrawdownPercentages;
                 dd = Math.Max(FitnessMinDrawdown, dd);
 
-                if (dd > FitnessMaxDrawdown) { return -dd; }
                 var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
+                if (dd > FitnessMaxDrawdown || args.Equity < initialBalance) { return -dd; }
 
                 var botType = this.GetType().FullName;
 #if cAlgo
@@ -321,6 +400,12 @@ namespace LionFire.Trading.Bots
 
                     this.BacktestLogger.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
                     var id = Template.Id;
+
+
+                    backtestResult.GetAverageDaysPerTrade(args);
+
+
+
                     SaveResult(args, backtestResult, fitness, resultJson, id, timeSpan);
                 }
                 catch (Exception ex)
@@ -331,9 +416,10 @@ namespace LionFire.Trading.Bots
             }
         }
 
+
         private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan)
         {
-            
+
             var dir = Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results");
 
             //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
@@ -351,8 +437,10 @@ namespace LionFire.Trading.Bots
             (this as IHasSingleSeries)?.MarketSeries?.TimeFrame?.Name;
 #endif
 
+
+
             var tradesPerMonth = (args.TotalTrades / (timeSpan.TotalDays / 31)).ToString("F1");
-            var filename = fitness.ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
+            var filename = fitness.ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
             var ext = ".json";
             int i = 0;
             var path = Path.Combine(dir, filename + ext);
@@ -691,7 +779,6 @@ namespace LionFire.Trading.Bots
             }
         }
 
-
 #endregion
 
 #region Misc
@@ -734,5 +821,41 @@ namespace LionFire.Trading.Bots
 #endregion
     }
 
+    public static class BacktestUtilities
+    {
+        public static void GetAverageDaysPerTrade(this BacktestResult results, GetFitnessArgs args)
+        {
+            double sum = 0;
+            int trades = 0;
+            double winSum = 0;
+            int winningTrades = 0;
+
+            double lossSum = 0;
+            int losingTrades = 0;
+            foreach (var trade in args.History)
+            {
+                if (double.IsNaN(trade.ClosingPrice)) continue;
+                sum += (trade.ClosingTime - trade.EntryTime).TotalDays;
+                trades++;
+
+                if (trade.NetProfit >= 0)
+                {
+                    winSum += (trade.ClosingTime - trade.EntryTime).TotalDays;
+                    winningTrades++;
+                }
+                else
+                {
+                    lossSum += (trade.ClosingTime - trade.EntryTime).TotalDays;
+                    losingTrades++;
+                }
+            }
+
+            results.AverageDaysPerTrade = sum / trades;
+            results.AverageDaysPerWinningTrade = winSum / winningTrades;
+            results.AverageDaysPerLosingTrade = lossSum / losingTrades;
+        }
+
+
+    }
 
 }

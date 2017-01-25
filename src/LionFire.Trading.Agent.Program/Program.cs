@@ -20,7 +20,7 @@ using LionFire.Trading.Spotware.Connect;
 using LionFire.Assets;
 using LionFire.Trading.Applications;
 using LionFire.Extensions.Options;
-using LionFire.Templating;
+using LionFire.Instantiating;
 
 namespace LionFire.Trading.Agent.Program
 {

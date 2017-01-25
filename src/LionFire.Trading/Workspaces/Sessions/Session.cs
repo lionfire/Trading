@@ -1,7 +1,7 @@
 ﻿using LionFire.Execution;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -16,10 +16,48 @@ using LionFire.Assets;
 using System.Collections.ObjectModel;
 using Newtonsoft.Json.Linq;
 using LionFire.Structures;
+using System.Diagnostics;
+using LionFire.Persistence;
+using LionFire.Types;
+using LionFire.States;
 
 namespace LionFire.Trading.Workspaces
 {
 
+    public class ScannerSettings : INotifyPropertyChanged
+    {
+
+        #region SignalThreshold
+
+        public double SignalThreshold
+        {
+            get { return signalThreshold; }
+            set
+            {
+                if (signalThreshold == value) return;
+                signalThreshold = value;
+                OnPropertyChanged(nameof(SignalThreshold));
+            }
+        }
+        private double signalThreshold;
+
+        #endregion
+
+
+
+
+        #region INotifyPropertyChanged Implementation
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
+
+    }
 
 
     /// <summary>
@@ -32,7 +70,7 @@ namespace LionFire.Trading.Workspaces
     ///     - scan
     ///     - paper
     /// </summary>
-    public class Session : TemplateInstanceBase<TSession>, IInitializable, IStartable, IStoppable, IExecutable, INotifyPropertyChanged, IChanged
+    public class Session : TemplateInstanceBase<TSession>, IInitializable, IStartable, IStoppable, IExecutable, INotifyPropertyChanged, IChanged, INotifyOnSaving
     {
 
         #region Properties
@@ -133,82 +171,108 @@ namespace LionFire.Trading.Workspaces
 
         #region Bots
 
+
+        #region ScannerSettings
+
+        [State]
+        public ScannerSettings ScannerSettings
+        {
+            get { return scannerSettings; }
+            set
+            {
+                if (scannerSettings == value) return;
+                scannerSettings = value;
+                OnPropertyChanged(nameof(ScannerSettings));
+            }
+        }
+        private ScannerSettings scannerSettings = new ScannerSettings();
+
+        #endregion
+
+
+
         public IEnumerable<IBot> AllBots
         {
             get
             {
-                if (LiveBots != null) foreach (var bot in LiveBots)
+                //if (LiveBots != null) foreach (var bot in LiveBots)
+                //    {
+                //        yield return bot;
+                //    }
+                //if (DemoBots != null) foreach (var bot in DemoBots)
+                //    {
+                //        yield return bot;
+                //    }
+                if (Bots != null) foreach (var bot in Bots)
                     {
                         yield return bot;
                     }
-                if (DemoBots != null) foreach (var bot in DemoBots)
-                    {
-                        yield return bot;
-                    }
-                if (Scanners != null) foreach (var bot in Scanners)
-                    {
-                        yield return bot;
-                    }
-                if (PaperBots != null) foreach (var bot in PaperBots)
-                    {
-                        yield return bot;
-                    }
+                //if (PaperBots != null) foreach (var bot in PaperBots)
+                //    {
+                //        yield return bot;
+                //    }
             }
         }
-        #region LiveBots
+        //#region LiveBots
 
-        public ObservableCollection<IBot> LiveBots
+        //public ObservableCollection<IBot> LiveBots
+        //{
+        //    get { return liveBots; }
+        //    set
+        //    {
+        //        liveBots = value;
+        //    }
+        //}
+        //private ObservableCollection<IBot> liveBots;
+
+        //#endregion
+
+        //#region DemoBots
+
+        //public ObservableCollection<IBot> DemoBots
+        //{
+        //    get { return demoBots; }
+        //    set
+        //    {
+        //        demoBots = value;
+        //    }
+        //}
+
+
+
+        //private ObservableCollection<IBot> demoBots;
+
+        //#endregion
+
+        #region Bots
+
+        public ObservableCollection<IBot> Bots
         {
-            get { return liveBots; }
-            set {
-                liveBots = value;
+            get { return bots; }
+            set
+            {
+                bots = value;
             }
         }
-        private ObservableCollection<IBot> liveBots;
+        private ObservableCollection<IBot> bots;
+
+        private HashSet<string> BotIds = new HashSet<string>();
 
         #endregion
 
-        #region DemoBots
+        //#region PaperBots
 
-        public ObservableCollection<IBot> DemoBots
-        {
-            get { return demoBots; }
-            set {
-                demoBots = value;
-            }
-        }
+        //public ObservableCollection<IBot> PaperBots
+        //{
+        //    get { return paperBots; }
+        //    set
+        //    {
+        //        paperBots = value;
+        //    }
+        //}
+        //private ObservableCollection<IBot> paperBots ;
 
-        
-
-        private ObservableCollection<IBot> demoBots;
-
-        #endregion
-
-        #region Scanners
-
-        public ObservableCollection<IBot> Scanners
-        {
-            get { return scanners; }
-            set {
-                scanners = value;
-            }
-        }
-        private ObservableCollection<IBot> scanners;
-
-        #endregion
-
-        #region PaperBots
-
-        public ObservableCollection<IBot> PaperBots
-        {
-            get { return paperBots; }
-            set {
-                paperBots = value;
-            }
-        }
-        private ObservableCollection<IBot> paperBots;
-
-        #endregion
+        //#endregion
 
         #endregion
 
@@ -284,10 +348,10 @@ namespace LionFire.Trading.Workspaces
             //VM.Symbols = symbols;
 
 
-            if (Mode.HasFlag(BotMode.Live)) { await LoadBots(Template.LiveBots, ref liveBots, BotMode.Live); }
-            if (Mode.HasFlag(BotMode.Demo)) { await LoadBots(Template.DemoBots, ref demoBots, BotMode.Demo); }
-            if (Mode.HasFlag(BotMode.Scanner)) { await LoadBots(Template.Scanners, ref scanners, BotMode.Scanner); }
-            if (Mode.HasFlag(BotMode.Paper)) { await LoadBots(Template.PaperBots, ref paperBots, BotMode.Paper); }
+            //if (Mode.HasFlag(BotMode.Live)) { await LoadBots(Template.LiveBots, ref liveBots, BotMode.Live); }
+            //if (Mode.HasFlag(BotMode.Demo)) { await LoadBots(Template.DemoBots, ref demoBots, BotMode.Demo); }
+            if (Mode.HasFlag(BotMode.Scanner)) { await LoadBots(Template.Bots, ref bots, BotMode.Scanner); }
+            //if (Mode.HasFlag(BotMode.Paper)) { await LoadBots(Template.PaperBots, ref paperBots, BotMode.Paper); }
 
             foreach (var bot in AllBots.OfType<IInitializable>().ToArray())
             {
@@ -304,22 +368,38 @@ namespace LionFire.Trading.Workspaces
 
         private Task LoadBots(IEnumerable<string> botIds, ref ObservableCollection<IBot> target, BotMode mode)
         {
+            return LoadBots(botIds.Select(id => new PBot { Id = id }), ref target, mode);
+        }
+        private Task LoadBots(IEnumerable<IInstantiator> bots, ref ObservableCollection<IBot> target, BotMode mode)
+        {
             if (target == null) target = new ObservableCollection<IBot>();
-            target.CollectionChanged += (s, e) => Changed?.Invoke(this);
+            target.CollectionChanged += (s, e) =>
+            {
+                RaiseChanged();
+                //if (e.NewItems != null)
+                //{
+                //    foreach (var newItem in e.NewItems)
+                //    {
+                //        newItem as IChanged
+                //    }
+                //}
+            };
 
             var target2 = target;
-            if (botIds == null) return Task.CompletedTask;
-            return Task.Run(() => LoadBots2(botIds, target2, mode));
+            if (bots == null || !bots.Any()) return Task.CompletedTask;
+            return Task.Run(() => LoadBots2(bots, target2, mode));
         }
-        private void LoadBots2(IEnumerable<string> botIds, ObservableCollection<IBot> target, BotMode mode)
+        private void LoadBots2(IEnumerable<IInstantiator> bots, ObservableCollection<IBot> target, BotMode mode)
         {
-            foreach (var botId in botIds.ToArray())
+            foreach (var pBot in bots.ToArray())
             {
-                foreach (var assetName in $"*id={botId}*".Find<BacktestResult>())
+                if (pBot == null)
                 {
-                    var br = assetName.Load<BacktestResult>();
-                    var bot = _AddBotForMode(br, mode);
+                    Debug.WriteLine("WARN - LoadBots2: null instantiator in bots parameter");
+                    continue;
                 }
+                var bot = (IBot)pBot.Instantiate();
+                _AddBotForMode(mode, bot: bot, pBot: pBot as PBot);
             }
         }
 
@@ -349,39 +429,39 @@ namespace LionFire.Trading.Workspaces
 
         public void AddDemoBot(BacktestResultHandle handle)
         {
-            _AddBot(handle, BotMode.Demo | BotMode.Scanner | BotMode.Paper, Workspace.DefaultDemoAccount);
+            _AddBot(BotMode.Demo | BotMode.Scanner | BotMode.Paper, account: Workspace.DefaultDemoAccount, backtestResultHandle: handle);
         }
 
         public void AddLiveBot(BacktestResultHandle handle)
         {
-            _AddBot(handle, BotMode.Live | BotMode.Scanner | BotMode.Paper, Workspace.DefaultLiveAccount);
+            _AddBot(BotMode.Live | BotMode.Scanner | BotMode.Paper, account: Workspace.DefaultLiveAccount, backtestResultHandle: handle);
         }
         public void AddScanner(BacktestResultHandle handle)
         {
-            _AddBot(handle, BotMode.Scanner | BotMode.Paper, Workspace.DefaultScannerAccount);
+            _AddBot(BotMode.Scanner | BotMode.Paper, account: Workspace.DefaultScannerAccount, backtestResultHandle: handle);
         }
 
         public IEnumerable<IBot> AddBotForModes(BacktestResult backtestResult, BotMode modes)
         {
             if (modes.HasFlag(BotMode.Live))
             {
-                yield return _AddBotForMode(backtestResult, BotMode.Live);
+                yield return _AddBotForMode(BotMode.Live, backtestResult: backtestResult);
             }
             if (modes.HasFlag(BotMode.Demo))
             {
-                yield return _AddBotForMode(backtestResult, BotMode.Demo);
+                yield return _AddBotForMode(BotMode.Demo, backtestResult: backtestResult);
             }
             if (modes.HasFlag(BotMode.Scanner))
             {
-                yield return _AddBotForMode(backtestResult, BotMode.Scanner);
+                yield return _AddBotForMode(BotMode.Scanner, backtestResult: backtestResult);
             }
             if (modes.HasFlag(BotMode.Paper))
             {
-                yield return _AddBotForMode(backtestResult, BotMode.Paper);
+                yield return _AddBotForMode(BotMode.Paper, backtestResult: backtestResult);
             }
         }
 
-        private IBot _AddBotForMode(BacktestResult backtestResult, BotMode mode)
+        private IBot _AddBotForMode(BotMode mode, BacktestResult backtestResult = null, PBot pBot = null, TBot tBot = null, IBot bot = null)
         {
             IAccount account;
             switch (mode)
@@ -401,48 +481,96 @@ namespace LionFire.Trading.Workspaces
                 default:
                     throw new ArgumentException(nameof(mode) + " unknown or is set to more than one mode.");
             }
-            return _AddBot(null, mode, account, backtestResult);
+            if (account == null)
+            {
+                Debug.WriteLine($"WARNING - _AddBotForMode({mode}) assigned no account");
+            }
+            return _AddBot(mode, account: account, backtestResult: backtestResult, pBot: pBot, tBot: tBot, bot: bot);
         }
 
         private IBot _AddBot(BacktestResult backtestResult, BotMode mode)
         {
-            return _AddBot(null, mode, null, backtestResult); // REFACTOR
+            return _AddBot(mode, backtestResult: backtestResult); // REFACTOR
         }
-        private IBot _AddBot(BacktestResultHandle handle, BotMode mode, IAccount account = null, BacktestResult backtestResult = null)
-        {
-            //var sessionVM = this;
 
+        private IBot _AddBot(BotMode mode, BacktestResultHandle backtestResultHandle = null, IAccount account = null, BacktestResult backtestResult = null, PBot pBot = null, TBot tBot = null, IBot bot = null)
+        {
             if (account == null) throw new ArgumentNullException(nameof(account));
 
-            if (backtestResult == null) { backtestResult = handle.Object; }
-
-            var templateType = ResolveType(backtestResult.BotConfigType);
-            //var templateType = Type.GetType(result.BotConfigType);
-            if (templateType == null)
+            if (bot == null)
             {
-                throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
+                if (pBot != null)
+                {
+                    bot = (IBot)pBot.Instantiate();
+                }
+                else
+                {
+                    if (tBot == null)
+                    {
+                        if (backtestResult == null) { backtestResult = backtestResultHandle?.Object; }
+
+                        var templateType = ResolveType(backtestResult.BotConfigType);
+                        //var templateType = Type.GetType(result.BotConfigType);
+                        if (templateType == null)
+                        {
+                            throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
+                        }
+
+                        tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
+                    }
+
+                    if (tBot == null)
+                    {
+                        throw new ArgumentNullException(nameof(tBot));
+                    }
+
+                    bot = (IBot)tBot.Create();
+                }
             }
 
-            var tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
-
-            var bot = (IBot)tBot.Create();
-            bot.Mode = BotMode.Scanner | BotMode.Paper;
+            //bot.Modes = mode | BotMode.Paper;
             //var botVM = new BotVM() { Bot = bot };
             //botVM.State = SupervisorBotState.Scanner;
 
-            if (bot.Mode.HasFlag(BotMode.Live))
+            if (bot.Modes.HasFlag(BotMode.Live))
             {
                 throw new Exception("Not ready for live yet");
             }
             bot.Account = account;
             //botVM.AddBacktestResult(backtestResult);
 
-            bool hasPaper = mode.HasFlag(BotMode.Paper);
-            mode = mode & ~BotMode.Paper;
-            if (mode.HasFlag(BotMode.Live)) { LiveBots.Add(bot); Template.LiveBots.Add(tBot.Id); }
-            if (mode.HasFlag(BotMode.Demo)) { DemoBots.Add(bot); Template.DemoBots.Add(tBot.Id); }
-            if (mode.HasFlag(BotMode.Scanner)) { Scanners.Add(bot); Template.Scanners.Add(tBot.Id); }
-            if (mode.HasFlag(BotMode.Paper)) { PaperBots.Add(bot); Template.PaperBots.Add(tBot.Id); }
+            //bool hasPaper = mode.HasFlag(BotMode.Paper);
+            //if (mode != BotMode.Paper)
+            //{
+            //    mode = mode & ~BotMode.Paper;
+            //}
+
+            //if (mode.HasFlag(BotMode.Live)) { LiveBots.Add(bot); Template.LiveBots.Add(tBot.Id); }
+            //if (mode.HasFlag(BotMode.Demo)) { DemoBots.Add(bot); Template.DemoBots.Add(tBot.Id); }
+            //if (mode.HasFlag(BotMode.Scanner)) { Scanners.Add(bot); Template.Scanners.Add(tBot.Id); }
+            //if (mode.HasFlag(BotMode.Paper)) { PaperBots.Add(bot); Template.PaperBots.Add(tBot.Id); }
+
+            //if (mode.HasFlag(BotMode.Live)) { if (LiveBots == null) { LiveBots = new ObservableCollection<IBot>(); } LiveBots.Add(bot); }
+            //if (mode.HasFlag(BotMode.Demo)) { if (DemoBots == null) { DemoBots = new ObservableCollection<IBot>(); } DemoBots.Add(bot); }
+            if (mode.HasFlag(BotMode.Scanner))
+            {
+                if (Bots == null)
+                {
+                    Bots = new ObservableCollection<IBot>();
+                }
+                if (!BotIds.Contains(bot.Template.Id))
+                {
+                    BotIds.Add(bot.Template.Id);
+                    Bots.Add(bot);
+                }
+            }
+            //if (mode.HasFlag(BotMode.Paper)) { if (PaperBots==null) { PaperBots = new ObservableCollection<IBot>(); } PaperBots.Add(bot); }
+
+            //if (pBot != null)
+            //{
+            //    bot.DesiredExecutionState = pBot.DesiredExecutionState;
+            //}
+
             //switch (mode)
             //{
             //    case BotMode.Live:
@@ -486,7 +614,7 @@ namespace LionFire.Trading.Workspaces
 
         #region Misc
 
-        
+
         public event Action<object> Changed;
 
         #region INotifyPropertyChanged Implementation
@@ -496,34 +624,54 @@ namespace LionFire.Trading.Workspaces
         protected void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            RaiseChanged();
+
+        }
+        private void RaiseChanged()
+        {
             Changed?.Invoke(this);
+            Workspace.RaiseChanged();
         }
 
         #endregion
 
-
         public Type ResolveType(string typeName)
         {
-
-            var type = Type.GetType(typeName);
-            if (type != null) return type;
             typeName = typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary");
-            type = Type.GetType(typeName);
-            return type;
-        }
 
+            return TypeResolver.Default.TryResolve(typeName);
+        }
 
         public override string ToString()
         {
-            var liveBots = LiveBots.Count == 0 ? "" : $" Live bots: {LiveBots.Count}";
-            var demoBots = LiveBots.Count == 0 ? "" : $" Demo bots: {DemoBots.Count}";
-            var scanners = LiveBots.Count == 0 ? "" : $" Scanners: {Scanners.Count}";
-            var paperBots = LiveBots.Count == 0 ? "" : $" Paper bots: {PaperBots.Count}";
+            // TODO
+            string liveBots = "", demoBots = "", paperBots = "";
+            //var liveBots = LiveBots.Count == 0 ? "" : $" Live bots: {LiveBots.Count}";
+            //var demoBots = LiveBots.Count == 0 ? "" : $" Demo bots: {DemoBots.Count}";
+            var scanners = Bots.Count == 0 ? "" : $" Bots: {Bots.Count}";
+            //var paperBots = LiveBots.Count == 0 ? "" : $" Paper bots: {PaperBots.Count}";
 
             return $"{{Session \"{Name}\" ({Mode}) {liveBots}{demoBots}{scanners}{paperBots}}}";
         }
 
+        public void OnSaving(object context = null)
+        {
+            Template.Bots.Clear();
+            foreach (var bot in Bots)
+            {
+                var inst = bot.ToInstantiator();
+                if (inst == null)
+                {
+                    // TOALERTER
+                    Debug.WriteLine("WARN- Session.OnSaving bot.ToInstantiator() returned null;");
+                    continue;
+                }
+                Template.Bots.Add(inst);
+            }
+
+        }
+
         #endregion
     }
-    
+
 }

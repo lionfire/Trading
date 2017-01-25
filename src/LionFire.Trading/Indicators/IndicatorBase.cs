@@ -5,21 +5,30 @@ using System.Linq;
 using System.Threading.Tasks;
 #if cAlgo
 using cAlgo.API;
+using cAlgo.API.Internals;
 #endif
 using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
 using System.Reflection;
-using LionFire.Templating;
+using LionFire.Instantiating;
+using LionFire.Execution;
+using LionFire.Reactive.Subjects;
+using System.Diagnostics;
+using LionFire.Reactive;
 
 namespace LionFire.Trading.Indicators
 {
 
-    public abstract partial class IndicatorBase<TIndicator> : IIndicator
+    public abstract partial class IndicatorBase<TIndicator> : IIndicator, IExecutable
         where TIndicator : ITIndicator, new()
     {
         #region Relationships
 
-        public virtual IEnumerable<IDataSeries> Outputs
+        //#if cAlgo
+        public virtual IEnumerable<IndicatorDataSeries> Outputs
+        //#else
+        //            public virtual IEnumerable<IDoubleDataSeries> Outputs
+        //#endif
         {
             get
             {
@@ -42,7 +51,7 @@ namespace LionFire.Trading.Indicators
 #endif
         }
 
-        protected int CalculatedCount // REVIEW - use this or LastIndex FIXME
+        protected int CalculatedCount
         {
             get
             {
@@ -70,6 +79,23 @@ namespace LionFire.Trading.Indicators
             }
         }
 
+        #region Derived
+
+        protected virtual MarketSeries series
+        {
+            get
+            {
+#if cAlgo
+                return Bot == null ? this.MarketSeries : Bot.MarketSeries;
+#else
+                //return this.MarketSeries;
+                return null;
+#endif
+            }
+            // add set to make it faster?
+        }
+
+        #endregion
 
         #endregion
 
@@ -96,21 +122,16 @@ namespace LionFire.Trading.Indicators
         #endregion
 
 
-        
-
-        //#region Identity
-
-        //ITemplate ITemplateInstance Tempalte{get{}}
-
-        //#endregion
-
-        
-
         #region Construction and Init
 
-        public IndicatorBase() { }
+        public IndicatorBase()
+        {
+#if cAlgo
+            LionFireEnvironment.ProgramName = "Trading";
+#endif
+        }
 
-        public IndicatorBase(TIndicator config)
+        public IndicatorBase(TIndicator config) : this()
         {
             this.Template = config;
         }
@@ -122,26 +143,32 @@ namespace LionFire.Trading.Indicators
             OnInitialized();
         }
 
+
+        
+
         protected virtual void OnInitializing()
         {
+            state.OnNext(ExecutionState.Initializing);
             try
             {
-                InitLog();
-            }
-            catch (Exception e)
-            {
-                throw new Exception("InitLog threw", e);
-            }
-            try
-            {
-                _InitPartial();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("_InitPartial threw", ex);
-            }
+                try
+                {
+                    InitLog();
+                }
+                catch (Exception e)
+                {
+                    throw new Exception("InitLog threw", e);
+                }
+                try
+                {
+                    _InitPartial();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception("_InitPartial threw", ex);
+                }
 
-            ValidateConfiguration();
+                ValidateConfiguration();
 
 #if cAlgo
             //if (Bot == null)
@@ -153,22 +180,45 @@ namespace LionFire.Trading.Indicators
                 throw new Exception("Bot != null && Bot.Indicators == null in OnInitializing()");
             }
 #endif
-            if (EffectiveIndicators == null)
-            {
-                throw new Exception("EffectiveIndicators == null");
-            }
+                if (EffectiveIndicators == null)
+                {
+                    throw new Exception("EffectiveIndicators == null");
+                }
+                if (!Outputs.Any())
+                {
+                    throw new Exception("!Outputs.Any().  Override Outputs.");
+                }
 
+                foreach (var child in Children.OfType<IIndicator>())
+                {
+#if !cAlgo
+                    if (child.Account == null)
+                    {
+                    // REvIEW - shouldn't be needed here?
+                        child.Account = this.Account;
+                    }
+#endif
+                    child.Start();
+                }
+                state.OnNext(ExecutionState.Ready);
+            }
+            catch (Exception)
+            {
+                state.OnNext(ExecutionState.Uninitialized);
+                throw;
+            }
         }
 
+        
         protected virtual void ValidateConfiguration()
         {
         }
-        
+
 
         protected virtual void OnInitialized()
         {
             OnInitialized_();
-            
+
         }
         partial void OnInitialized_();
 
@@ -199,30 +249,33 @@ namespace LionFire.Trading.Indicators
             }
         }
 
-        public
-#if !cAlgo
-            async
-#endif
-            Task Start()
-        {
-#if !cAlgo
-            await EnsureDataAvailable(Account.ExtrapolatedServerTime);
-#else
-            return Task.CompletedTask;
-#endif
-        }
+        //        public
+        //#if !cAlgo
+        //            async
+        //#endif
+        //            Task Start()
+        //        {
+        //#if !cAlgo
+        //            await base.Start();
+        //            await EnsureDataAvailable(Account.ExtrapolatedServerTime);
+        //#else
+        //            return Task.CompletedTask;
+        //#endif
+        //        }
 
         protected
 #if cAlgo
          virtual
 #else
-         override
+         async override
 #endif
-        void OnStarting()
+        Task OnStarting()
         {
 #if !cAlgo
             Init();
-            base.OnStarting();
+            await base.OnStarting();
+#else
+            return Task.CompletedTask;
 #endif
 
             //l = this.GetLogger(this.ToString().Replace(' ', '.'), Config.Log);
@@ -247,20 +300,77 @@ namespace LionFire.Trading.Indicators
             }
         }
 
-        #endregion
+#endregion
 
         //protected SortedList<KeyValuePair<DateTime, TimeSpan>, int> indexOffsets = new SortedList<KeyValuePair<DateTime, TimeSpan>, int>();
 
-        //public virtual void Calculate(int index)
-        //{
-        //}
+#if cAlgo
 
-        public virtual void CalculateToTime(DateTime openTime)
+        public override void Calculate(int index)
         {
+            CalculateIndex(index).Wait(); // REVIEW Wait
         }
 
+#endif
 
-        #region Misc
+        public abstract Task CalculateIndex(int index);
+        
+
+
+        public  async Task CalculateToTime(DateTime date)
+        {
+
+#if cAlgo
+            var series = Bot == null ? MarketSeries : Bot.MarketSeries;
+            if (MarketSeries == null && Bot == null)
+            {
+                throw new ArgumentNullException("MarketSeries == null && Bot == null");
+            }
+#else
+            //var series = MarketSeries;
+#endif
+#if NULLCHECKS
+            if (series == null)
+            {
+                throw new ArgumentNullException("MarketSeries");
+            }
+#endif
+
+            //l.Debug("Calculating until " + date);
+
+#if cAlgo
+            var startIndex = 0;
+#else
+            var startIndex = series.FindIndex(date)-2;
+            if (startIndex == -1) { startIndex = 0;
+                Debug.WriteLine("TODO FIXME: IndicatorBase.CalculateToTime did not find seriesIndex for date: " + date);
+            }
+#endif
+            startIndex = Math.Max(LastIndex, startIndex);
+
+            for (int index = startIndex; series.OpenTime[index] < date; index++)
+            {
+#if cAlgo
+                if (index >= series.OpenTime.Count) break;
+#else
+                if (index >= series.LastIndex)
+                {
+                    if ((date-series.OpenTime[index] ) > TimeSpan.FromMinutes(1))
+                    {
+                        Debug.WriteLine($"Indicator stopping due to lack of data: (series.OpenTime[index] - date) is {(series.OpenTime[index] - date)} for date {date} and last series time: {series.OpenTime[index]}");
+                    }
+                    break;
+                }
+#endif
+                var openTime = series.OpenTime[index];
+                //l.Warn($"series.OpenTime[index] {openTime} open: {series.Open[index]}");
+                if (double.IsNaN(series.Open[index])) continue;
+                await CalculateIndex(index).ConfigureAwait(false);
+            }
+            //l.Info("Calculated until " + date + " " + OpenLongPoints.LastValue);
+        }
+
+#region Misc
 
         public virtual string ToStringDescription()
         {
@@ -269,7 +379,7 @@ namespace LionFire.Trading.Indicators
 
         protected Microsoft.Extensions.Logging.ILogger l;
 
-        #endregion
+#endregion
 
 
     }

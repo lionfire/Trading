@@ -4,6 +4,9 @@
 #endif
 #if cAlgo
 using cAlgo.API.Internals;
+using DataSeriesType = cAlgo.API.DataSeries;
+#else
+using DataSeriesType = LionFire.Trading.DataSeries;
 #endif
 using System;
 using System.Collections.Generic;
@@ -28,61 +31,11 @@ namespace LionFire.Trading.Indicators
         }
 #endif
 
-        #region Construction
+        #region Relationships
 
-        public SingleSeriesIndicatorBase() { }
+        #region Derived
 
-        public SingleSeriesIndicatorBase(TConfig config) : base(config)
-        {
-        }
-
-        #endregion
-
-        protected IDataSeries DataSeries;
-
-        protected override void OnInitializing()
-        {
-            base.OnInitializing();
-            OnInitializing_();
-
-            DataSeries = MarketSeries.GetDataSeries(Template.IndicatorBarSource);
-        }
-        partial void OnInitializing_();
-
-
-        public override void CalculateToTime(DateTime date)
-        {
-#if cAlgo
-            var series = Bot == null ? MarketSeries : Bot.MarketSeries;
-            if (MarketSeries == null && Bot == null)
-            {
-                throw new ArgumentNullException("MarketSeries == null && Bot == null");
-            }
-#else
-            var series = MarketSeries;
-#endif
-#if NULLCHECKS
-            if (series == null)
-            {
-                throw new ArgumentNullException("MarketSeries");
-            }
-#endif
-
-            //l.Debug("Calculating until " + date);
-
-            for (int index = CalculatedCount; series.OpenTime[index] < date; index++)
-            {
-                if (index >= series.OpenTime.Count) break;
-                var openTime = series.OpenTime[index];
-                //l.Warn($"series.OpenTime[index] {openTime} open: {series.Open[index]}");
-                if (double.IsNaN(series.Open[index])) continue;
-                Calculate(index);
-            }
-            //l.Info("Calculated until " + date + " " + OpenLongPoints.LastValue);
-        }
-
-
-        protected MarketSeries series
+        protected override MarketSeries series
         {
             get
             {
@@ -95,38 +48,75 @@ namespace LionFire.Trading.Indicators
             // add set to make it faster?
         }
 
-#if !cAlgo
+        #endregion
+
+        #endregion
+
+        #region Construction
+
+        public SingleSeriesIndicatorBase() { }
+
+        public SingleSeriesIndicatorBase(TConfig config) : base(config)
+        {
+        }
+
+        #endregion
+
+        protected DataSeriesType DataSeries;
+
+        protected override void OnInitializing()
+        {
+            base.OnInitializing();
+            OnInitializing_();
+
+            DataSeries = Template.IndicatorBarSource ?? MarketSeries.GetDataSeries(Template.IndicatorBarComponent);
+
+        }
+        partial void OnInitializing_();
+        
+
         public virtual int Periods
         {
             get
             {
+                var t = Template as ITSingleSeriesIndicator;
+                if (t != null)
+                {
+                    return t.Periods;
+                }
+
                 var maxPeriods = 0;
-                foreach (var child in Children.OfType<ISingleSeriesIndicator>())
+                foreach (var child in Children.OfType<IIndicator>().Select(c=>c.Template).OfType<ITSingleSeriesIndicator>())
                 {
                     maxPeriods = Math.Max(maxPeriods, child.Periods);
                 }
+#if DEBUG
+                if (maxPeriods == 0)
+                {
+                    Debug.WriteLine("WARNING: SingleSeriesIndicatorBase.Periods returning 0 for type: " + this.GetType().Name);
+                }
+#endif
                 return maxPeriods;
             }
         }
-#endif
 
-        public override void Calculate(int upToIndex)
+        public async Task CalculateUpToIndex(int upToIndex) // UNUSED
         {
-            
+
 #if !cAlgo
             bool failedToGetHistoricalData = false;
 
-            if (CalculatedCount == 0 && !Account.IsBacktesting)
-            {
+            //if (CalculatedCount == 0 && !Account.IsBacktesting)
+            //{
 
-                var minIndex = Math.Max(upToIndex, MarketSeries.LastIndex - Periods);
-                //for (int index = MarketSeries.MinIndex; index < minIndex; index++)
-                for (int index = MarketSeries.FirstIndex; index < upToIndex - 1; index++)
-                {
-                    // Skip unneeded sections
-                    SetBlank(index); // MEMORYOPTIMIZE use sparse arrays instead of filling with blanks
-                }
-            }
+            //    var minIndex = Math.Max(upToIndex, MarketSeries.LastIndex - Periods);
+            //    //for (int index = MarketSeries.MinIndex; index < minIndex; index++)
+            //    for (int index = MarketSeries.FirstIndex; index < upToIndex - 1; index++)
+            //    {
+            //        // Skip unneeded sections
+            //        SetBlank(index); // MEMORYOPTIMIZE use sparse arrays instead of filling with blanks
+            //    }
+            //}
 #endif
 
             var lastIndex = LastIndex == int.MinValue ? -1 : LastIndex;
@@ -143,8 +133,7 @@ namespace LionFire.Trading.Indicators
                     {
                         Debug.WriteLine($"[indicator for {MarketSeries}] Index needed: {lookbackIndex} + but MarketSeries.MinIndex: {MarketSeries.FirstIndex}.  Requesting {2 + MarketSeries.FirstIndex - lookbackIndex} bars from {MarketSeries.OpenTime.First()}");
 
-                        Task.Run(async () => await MarketSeries.EnsureDataAvailable(null, MarketSeries.OpenTime.First(), 2 + MarketSeries.FirstIndex - lookbackIndex).ConfigureAwait(false)).Wait();
-
+                        await MarketSeries.EnsureDataAvailable(null, MarketSeries.OpenTime.First(), 2 + MarketSeries.FirstIndex - lookbackIndex).ConfigureAwait(false);
                     }
                     if (lookbackIndex < MarketSeries.FirstIndex)
                     {
@@ -157,11 +146,10 @@ namespace LionFire.Trading.Indicators
                 #endregion
 #endif
 
-                CalculateIndex(index);
+                await CalculateIndex(index);
             }
         }
 
-        protected abstract void CalculateIndex(int index);
 
 #if TRACE_INDICATOR_BARS
         long i = 0;

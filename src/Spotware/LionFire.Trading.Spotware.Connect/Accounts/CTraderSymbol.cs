@@ -76,7 +76,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         public LiveSymbol(string symbolCode, AccountType account) : base(symbolCode, account)
         {
-            System.Reactive.AnonymousObservable<TimedBar> a;
+            //System.Reactive.AnonymousObservable<TimedBar> a;
 
             this.account = account;
         }

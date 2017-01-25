@@ -1,5 +1,5 @@
 ﻿//using LionFire.Reactive;
-//using LionFire.Templating;
+//using LionFire.Instantiating;
 //using System;
 //using System.Collections.Generic;
 //using System.Linq;

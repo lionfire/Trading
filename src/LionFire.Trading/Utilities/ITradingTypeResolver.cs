@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public interface ITypeResolver
+    public interface ITradingTypeResolver
     {
         Type GetTemplateType(string type);
         Type GetType(string type);

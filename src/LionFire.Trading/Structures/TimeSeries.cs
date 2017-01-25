@@ -16,6 +16,7 @@ namespace LionFire.Trading
             {
 
                 result = reverseList.FindLastIndex(d => d <= time);
+                if (result == -1) return int.MinValue;
                 result = -1 - result;
 
             }

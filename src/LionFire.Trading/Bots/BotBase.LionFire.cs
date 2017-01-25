@@ -6,6 +6,8 @@ using System.Reflection;
 using System.Threading.Tasks;
 using LionFire.Execution;
 using LionFire.Dependencies;
+using LionFire.Instantiating;
+using LionFire.States;
 
 namespace LionFire.Trading.Bots
 {
@@ -28,11 +30,8 @@ namespace LionFire.Trading.Bots
 
         #region Data
 
-
         public MarketData MarketData { get; set; }
-
-
-
+        
         [RequiredToEnterState(ExecutionState.Starting)]
         public Symbol Symbol
         {
@@ -51,10 +50,7 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
-
         #region Positions
-
-
 
         public IPositions Positions
         {
@@ -63,7 +59,7 @@ namespace LionFire.Trading.Bots
                 return Account?.Positions;
             }
         }
-
+                
         #region Position Methods
 
         public TradeResult ClosePosition(Position position)
@@ -100,6 +96,14 @@ namespace LionFire.Trading.Bots
         #endregion
 
         #endregion
+
+        
+
+        
+
+        
+
+        
 
 
     }

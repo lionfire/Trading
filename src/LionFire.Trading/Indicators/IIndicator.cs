@@ -1,8 +1,9 @@
 ﻿#if cAlgo
+using cAlgo.API;
 using cAlgo.API.Internals;
 #endif
 using LionFire.Execution;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,18 +11,20 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Indicators
 {
-    public interface IIndicator : ITemplateInstance, IStartable
+    public interface IIndicator : ITemplateInstance
 #if !cAlgo
+        , IStartable
+        , IInitializable
         , IAccountParticipant
 #endif
     {
         new ITIndicator Template { get; set; }
 
-        void Calculate(int index);
+        Task CalculateIndex(int index);
 
         Symbol Symbol { get; }
 
-        void CalculateToTime(DateTime openTime);
+        Task CalculateToTime(DateTime openTime);
 
 #if !cAlgo
         int GetDesiredBars(string symbolCode, TimeFrame timeFrame);
@@ -31,7 +34,13 @@ namespace LionFire.Trading.Indicators
 
     public interface IMovingAverageIndicator : IIndicator
     {
-        DoubleDataSeries Result { get; }
+        MovingAverageType Kind { get; }
+
+#if cAlgo
+        IndicatorDataSeries Result { get; }
+#else
+        DataSeries Result { get; }
+#endif
     }
 
 }

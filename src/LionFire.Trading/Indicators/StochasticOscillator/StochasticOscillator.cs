@@ -10,6 +10,16 @@ namespace LionFire.Trading.Indicators
 
     public class TStochasticOscillator : TSingleSeriesIndicator
     {
+        public override int Periods
+        {
+            get
+            {
+                return KPeriods + KSlowing + DPeriods; // REVIEW
+            }
+            set
+            {
+            }
+        }
         public int KPeriods { get; set; } = 9;
         public int KSlowing { get; set; } = 3;
         public int DPeriods { get; set; } = 9;
@@ -22,10 +32,10 @@ namespace LionFire.Trading.Indicators
 
         #region Outputs
 
-        public DoubleDataSeries PercentD { get; private set; } = new DoubleDataSeries();
-        public DoubleDataSeries PercentK { get; private set; } = new DoubleDataSeries();
+        public DataSeries PercentD { get; private set; } = new DataSeries();
+        public DataSeries PercentK { get; private set; } = new DataSeries();
 
-        public override IEnumerable<IDataSeries> Outputs
+        public override IEnumerable<IndicatorDataSeries> Outputs
         {
             get
             {
@@ -33,6 +43,19 @@ namespace LionFire.Trading.Indicators
                 yield return PercentK;
             }
         }
+
+        #endregion
+
+        #region Relationships
+
+        public override IEnumerable<IAccountParticipant> Children
+        {
+            get
+            {
+                yield return kDonc;
+            }
+        }
+        DonchianChannel kDonc;
 
         #endregion
 
@@ -44,19 +67,14 @@ namespace LionFire.Trading.Indicators
 
         protected override void OnInitializing()
         {
-            base.OnInitializing();
-
             kDonc = EffectiveIndicators.DonchianChannel(Template.KPeriods);
-            
+            base.OnInitializing();
         }
 
         #endregion
 
-        DonchianChannel kDonc;
 
-
-
-        protected override void CalculateIndex(int index)
+        public override Task CalculateIndex(int index)
         {
 
             /*
@@ -87,6 +105,7 @@ namespace LionFire.Trading.Indicators
             }
             d /= Template.DPeriods;
             PercentD[index] = d;
+            return Task.CompletedTask;
         }
     }
 }

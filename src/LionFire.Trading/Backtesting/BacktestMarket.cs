@@ -4,7 +4,7 @@
 //using System.Threading;
 //using System.Threading.Tasks;
 //using LionFire.Trading.Bots;
-//using LionFire.Templating;
+//using LionFire.Instantiating;
 //using LionFire.Assets;
 
 //namespace LionFire.Trading.Backtesting

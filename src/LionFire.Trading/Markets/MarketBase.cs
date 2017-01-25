@@ -2,7 +2,7 @@
 //using System.Collections.Generic;
 //using System.Linq;
 //using System.Threading.Tasks;
-//using LionFire.Templating;
+//using LionFire.Instantiating;
 //using LionFire.Extensions.Logging;
 //using Microsoft.Extensions.Logging;
 //using System.Collections.Concurrent;

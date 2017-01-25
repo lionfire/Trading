@@ -40,6 +40,7 @@ namespace LionFire.Trading
         public string Comment { get; set; }
         public double Commissions { get; set; } // REVEW - verify this is getting set
         public double EntryPrice { get; set; }
+        public double ExitPrice { get; set; }
 
         public DateTime EntryTime { get; set; }
 

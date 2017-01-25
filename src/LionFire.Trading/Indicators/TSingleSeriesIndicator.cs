@@ -2,6 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+#if cAlgo
+using cAlgo.API;
+#endif
+
 using System.Threading.Tasks;
 
 namespace LionFire.Trading
@@ -12,7 +16,7 @@ namespace LionFire.Trading
     //    public TIndicator() { }
     //}
 
-    public class TSingleSeriesIndicator : ITIndicator, ITSingleSeriesIndicator
+    public abstract class TSingleSeriesIndicator : ITIndicator, ITSingleSeriesIndicator
     {
         public TSingleSeriesIndicator() { }
         public TSingleSeriesIndicator(string symbolCode, string timeFrame)
@@ -23,10 +27,13 @@ namespace LionFire.Trading
 
         public string Symbol { get; set; }
         public string TimeFrame { get; set; }
-        public BarComponent IndicatorBarSource { get; set; } = BarComponent.Close;
+        public DataSeries IndicatorBarSource { get; set; }
+        public BarComponent IndicatorBarComponent { get; set; } = BarComponent.Close;
 
         public double SignalThreshold { get; set; } = 0.75; // MOVE to Signal Indicator?
         public bool Log { get; set; } = false;
+
+        public virtual int Periods { get; set; }
     }
 
 

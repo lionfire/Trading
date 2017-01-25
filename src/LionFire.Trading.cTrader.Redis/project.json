@@ -9,7 +9,7 @@
     "NETStandard.Library": "1.6.1",
     "Newtonsoft.Json": "9.0.1",
     "StackExchange.Redis": "1.1.605",
-    "System.Collections.Concurrent": "4.0.12"
+    "System.Collections.Concurrent": "4.*"
   },
 
   "frameworks": {

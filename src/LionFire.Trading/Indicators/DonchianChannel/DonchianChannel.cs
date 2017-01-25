@@ -10,7 +10,10 @@ namespace LionFire.Trading.Indicators
 
     public class TDonchianChannel : TSingleSeriesIndicator
     {
-        public int Periods { get; set; } = 21;
+        public TDonchianChannel()
+        {
+            base.Periods = 21;
+        }
     }
 
 
@@ -19,11 +22,11 @@ namespace LionFire.Trading.Indicators
 
         #region Outputs
 
-        public DoubleDataSeries Top { get; private set; } = new DoubleDataSeries();
-        public DoubleDataSeries Middle { get; private set; } = new DoubleDataSeries();
-        public DoubleDataSeries Bottom { get; private set; } = new DoubleDataSeries();
+        public DataSeries Top { get; private set; } = new DataSeries();
+        public DataSeries Middle { get; private set; } = new DataSeries();
+        public DataSeries Bottom { get; private set; } = new DataSeries();
 
-        public override IEnumerable<IDataSeries> Outputs
+        public override IEnumerable<IndicatorDataSeries> Outputs
         {
             get
             {
@@ -44,8 +47,9 @@ namespace LionFire.Trading.Indicators
         #endregion
         
 
-        protected  override void CalculateIndex(int index)
+        public  override Task CalculateIndex(int index)
         {
+            
             double high = double.NaN;
             double low = double.NaN;
             var lookbackIndex = index - Template.Periods;
@@ -72,6 +76,7 @@ namespace LionFire.Trading.Indicators
             Top[index] = high;
             Bottom[index] = low;
             Middle[index] = (high + low) / 2.0;
+            return Task.CompletedTask;
         }
     }
 }

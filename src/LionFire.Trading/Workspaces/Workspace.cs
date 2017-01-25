@@ -1,6 +1,6 @@
 ﻿using LionFire.Assets;
 using LionFire.Execution;
-using LionFire.Templating;
+using LionFire.Instantiating;
 using LionFire.Trading.Bots;
 using System;
 using System.Collections.Generic;
@@ -14,15 +14,16 @@ using System.IO;
 using LionFire.States;
 using LionFire.Structures;
 using System.Reflection;
+using LionFire.Persistence;
 
 namespace LionFire.Trading.Workspaces
 {
-    
+
     /// <summary>
     /// Each user will typically work with one workspace.  
     /// FUTURE: Hierarchy of groups and sessions, allowing users to start/stop/view entire groups
     /// </summary>
-    public class Workspace : ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged
+    public class Workspace : ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, ISaveable
     {
 
         #region Relationships
@@ -38,15 +39,25 @@ namespace LionFire.Trading.Workspaces
                 if (template != null)
                 {
                     template.ControlSwitchChanged -= ControlSwitchChanged;
+                    template.IsAutoSaveEnabledChanged -= Template_IsAutoSaveEnabledChanged;
                 }
                 template = value;
 
                 if (template != null)
                 {
                     template.ControlSwitchChanged += ControlSwitchChanged;
+                    template.IsAutoSaveEnabledChanged += Template_IsAutoSaveEnabledChanged;
+                    this.EnableAutoSave(Template.IsAutoSaveEnabled);
+                    ControlSwitchChanged();
                 }
             }
         }
+
+        private void Template_IsAutoSaveEnabledChanged()
+        {
+            this.EnableAutoSave(Template.IsAutoSaveEnabled);
+        }
+
         private TWorkspace template;
 
         #endregion
@@ -59,7 +70,8 @@ namespace LionFire.Trading.Workspaces
         public WorkspaceInfo Info { get; set; }
 
         #region Settings
-               
+
+        
 
         #region Handlers
 
@@ -81,7 +93,6 @@ namespace LionFire.Trading.Workspaces
         #endregion
 
         #region State
-
 
         #region StatusText
 
@@ -166,12 +177,22 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-
         #region Lifecycle
 
         public Workspace()
         {
-            //this.AttachChangedEventToCollections(() => Changed?.Invoke(this));
+            this.AttachChangedEventToCollections(() => Changed?.Invoke(this));
+
+            Accounts.CollectionChanged += Accounts_CollectionChanged;
+            
+        }
+
+        private void Accounts_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            if (e.NewItems != null && e.NewItems.Count > 0)
+            {
+                ControlSwitchChanged();
+            }
         }
 
         public async Task<bool> Initialize()
@@ -187,7 +208,7 @@ namespace LionFire.Trading.Workspaces
             {
                 foreach (var accountId in Template.LiveAccounts)
                 {
-                    var account = TypeResolver.CreateAccount(accountId);
+                    var account = TradingTypeResolver.CreateAccount(accountId);
                     LiveAccounts.Add(account);
                     AddAccount(accountId, account);
                 }
@@ -197,7 +218,7 @@ namespace LionFire.Trading.Workspaces
             {
                 foreach (var accountId in Template.DemoAccounts)
                 {
-                    var account = TypeResolver.CreateAccount(accountId);
+                    var account = TradingTypeResolver.CreateAccount(accountId);
                     DemoAccounts.Add(account);
                     AddAccount(accountId, account);
                 }
@@ -207,19 +228,19 @@ namespace LionFire.Trading.Workspaces
             {
                 var session = tSession.Create();
                 session.Workspace = this;
+                await session.Initialize().ConfigureAwait(continueOnCapturedContext: false); // Loads child collections
                 this.Sessions.Add(session);
-                await session.Initialize().ConfigureAwait(continueOnCapturedContext: false);
             }
 
             state.OnNext(ExecutionState.Ready);
             return true;
         }
 
-        public ITypeResolver TypeResolver
+        public ITradingTypeResolver TradingTypeResolver
         {
             get
             {
-                return LionFire.Structures.ManualSingleton<ITypeResolver>.Instance;
+                return LionFire.Structures.ManualSingleton<ITradingTypeResolver>.Instance;
             }
         }
 
@@ -286,6 +307,40 @@ namespace LionFire.Trading.Workspaces
         #endregion
 
         #endregion
+
+        public Task Save(object context = null)
+        {
+            if (Template.Name == null)
+            {
+                throw new Exception("Can't save when name is null");
+            }
+
+            //foreach (var item in Items)
+            //{
+            //}
+
+            OnSaving(context);
+            Template.Save();
+
+            return Task.CompletedTask;
+        }
+
+        public void OnSaving(object context = null)
+        {
+            foreach (var item in Template.Items)
+            {
+            }
+
+            foreach (var s in Sessions)
+            {
+                s.OnSaving(context);
+            }
+        }
+
+        internal void RaiseChanged()
+        {
+            this.Changed?.Invoke(this);
+        }
     }
 
 

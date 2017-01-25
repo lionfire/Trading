@@ -31,5 +31,14 @@ namespace LionFire
         {
             return new DateTime(value.Year, 1, 1, 0, 0, 0, value.Kind);
         }
+
+        public static bool IsSameMinute(this DateTime time1, DateTime time2)
+        {
+            return time1.Year == time2.Year
+                && time1.Month == time2.Month
+                && time1.Day == time2.Day
+                && time1.Hour == time2.Hour
+                && time1.Minute == time2.Minute;
+        }
     }
 }
