@@ -15,6 +15,7 @@ using System.Reactive.Linq;
 using System.ComponentModel;
 using System.Diagnostics;
 using LionFire.States;
+using LionFire.Messaging;
 
 namespace LionFire.Trading
 {
@@ -94,7 +95,7 @@ namespace LionFire.Trading
         }
 
         #endregion
-        
+
         #region Construction
 
         public AccountParticipant()
@@ -103,7 +104,7 @@ namespace LionFire.Trading
         }
 
         #endregion
-        
+
         #region Subscriptions
 
         public IEnumerable<MarketDataSubscription> DesiredSubscriptions
@@ -232,6 +233,8 @@ namespace LionFire.Trading
                 child.Account = this.Account;
             }
 
+            
+
             Account.Started.Subscribe(started => { if (started) { Threading.Tasks.TaskManager.OnNewTask(OnMarketStarted(), Threading.Tasks.TaskFlags.Unowned); } });
             //Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
         }
@@ -265,8 +268,9 @@ namespace LionFire.Trading
 
         protected void SetState(ExecutionState state)
         {
+            var oldState = this.state.Value;
             this.state.OnNext(state);
-            
+            new MExecutionStateChanged() { Source = this, OldState = oldState, NewState = state }.Publish();
             OnPropertyChanged(nameof(this.State));
         }
 
@@ -415,7 +419,7 @@ namespace LionFire.Trading
             state.OnNext(ExecutionState.Ready);
             return Task.FromResult(true);
         }
-        
+
         public async Task Start()
         {
             if (this.IsStarted()) return;
@@ -466,7 +470,7 @@ namespace LionFire.Trading
                         throw new Exception("Cannot start, current state is Initializing.");
                     }
                 case ExecutionState.Ready:
-                //case ExecutionState.WaitingToStart:
+                    //case ExecutionState.WaitingToStart:
                     break;
                 case ExecutionState.Starting:
                 case ExecutionState.Started:
@@ -492,7 +496,7 @@ namespace LionFire.Trading
             {
                 await child.Start();
             }
-            
+
             SetState(ExecutionState.Started);
         }
 
@@ -547,7 +551,7 @@ namespace LionFire.Trading
 
         public virtual async Task Stop(StopMode stopMode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
         {
-            await DoStop();            
+            await DoStop();
         }
 
         protected bool StartOnMarketAvailable = false;
@@ -571,7 +575,7 @@ namespace LionFire.Trading
                 await EnsureDataAvailable(Account.ExtrapolatedServerTime).ConfigureAwait(false);
             }
         }
-        protected virtual  Task OnStarted()
+        protected virtual Task OnStarted()
         {
             return Task.CompletedTask;
         }

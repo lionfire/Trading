@@ -71,9 +71,10 @@ namespace LionFire.Trading
             }
             else
             {
-                if (!listParameter[index].Equals(val))
-                {
-                    
+
+                if (!(listParameter[index] is double && double.IsNaN((double)(object)listParameter[index]))
+                    && !listParameter[index].Equals(val))
+                {                    
                     Debug.WriteLine($"WARNING - resetting index {index} from {listParameter[index]} to {val}");
                     listParameter[index] = val;
                 }

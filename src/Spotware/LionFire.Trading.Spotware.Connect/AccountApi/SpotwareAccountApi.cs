@@ -28,6 +28,10 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         public const string PositionsUri = @"/connect/tradingaccounts/{id}/positions?access_token={access_token}&limit={limit}";
         public const string AllPositionsUri = @"/connect/tradingaccounts/{id}/deals?access_token={access_token}&limit={limit}";
 
+
+        public const string RefreshTokenUri = @"/apps/token?grant_type=refresh_token&refresh_token={refresh_token}&client_id={client_id}&client_secret={client_secret}";
+        
+
         public static string ToSpotwareUriParameter(this DateTime time)
         {
             return time.ToString("yyyyMMddHHmmss");
@@ -65,6 +69,11 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             client.DefaultRequestHeaders.Add("Connection", "keep-alive");
             client.DefaultRequestHeaders.Add("Host", "api.spotware.com");
             client.DefaultRequestHeaders.Add("Cookie", "_ga=GA1.2.1217132727.1477434575");
+        }
+
+        public async static Task<string> RefreshToken(CTraderAccount account)
+        {
+            return "Notimplemented";
         }
 
         #region Positions
