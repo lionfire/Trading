@@ -12,6 +12,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Trading.Workspaces;
 using LionFire.Trading.Statistics;
+using LionFire.DependencyInjection;
 
 namespace LionFire.Trading.Accounts
 {
@@ -19,7 +20,7 @@ namespace LionFire.Trading.Accounts
     //{
     //}
     //public class PaperAccount : BacktestAccount
-    
+
     public abstract class AccountBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, IAccount, INotifyPropertyChanged
         where TTemplate : TAccount
     {
@@ -35,12 +36,41 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
-        public ITradingContext Context
+        public TradingContext Context
         {
-            get { return tradingContext ?? Defaults.Get<TradingContext>(); }
+            get
+            {
+                return InjectionContext.Current.GetService<TradingContext>();
+                //return tradingContext ?? Defaults.Get<TradingContext>();
+            }
             set { tradingContext = value; }
         }
-        ITradingContext tradingContext;
+        TradingContext tradingContext;
+
+
+        #region Workspace
+
+        public Workspace Workspace
+        {
+            get { return workspace; }
+            set
+            {
+                if (workspace == value) return;
+                workspace = value;
+                if (workspace != null)
+                {
+                    if (workspace.Template == null)
+                        {
+                        throw new ArgumentException("Workspace must have Template");
+                    }
+                    workspace.Template.PropertyChanged += TWorkspace_PropertyChanged;
+                }
+            }
+        }
+
+        private Workspace workspace;
+
+        #endregion
 
 
         public Server Server
@@ -51,6 +81,31 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
+        #region Lifecycle
+
+        public AccountBase()
+        {
+            //if (Context == null)
+            //{
+            //    throw new Exception("Cannot create AccountBase before TradingContext is available.");
+            //}
+            //Context.Options.PropertyChanged += Options_PropertyChanged;
+        }
+
+        #endregion
+
+        private void TWorkspace_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            switch (e.PropertyName)
+            {
+                case nameof(Workspace.Template.AllowSubscribeToTicks):
+                    OnAllowSubscribeToTicksChanged();
+                    break;
+                default:
+                    break;
+            }
+        }
+        
         #region Lifecycle State
 
         #region IsTradeApiEnabled
@@ -83,6 +138,27 @@ namespace LionFire.Trading.Accounts
         #endregion
 
         #region State
+
+        #region AllowSubscribeToTicks
+
+        public virtual bool AllowSubscribeToTicks
+        {
+            get
+            {
+                if (Workspace?.Template != null && !Workspace.Template.AllowSubscribeToTicks) return false;
+                return allowSubscribeToTicks;
+            }
+            set
+            {
+                if (allowSubscribeToTicks == value) return;
+                allowSubscribeToTicks = value;
+                OnAllowSubscribeToTicksChanged();
+            }
+        }
+        private bool allowSubscribeToTicks;
+        protected virtual void OnAllowSubscribeToTicksChanged() { }
+
+        #endregion
 
         public AccountStats AccountStats { get; } = new AccountStats();
         public PositionStats PositionStats
@@ -193,7 +269,7 @@ namespace LionFire.Trading.Accounts
         {
             return (MarketSeries)GetMarketSeries(symbol.Code, timeFrame);
         }
-        
+
         public abstract MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame);
 
         #region MarketSeries
@@ -211,12 +287,13 @@ namespace LionFire.Trading.Accounts
             }
             else
             {
-                return GetMarketSeries(symbol,tf);
+                return GetMarketSeries(symbol, tf);
             }
         }
 
         public MarketSeries GetMarketSeries(string symbol, TimeFrame tf)
         {
+            if (symbol == null) return null;
             if (tf == TimeFrame.t1)
             {
                 throw new ArgumentException("Use Symbol.MarketTickSeries for t1");
@@ -228,7 +305,7 @@ namespace LionFire.Trading.Accounts
         }
 
         #endregion
-        
+
         #endregion
 
         #region Symbols
@@ -322,7 +399,7 @@ namespace LionFire.Trading.Accounts
                 var interested = actor as IInterestedInMarketData;
                 if (interested != null)
                 {
-                    await interested.EnsureDataAvailable(ExtrapolatedServerTime);
+                    await interested.EnsureDataAvailable(ExtrapolatedServerTime).ConfigureAwait(false);
                 }
             }
         }
@@ -335,7 +412,7 @@ namespace LionFire.Trading.Accounts
 
         protected virtual async Task OnStarting()
         {
-            await EnsureParticipantsHaveDesiredData();
+            await EnsureParticipantsHaveDesiredData().ConfigureAwait(false);
         }
 
         protected async virtual Task EnsureParticipantsHaveDesiredData()
@@ -348,7 +425,7 @@ namespace LionFire.Trading.Accounts
 
             foreach (var p in participants.OfType<IInterestedInMarketData>())
             {
-                await p.EnsureDataAvailable(time);
+                await p.EnsureDataAvailable(time).ConfigureAwait(false);
             }
         }
 

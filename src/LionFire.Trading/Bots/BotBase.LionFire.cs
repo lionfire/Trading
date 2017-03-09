@@ -59,7 +59,15 @@ namespace LionFire.Trading.Bots
                 return Account?.Positions;
             }
         }
-                
+
+        public override bool CanStart
+        {
+            get
+            {
+                return this.Template.TimeFrame == "h1"; // TEMP FIXME - h1 only!
+            }
+        }
+
         #region Position Methods
 
         public TradeResult ClosePosition(Position position)

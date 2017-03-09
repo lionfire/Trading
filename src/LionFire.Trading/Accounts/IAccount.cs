@@ -15,7 +15,7 @@ namespace LionFire.Trading
     public interface IAccount
     //: ITemplateInstance<TAccount>
     {
-
+        bool AllowSubscribeToTicks { get; set; }
         AccountStats AccountStats { get; }
 
         #region Relationships

@@ -42,7 +42,7 @@ namespace LionFire.Trading.Bots
 
             using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
             {
-                await sw.WriteAsync(json);
+                await sw.WriteAsync(json).ConfigureAwait(false);
             }
 
             return config.Id;

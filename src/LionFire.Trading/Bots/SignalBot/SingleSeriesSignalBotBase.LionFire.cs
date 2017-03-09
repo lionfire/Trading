@@ -60,7 +60,7 @@ namespace LionFire.Trading.Bots
 
         protected override async Task OnStarted()
         {
-            await base.OnStarted();
+            await base.OnStarted().ConfigureAwait(false);
 
             this.Symbol.Ticked += Symbol_Tick;
             Evaluate();

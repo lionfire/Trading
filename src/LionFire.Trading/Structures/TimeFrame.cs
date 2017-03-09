@@ -21,7 +21,7 @@ namespace LionFire.Trading
 #endif
     {
 
-    #region Static
+        #region Static
 
 #if cAlgo
         static LionFireTimeFrame()
@@ -31,29 +31,78 @@ namespace LionFire.Trading
         {
             t1 = new TimeFrame("t1");
             m1 = new TimeFrame("m1");
+            m2 = new TimeFrame("m2");
+            m3 = new TimeFrame("m3");
+            m4 = new TimeFrame("m4");
+            m5 = new TimeFrame("m5");
+            m6 = new TimeFrame("m6");
+            m7 = new TimeFrame("m7");
+            m8 = new TimeFrame("m8");
+            m9 = new TimeFrame("m9");
+            m10 = new TimeFrame("m10");
+            m15 = new TimeFrame("m15");
+            m20 = new TimeFrame("m20");
+            m30 = new TimeFrame("m30");
+            m45 = new TimeFrame("m45");
+
             h1 = new TimeFrame("h1");
             h2 = new TimeFrame("h2");
+            h3 = new TimeFrame("h3");
             h4 = new TimeFrame("h4");
+            h6 = new TimeFrame("h6");
+            h8 = new TimeFrame("h8");
+            h12 = new TimeFrame("h12");
+
+            d1= new TimeFrame("d1");
+            d2= new TimeFrame("d2");
+            d3= new TimeFrame("d3");
+
+            w1 = new TimeFrame("w1");
+            mn1 = new TimeFrame("mn1");
         }
 
         public static TimeFrame t1 { get; private set; }
         public static TimeFrame m1 { get; private set; }
+        public static TimeFrame m2 { get; private set; }
+        public static TimeFrame m3 { get; private set; }
+        public static TimeFrame m4 { get; private set; }
+        public static TimeFrame m5 { get; private set; }
+        public static TimeFrame m6 { get; private set; }
+        public static TimeFrame m7 { get; private set; }
+        public static TimeFrame m8 { get; private set; }
+        public static TimeFrame m9 { get; private set; }
+        public static TimeFrame m10 { get; private set; }
+        public static TimeFrame m15 { get; private set; }
+        public static TimeFrame m20 { get; private set; }
+        public static TimeFrame m30 { get; private set; }
+        public static TimeFrame m45 { get; private set; }
         public static TimeFrame h1 { get; private set; }
         public static TimeFrame h2 { get; private set; }
+        public static TimeFrame h3 { get; private set; }
         public static TimeFrame h4 { get; private set; }
+        public static TimeFrame h6 { get; private set; }
+        public static TimeFrame h8 { get; private set; }
+        public static TimeFrame h12 { get; private set; }
+        public static TimeFrame d1 { get; private set; }
+        public static TimeFrame d2 { get; private set; }
+        public static TimeFrame d3 { get; private set; }
+        public static TimeFrame w1 { get; private set; }
+        public static TimeFrame mn1 { get; private set; }
 
-    #endregion
+        #endregion
 
-    #region Construction
+        #region Construction
 
 #if cAlgo
         public LionFireTimeFrame(string name)
 #else
-                public TimeFrame(string name)
+        public TimeFrame(string name)
 #endif
         {
             this.Name = name;
             string type = name[0].ToString();
+
+            if(name.Substring(0,2) == "mn") type = "mn";
 
             switch (type)
             {
@@ -76,16 +125,17 @@ namespace LionFire.Trading
                     TimeFrameUnit = TimeFrameUnit.Week;
                     break;
                 case "M":
+                case "mn":
                     TimeFrameUnit = TimeFrameUnit.Month;
                     break;
                 default:
                     break;
             }
 
-            TimeFrameValue = Int32.Parse(name.Substring(1));
+            TimeFrameValue = Int32.Parse(name.Substring(type.Length));
         }
 
-        
+
 
         public static TimeFrame TryParse(string timeFrameCode)
         {
@@ -100,20 +150,20 @@ namespace LionFire.Trading
             return TryParse(timeFrameCode);
         }
 
-    #endregion
+        #endregion
 
 
 
-    #region Operators
+        #region Operators
 
         public static implicit operator string(TimeFrame tf)
         {
             return tf.Name;
         }
 
-    #endregion
+        #endregion
 
-    #region Properties
+        #region Properties
 
         public string Name { get; set; }
 
@@ -121,9 +171,9 @@ namespace LionFire.Trading
 
         public int TimeFrameValue { get; set; }
 
-    #endregion
+        #endregion
 
-    #region Derived
+        #region Derived
 
         public TimeSpan TimeSpan
         { // TODO - Init this readonly during construction
@@ -162,9 +212,9 @@ namespace LionFire.Trading
 
 
 
-    #endregion
+        #endregion
 
-    #region Utilities
+        #region Utilities
 
         public DateTime GetPeriodStart(DateTime time)
         {
@@ -205,7 +255,7 @@ namespace LionFire.Trading
                         throw new NotImplementedException("GetPeriodStart for " + Name);
                     }
                 //case TimeFrameUnit.Day:
-                        
+
                 //    break;
                 //case TimeFrameUnit.Week:
                 //    break;
@@ -216,12 +266,12 @@ namespace LionFire.Trading
                 default:
                     throw new NotImplementedException("GetPeriodStart for " + Name);
             }
-            
+
         }
 
-    #endregion
+        #endregion
 
-    #region Misc
+        #region Misc
 
         public override string ToString()
         {
@@ -289,7 +339,7 @@ namespace LionFire.Trading
             return TryParse(unit.ToLetterCode() + val.ToString());
         }
 
-    #endregion
+        #endregion
     }
 #endif
 

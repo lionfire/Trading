@@ -11,6 +11,9 @@ using LionFire.Structures;
 using System.Collections.ObjectModel;
 using LionFire.Trading.Bots;
 using LionFire.Validation;
+using LionFire.Persistence;
+using LionFire.UI.Windowing;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -50,15 +53,16 @@ namespace LionFire.Trading.Workspaces
         }
     }
 
+
     [AssetPath("Workspaces")]
-    public class TWorkspace : ITemplate<Workspace>, INotifyPropertyChanged, IAsset, IChanged, IValidatable
+    public class TWorkspace : ITemplate<Workspace>, INotifyPropertyChanged, IChanged, IValidatable, INotifyOnSaving
     {
         #region Identity
 
         public Guid Guid { get; set; } = Guid.NewGuid();
 
         public string Name { get; set; }
-        string IAsset.AssetSubPath { get { return Name; } }
+        //string IAsset.AssetSubPath { get { return Name; } }
 
         #endregion
 
@@ -80,14 +84,33 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-        
+        #region WindowSettings
+
+        public WindowSettings WindowSettings
+        {
+            get
+            {
+                if (windowSettings == null)
+                {
+                    windowSettings = new WindowSettings();
+                }
+                return windowSettings;
+            }
+            set { windowSettings = value; }
+        }
+        private WindowSettings windowSettings;
+
+        #endregion
+
         public bool IsAutoSaveEnabled
         {
-            get { return isAutoSaveEnabled; }
+            get
+            {
+                return isAutoSaveEnabled;
+            }
             set
             {
                 isAutoSaveEnabled = value;
-                // FUTURE: Move this to a global autosave manager that autosaves all asset types (unless turned off for that type, or globally)
                 // FUTURE - use Instantiation
                 //this.EnableAutoSave(isAutoSaveEnabled);
                 OnPropertyChanged(nameof(IsAutoSaveEnabled));
@@ -201,7 +224,6 @@ namespace LionFire.Trading.Workspaces
 
         #region AllowDownload
 
-
         public bool AllowDownload
         {
             get { return allowDownload; }
@@ -289,8 +311,25 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-        #region Misc
+        #region AllowSubscribeToTicks
 
+        public bool AllowSubscribeToTicks
+        {
+            get { return allowSubscribeToTicks; }
+            set
+            {
+                if (allowSubscribeToTicks == value) return;
+                allowSubscribeToTicks = value;
+                OnPropertyChanged(nameof(AllowSubscribeToTicks));
+            }
+        }
+        private bool allowSubscribeToTicks;
+
+        #endregion
+
+        
+        
+        #region Misc
 
         #region INotifyPropertyChanged Implementation
 
@@ -302,6 +341,20 @@ namespace LionFire.Trading.Workspaces
         }
 
         #endregion
+
+        public event Action<object> Changed;
+
+        private void RaiseChanged() => Changed?.Invoke(this);
+        private void CollectionChangedToChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            RaiseChanged();
+        }
+
+        public void OnSaving(object persistenceContext = null)
+        {
+            Saving?.Invoke();
+        }
+        public event Action Saving;
 
         #endregion
 
@@ -386,22 +439,22 @@ namespace LionFire.Trading.Workspaces
                         new TWorkspaceItem
                         {
                             Session = "Scanner",
-                            View = "Log",
+                            ViewModelType = "Log",
                         },
                         new TWorkspaceItem
                         {
                             Session = "Scanner",
-                            View = "Symbols",
+                            ViewModelType = "Symbols",
                         },
                         new TWorkspaceItem
                         {
                             Session = "Scanner",
-                            View = "Backtesting",
+                            ViewModelType = "Backtesting",
                         },
                         new TWorkspaceItem
                         {
                             Session = "Scanner",
-                            View = "HistoricalData",
+                            ViewModelType = "HistoricalData",
                             IsSelected = true,
                             State = new HistoricalDataScreenState
                             {
@@ -415,7 +468,7 @@ namespace LionFire.Trading.Workspaces
                         new TWorkspaceItem
                         {
                             Session = "Scanner",
-                            View = "Bots",
+                            ViewModelType = "Bots",
                             State = new {
                                 DisplayName = "Scanners",
                                 //Mode = BotMode.Scanner,
@@ -426,47 +479,25 @@ namespace LionFire.Trading.Workspaces
             }
         }
 
-        #endregion
 
-        #region Misc
+        #region SelectedWorkspaceItemId
 
-        public event Action<object> Changed;
-
-        private void RaiseChanged() => Changed?.Invoke(this);
-        private void CollectionChangedToChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        public string SelectedWorkspaceItemId
         {
-            RaiseChanged();
+            get { return selectedWorkspaceItemId; }
+            set
+            {
+                if (selectedWorkspaceItemId == value) return;
+                selectedWorkspaceItemId = value;
+                OnPropertyChanged(nameof(SelectedWorkspaceItemId));
+            }
         }
-
-        #endregion
-    }
-
-
-    public class TWorkspaceItem : ITemplate<WorkspaceItem>
-    {
-        #region Construction
-
-        public TWorkspaceItem() { }
-        public TWorkspaceItem(string type, string session, object state = null)
-        {
-            this.View = type;
-            this.Session = session;
-            this.State = state;
-        }
+        private string selectedWorkspaceItemId;
 
         #endregion
 
-        public string Session { get; set; }
-        public string View { get; set; }
-        public object State { get; set; }
-
-        public bool IsSelected { get; set; }
-
-    }
-
-    public class WorkspaceItem : TemplateInstanceBase<TWorkspaceItem>
-    {
-
+        #endregion
+        
     }
 
 }

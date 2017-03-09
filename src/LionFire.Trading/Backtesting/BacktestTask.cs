@@ -70,9 +70,9 @@ namespace LionFire.Applications.Trading
             isInitialized = true;
             logger = this.GetLogger();
 
-            if (await BacktestAccount.Initialize() == false) { return false; }
+            if (await BacktestAccount.Initialize().ConfigureAwait(false) == false) { return false; }
 
-            return await base.Initialize();
+            return await base.Initialize().ConfigureAwait(false);
         }
 
         #endregion

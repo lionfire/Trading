@@ -53,6 +53,7 @@ namespace LionFire.Trading.Connect
                 .SetQueryParam("from", from.ToString("yyyyMMddHHmmss"))
                 .SetQueryParam("to", to.ToString("yyyyMMddHHmmss"))
                 .GetJsonAsync<TrendbarsResponse>()
+                .ConfigureAwait(false)
                 ;
 
             var epoch = new DateTime(1970, 1, 1, 0, 0, 0, 0, System.DateTimeKind.Utc);

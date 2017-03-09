@@ -146,7 +146,7 @@ namespace LionFire.Trading.Indicators
                 #endregion
 #endif
 
-                await CalculateIndex(index);
+                await CalculateIndex(index).ConfigureAwait(false);
             }
         }
 

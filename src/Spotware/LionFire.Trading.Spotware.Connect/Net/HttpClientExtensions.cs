@@ -36,7 +36,7 @@ namespace LionFire.ExtensionMethods
 
         public static bool DebugHttpSuccess = true;
 
-        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount)
+        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount, Action<HttpResponseMessage> onFail = null, Func<bool> canContinue = null)
         {
             if (retryCondition == null) { retryCondition = IsTimeError; }
 
@@ -44,16 +44,32 @@ namespace LionFire.ExtensionMethods
             HttpResponseMessage response = null;
             for (int retriesRemaining = retryCount; response == null || retriesRemaining > 0 && retryCondition(response); retriesRemaining--)
             {
-                response = await client.GetAsync(uri);
+                response = await client.GetAsync(uri).ConfigureAwait(false);
                 if (retryCondition(response))
                 {
+                    if (onFail != null) { onFail(response); }
                     var msg = GetTimeErrorString(response);
 
-                    Debug.WriteLine($"{response.StatusCode} {msg} - {uri}");
-                    Thread.Sleep(retryDelayMilliseconds + RetryIncreaseMilliseconds * failCount);
+                    if (canContinue != null)
+                    {
+                        do
+                        {
+                            if (canContinue != null)
+                            {
+                                await Task.Delay(200);
+                            }
+                            else
+                            {
+                                await Task.Delay(retryDelayMilliseconds + RetryIncreaseMilliseconds * failCount);
+                            }
+                            //Debug.WriteLine($"{response.StatusCode} {msg} - {uri}");
+                        }
+                        while (canContinue != null && !canContinue());
+                    }
+
                     failCount++;
                 }
-                if(DebugHttpSuccess) Debug.WriteLine($"[http] {response.StatusCode} {uri}");
+                if (DebugHttpSuccess) Debug.WriteLine($"[http] {response.StatusCode} {uri}");
             }
             return response;
         }

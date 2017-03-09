@@ -233,7 +233,7 @@ namespace LionFire.Trading
                 child.Account = this.Account;
             }
 
-            
+
 
             Account.Started.Subscribe(started => { if (started) { Threading.Tasks.TaskManager.OnNewTask(OnMarketStarted(), Threading.Tasks.TaskFlags.Unowned); } });
             //Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
@@ -368,63 +368,80 @@ namespace LionFire.Trading
 
         #endregion
 
-        public virtual Task<bool> Initialize()
+        public virtual async Task<bool> Initialize()
         {
-            this.ValidateDependencies();
-            switch (state.Value)
+            try
             {
-                //case ExecutionState.Unspecified:
-                //    break;
-                //case ExecutionState.Unconfigured:
-                //    break;
-                //case ExecutionState.InvalidConfiguration:
-                //    break;
-                //case ExecutionState.Uninitialized:
-                //    break;
-                //case ExecutionState.Initializing:
-                //    break;
-                //case ExecutionState.Ready:
-                //    break;
-                //case ExecutionState.Starting:
-                //    break;
-                //case ExecutionState.Started:
-                //    break;
-                //case ExecutionState.Pausing:
-                //    break;
-                //case ExecutionState.Paused:
-                //    break;
-                //case ExecutionState.Unpausing:
-                //    break;
-                //case ExecutionState.Stopping:
-                //    break;
-                //case ExecutionState.Stopped:
-                //    break;
-                //case ExecutionState.Finished:
-                //    break;
-                case ExecutionState.Disposed:
-                    throw new ObjectDisposedException(this.ToString());
-                //case ExecutionState.WaitingToStart:
-                //    break;
-                //case ExecutionState.Faulted:
-                //    break;
-                default:
-                    break;
-            }
+                FaultException = null;
+                this.ValidateDependencies();
+                switch (state.Value)
+                {
+                    //case ExecutionState.Unspecified:
+                    //    break;
+                    //case ExecutionState.Unconfigured:
+                    //    break;
+                    //case ExecutionState.InvalidConfiguration:
+                    //    break;
+                    //case ExecutionState.Uninitialized:
+                    //    break;
+                    //case ExecutionState.Initializing:
+                    //    break;
+                    //case ExecutionState.Ready:
+                    //    break;
+                    //case ExecutionState.Starting:
+                    //    break;
+                    //case ExecutionState.Started:
+                    //    break;
+                    //case ExecutionState.Pausing:
+                    //    break;
+                    //case ExecutionState.Paused:
+                    //    break;
+                    //case ExecutionState.Unpausing:
+                    //    break;
+                    //case ExecutionState.Stopping:
+                    //    break;
+                    //case ExecutionState.Stopped:
+                    //    break;
+                    //case ExecutionState.Finished:
+                    //    break;
+                    case ExecutionState.Disposed:
+                        throw new ObjectDisposedException(this.ToString());
+                    //case ExecutionState.WaitingToStart:
+                    //    break;
+                    //case ExecutionState.Faulted:
+                    //    break;
+                    default:
+                        break;
+                }
 
-            state.OnNext(ExecutionState.Initializing);
-            foreach (var child in Children.OfType<IAccountParticipant>())
-            {
-                child.Account = this.Account;
+                state.OnNext(ExecutionState.Initializing);
+                foreach (var child in Children.OfType<IAccountParticipant>())
+                {
+                    child.Account = this.Account;
+                }
+                state.OnNext(ExecutionState.Ready);
+                return true;
             }
-            state.OnNext(ExecutionState.Ready);
-            return Task.FromResult(true);
+            catch (Exception ex)
+            {
+                await OnFault(ex).ConfigureAwait(false);
+                throw;
+            }
+        }
+
+        public virtual bool CanStart
+        {
+            get { return true; }
         }
 
         public async Task Start()
         {
             if (this.IsStarted()) return;
 
+
             desiredExecutionState = ExecutionState.Started; // REVIEW - have a single input/output
+
+            if (!CanStart) return; // TODO: Error?
 
             StartOnMarketAvailable = true;
 
@@ -444,61 +461,90 @@ namespace LionFire.Trading
 
         private async Task _Start()
         {
-            int retriesRemaining = 30;
-            tryagain:
-            switch (State.Value)
+            try
             {
-                //case ExecutionState.Unconfigured:
-                //    break;
-                //case ExecutionState.InvalidConfiguration:
-                //    break;
-                case ExecutionState.Unspecified:
-                case ExecutionState.Finished:
-                case ExecutionState.Uninitialized:
-                case ExecutionState.Stopped:
-                    await Initialize();
-                    goto tryagain;
-                case ExecutionState.Initializing:
-                case ExecutionState.Stopping:
-                    if (retriesRemaining-- > 0)
-                    {
-                        await Task.Delay(1000);
+                int retriesRemaining = 30;
+                tryagain:
+                switch (State.Value)
+                {
+                    //case ExecutionState.Unconfigured:
+                    //    break;
+                    //case ExecutionState.InvalidConfiguration:
+                    //    break;
+                    case ExecutionState.Unspecified:
+                    case ExecutionState.Finished:
+                    case ExecutionState.Uninitialized:
+                    case ExecutionState.Stopped:
+                        await Initialize().ConfigureAwait(false);
                         goto tryagain;
-                    }
-                    else
-                    {
-                        throw new Exception("Cannot start, current state is Initializing.");
-                    }
-                case ExecutionState.Ready:
-                    //case ExecutionState.WaitingToStart:
-                    break;
-                case ExecutionState.Starting:
-                case ExecutionState.Started:
-                    return;
-                //case ExecutionState.Pausing:
-                //    break;
-                //case ExecutionState.Paused:
-                //    break;
-                //case ExecutionState.Unpausing:
-                //    break;
-                case ExecutionState.Disposed:
-                    throw new ObjectDisposedException(this.GetType().Name);
-                default:
-                    throw new Exception("Unsupported state for Start(): " + State.Value);
+                    case ExecutionState.Initializing:
+                    case ExecutionState.Stopping:
+                        if (retriesRemaining-- > 0)
+                        {
+                            await Task.Delay(1000).ConfigureAwait(false);
+                            goto tryagain;
+                        }
+                        else
+                        {
+                            throw new Exception("Cannot start, current state is Initializing.");
+                        }
+                    case ExecutionState.Ready:
+                        //case ExecutionState.WaitingToStart:
+                        break;
+                    case ExecutionState.Starting:
+                    case ExecutionState.Started:
+                        return;
+                    //case ExecutionState.Pausing:
+                    //    break;
+                    //case ExecutionState.Paused:
+                    //    break;
+                    //case ExecutionState.Unpausing:
+                    //    break;
+                    case ExecutionState.Disposed:
+                        throw new ObjectDisposedException(this.GetType().Name);
+                    default:
+                        throw new Exception("Unsupported state for Start(): " + State.Value);
+                }
+
+                SetState(ExecutionState.Starting);
+                this.OnEnteringState(LionFire.Execution.ExecutionState.Starting);
+
+
+                await OnStarting().ConfigureAwait(false);
+
+                foreach (var child in Children.OfType<IStartable>())
+                {
+                    await child.Start().ConfigureAwait(false);
+                }
             }
-
-            SetState(ExecutionState.Starting);
-            this.OnEnteringState(LionFire.Execution.ExecutionState.Starting);
-
-            await OnStarting();
-
-            foreach (var child in Children.OfType<IStartable>())
+            catch (Exception ex)
             {
-                await child.Start();
+                await OnFault(ex).ConfigureAwait(false);
+                return;
             }
 
             SetState(ExecutionState.Started);
         }
+
+        protected async Task OnFault(Exception ex)
+        {
+            FaultException = ex;
+            SetState(ExecutionState.Faulted);
+
+            try
+            {
+                foreach (var child in Children.OfType<IStoppable>())
+                {
+                    await child.Stop(StopMode.CriticalFailure, StopOptions.StopChildren).ConfigureAwait(false);
+                }
+            }
+            catch
+            {
+                // TODO EMPTYCATCH
+            }
+        }
+
+        public Exception FaultException { get; set; }
 
         protected async Task DoStop(StopMode stopMode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
         {
@@ -533,7 +579,7 @@ namespace LionFire.Trading
 
             foreach (var child in Children.OfType<IStoppable>())
             {
-                await child.Stop(stopMode, options);
+                await child.Stop(stopMode, options).ConfigureAwait(false);
             }
 
             SetState(ExecutionState.Stopped);
@@ -551,7 +597,7 @@ namespace LionFire.Trading
 
         public virtual async Task Stop(StopMode stopMode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
         {
-            await DoStop();
+            await DoStop().ConfigureAwait(false);
         }
 
         protected bool StartOnMarketAvailable = false;
@@ -560,7 +606,7 @@ namespace LionFire.Trading
         {
             if (StartOnMarketAvailable)
             {
-                await Start();
+                await Start().ConfigureAwait(false);
             }
         }
 

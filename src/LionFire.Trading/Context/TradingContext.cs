@@ -1,11 +1,12 @@
-﻿using System;
+﻿using LionFire.MultiTyping;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public class TradingContext : ITradingContext
+    public class TradingContext : MultiType
     {
         #region Configuration
 

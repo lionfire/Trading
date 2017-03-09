@@ -30,6 +30,10 @@ namespace LionFire.Trading.Backtesting
                     try
                     {
                         obj = Newtonsoft.Json.JsonConvert.DeserializeObject<BacktestResult>(System.IO.File.ReadAllText(Path));
+                        if (obj.AD == 0.0)
+                        {
+                            obj.AD = this.AD;
+                        }
                     }
                     catch { }
                 }

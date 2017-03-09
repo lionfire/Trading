@@ -25,6 +25,13 @@ using System.ComponentModel;
 
 namespace LionFire.Trading
 {
+    [Flags]
+    public enum BackwardForward
+    {
+        None = 0,
+        Backward = 1 << 0,
+        Forward = 1 << 1,
+    }
 
     public class TMarketSeriesBase : ITemplate
     {
@@ -95,7 +102,7 @@ namespace LionFire.Trading
                 return this[FirstIndex];
             }
         }
-                
+
         public DataType Last
         {
             get
@@ -124,6 +131,7 @@ namespace LionFire.Trading
 
         public void Add(List<DataType> dataPoints, DateTime? startDate = null, DateTime? endDate = null)
         {
+            if (dataPoints == null) { Debug.WriteLine("MarketSeriesBase Add - NULL dataPoints - FIXME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); return; }
             var lastDataEndDate = this[LastIndex].Time;
 
             // TODO: Fill range from startDate to endDate with "NoData" and if a range is loaded that creates a gap with existing ranges, fill that with "MissingData"
@@ -223,7 +231,12 @@ namespace LionFire.Trading
             var addedSpan = this[LastIndex].Time - (lastDataEndDate == default(DateTime) ? this[FirstIndex].Time : lastDataEndDate);
             if (addedSpan > TimeSpan.Zero)
             {
-                Debug.WriteLine($"[{this}] ADDED DATA: {addedSpan}");
+                BackwardForward bf = BackwardForward.None;
+                if (oldEnd != DataEndDate) bf |= BackwardForward.Forward;
+                if (oldStart != DataStartDate) bf |= BackwardForward.Backward;
+                Debug.WriteLine($"[{this}] ADDED DATA: {addedSpan} {bf} ");
+                
+                DataAdded?.Invoke(bf);
             }
             //Debug.WriteLine($"[{this} - new range] {DataStartDate} - {DataEndDate} (last data: {this[LastIndex].Time})           (was {oldStart} - {oldEnd} (last data: {lastDataEndDate}))");
 #if DEBUG_BARSCOPIED
@@ -231,6 +244,10 @@ namespace LionFire.Trading
 #endif
             EraseGap(startDate.Value, endDate.Value);
         }
+
+        public event Action<BackwardForward> DataAdded;
+
+        
 
         #region Data Gaps (Incomplete
 
@@ -310,7 +327,7 @@ namespace LionFire.Trading
 
         public async Task LoadMoreData()
         {
-            await EnsureDataAvailable(null, DataEndDate - TimeFrame.TimeSpan);
+            await EnsureDataAvailable(null, DataEndDate - TimeFrame.TimeSpan).ConfigureAwait(false);
         }
 
 
@@ -464,6 +481,24 @@ namespace LionFire.Trading
 
         #endregion
 
+        public DateTime? CloseTime
+        {
+            get
+            {
+                var result = DateTime.UtcNow;
+                if ((result.DayOfWeek == DayOfWeek.Friday && result.Hour >= 22)||
+                    result.DayOfWeek == DayOfWeek.Saturday ||
+                    (result.DayOfWeek == DayOfWeek.Sunday && result.Hour < 21))
+                {
+                    while (result.DayOfWeek != DayOfWeek.Friday)
+                    {
+                        result = result - TimeSpan.FromDays(1);
+                    }
+                    result = new DateTime(result.Year, result.Month, result.Day, 22, 0, 0);
+                }
+                return result;
+            }
+        }
 
 
         public int Count { get { return OpenTime.Count; } }

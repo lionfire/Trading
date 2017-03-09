@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 #if !cAlgo
@@ -20,6 +21,7 @@ namespace LionFire.Trading.Backtesting
 
         public double WinRate { get { return WinningTrades / TotalTrades; } }
 
+        [Unit("tpm")]
         public double TradesPerMonth { get { return TotalTrades / Months; } }
 
         public double Days { get { return Duration.TotalDays; } }
@@ -36,7 +38,9 @@ namespace LionFire.Trading.Backtesting
         /// Average trade duration in days
         /// </summary>
         public double AverageDaysPerTrade { get; set; }
+        [Unit("adwt")]
         public double AverageDaysPerWinningTrade { get; set; }
+        [Unit("adlt")]
         public double AverageDaysPerLosingTrade { get; set; }
 
         public double AverageTrade { get; set; }
@@ -66,9 +70,9 @@ namespace LionFire.Trading.Backtesting
         {
             get
             {
-                dynamic tbot = Config;
+                dynamic tbot = (Config as JObject);
                 //var tbot = Config as Bots.TBot;
-                return tbot?.TimeFrame;
+                return tbot?.TimeFrame.Value;
             }
         }
 
@@ -82,6 +86,7 @@ namespace LionFire.Trading.Backtesting
         /// <summary>
         /// AnnualReturnPercentPerEquityDrawdown
         /// </summary>
+        [Unit("ad")]
         public double AD { get; set; }
 
 

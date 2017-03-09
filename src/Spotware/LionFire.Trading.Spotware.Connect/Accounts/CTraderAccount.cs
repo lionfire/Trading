@@ -66,7 +66,7 @@ namespace LionFire.Trading.Spotware.Connect
         //DateTime _lastSendTime = DateTime.MinValue;
         DateTime _nextHeartbeat = DateTime.MinValue;
 
-        protected ISpotwareConnectAppInfo ApiInfo { get { return Defaults.Get<ISpotwareConnectAppInfo>(); } }
+        protected ISpotwareConnectAppInfo ApiInfo { get { return Defaults.TryGet<ISpotwareConnectAppInfo>(); } }
 
         #region Derived (Convenience)
 
@@ -95,13 +95,13 @@ namespace LionFire.Trading.Spotware.Connect
         {
             CTraderAccount_NetFramework();
             logger = this.GetLogger();
-            historicalDataProvider = new SpotwareConnectLoadHistoricalDataProvider(this);
+            historicalDataProvider = new SpotwareDataProvider(this);
             //this.Data.LoadHistoricalDataAction = LoadHistoricalDataAction;
         }
 
         //public IJob LoadHistoricalDataAction(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int minBars = 0)
         //{
-        //    var loadTask = new SpotwareLoadHistoricalDataJob(marketSeries)
+        //    var loadTask = new SpotwareDataJob(marketSeries)
         //    {
         //        EndTime = endDate,
         //        StartTime = startDate,
@@ -164,7 +164,7 @@ namespace LionFire.Trading.Spotware.Connect
                 state.OnNext(ExecutionState.Stopping);
                 if (IsTradeApiEnabled)
                 {
-                    await Task.Run(() => Stop_TradeApi());
+                    await Task.Run(() => Stop_TradeApi()).ConfigureAwait(false);
                 }
                 state.OnNext(ExecutionState.Stopped);
             }
@@ -182,9 +182,9 @@ namespace LionFire.Trading.Spotware.Connect
 
                 state.OnNext(ExecutionState.Starting);
             }
-            await OnStarting();
+            await OnStarting().ConfigureAwait(false);
 
-            RunTask = Task.Run(() => Run());
+            RunTask = Run();
             //RunTask = Task.Factory.StartNew(Run);
         }
 
@@ -201,12 +201,21 @@ namespace LionFire.Trading.Spotware.Connect
         partial void SubscribeToDefaultSymbols();
         partial void CloseConnection();
 
+        public override string ToString()
+        {
+            var type = IsDemo ? "[demo]" : "[LIVE]";
+            return $"{BrokerName} {AccountId} {type}";
+        }
+
         public string DumpPositions(IPositions positions)
         {
             var sb = new StringBuilder();
 
+            sb.AppendLine($"Positions for account {this}:");
+            
             foreach (var p in positions)
             {
+                sb.Append(" - ");
                 sb.AppendLine(p.ToString());
             }
             return sb.ToString();
@@ -214,7 +223,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         public async Task UpdatePositions()
         {
-            var positions = await SpotwareAccountApi.GetPositions(this);
+            var positions = await SpotwareAccountApi.GetPositions(this).ConfigureAwait(false);
             this.positions.Clear();
             this.positions.AddRange(positions);
             Console.WriteLine(DumpPositions(Positions));
@@ -222,12 +231,12 @@ namespace LionFire.Trading.Spotware.Connect
 
 
         public override IHistoricalDataProvider HistoricalDataProvider { get { return historicalDataProvider; } }
-        SpotwareConnectLoadHistoricalDataProvider historicalDataProvider;
+        SpotwareDataProvider historicalDataProvider;
 
 
         protected override async void OnTradeApiEnabledChanging()
         {
-            await Task.Run(() => Stop());
+            await Task.Run(() => Stop()).ConfigureAwait(false);
         }
         protected override void OnTradeApiEnabledChanged()
         {
@@ -239,7 +248,7 @@ namespace LionFire.Trading.Spotware.Connect
         public object connectLock = new object();
         
 
-        public void Run()
+        public async Task Run()
         {
 
             // TODO: Verify account valid via web api
@@ -247,7 +256,16 @@ namespace LionFire.Trading.Spotware.Connect
             {
                 StatusText = "Updating positions";
 
-                UpdatePositions().Wait();
+                try
+                {
+                    await UpdatePositions().ConfigureAwait(false);
+                }
+                catch (AccessTokenInvalidException atie)
+                {
+                    StatusText = "Access token invalid";
+                    state.OnNext(ExecutionState.Faulted);
+                    return;
+                }
 
                 StatusText = "Disconnected mode";
                 state.OnNext(ExecutionState.Started);
@@ -259,7 +277,7 @@ namespace LionFire.Trading.Spotware.Connect
                     isRestart = false;
 
                     StatusText = "Updating positions";
-                    UpdatePositions().Wait();
+                    await UpdatePositions().ConfigureAwait(false);
 
                     if (IsTradeApiEnabled)
                     {
@@ -342,6 +360,13 @@ namespace LionFire.Trading.Spotware.Connect
         public bool MinuteBarsFromTicks = true;
         public bool OtherBarsFromMinutes = true;
 
+        //ConcurrentBag<Symbol> subscriptionsQueued = new ConcurrentBag<Symbol>();
+        //ConcurrentBag<Symbol> unsubscriptionsQueued = new ConcurrentBag<Symbol>();
+
+        //private void ProcessSubscriptionQueues()
+        //{
+        //    foreach(var s in subscriptionsQueued
+        //}
 
         protected override void Subscribe(string symbolCode, string timeFrame)
         {
@@ -431,7 +456,7 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     Task.Factory.StartNew(async () =>
                     {
-                        await Task.Delay(TickToM1BarHandler.WaitForTickToMinuteToFinishInMilliseconds);
+                        await Task.Delay(TickToM1BarHandler.WaitForTickToMinuteToFinishInMilliseconds).ConfigureAwait(false);
                         OnMinuteRollover(oldTime);
                         serverTickToMinuteTime = serverTimeFromTick;
                     });
@@ -595,6 +620,17 @@ namespace LionFire.Trading.Spotware.Connect
             return result;
         }
 
+        protected override void OnAllowSubscribeToTicksChanged()
+        {
+            foreach (var sym in symbols.Values)
+            {
+                var symI = (ISymbolInternal)sym;
+                Result_TickHasObserversChanged(sym, symI.TickHasObservers);
+            }
+        }
+        
+
+
         private void Result_TickHasObserversChanged(Symbol symbol, bool hasSubscribers)
         {
 #if NET462
@@ -643,13 +679,17 @@ namespace LionFire.Trading.Spotware.Connect
 
             DateTime startTime;
 
-            if (timeFrame == TimeFrame.m1)
+            if (timeFrame.TimeFrameUnit == TimeFrameUnit.Minute)
             {
-                startTime = DateTime.UtcNow - TimeSpan.FromMinutes(barCount);
+                startTime = DateTime.UtcNow - TimeSpan.FromMinutes(barCount * timeFrame.TimeFrameValue);
             }
-            else if (timeFrame == TimeFrame.h1)
+            else if (timeFrame.TimeFrameUnit == TimeFrameUnit.Hour)
             {
-                startTime = DateTime.UtcNow - TimeSpan.FromHours(barCount);
+                startTime = DateTime.UtcNow - TimeSpan.FromHours(barCount * timeFrame.TimeFrameValue);
+            }
+            else if (timeFrame.TimeFrameUnit == TimeFrameUnit.Day)
+            {
+                startTime = DateTime.UtcNow - TimeSpan.FromDays(barCount * timeFrame.TimeFrameValue);
             }
             else if (timeFrame == TimeFrame.t1)
             {
@@ -664,7 +704,7 @@ namespace LionFire.Trading.Spotware.Connect
             Data.EnsureDataAvailable(series, null, ExtrapolatedServerTime, barCount);
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             ////barCount = 0; // TEMP DISABLE
-            //var task = new SpotwareLoadHistoricalDataJob(symbol, timeFrame)
+            //var task = new SpotwareDataJob(symbol, timeFrame)
             //{
             //    MinBars = barCount,
             //    Account = this,

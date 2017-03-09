@@ -1,11 +1,14 @@
-﻿using System;
+﻿using LionFire.Assets;
+using LionFire.Persistence;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public class TradingOptions
+    public class TradingOptions : INotifyPropertyChanged
     {
         /// <summary>
         /// If true:
@@ -49,6 +52,38 @@ namespace LionFire.Trading
         }
 
         #endregion
+        
+        //#region AllowSubscribeToTicks
 
+        //public bool AllowSubscribeToTicks
+        //{
+        //    get { return allowSubscribeToTicks; }
+        //    set
+        //    {
+        //        if (allowSubscribeToTicks == value) return;
+        //        allowSubscribeToTicks = value;
+        //        OnPropertyChanged(nameof(AllowSubscribeToTicks));
+        //    }
+        //}
+        //private bool allowSubscribeToTicks;
+
+        //#endregion
+
+        #region Misc
+
+
+        #region INotifyPropertyChanged Implementation
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
+
+        #endregion
+        
     }
 }

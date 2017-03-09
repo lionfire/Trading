@@ -88,7 +88,7 @@ namespace LionFire.Trading.Accounts
             if (ServerTime != default(DateTime)) return false;
             Reset();
 
-            await ExecuteBackfillUpToDate(StartDate, Template.BackFillMinutes);
+            await ExecuteBackfillUpToDate(StartDate, Template.BackFillMinutes).ConfigureAwait(false);
 
             return true;
         }

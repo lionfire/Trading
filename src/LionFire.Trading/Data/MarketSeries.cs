@@ -69,7 +69,7 @@ namespace LionFire.Trading
         #endregion
 
         #region Data
-        
+
         public BarType this[DateTime time]
         {
             get
@@ -80,11 +80,18 @@ namespace LionFire.Trading
             }
         }
 
-        //public IBarSeries Bars // FUTURE
-        //{
-        //    get { return bars; }
-        //}
-        //private BarSeries bars = new BarSeries();
+        public IBarSeries Bars 
+        {
+            get
+            {
+                if (bars == null)
+                {
+                    bars = new BarSeriesAdapter(this);
+                }
+                return bars;
+            }
+        }
+        private BarSeriesAdapter bars; // TOOPTIMIZE: switch to BarSeries
 
 
         public DataSeries Open
@@ -177,7 +184,7 @@ namespace LionFire.Trading
             {
                 bool last = BarHasObservers;
                 timedBar += value;
-                if (last!=BarHasObservers)
+                if (last != BarHasObservers)
                 {
                     BarHasObserversChanged?.Invoke(this, BarHasObservers);
                 }
@@ -812,7 +819,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        
+
 
         #region Misc
 

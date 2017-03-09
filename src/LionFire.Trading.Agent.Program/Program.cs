@@ -125,7 +125,7 @@ namespace LionFire.Trading.Agent.Program
         private async static Task TestHistoricalDataSource()
         {
             var s = new ConnectHistoricalDataSource();
-            var bars = await s.Get("XAUUSD", "h1", new DateTime(2016, 01, 01), new DateTime(2016, 01, 10));
+            var bars = await s.Get("XAUUSD", "h1", new DateTime(2016, 01, 01), new DateTime(2016, 01, 10)).ConfigureAwait(false);
             foreach (var bar in bars)
             {
                 Console.WriteLine(bar);

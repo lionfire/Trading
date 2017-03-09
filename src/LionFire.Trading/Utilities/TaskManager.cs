@@ -60,7 +60,7 @@ namespace LionFire.Threading.Tasks
     {
         public int KeepCompletedTasksInCurrentListForMilliseconds { get; set; } = 60000;
     }
-
+    
     // TODO: Make this a service?
     public class TaskManager
     {
@@ -69,6 +69,7 @@ namespace LionFire.Threading.Tasks
         public static void OnNewTask(Task task, TaskFlags flags = TaskFlags.None)
         {
         }
+
         public static void OnFireAndForget(Task task, TaskFlags flags = TaskFlags.Unowned, string name = null)
         {
             var tt = new TrackedTask(task, flags)
@@ -77,26 +78,40 @@ namespace LionFire.Threading.Tasks
             };
             if (task != null)
             {
-                Task.Run(() =>
+                Task.Run(async () =>
                 {
-                    if (tt.Name != null)
+                    try
                     {
-                        Debug.WriteLine($"Task started: {tt.Name}");
+                        if (tt.Name != null)
+                        {
+                            Debug.WriteLine($"Task started: {tt.Name}");
+                        }
+                        await task.ConfigureAwait(false);
+                        lock (lock_)
+                        {
+                            Default.CurrentTasks.Remove(tt);
+                            Default.OldTasks.Add(tt);
+                        }
+                        if (tt.Name != null)
+                        {
+                            Debug.WriteLine($"Task finished: {tt.Name}");
+                        }
                     }
-                    task.Wait();
-                    Default.CurrentTasks.Remove(tt);
-                    Default.OldTasks.Add(tt);
-                    if (tt.Name != null)
+                    catch (Exception ex)
                     {
-                        Debug.WriteLine($"Task finished: {tt.Name}");
+                        Debug.WriteLine("TaskManager task threw exception: " + ex);
                     }
                 });
             }
-            Default.CurrentTasks.Add(tt);
+            lock (lock_)
+            {
+                Default.CurrentTasks.Add(tt);
+            }
         }
 
         public ObservableCollection<TrackedTask> OldTasks { get; private set; } = new ObservableCollection<TrackedTask>();
 
         public ObservableCollection<TrackedTask> CurrentTasks { get; private set; } = new ObservableCollection<TrackedTask>();
+        private static object lock_ = new object();
     }
 }

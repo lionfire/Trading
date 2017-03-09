@@ -165,7 +165,7 @@ namespace LionFire.Trading.Backtesting
             this.StartDate = Template.StartDate;
             this.EndDate = Template.EndDate;
 
-            if (await base.Initialize() == false) { return false; }
+            if (await base.Initialize().ConfigureAwait(false) == false) { return false; }
 
             Equity = Balance = Template.StartingBalance;
 

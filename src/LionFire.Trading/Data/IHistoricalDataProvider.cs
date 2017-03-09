@@ -17,11 +17,11 @@ namespace LionFire.Trading
 
     public static class IHistoricalDataProviderExtensions
     {
-        
+
 
         public static async Task<IEnumerable<DataLoadResult>> GetData(this IHistoricalDataProvider provider, MarketSeriesBase series, DateTime? startDate, DateTime endDate, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, int totalDesiredBars = 0, bool forceRetrieve = false)
         {
-            await series.DataLock.WaitAsync();
+            await series.DataLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (!startDate.HasValue) { startDate = endDate; }
@@ -57,7 +57,7 @@ namespace LionFire.Trading
 
                 int giveUpAfterNoData = GetGiveUpAfterNoData(series.TimeFrame);
 
-                
+
                 do
                 {
                     if (nextChunkDate == default(DateTime)) break;
@@ -66,9 +66,9 @@ namespace LionFire.Trading
                     DateTime chunkEnd;
                     HistoricalDataCacheFile.GetChunkRange(series.TimeFrame, nextChunkDate, out chunkStart, out chunkEnd);
 
-                    dataLoadResult = await provider.GetDataForChunk(series, chunkStart, chunkEnd, cacheOnly, writeCache);
+                    dataLoadResult = await provider.GetDataForChunk(series, chunkStart, chunkEnd, cacheOnly, writeCache).ConfigureAwait(false);
                     results.Add(dataLoadResult);
-                    
+
                     nextChunkDate = chunkStart - TimeSpan.FromMinutes(1);
 
                     if (!dataLoadResult.IsAvailable)
@@ -81,7 +81,7 @@ namespace LionFire.Trading
                     }
 
                     //Debug.WriteLine($"[data {series}]  {dataLoadResult}" + (cacheOnly?" (CACHE ONLY)":""));
-                } while ( giveUpAfterNoData > 0 &&
+                } while (giveUpAfterNoData > 0 &&
                 ((nextChunkDate != default(DateTime) && nextChunkDate > startDate.Value)
                  || series.Count < totalDesiredBars)
                 );
@@ -97,25 +97,39 @@ namespace LionFire.Trading
 
         private static int GetGiveUpAfterNoData(string timeFrame)
         {
-            int giveUpAfterNoData;
-            if (timeFrame == "h1")
+            int giveUpAfterNoData = -1;
+            var tf = TimeFrame.TryParse(timeFrame);
+            switch (tf.TimeFrameUnit)
             {
-                giveUpAfterNoData = 1; // years
+                //case TimeFrameUnit.Unspecified:
+                //    break;
+                case TimeFrameUnit.Tick:
+                    giveUpAfterNoData = 5 * 24; // hours
+                    break;
+                //case TimeFrameUnit.Second:
+                //    break;
+                case TimeFrameUnit.Minute:
+                    giveUpAfterNoData = 5; // days
+                    break;
+                case TimeFrameUnit.Hour:
+                    giveUpAfterNoData = 1; // Years
+                    break;
+                //case TimeFrameUnit.Day:
+                //    break;
+                //case TimeFrameUnit.Week:
+                //    break;
+                //case TimeFrameUnit.Month:
+                //    break;
+                case TimeFrameUnit.Year:
+                    break;
+                default:
+                    throw new ArgumentException("Timeframe not supported");
             }
-            else if (timeFrame == "m1")
-            {
-                giveUpAfterNoData = 5; // days
-            }
-            else if (timeFrame == "t1")
-            {
-                giveUpAfterNoData = 5*24; // hours
-            }
-            else
-            {
-                throw new ArgumentException("Timeframe not supported");
-            }
+
             return giveUpAfterNoData;
         }
+
+
 
         public static async Task<DataLoadResult> GetDataForChunk(this IHistoricalDataProvider provider, MarketSeriesBase series, DateTime chunkStart, DateTime chunkEnd, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, bool forceRetrieve = false)
         {
@@ -130,7 +144,7 @@ namespace LionFire.Trading
 
                 if (chunkEndPastLast <= TimeSpan.Zero)
                 {
-                    Debug.WriteLine($"[{series}] Already contains data for {chunkStart} - {chunkEnd}");
+                    //Debug.WriteLine($"[{series}] Already contains data for {chunkStart} - {chunkEnd}");
                     return DataLoadResult.AlreadyLoaded; ;
                 }
 
@@ -138,21 +152,27 @@ namespace LionFire.Trading
 
                 if (!forceRetrieve && nowPastLast < maxOutOfDate)
                 {
-                    Debug.WriteLine($"[{series}] Already contains data for {chunkStart} - {chunkEnd} (Only slightly out of date: {nowPastLast})");
+                    //Debug.WriteLine($"[{series}] Already contains data for {chunkStart} - {chunkEnd} (Only slightly out of date: {nowPastLast})");
                     return DataLoadResult.AlreadyLoaded;
                 }
             }
 
-            var cacheFile = await HistoricalDataCacheFile.GetCacheFile(series, chunkStart);
+            var cacheFile = await HistoricalDataCacheFile.GetCacheFile(series, chunkStart).ConfigureAwait(false);
             DataLoadResult result = cacheFile.DataLoadResult;
 
-            if (!forceRetrieve && cacheFile.IsPersisted && cacheFile.OutOfDateTimeSpan < maxOutOfDate.Value
+            bool isUpToDateAfterClose = series.CloseTime.HasValue && cacheFile.QueryDate > series.CloseTime.Value;
+
+            if (!forceRetrieve && cacheFile.IsPersisted && (isUpToDateAfterClose || cacheFile.OutOfDateTimeSpan < maxOutOfDate.Value)
                 //&& (chunkEnd > DateTime.UtcNow || !result.IsPartial)
                 )
             {
                 //Debug.WriteLine($"[cache available {series}] Chunk {chunkStart}");
                 if (!cacheOnly)
                 {
+                    if (result.Bars == null)
+                    {
+                        result.Bars = new List<TimedBar>();
+                    }
                     ImportData(series, result);
 
                     //if (series is MarketSeries) // TOC#7 OLD
@@ -171,13 +191,14 @@ namespace LionFire.Trading
             {
 #if DEBUG
                 var str = forceRetrieve ? "FORCE RETRIEVE" : "CACHE MISS";
-                Debug.WriteLine($"[{series} {str}] Chunk {chunkStart}");
+                Debug.WriteLine($"[{series} {str}] Chunk {chunkStart} ");
+                Debug.WriteLine($"<<<cache debug>>> cacheFile.IsPersisted {cacheFile.IsPersisted}, isUpToDateAfterClose {isUpToDateAfterClose}, cacheFile.OutOfDateTimeSpan < maxOutOfDate.Value {cacheFile.OutOfDateTimeSpan < maxOutOfDate.Value} ");
 #endif
                 var loader = new object();
                 try
                 {
                     series.OnLoadingStarted(loader);
-                    result = await provider.RetrieveDataForChunk(series, chunkStart, cacheOnly, writeCache);
+                    result = await provider.RetrieveDataForChunk(series, chunkStart, cacheOnly, writeCache).ConfigureAwait(false);
 
                     //if (LinkWithAccountData && Account != null && ResultBars.Count > 0)
 
@@ -199,7 +220,7 @@ namespace LionFire.Trading
                 {
                     Debug.WriteLine("WRITECACHE OFF");
                 }
-               
+
             }
             return result;
         }

@@ -27,7 +27,6 @@ namespace LionFire.Trading.Bots
             set
             {
                 Symbols = new List<string> { value };
-
             }
         }
 

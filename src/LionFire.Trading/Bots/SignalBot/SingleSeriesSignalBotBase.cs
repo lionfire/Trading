@@ -127,6 +127,12 @@ namespace LionFire.Trading.Bots
                 if (!StartDate.HasValue) StartDate = ExtrapolatedServerTime;
                 EndDate = ExtrapolatedServerTime;
 
+#if !cAlgo
+                if (State.Value != ExecutionState.Started)
+                {
+                    throw new InvalidExecutionStateException(ExecutionState.Started, State.Value);
+                }
+#endif
 #if NULLCHECKS
                 if (Indicator == null)
                 {
@@ -244,9 +250,14 @@ namespace LionFire.Trading.Bots
                 }
                 OnEvaluated();
             }
+            catch (InvalidExecutionStateException iex)
+            {
+                Debug.WriteLine($"{this} InvalidExecutionStateException. {iex.ToString()}");
+            }
             catch (Exception ex)
             {
                 LastException = ex;
+                Debug.WriteLine($"{this} faulted with exception: {ex.ToString()}");
 #if cAlgo
                 Stop();
 #else

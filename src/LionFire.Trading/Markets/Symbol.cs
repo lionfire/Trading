@@ -57,11 +57,17 @@ namespace LionFire.Trading
         Task EnsureHasLatestTick();
         double GetStopLossFromPips(TradeType tradeType, double stopLossInPips);
         double GetTakeProfitFromPips(TradeType tradeType, double takeProfitInPips);
+
+        string PriceStringFormat { get; }
     }
 
     public interface ISymbolInternal : Symbol
     {
         event Action<Symbol, bool> TickHasObserversChanged;
+        bool TickHasObservers
+        {
+            get;
+        }
         void OnTick(SymbolTick tick);
 
     }
@@ -82,6 +88,23 @@ namespace LionFire.Trading
 
     public abstract class SymbolImplBase : Symbol, ISymbolInternal
     {
+        public string PriceStringFormat
+        {
+            get
+            {
+                if (priceStringFormat == null)
+                {
+                    priceStringFormat = "0.";
+                    for (int i = 0; i < PipSize.ToString().Length - 1; i++)
+                    {
+                        priceStringFormat += "0";
+                    }
+                }
+                return priceStringFormat;
+            }
+        }
+        private string priceStringFormat;
+
         #region Config
 
         // MOVE to BacktestSymbol
@@ -254,6 +277,7 @@ namespace LionFire.Trading
         private object eventLock = new object();
 
         public event Action<Symbol, bool> TickHasObserversChanged;
+        public bool TickHasObservers { get { return tickedEvent != null; } }
 
         void ISymbolInternal.OnTick(SymbolTick tick)
         {
@@ -276,6 +300,7 @@ namespace LionFire.Trading
         ConcurrentDictionary<string, MarketSeries> seriesByTimeFrame = new ConcurrentDictionary<string, MarketSeries>();
         public MarketSeries GetMarketSeries(TimeFrame timeFrame)
         {
+            if (timeFrame == null) return null;
             if (timeFrame.Name == "t1") { throw new ArgumentException("Use MarketTickSeries instead for t1"); }
             return seriesByTimeFrame.GetOrAdd(timeFrame.Name, timeFrameName => this.Account.CreateMarketSeries(Code, timeFrame));
         }
@@ -530,7 +555,7 @@ namespace LionFire.Trading
         #endregion
         public async Task EnsureHasLatestTick()
         {
-            await MarketTickSeries.EnsureDataAvailable(null, DateTime.UtcNow, 1);
+            await MarketTickSeries.EnsureDataAvailable(null, DateTime.UtcNow, 1).ConfigureAwait(false);
             UpdateBidAsk();
         }
     }

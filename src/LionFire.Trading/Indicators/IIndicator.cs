@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading.Indicators
+namespace LionFire.Trading
 {
     public interface IIndicator : ITemplateInstance
 #if !cAlgo
@@ -32,6 +32,9 @@ namespace LionFire.Trading.Indicators
 
     }
 
+}
+namespace LionFire.Trading.Indicators
+{
     public interface IMovingAverageIndicator : IIndicator
     {
         MovingAverageType Kind { get; }

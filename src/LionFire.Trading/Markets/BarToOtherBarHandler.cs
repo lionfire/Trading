@@ -120,7 +120,7 @@ namespace LionFire.Trading
                 {
                     Task.Factory.StartNew(async () =>
                     {
-                        await Task.Delay(WaitForM1BarToMinuteToFinishInMilliseconds);
+                        await Task.Delay(WaitForM1BarToMinuteToFinishInMilliseconds).ConfigureAwait(false);
                         OnTimeFrameRollover(oldTime);
                         serverM1BarToTimeFrameTime = serverTimeFromM1Bar;
                     });

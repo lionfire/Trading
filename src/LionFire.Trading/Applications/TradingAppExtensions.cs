@@ -12,6 +12,10 @@ using LionFire.Structures;
 using System.Reflection;
 using LionFire.Types;
 using LionFire.DependencyInjection;
+using LionFire.Persistence;
+using LionFire.Assets;
+using LionFire.Execution.Jobs;
+using LionFire.Trading.Data;
 
 namespace LionFire.Trading.Applications
 {
@@ -33,33 +37,53 @@ namespace LionFire.Trading.Applications
         /// 
         /// </summary>
         /// <param name="host"></param>
-        /// <param name="options"></param>
-        /// <param name="accountModes">Override options with this mode (if not unspecified)</param>
+        /// <param name="defaultOptions"></param>
+        /// <param name="accountModesAllowed">Override options with this mode (if not unspecified)</param>
         /// <returns></returns>
-        public static IAppHost AddTrading(this IAppHost host, TradingOptions options, AccountMode accountModes = AccountMode.Unspecified)
+        public static IAppHost AddTrading(this IAppHost host, TradingOptions defaultOptions, AccountMode accountModesAllowed = AccountMode.Unspecified)
         {
             // FUTURE: find another way to get this to app during ConfigureServices
             TypeNamingContext tnc = ManualSingleton<TypeNamingContext>.GuaranteedInstance;
             tnc.UseShortNamesForDataAssemblies = true;
 
+            var jm = Defaults.Get<JobManager>();
+
+            //jm.AddQueueWithPrioritizer<HistoricalDataJobPrioritizer>();
+            jm.AddQueue(new JobQueue
+            {
+                MaxConcurrentJobs = 5,
+                Prioritizer = new HistoricalDataJobPrioritizer(),
+            });
+
             host.ConfigureServices(serviceCollection =>
             {
                 //var Configuration = LionFire.Structures.ManualSingleton<IConfigurationRoot>.Instance;
                 //serviceCollection.Configure<TradingOptions>(opt => Configuration.GetSection("Trading").Bind(opt));
-
-                if (accountModes != AccountMode.Unspecified)
-                {
-                    options.AccountModes = accountModes;
-                }
+                
                 //app.ServiceCollection.AddSingleton<IAccountProvider, AccountProvider>(); FUTURE
-                serviceCollection.AddSingleton<ITradingContext>(new TradingContext(options));
+                var tradingOptions = "Default".Load<TradingOptions>();
+                if (tradingOptions == null)
+                {
+                    tradingOptions = defaultOptions;
+                }
+                if (accountModesAllowed != AccountMode.Unspecified)
+                {
+                    defaultOptions.AccountModes &= accountModesAllowed;
+                }
+                //tradingOptions.EnableAutoSave();
+
+                var tradingContext = new TradingContext(tradingOptions);
+                InjectionContext.Current.AddSingleton(tradingOptions);
+                InjectionContext.Current.AddSingleton(tradingContext);
+                serviceCollection.AddSingleton(tradingContext);
+                serviceCollection.AddSingleton(tradingContext.Options);
 
                 //InjectionContext.SetSingletonDefault<TypeNamingContext>(tnc);  RECENTCHANGE - should no lonber be needed now that the app's IServiceProvider is used as the default for InjectionContext.
 
                 serviceCollection.AddSingleton<TypeNamingContext>(tnc);
 
             });
-            
+
 
             AssetInstantiationStrategy.Enable();
 

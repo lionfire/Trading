@@ -44,10 +44,13 @@ namespace LionFire.Trading.Indicators
 
         #endregion
 
+        // Implementation From http://ctdn.com/forum/calgo-support/11309?page=1#2
+        // TOVERIFY vs cAlgo
         public override Task CalculateIndex(int index)
         {
-            throw new NotImplementedException();
-            /*      var periods = Template.Periods;
+            var periods = Template.Periods;
+            //throw new NotImplementedException();
+            /*      
 
                   double avg = Result[index - 1];
 
@@ -69,6 +72,19 @@ namespace LionFire.Trading.Indicators
                   Result[index] = avg;
                   return Task.CompletedTask;
               */
+
+            double sumX = 0, sumY = 0, sumXY = 0, sumXPower = 0;
+
+            for (int i = 0; i < periods; i++)
+            {
+                sumXPower += i * i;
+                sumX += i;
+                sumY += DataSeries[index - i];
+                sumXY += i * DataSeries[index - i];
+            }
+
+            Result[index] = (sumXPower * sumY - sumX * sumXY) / (sumXPower * periods - sumX * sumX);
+            return Task.CompletedTask;
         }
     }
 }

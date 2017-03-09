@@ -15,7 +15,7 @@ namespace LionFire.Trading.Spotware.Connect.Accounts
 
         public void Authenticate()
         {
-            ISpotwareConnectAppInfo apiInfo = Defaults.Get<ISpotwareConnectAppInfo>();
+            ISpotwareConnectAppInfo apiInfo = Defaults.TryGet<ISpotwareConnectAppInfo>();
             
             //var RedirectUri = "https://connect.spotware.com/apps/50";
             var Scope = "trading";

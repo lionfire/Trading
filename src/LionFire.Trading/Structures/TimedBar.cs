@@ -18,6 +18,11 @@ namespace LionFire.Trading
         NotLoaded = 3,
     }
 
+    public interface IBarSeries : ISeries<TimedBar>, IEnumerable<TimedBar>
+    {
+    }
+
+    // Rename to bar, and create UntimedBar if necessary
     public struct TimedBar : ITimedBar
     {
 

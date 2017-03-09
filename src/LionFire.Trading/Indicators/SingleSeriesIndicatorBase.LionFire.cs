@@ -16,7 +16,9 @@ namespace LionFire.Trading.Indicators
             {
                 if (marketSeries == null && Template != null && Account != null && Template.Symbol != null && Template.TimeFrame != null)
                 {
-                    marketSeries = (MarketSeries)Account.GetMarketSeries(Template.Symbol, TimeFrame.TryParse(Template.TimeFrame));
+                    var tf = TimeFrame.TryParse(Template.TimeFrame);
+                    if (tf == null) { throw new ArgumentException("Failed to parse TimeFrame: " + Template.TimeFrame); }
+                    marketSeries = (MarketSeries)Account.GetMarketSeries(Template.Symbol, tf);
                 }
                 return marketSeries;
             }
@@ -40,7 +42,21 @@ namespace LionFire.Trading.Indicators
             if (MarketSeries == null) throw new Exception("MarketSeries not resolved at Initialize time.");
 
             //marketSeriesSubscription = this.MarketSeries.LatestBar.Subscribe(bar => OnBar(MarketSeries, bar));
-            MarketSeries.Bar += bar => OnBar(MarketSeries.SymbolCode, MarketSeries.TimeFrame, bar);
+            MarketSeries.Bar += barHandler;
+        }
+
+        private async void barHandler(TimedBar bar)
+        {
+            try
+            {
+                OnBar(MarketSeries.SymbolCode, MarketSeries.TimeFrame, bar);
+            }
+            catch (Exception ex)
+            {
+                this.FaultException = ex;
+                MarketSeries.Bar += barHandler;
+                await this.OnFault(ex).ConfigureAwait(false);
+            }
         }
 
 
@@ -69,7 +85,7 @@ namespace LionFire.Trading.Indicators
             if (Account != null)
             {
                 Symbol = Account.GetSymbol(Template.Symbol);
-                Account.Started.Subscribe(async started => { if (started) { await OnStarting(); } });
+                Account.Started.Subscribe(async started => { if (started) { await OnStarting().ConfigureAwait(false); } });
             }
         }
     }

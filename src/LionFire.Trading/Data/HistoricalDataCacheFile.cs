@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using LionFire.Execution;
 
 namespace LionFire.Trading.Data
 {
@@ -44,22 +45,22 @@ string text = new string(
         public static void GetChunkRange(TimeFrame tf, DateTime date, out DateTime chunkStartDate, out DateTime chunkEndDate) // TOC#7
         {
 
-            switch (tf.Name)
+            switch (tf.TimeFrameUnit)
             {
-                case "t1":
+                case TimeFrameUnit.Tick:
                     chunkStartDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0, DateTimeKind.Utc);
                     chunkEndDate = new DateTime(chunkStartDate.Year, chunkStartDate.Month, chunkStartDate.Day, chunkStartDate.Hour, 59, 59, 999, DateTimeKind.Utc);
                     break;
-                case "m1":
+                case TimeFrameUnit.Minute:
                     chunkStartDate = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Utc);
                     chunkEndDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59, 999, DateTimeKind.Utc);
                     break;
-                case "h1":
+                case TimeFrameUnit.Hour:
                     chunkStartDate = new DateTime(date.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
                     chunkEndDate = new DateTime(date.Year, 12, 31, 23, 59, 59, 999, DateTimeKind.Utc);
                     break;
                 default:
-                    throw new NotImplementedException();
+                    throw new NotImplementedException($"TimeFrameUnit {tf.TimeFrameUnit} not supported yet");
             }
         }
 
@@ -79,19 +80,26 @@ string text = new string(
 
             string dateStr;
 
-            switch (tf.Name)
+            var tfUnit = tf.TimeFrameUnit;
+
+            if (tfUnit == TimeFrameUnit.Minute && tf.TimeFrameValue > 60)
             {
-                case "t1":
+                throw new NotImplementedException("TODO: tfUnit == TimeFrameUnit.Minute && tf.TimeFrameValue > 60");
+            }
+
+            switch (tf.TimeFrameUnit)
+            {
+                case TimeFrameUnit.Tick:
                     dateStr = $"{date.Year}\\{date.Month}\\{date.Day}\\{date.Hour}";
                     break;
-                case "m1":
+                case TimeFrameUnit.Minute:
                     dateStr = $"{date.Year}\\{date.Month}\\{date.Day}";
                     break;
-                case "h1":
+                case TimeFrameUnit.Hour:
                     dateStr = $"{date.Year}";
                     break;
                 default:
-                    throw new NotImplementedException();
+                    throw new NotImplementedException($"TimeFrameUnit {tf.TimeFrameUnit} not supported yet");
             }
 
             return $"{brokerName}{subType}\\{symbolCode}\\{tf.Name}\\{dateStr}";
@@ -223,7 +231,7 @@ string text = new string(
                  _ => new HistoricalDataCacheFile(marketSeries, chunkDate)
              );
 
-            await cacheFile.EnsureLoaded();
+            await cacheFile.EnsureLoaded().ConfigureAwait(false);
 
             return cacheFile;
         }
@@ -234,7 +242,7 @@ string text = new string(
         {
             if (Ticks == null && Bars == null)
             {
-                return await Load();
+                return await Load().ConfigureAwait(false);
             }
             return true;
         }
@@ -316,6 +324,7 @@ string text = new string(
             }
         }
 
+
         public List<Tick> Ticks { get; set; }
         public List<TimedBar> Bars { get; set; }
 
@@ -345,7 +354,7 @@ string text = new string(
 
             cache.AddOrUpdate(cacheFile.Key, cacheFile, (k, f) => cacheFile);
 
-            await cacheFile.Save();
+            await cacheFile.Save().ConfigureAwait(false);
         }
 
         public async Task Save()
@@ -477,7 +486,7 @@ string text = new string(
                 }
 
                 IsPersisted = true;
-            });
+            }).ConfigureAwait(false);
         }
 
         #endregion
@@ -486,90 +495,128 @@ string text = new string(
 
         public async Task<bool> Load(bool loadOnlyHeader = false)
         {
-            string path;
-            if (File.Exists(FilePath))
+            string path = null;
+            try
             {
-                IsPartial = false;
-                path = FilePath;
-            }
-            else if (File.Exists(PartFilePath))
-            {
-                IsPartial = true;
-                path = PartFilePath;
-            }
-            else
-            {
-                IsAvailable = false;
-                return false;
-            }
-
-            // OPTIMIZE: Albeit, it might be considered dangerous) Instead of parsing EACH Int32, you could do them all at once using Buffer.BlockCopy()
-            //http://stackoverflow.com/questions/17043631/using-stream-read-vs-binaryreader-read-to-process-binary-streams
-
-            await Task.Run(() =>
-            {
-                using (var br = new BinaryReader(new FileStream(path, FileMode.Open)))
+                if (File.Exists(FilePath))
                 {
-                    //var deserializedHeader = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
-                    //if (deserializedHeader.StartDate != StartDate)
-                    //{
-                    //    throw new Exception("deserializedHeader.StartDate != StartDate");
-                    //}
-                    //if (deserializedHeader.EndDate != EndDate)
-                    //{
-                    //    throw new Exception("deserializedHeader.EndDate != EndDate");
-                    //}
-                    //this.Header = deserializedHeader;// Overwrites local properties
-
-                    int version = br.ReadInt32();
-                    if (version != 1) { throw new InvalidDataException("Cache file data versions supported: 1"); }
-
-                    this.StartDate = DateTime.FromBinary(br.ReadInt64());
-                    this.EndDate = DateTime.FromBinary(br.ReadInt64());
-                    this.QueryDate = DateTime.FromBinary(br.ReadInt64());
-
-
-
-                    if (loadOnlyHeader) return;
-
-                    if (TimeFrame == TimeFrame.t1)
-                    {
-                        var ticks = new List<Tick>();
-                        while (br.BaseStream.Position < br.BaseStream.Length)
-                        {
-                            ticks.Add(new Tick(
-                            DateTime.FromBinary(br.ReadInt64())
-                            , br.ReadDouble()
-                            , br.ReadDouble()
-                            ));
-                        }
-                        this.Ticks = ticks;
-                    }
-                    else
-                    {
-                        var bars = new List<TimedBar>();
-                        while (br.BaseStream.Position < br.BaseStream.Length)
-                        {
-                            bars.Add(new TimedBar(
-                            DateTime.FromBinary(br.ReadInt64())
-                            , br.ReadDouble()
-                            , br.ReadDouble()
-                            , br.ReadDouble()
-                            , br.ReadDouble()
-                            , br.ReadDouble()
-                            ));
-                        }
-                        this.Bars = bars;
-                    }
+                    IsPartial = false;
+                    path = FilePath;
+                }
+                else if (File.Exists(PartFilePath))
+                {
+                    IsPartial = true;
+                    path = PartFilePath;
+                }
+                else
+                {
+                    IsAvailable = false;
+                    return false;
                 }
 
-                //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded] Loaded {StartDate} - {EndDate} @ {QueryDate}, {Count} items");
-                //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded]  - Info: {this.ToString()}");
-            });
+                // OPTIMIZE: Albeit, it might be considered dangerous) Instead of parsing EACH Int32, you could do them all at once using Buffer.BlockCopy()
+                //http://stackoverflow.com/questions/17043631/using-stream-read-vs-binaryreader-read-to-process-binary-streams
 
-            IsPersisted = true;
-            return true;
+
+                await new Func<Task>(async () =>
+                {
+                    await Task.Run(() =>
+                    {
+                        using (var br = new BinaryReader(new FileStream(path, FileMode.Open)))
+                        {
+                            //var deserializedHeader = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
+                            //if (deserializedHeader.StartDate != StartDate)
+                            //{
+                            //    throw new Exception("deserializedHeader.StartDate != StartDate");
+                            //}
+                            //if (deserializedHeader.EndDate != EndDate)
+                            //{
+                            //    throw new Exception("deserializedHeader.EndDate != EndDate");
+                            //}
+                            //this.Header = deserializedHeader;// Overwrites local properties
+
+                            int version = br.ReadInt32();
+                            if (version != 1)
+                            {
+                                int zeroCount = 1;
+                                if (version == 0)
+                                {
+                                    try
+                                    {
+                                        while (br.ReadInt32() == 0 && zeroCount < 10) { zeroCount++; }
+                                    }
+                                    catch { }
+                                    if (zeroCount > 5)
+                                    {
+                                        // Assume file is corrupt and delete it.
+                                        throw new DataCorruptException();
+                                    }
+                                }
+                                throw new InvalidDataException("Cache file data versions supported: 1");
+                            }
+
+                            this.StartDate = DateTime.FromBinary(br.ReadInt64());
+                            this.EndDate = DateTime.FromBinary(br.ReadInt64());
+                            this.QueryDate = DateTime.FromBinary(br.ReadInt64());
+
+                            if (loadOnlyHeader) return;
+
+                            if (TimeFrame == TimeFrame.t1)
+                            {
+                                var ticks = new List<Tick>();
+                                while (br.BaseStream.Position < br.BaseStream.Length)
+                                {
+                                    ticks.Add(new Tick(
+                                    DateTime.FromBinary(br.ReadInt64())
+                                    , br.ReadDouble()
+                                    , br.ReadDouble()
+                                    ));
+                                }
+                                this.Ticks = ticks;
+                            }
+                            else
+                            {
+                                var bars = new List<TimedBar>();
+                                while (br.BaseStream.Position < br.BaseStream.Length)
+                                {
+                                    bars.Add(new TimedBar(
+                                    DateTime.FromBinary(br.ReadInt64())
+                                    , br.ReadDouble()
+                                    , br.ReadDouble()
+                                    , br.ReadDouble()
+                                    , br.ReadDouble()
+                                    , br.ReadDouble()
+                                    ));
+                                }
+                                this.Bars = bars;
+                            }
+                        }
+
+                        //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded] Loaded {StartDate} - {EndDate} @ {QueryDate}, {Count} items");
+                        //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded]  - Info: {this.ToString()}");
+                    }).ConfigureAwait(false);
+                }).AutoRetry(allowException: e => e.GetType() != typeof(DataCorruptException)); // TOCONFIGUREAWAIT ?
+                IsPersisted = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Error reading cache file: " + ex);
+                if (DeleteCacheOnLoadError && path != null)
+                {
+                    try
+                    {
+                        File.Delete(path);
+                    }
+                    catch
+                    {
+                        Debug.WriteLine($"[data corrupt] Failed to delete corrupt cache file '{path}': " + ex); // TOLOG
+                    }
+                }
+                IsPersisted = false;
+            }
+            return IsPersisted;
         }
+        public static bool DeleteCacheOnLoadError = true; // TOCONFIG
 
         public int Count
         {

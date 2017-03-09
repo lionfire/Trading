@@ -201,7 +201,7 @@ namespace LionFire.Trading.Spotware.Connect
                 }
             }
 
-            await series.EnsureDataAvailable(null, DateTime.UtcNow, 1);
+            await series.EnsureDataAvailable(null, DateTime.UtcNow, 1).ConfigureAwait(false);
 
             if (series.Count == 0) return TimedBar.Invalid;
             return series.Last;
@@ -220,7 +220,7 @@ namespace LionFire.Trading.Spotware.Connect
             {
                 if (index < series.FirstIndex)
                 {
-                    await series.LoadMoreData();
+                    await series.LoadMoreData().ConfigureAwait(false);
                     if (index < series.FirstIndex)
                     {
                         System.Diagnostics.Debug.WriteLine("LoadMoreData didn't get any more data.  That must be all that's available");
@@ -258,7 +258,7 @@ namespace LionFire.Trading.Spotware.Connect
             }
 
             // DefaultLagDelay is an extra buffer on top of LocalDelta. TODO: Account for StdDev, also see how far in the future Spotware will let me query
-            await series.EnsureDataAvailable(series.Last.Time + series.TimeFrame.TimeSpan, DateTime.UtcNow - Account.LocalDelta + DefaultLagDelay, forceRetrieve:true); 
+            await series.EnsureDataAvailable(series.Last.Time + series.TimeFrame.TimeSpan, DateTime.UtcNow - Account.LocalDelta + DefaultLagDelay, forceRetrieve:true).ConfigureAwait(false);
 
             if (series.Count == 0) return Tick.Invalid;
             return new Tick(time, lastBid, lastAsk);

@@ -4,6 +4,8 @@
 //#define TRACE_HEARTBEAT
 //#define TRACE_DATA_INCOMING
 //#define LOG_SENTITIVE_INFO
+//#define TRACE_SUBSCRIPTIONS
+//#define GET_SUBS_AFTER_SUB
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -58,7 +60,7 @@ namespace LionFire.Trading.Spotware.Connect
 
 #region Testing
 
-        bool isDebugIsOn = true;
+        bool isDebugIsOn = false;
 
         //public string SandboxApiHost = "sandbox-tradeapi.spotware.com";
         //public static string TestClientPublicId = "7_5az7pj935owsss8kgokcco84wc8osk0g0gksow0ow4s4ocwwgc";
@@ -199,18 +201,39 @@ namespace LionFire.Trading.Spotware.Connect
         }
 
         // incoming data processing thread
+bool IncomingDataProcessingRunning = false;
         void IncomingDataProcessing(OpenApiMessagesFactory msgFactory, Queue messagesQueue)
         {
             isShutdown = false;
+if(IncomingDataProcessingRunning)
+{
+throw new System.Exception("IncomingDataProcessing Started twice");
+
+}
+try{
             while (!isShutdown)
             {
+IncomingDataProcessingRunning = true;
                 Thread.Sleep(0);
 
                 if (messagesQueue.Count <= 0) continue;
 
-                byte[] _message = (byte[])messagesQueue.Dequeue();
+                byte[] _message;
+                try
+                {
+                   _message = (byte[])messagesQueue.Dequeue();
+                }
+                catch (InvalidOperationException ioe)
+                {
+                    Debug.WriteLine("InvalidOperationException in IncomingDataProcessing at messagesQueue.Dequeue() " + ioe);
+                    continue;
+                }
                 ProcessIncomingDataStream(msgFactory, _message);
             }
+}
+finally{
+IncomingDataProcessingRunning = false;
+}
         }
 
 #endregion
@@ -368,7 +391,7 @@ namespace LionFire.Trading.Spotware.Connect
             if (apiSocket != null)
             {
                 apiSocket.Close();
-                apiSocket = null; 
+                apiSocket = null;
             }
 
 #endregion
@@ -561,17 +584,18 @@ namespace LionFire.Trading.Spotware.Connect
                             foreach (var bar in payload.TrendbarList)
                             {
                                 Console.WriteLine($"*********************** TRENDBAR: {bar.Period} o:{bar.Open} h:{bar.High} l:{bar.Low} c:{bar.Close} [v:{bar.Volume}]");
-                                if(bar.Period == ProtoOATrendbarPeriod.H1)
-{
-AccountStats.Increment(StatEventType.H1Bar);
-}
-else if(bar.Period == ProtoOATrendbarPeriod.H1)
-{
-AccountStats.Increment(StatEventType.H1Bar);
-}
-else{
-AccountStats.Increment(StatEventType.Other);
-}
+                                if (bar.Period == ProtoOATrendbarPeriod.H1)
+                                {
+                                    AccountStats.Increment(StatEventType.H1Bar);
+                                }
+                                else if (bar.Period == ProtoOATrendbarPeriod.H1)
+                                {
+                                    AccountStats.Increment(StatEventType.H1Bar);
+                                }
+                                else
+                                {
+                                    AccountStats.Increment(StatEventType.Other);
+                                }
                                 throw new Exception("***** got a trendbar!  Celebrate!");
                             }
                         }
@@ -582,19 +606,19 @@ AccountStats.Increment(StatEventType.Other);
                             Bid = payload.HasBidPrice ? payload.BidPrice : double.NaN,
                             Time = time
                         };
-                        if(payload.HasAskPrice  || payload.HasBidPrice )
-{
-AccountStats.Increment(StatEventType.Tick);
+                        if (payload.HasAskPrice || payload.HasBidPrice)
+                        {
+                            AccountStats.Increment(StatEventType.Tick);
 #if DEBUG
-if(AccountStats.Totals.Ticks % 100 == 0)
-{
-Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
-}
+                            //if (AccountStats.Totals.Ticks % 100 == 0)
+                            //{
+                            //    Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
+                            //}
 #endif
-}
+                        }
 
                         var symbol = (ISymbolInternal)GetSymbol(payload.SymbolName);
-                        
+
                         symbol.OnTick(tick);
                         break;
                     }
@@ -603,10 +627,14 @@ Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
                         var payload = msgFactory.GetSubscribeForSpotsResponse(rawData);
 
                         uint? subId = payload.HasSubscriptionId ? (uint?)payload.SubscriptionId : null;
+#if TRACE_SUBSCRIPTIONS
                         Console.WriteLine($"[SUBSCRIBED] {subId}");
+#endif
 
+#if GET_SUBS_AFTER_SUB
                         SendGetSpotSubscriptionReq(subId);
                         SendGetAllSpotSubscriptionsReq();
+#endif
 
                         WriteUnknownFields(_msg.PayloadType, payload);
                         break;
@@ -616,9 +644,11 @@ Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
                         var payload = msgFactory.GetUnsubscribeFromSpotsResponse(rawData);
 
                         //uint? subId = payload. ? (uint?)payload.SubscriptionId : null;
-                        Console.WriteLine($"[UNSUBSCRIBED]");
+                        Debug.WriteLine($"[UNSUBSCRIBED]");
 
+#if GET_SUBS_AFTER_SUB
                         SendGetAllSpotSubscriptionsReq();
+#endif
 
                         WriteUnknownFields(_msg.PayloadType, payload);
 
@@ -626,38 +656,41 @@ Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
                     }
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_GET_ALL_SPOT_SUBSCRIPTIONS_RES:
                     {
-                        Console.WriteLine($"--- GET_ALL_SPOT_SUBSCRIPTIONS_RES: ---");
+#if TRACE_SUBSCRIPTIONS
+                        Debug.WriteLine($"--- GET_ALL_SPOT_SUBSCRIPTIONS_RES: ---");
                         var payload = msgFactory.GetGetAllSpotSubscriptionsResponse(rawData);
                         foreach (var x in payload.SpotSubscriptionsList)
                         {
                             foreach (var y in x.SubscribedSymbolsList)
                             {
-                                Console.Write($" - subscription {x.SubscriptionId}: {y.SymbolName} periods: ");
+                                Debug.Write($" - subscription {x.SubscriptionId}: {y.SymbolName} periods: ");
                                 foreach (var z in y.PeriodList)
                                 {
-                                    Console.Write($" {z.ToString()}");
+                                    Debug.Write($" {z.ToString()}");
                                 }
-                                Console.WriteLine();
+                                Debug.WriteLine();
                             }
                         }
-                        Console.WriteLine($"--------------------------------------- ");
+                        Debug.WriteLine($"--------------------------------------- ");
+#endif
                     }
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_GET_SPOT_SUBSCRIPTION_RES:
                     {
-
+#if TRACE_SUBSCRIPTIONS
                         var payload = msgFactory.GetGetSpotSubscriptionResponse(rawData);
-                        Console.WriteLine($"--- GET_SPOT_SUBSCRIPTION_RES for subscription {payload.SpotSubscription.SubscriptionId}: --- ");
+                        Debug.WriteLine($"--- GET_SPOT_SUBSCRIPTION_RES for subscription {payload.SpotSubscription.SubscriptionId}: --- ");
                         foreach (var y in payload.SpotSubscription.SubscribedSymbolsList)
                         {
-                            Console.Write($" - {y.SymbolName} periods: ");
+                            Debug.Write($" - {y.SymbolName} periods: ");
                             foreach (var z in y.PeriodList)
                             {
-                                Console.Write($"{z.ToString()} ");
+                                Debug.Write($"{z.ToString()} ");
                             }
-                            Console.WriteLine();
+                            Debug.WriteLine();
                         }
-                        Console.WriteLine($"------------------------------------------------------ ");
+                        Debug.WriteLine($"------------------------------------------------------ ");
+#endif
                     }
                     break;
                 case (int)OpenApiLib.ProtoOAPayloadType.OA_SUBSCRIBE_FOR_TRADING_EVENTS_RES:
@@ -846,7 +879,12 @@ Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
         {
             ValidateConnected();
 
-            if (periods.Length == 0) { periods = new ProtoOATrendbarPeriod[] { ProtoOATrendbarPeriod.M1 }; } // TEMP TEST - For Spotware troubleshooting missing trendbars
+            if (periods.Length == 0)
+            {
+                periods = new ProtoOATrendbarPeriod[] {
+                ProtoOATrendbarPeriod.M1 // TEMP TEST - For Spotware troubleshooting missing trendbars
+            };
+            }
 
             var subscribed = GetSubscribed(symbol);
 
@@ -858,7 +896,9 @@ Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
             if (isDebugIsOn)
             {
                 //#if LOG_SENTITIVE_INFO
-                Console.WriteLine("SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
+#if TRACE_SUBSCRIPTIONS
+                Debug.WriteLine("[tradeapi] SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
+#endif
                 //#else
                 //                Console.WriteLine("SendSubscribeForSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
                 //#endif
@@ -869,7 +909,9 @@ Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
         {
             var _msg = outgoingMsgFactory.CreateUnsubscribeFromSymbolSpotsRequest(symbol, clientMsgId);
 
+#if TRACE_SUBSCRIPTIONS
             if (isDebugIsOn) Console.WriteLine("Send UnsubscribeFromSymbolSpotsRequest(): {0}", OpenApiMessagesPresentation.ToString(_msg));
+#endif
             writeQueueSync.Enqueue(_msg.ToByteArray());
 
             var subscribed = GetSubscribed(symbol);
@@ -899,13 +941,18 @@ Debug.WriteLine($"[stats] {AccountStats.Totals.Ticks} ticks received");
         {
             if (!subscriptionId.HasValue) { return; }
             var _msg = outgoingMsgFactory.CreateGetSpotSubscriptionRequest(subscriptionId.Value, clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendGetSpotSubscriptionReq() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+#if TRACE_SUBSCRIPTIONS
+            if (isDebugIsOn) Debug.WriteLine("SendGetSpotSubscriptionReq() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+#endif
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
         void SendGetAllSpotSubscriptionsReq()
         {
             var _msg = outgoingMsgFactory.CreateGetAllSpotSubscriptionsRequest(clientMsgId);
-            if (isDebugIsOn) Console.WriteLine("SendGetAllSpotSubscriptionsReq() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+#if TRACE_SUBSCRIPTIONS
+            if (isDebugIsOn) Debug.WriteLine("SendGetAllSpotSubscriptionsReq() Message to be sent:\n{0}", OpenApiMessagesPresentation.ToString(_msg));
+#endif
+
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
 

@@ -13,9 +13,7 @@ namespace LionFire.Trading
     {
     }
 
-    public interface IBarSeries : ISeries<ITimedBar>
-    {
-    }
+    
 
     public interface ISeries<T>
     {

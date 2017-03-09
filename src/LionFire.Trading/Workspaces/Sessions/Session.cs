@@ -20,6 +20,7 @@ using System.Diagnostics;
 using LionFire.Persistence;
 using LionFire.Types;
 using LionFire.States;
+using LionFire.Threading.Tasks;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -39,12 +40,9 @@ namespace LionFire.Trading.Workspaces
                 OnPropertyChanged(nameof(SignalThreshold));
             }
         }
-        private double signalThreshold;
+        private double signalThreshold = 0.5;
 
         #endregion
-
-
-
 
         #region INotifyPropertyChanged Implementation
 
@@ -57,6 +55,52 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
+    }
+
+    /// <summary>
+    /// Documents for 
+    /// </summary>
+    public interface ISessionItemViewModel
+    {
+    }
+
+    public enum LayoutItemDockMode
+    {
+        Unspecified,
+        Document,
+        Left,
+        Right,
+        Bottom,
+        Top,
+        Tabbed,
+    }
+
+    public class LayoutItem
+    {
+        public LayoutItemDockMode DockMode { get; set; }
+
+        public string Name { get; set; }
+        public string ParentName { get; set; }
+
+        public object ViewModel { get; set; }
+    }
+    public class Layout
+    {
+        public List<LayoutItem> Items { get; set; }
+    }
+
+
+    public class CategoryViewModel : SignalViewModelBase
+    {
+    }
+
+    public class SymbolViewModel : SignalViewModelBase
+    {
+        public Symbol Symbol { get; set; }
+
+        public SymbolViewModel()
+        {
+        }
     }
 
 
@@ -134,6 +178,7 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
+
         public IEnumerable<string> SymbolsAvailable
         {
             get
@@ -189,61 +234,6 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-
-
-        public IEnumerable<IBot> AllBots
-        {
-            get
-            {
-                //if (LiveBots != null) foreach (var bot in LiveBots)
-                //    {
-                //        yield return bot;
-                //    }
-                //if (DemoBots != null) foreach (var bot in DemoBots)
-                //    {
-                //        yield return bot;
-                //    }
-                if (Bots != null) foreach (var bot in Bots)
-                    {
-                        yield return bot;
-                    }
-                //if (PaperBots != null) foreach (var bot in PaperBots)
-                //    {
-                //        yield return bot;
-                //    }
-            }
-        }
-        //#region LiveBots
-
-        //public ObservableCollection<IBot> LiveBots
-        //{
-        //    get { return liveBots; }
-        //    set
-        //    {
-        //        liveBots = value;
-        //    }
-        //}
-        //private ObservableCollection<IBot> liveBots;
-
-        //#endregion
-
-        //#region DemoBots
-
-        //public ObservableCollection<IBot> DemoBots
-        //{
-        //    get { return demoBots; }
-        //    set
-        //    {
-        //        demoBots = value;
-        //    }
-        //}
-
-
-
-        //private ObservableCollection<IBot> demoBots;
-
-        //#endregion
-
         #region Bots
 
         public ObservableCollection<IBot> Bots
@@ -259,20 +249,6 @@ namespace LionFire.Trading.Workspaces
         private HashSet<string> BotIds = new HashSet<string>();
 
         #endregion
-
-        //#region PaperBots
-
-        //public ObservableCollection<IBot> PaperBots
-        //{
-        //    get { return paperBots; }
-        //    set
-        //    {
-        //        paperBots = value;
-        //    }
-        //}
-        //private ObservableCollection<IBot> paperBots ;
-
-        //#endregion
 
         #endregion
 
@@ -322,7 +298,11 @@ namespace LionFire.Trading.Workspaces
             LiveAccount = Workspace.GetAccount(Template.LiveAccount);
             DemoAccount = Workspace.GetAccount(Template.DemoAccount);
 
-            await InitializeBots().ConfigureAwait(false);
+            if (!await InitBots().ConfigureAwait(continueOnCapturedContext: false))
+            {
+                state.OnNext(ExecutionState.Faulted);
+                return false;
+            }
 
             state.OnNext(ExecutionState.Ready);
 
@@ -330,7 +310,7 @@ namespace LionFire.Trading.Workspaces
         }
 
         //[Idempotent] -- TODO make this idempotent by checking for existing bots
-        private async Task<bool> InitializeBots()
+        private async Task<bool> InitBots()
         {
             //if (account == null) { return false; }
 
@@ -350,16 +330,27 @@ namespace LionFire.Trading.Workspaces
 
             //if (Mode.HasFlag(BotMode.Live)) { await LoadBots(Template.LiveBots, ref liveBots, BotMode.Live); }
             //if (Mode.HasFlag(BotMode.Demo)) { await LoadBots(Template.DemoBots, ref demoBots, BotMode.Demo); }
-            if (Mode.HasFlag(BotMode.Scanner)) { await LoadBots(Template.Bots, ref bots, BotMode.Scanner); }
+            if (Mode.HasFlag(BotMode.Scanner)) { await LoadBots(Template.Bots, ref bots, BotMode.Scanner).ConfigureAwait(false); }
             //if (Mode.HasFlag(BotMode.Paper)) { await LoadBots(Template.PaperBots, ref paperBots, BotMode.Paper); }
 
-            foreach (var bot in AllBots.OfType<IInitializable>().ToArray())
+            foreach (var bot in Bots.OfType<IInitializable>().ToArray())
             {
-                var result = await bot.Initialize();
-                if (!result)
+                try
                 {
-                    throw new Exception($"Bot failed to initialize: {bot}");
+                    var result = await bot.Initialize().ConfigureAwait(continueOnCapturedContext: false);
+                    if (!result)
+                    {
+                        Debug.WriteLine($"Bot failed to initialize: {bot}{Environment.NewLine}{(bot as AccountParticipant)?.FaultException?.ToString()}");
+                    }
                 }
+                catch
+                {
+                    // EMPTYCATCH - intended
+                }
+                //if (!result)
+                //{
+                //    throw new Exception($"Bot failed to initialize: {bot}");
+                //}
             }
             return true;
         }
@@ -387,6 +378,7 @@ namespace LionFire.Trading.Workspaces
 
             var target2 = target;
             if (bots == null || !bots.Any()) return Task.CompletedTask;
+
             return Task.Run(() => LoadBots2(bots, target2, mode));
         }
         private void LoadBots2(IEnumerable<IInstantiator> bots, ObservableCollection<IBot> target, BotMode mode)
@@ -399,6 +391,7 @@ namespace LionFire.Trading.Workspaces
                     continue;
                 }
                 var bot = (IBot)pBot.Instantiate();
+                // TODO: Use AddBotForModes NEXT
                 _AddBotForMode(mode, bot: bot, pBot: pBot as PBot);
             }
         }
@@ -552,18 +545,18 @@ namespace LionFire.Trading.Workspaces
 
             //if (mode.HasFlag(BotMode.Live)) { if (LiveBots == null) { LiveBots = new ObservableCollection<IBot>(); } LiveBots.Add(bot); }
             //if (mode.HasFlag(BotMode.Demo)) { if (DemoBots == null) { DemoBots = new ObservableCollection<IBot>(); } DemoBots.Add(bot); }
-            if (mode.HasFlag(BotMode.Scanner))
+
+            if (Bots == null)
             {
-                if (Bots == null)
-                {
-                    Bots = new ObservableCollection<IBot>();
-                }
-                if (!BotIds.Contains(bot.Template.Id))
-                {
-                    BotIds.Add(bot.Template.Id);
-                    Bots.Add(bot);
-                }
+                Bots = new ObservableCollection<IBot>();
             }
+
+            if (!BotIds.Contains(bot.Template.Id))
+            {
+                BotIds.Add(bot.Template.Id);
+                Bots.Add(bot);
+            }
+
             //if (mode.HasFlag(BotMode.Paper)) { if (PaperBots==null) { PaperBots = new ObservableCollection<IBot>(); } PaperBots.Add(bot); }
 
             //if (pBot != null)

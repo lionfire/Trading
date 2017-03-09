@@ -83,7 +83,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         {
             List<Position> Result = new List<Position>();
 
-            var apiInfo = Defaults.Get<ISpotwareConnectAppInfo>();
+            var apiInfo = Defaults.TryGet<ISpotwareConnectAppInfo>();
             var client = NewHttpClient();
 
             var uri = SpotwareAccountApi.PositionsUri;
@@ -93,11 +93,11 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
                 .Replace("{limit}", PositionsPageSize.ToString())  // TODO: Paging if there are more positions, and cache
                 ;
             //UpdateProgress(0.11, "Sending request");
-            var response = await client.GetAsyncWithRetries(uri);
+            var response = await client.GetAsyncWithRetries(uri).ConfigureAwait(false);
 
             //UpdateProgress(0.12, "Receiving response");
 
-            var receiveStream = await response.Content.ReadAsStreamAsync();
+            var receiveStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
             var json = readStream.ReadToEnd();
 
@@ -140,7 +140,15 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             }
             else
             {
-                throw new Exception("GetPositions: got no data from json response: " + json);
+                var error = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareErrorContainer>(json);
+                if (json.Contains("CH_ACCESS_TOKEN_INVALID"))
+                {
+                    throw new AccessTokenInvalidException();
+                }
+                else
+                {
+                    throw new Exception("GetPositions: got no data from json response: " + json);
+                }
             }
 
             //UpdateProgress(1, "Done");
@@ -171,7 +179,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         {
             List<Position> Result = new List<Position>();
 
-            var apiInfo = Defaults.Get<ISpotwareConnectAppInfo>();
+            var apiInfo = Defaults.TryGet<ISpotwareConnectAppInfo>();
             var client = NewHttpClient();
 
             var uri = SpotwareAccountApi.PositionsUri;
@@ -181,11 +189,11 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
                 .Replace("{limit}", "10000")  // HARDCODE REVIEW
                 ;
             //UpdateProgress(0.11, "Sending request");
-            var response = await client.GetAsync(uri);
+            var response = await client.GetAsync(uri).ConfigureAwait(false);
 
             //UpdateProgress(0.12, "Receiving response");
 
-            var receiveStream = await response.Content.ReadAsStreamAsync();
+            var receiveStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
             System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
             var json = readStream.ReadToEnd();
 

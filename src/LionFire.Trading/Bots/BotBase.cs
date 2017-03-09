@@ -51,6 +51,7 @@ namespace LionFire.Trading.Bots
 
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
 
+        
 
         #region Modes
 
@@ -134,7 +135,7 @@ namespace LionFire.Trading.Bots
         public override async Task<bool> Initialize()
         {
 #if !cAlgo
-            if (!await base.Initialize()) return false;
+            if (!await base.Initialize().ConfigureAwait(false)) return false;
 #endif
             logger = this.GetLogger(this.ToString().Replace(' ', '.'), Template.Log);
             return true;
@@ -147,7 +148,7 @@ namespace LionFire.Trading.Bots
         protected override Task OnStarting()
 #endif
         {
-
+            
             StartDate = null;
             EndDate = null;
 #if cAlgo
@@ -447,7 +448,7 @@ namespace LionFire.Trading.Bots
             for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
             using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
             {
-                await sw.WriteAsync(json);
+                await sw.WriteAsync(json).ConfigureAwait(false);
             }
         }
 

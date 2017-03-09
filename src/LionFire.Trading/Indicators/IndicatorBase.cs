@@ -273,7 +273,7 @@ namespace LionFire.Trading.Indicators
         {
 #if !cAlgo
             Init();
-            await base.OnStarting();
+            await base.OnStarting().ConfigureAwait(false);
 #else
             return Task.CompletedTask;
 #endif

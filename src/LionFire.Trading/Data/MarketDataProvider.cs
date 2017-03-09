@@ -126,7 +126,7 @@ namespace LionFire.Trading
 
         public async Task EnsureDataAvailable(MarketSeriesBase marketSeries, DateTime? startDate, DateTime endDate, int totalDesiredBars, bool forceRetrieve = false)
         {
-            await marketSeries.Account.HistoricalDataProvider.GetData(marketSeries, startDate, endDate, totalDesiredBars: totalDesiredBars, forceRetrieve: forceRetrieve);
+            await marketSeries.Account.HistoricalDataProvider.GetData(marketSeries, startDate, endDate, totalDesiredBars: totalDesiredBars, forceRetrieve: forceRetrieve).ConfigureAwait(false);
 
 
             //if (LoadHistoricalDataAction == null) throw new NotImplementedException();
