@@ -36,42 +36,51 @@ namespace LionFire.ExtensionMethods
 
         public static bool DebugHttpSuccess = true;
 
+        
+
         public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount, Action<HttpResponseMessage> onFail = null, Func<bool> canContinue = null)
         {
-            if (retryCondition == null) { retryCondition = IsTimeError; }
-
-            int failCount = 0;
-            HttpResponseMessage response = null;
-            for (int retriesRemaining = retryCount; response == null || retriesRemaining > 0 && retryCondition(response); retriesRemaining--)
+            try
             {
-                response = await client.GetAsync(uri).ConfigureAwait(false);
-                if (retryCondition(response))
+                if (retryCondition == null) { retryCondition = IsTimeError; }
+
+                int failCount = 0;
+                HttpResponseMessage response = null;
+                for (int retriesRemaining = retryCount; response == null || retriesRemaining > 0 && retryCondition(response); retriesRemaining--)
                 {
-                    if (onFail != null) { onFail(response); }
-                    var msg = GetTimeErrorString(response);
-
-                    if (canContinue != null)
+                    response = await client.GetAsync(uri).ConfigureAwait(false);
+                    if (retryCondition(response))
                     {
-                        do
-                        {
-                            if (canContinue != null)
-                            {
-                                await Task.Delay(200);
-                            }
-                            else
-                            {
-                                await Task.Delay(retryDelayMilliseconds + RetryIncreaseMilliseconds * failCount);
-                            }
-                            //Debug.WriteLine($"{response.StatusCode} {msg} - {uri}");
-                        }
-                        while (canContinue != null && !canContinue());
-                    }
+                        if (onFail != null) { onFail(response); }
+                        var msg = GetTimeErrorString(response);
 
-                    failCount++;
+                        if (canContinue != null)
+                        {
+                            do
+                            {
+                                if (canContinue != null)
+                                {
+                                    await Task.Delay(200);
+                                }
+                                else
+                                {
+                                    await Task.Delay(retryDelayMilliseconds + RetryIncreaseMilliseconds * failCount);
+                                }
+                                //Debug.WriteLine($"{response.StatusCode} {msg} - {uri}");
+                            }
+                            while (canContinue != null && !canContinue());
+                        }
+
+                        failCount++;
+                    }
+                    if (DebugHttpSuccess) Debug.WriteLine($"[http] {response.StatusCode} {uri}");
                 }
-                if (DebugHttpSuccess) Debug.WriteLine($"[http] {response.StatusCode} {uri}");
+                return response;
             }
-            return response;
+            catch (HttpRequestException hrex)
+            {
+                new MInternetFailure { Url = uri };
+            }
         }
     }
 }

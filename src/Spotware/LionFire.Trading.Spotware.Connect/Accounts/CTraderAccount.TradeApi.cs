@@ -207,8 +207,8 @@ bool IncomingDataProcessingRunning = false;
             isShutdown = false;
 if(IncomingDataProcessingRunning)
 {
-throw new System.Exception("IncomingDataProcessing Started twice");
-
+//throw new System.Exception("IncomingDataProcessing Started twice");
+return;
 }
 try{
             while (!isShutdown)
@@ -259,6 +259,7 @@ IncomingDataProcessingRunning = false;
 
 #endregion open ssl connection
 
+if(IncomingDataProcessingRunning) return true;
 #region start incoming data processing thread
 
             handlerThread = new Thread(() =>

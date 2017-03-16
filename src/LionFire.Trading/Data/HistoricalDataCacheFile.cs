@@ -42,9 +42,9 @@ string text = new string(
 
         #region (Static) Utility Methods
 
-        public static void GetChunkRange(TimeFrame tf, DateTime date, out DateTime chunkStartDate, out DateTime chunkEndDate) // TOC#7
-        {
 
+        public static (DateTime chunkStartDate, DateTime chunkEndDate) GetChunkRange(TimeFrame tf, DateTime date, out DateTime chunkStartDate, out DateTime chunkEndDate) // TOC#7
+        {
             switch (tf.TimeFrameUnit)
             {
                 case TimeFrameUnit.Tick:
@@ -62,6 +62,7 @@ string text = new string(
                 default:
                     throw new NotImplementedException($"TimeFrameUnit {tf.TimeFrameUnit} not supported yet");
             }
+            return (chunkStartDate, chunkEndDate);
         }
 
         #endregion
@@ -374,9 +375,17 @@ string text = new string(
                 {
                     if (!KeepOldData)
                     {
-                        File.Delete(path);
+                        try
+                        {
+                            File.Delete(path);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("Failed to delete old file: " + path + " with exception: " + ex);
+                        }
                     }
-                    else
+
+                    if (File.Exists(path))
                     {
 
                         int i = 1;
@@ -524,71 +533,78 @@ string text = new string(
                     {
                         using (var br = new BinaryReader(new FileStream(path, FileMode.Open)))
                         {
-                            //var deserializedHeader = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
-                            //if (deserializedHeader.StartDate != StartDate)
-                            //{
-                            //    throw new Exception("deserializedHeader.StartDate != StartDate");
-                            //}
-                            //if (deserializedHeader.EndDate != EndDate)
-                            //{
-                            //    throw new Exception("deserializedHeader.EndDate != EndDate");
-                            //}
-                            //this.Header = deserializedHeader;// Overwrites local properties
-
-                            int version = br.ReadInt32();
-                            if (version != 1)
+                            try
                             {
-                                int zeroCount = 1;
-                                if (version == 0)
+                                //var deserializedHeader = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
+                                //if (deserializedHeader.StartDate != StartDate)
+                                //{
+                                //    throw new Exception("deserializedHeader.StartDate != StartDate");
+                                //}
+                                //if (deserializedHeader.EndDate != EndDate)
+                                //{
+                                //    throw new Exception("deserializedHeader.EndDate != EndDate");
+                                //}
+                                //this.Header = deserializedHeader;// Overwrites local properties
+
+                                int version = br.ReadInt32();
+                                if (version != 1)
                                 {
-                                    try
+                                    int zeroCount = 1;
+                                    if (version == 0)
                                     {
-                                        while (br.ReadInt32() == 0 && zeroCount < 10) { zeroCount++; }
+                                        try
+                                        {
+                                            while (br.ReadInt32() == 0 && zeroCount < 10) { zeroCount++; }
+                                        }
+                                        catch { }
+                                        if (zeroCount > 5)
+                                        {
+                                            // Assume file is corrupt and delete it.
+                                            throw new DataCorruptException();
+                                        }
                                     }
-                                    catch { }
-                                    if (zeroCount > 5)
+                                    throw new InvalidDataException("Cache file data versions supported: 1");
+                                }
+
+                                this.StartDate = DateTime.FromBinary(br.ReadInt64());
+                                this.EndDate = DateTime.FromBinary(br.ReadInt64());
+                                this.QueryDate = DateTime.FromBinary(br.ReadInt64());
+
+                                if (loadOnlyHeader) return;
+
+                                if (TimeFrame == TimeFrame.t1)
+                                {
+                                    var ticks = new List<Tick>();
+                                    while (br.BaseStream.Position < br.BaseStream.Length)
                                     {
-                                        // Assume file is corrupt and delete it.
-                                        throw new DataCorruptException();
+                                        ticks.Add(new Tick(
+                                        DateTime.FromBinary(br.ReadInt64())
+                                        , br.ReadDouble()
+                                        , br.ReadDouble()
+                                        ));
                                     }
+                                    this.Ticks = ticks;
                                 }
-                                throw new InvalidDataException("Cache file data versions supported: 1");
-                            }
-
-                            this.StartDate = DateTime.FromBinary(br.ReadInt64());
-                            this.EndDate = DateTime.FromBinary(br.ReadInt64());
-                            this.QueryDate = DateTime.FromBinary(br.ReadInt64());
-
-                            if (loadOnlyHeader) return;
-
-                            if (TimeFrame == TimeFrame.t1)
-                            {
-                                var ticks = new List<Tick>();
-                                while (br.BaseStream.Position < br.BaseStream.Length)
+                                else
                                 {
-                                    ticks.Add(new Tick(
-                                    DateTime.FromBinary(br.ReadInt64())
-                                    , br.ReadDouble()
-                                    , br.ReadDouble()
-                                    ));
+                                    var bars = new List<TimedBar>();
+                                    while (br.BaseStream.Position < br.BaseStream.Length)
+                                    {
+                                        bars.Add(new TimedBar(
+                                        DateTime.FromBinary(br.ReadInt64())
+                                        , br.ReadDouble()
+                                        , br.ReadDouble()
+                                        , br.ReadDouble()
+                                        , br.ReadDouble()
+                                        , br.ReadDouble()
+                                        ));
+                                    }
+                                    this.Bars = bars;
                                 }
-                                this.Ticks = ticks;
                             }
-                            else
+                            catch (IOException ioe)
                             {
-                                var bars = new List<TimedBar>();
-                                while (br.BaseStream.Position < br.BaseStream.Length)
-                                {
-                                    bars.Add(new TimedBar(
-                                    DateTime.FromBinary(br.ReadInt64())
-                                    , br.ReadDouble()
-                                    , br.ReadDouble()
-                                    , br.ReadDouble()
-                                    , br.ReadDouble()
-                                    , br.ReadDouble()
-                                    ));
-                                }
-                                this.Bars = bars;
+                                if (ioe.Message.Contains("end of stream")) throw new DataCorruptException("End of stream", ioe);
                             }
                         }
 
