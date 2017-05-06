@@ -8,9 +8,8 @@
 #if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
-#else
-using LionFire.Execution;
 #endif
+using LionFire.Execution;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -44,14 +43,14 @@ namespace LionFire.Trading.Bots
       where TIndicator : class, ITIndicator, new()
     {
 
-#region Config
+        #region Config
 
         public int MinStopLossTimesSpread = 5; // TEMP TODO
         public bool UseTakeProfit = false; // TEMP
 
-#endregion
+        #endregion
 
-#region Construction
+        #region Construction
 
         public SingleSeriesSignalBotBase()
         {
@@ -84,24 +83,30 @@ namespace LionFire.Trading.Bots
 
         partial void SignalBotBase_();
 
-#endregion
+        #endregion
 
-#region Computations by Derived Class
+        #region Computations by Derived Class
 
         public virtual double StopLossInPips { get { return 0; } }
         public virtual double TakeProfitInPips { get { return 0; } }
 
-#endregion
+        #endregion
 
-#region State
+        #region State
 
         public int barCount = 0;
 
-#endregion
+        #endregion
+
+        public IEnumerable<Position> MyPositions
+        {
+            get {
+                return base.Positions.Where(p => p.Label == this.Label);
+            }
+        }
 
 
-
-#region Evaluate
+        #region Evaluate
 
         //private int counter = 0;
 
@@ -109,7 +114,7 @@ namespace LionFire.Trading.Bots
         public override void Evaluate() // TOASYNC
         {
 #if !cAlgo
-            if(State.Value == ExecutionState.Faulted) return;
+            if(State == ExecutionState.Faulted) return;
 #endif
 
             try
@@ -128,9 +133,9 @@ namespace LionFire.Trading.Bots
                 EndDate = ExtrapolatedServerTime;
 
 #if !cAlgo
-                if (State.Value != ExecutionState.Started)
+                if (State != ExecutionState.Started)
                 {
-                    throw new InvalidExecutionStateException(ExecutionState.Started, State.Value);
+                    throw new InvalidExecutionStateException(ExecutionState.Started, State);
                 }
 #endif
 #if NULLCHECKS
@@ -214,7 +219,7 @@ namespace LionFire.Trading.Bots
                 List<Position> toClose = null;
                 if (Indicator.CloseLongPoints.LastValue >= 1.0)
                 {
-                    foreach (var position in Positions.Where(p => p.TradeType == TradeType.Buy))
+                    foreach (var position in MyPositions.Where(p => p.TradeType == TradeType.Buy))
                     {
 
 #if TRACE_CLOSE
@@ -227,7 +232,7 @@ namespace LionFire.Trading.Bots
                 }
                 if (-Indicator.CloseShortPoints.LastValue >= 1.0)
                 {
-                    foreach (var position in Positions.Where(p => p.TradeType == TradeType.Sell))
+                    foreach (var position in MyPositions.Where(p => p.TradeType == TradeType.Sell))
                     {
 
 #if TRACE_CLOSE
@@ -269,11 +274,11 @@ namespace LionFire.Trading.Bots
         public Exception LastException { get; set; }
 
 
-#endregion
+        #endregion
 
         public Dictionary<Position, BotPosition> BotPositionDict = new Dictionary<Position, BotPosition>();
 
-#region Position Management
+        #region Position Management
 
 
         private void _Open(TradeType tradeType, IndicatorDataSeries indicatorSL)
@@ -304,13 +309,26 @@ namespace LionFire.Trading.Bots
                 UseTakeProfit = true;
                 TakeProfitInPips = stopLossDistancePips * Template.BacktestProfitTPMultiplierOnSL;
             }
+
             OpenPosition(tradeType, stopLossDistancePips, UseTakeProfit ? TakeProfitInPips : double.NaN, volumeInUnits);
         }
 
         private void OpenPosition(TradeType tradeType, double stopLossInPips, double takeProfitInPips, long volumeInUnits)
         {
-
+             
             if (volumeInUnits == 0) return;
+
+            if (Template.MaxStopLossPips > 0)
+            {
+#if cAlgo
+                // TODO: only print if not backtesting
+                if(!IsBacktesting) Print($"[sl] MaxStopLossPips {Template.MaxStopLossPips}.  Reducing from {stopLossInPips}.");
+#endif
+                stopLossInPips = double.IsNaN(stopLossInPips) ? Template.MaxStopLossPips : Math.Min(Template.MaxStopLossPips, stopLossInPips);
+#if cAlgo
+                if (!IsBacktesting) Print($" -- confirm:  {stopLossInPips}.");
+#endif
+            }
 
             //if (tradeType == TradeType.Sell) { stopLossInPips = -stopLossInPips; }
 
@@ -360,11 +378,11 @@ p.onBars.Add(new StopLossTrailer(p)
             //p.onBars.Add(new StopLossTrailer(p, closePointsTSL));
         }
 
-#endregion
+        #endregion
 
-#region Backtesting
+        #region Backtesting
 
-#region Fitness
+        #region Fitness
 
 
 
@@ -394,16 +412,16 @@ p.onBars.Add(new StopLossTrailer(p)
         //            return fitness;
         //        }
 
-#endregion
+        #endregion
 
 
 
 
 
 
-#endregion
+        #endregion
 
-#region Misc
+        #region Misc
 
         public string TradeString(TradeType tradeType)
         {
@@ -432,11 +450,11 @@ p.onBars.Add(new StopLossTrailer(p)
 #endif
         }
 
-#endregion
+        #endregion
 
-#region TOREVIEW
+        #region TOREVIEW
 
-#region Event Handlers
+        #region Event Handlers
 
         //#if cAlgo
         //        protected override void OnTick()
@@ -450,9 +468,9 @@ p.onBars.Add(new StopLossTrailer(p)
 
 
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
     }
 

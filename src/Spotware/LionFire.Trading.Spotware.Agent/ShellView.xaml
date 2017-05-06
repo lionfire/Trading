@@ -1,0 +1,15 @@
+<Window x:Class="LionFire.Trading.Spotware.Agent.ShellView"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    
+
+    <StackPanel>
+        <TextBox x:Name="BotName"/>
+        <TextBox x:Name="CAlgoSources"/>
+        <ComboBox x:Name="Kind"/>
+        <ComboBox x:Name="ReleaseMode"/>
+        <Button x:Name="Go" DockPanel.Dock="Bottom">Go </Button>
+    </StackPanel>
+
+</Window>

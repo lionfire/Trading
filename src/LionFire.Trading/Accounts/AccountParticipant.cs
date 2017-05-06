@@ -10,7 +10,7 @@ using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
 using System.Threading;
 using System.Collections.Concurrent;
-using LionFire.Dependencies;
+using LionFire.DependencyInjection;
 using System.Reactive.Linq;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -37,7 +37,7 @@ namespace LionFire.Trading
     /// <summary>
     /// Represents an entity that participates in the market, either passively (readonly, which will receive events for DesiredSubscriptions via OnBar) and/or actively (by creating orders)
     /// </summary>
-    public abstract class AccountParticipant : IAccountParticipant, IExecutable, INotifyPropertyChanged, IInterestedInMarketData
+    public abstract class AccountParticipant : ExecutableBase, IAccountParticipant, IExecutable, INotifyPropertyChanged, IInterestedInMarketData
     {
 
         #region Desired Bars
@@ -208,7 +208,7 @@ namespace LionFire.Trading
 
                 if (account != null)
                 {
-                    account.Add(this); // REVIEW
+                    account.AddAccountParticipant(this); // REVIEW
 
                     if (DesiredSubscriptions != null)
                     {
@@ -235,7 +235,7 @@ namespace LionFire.Trading
 
 
 
-            Account.Started.Subscribe(started => { if (started) { Threading.Tasks.TaskManager.OnNewTask(OnMarketStarted(), Threading.Tasks.TaskFlags.Unowned); } });
+            Account.Started.Subscribe(started => { if (started) { LionFire.Threading.Tasks.TaskManager.OnNewTask(OnMarketStarted(), Threading.Tasks.TaskFlags.Unowned); } });
             //Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
         }
 
@@ -257,19 +257,10 @@ namespace LionFire.Trading
 
         #region ExecutionState
 
-        public IBehaviorObservable<ExecutionState> State
-        {
-            get
-            {
-                return state;
-            }
-        }
-        protected BehaviorObservable<ExecutionState> state = new BehaviorObservable<ExecutionState>();
-
         protected void SetState(ExecutionState state)
         {
-            var oldState = this.state.Value;
-            this.state.OnNext(state);
+            var oldState = this.State;
+            this.State = state;
             new MExecutionStateChanged() { Source = this, OldState = oldState, NewState = state }.Publish();
             OnPropertyChanged(nameof(this.State));
         }
@@ -290,7 +281,7 @@ namespace LionFire.Trading
                 if (desiredExecutionState == value) return;
                 desiredExecutionState = value;
 
-                switch (State.Value)
+                switch (State)
                 {
                     //case ExecutionState.Unspecified:
                     //    break;
@@ -374,7 +365,7 @@ namespace LionFire.Trading
             {
                 FaultException = null;
                 this.ValidateDependencies();
-                switch (state.Value)
+                switch (State)
                 {
                     //case ExecutionState.Unspecified:
                     //    break;
@@ -414,12 +405,12 @@ namespace LionFire.Trading
                         break;
                 }
 
-                state.OnNext(ExecutionState.Initializing);
+                State = ExecutionState.Initializing;
                 foreach (var child in Children.OfType<IAccountParticipant>())
                 {
                     child.Account = this.Account;
                 }
-                state.OnNext(ExecutionState.Ready);
+                State = ExecutionState.Ready;
                 return true;
             }
             catch (Exception ex)
@@ -465,7 +456,7 @@ namespace LionFire.Trading
             {
                 int retriesRemaining = 30;
                 tryagain:
-                switch (State.Value)
+                switch (State)
                 {
                     //case ExecutionState.Unconfigured:
                     //    break;
@@ -503,7 +494,7 @@ namespace LionFire.Trading
                     case ExecutionState.Disposed:
                         throw new ObjectDisposedException(this.GetType().Name);
                     default:
-                        throw new Exception("Unsupported state for Start(): " + State.Value);
+                        throw new Exception("Unsupported state for Start(): " + State);
                 }
 
                 SetState(ExecutionState.Starting);
@@ -550,7 +541,7 @@ namespace LionFire.Trading
         {
             DesiredExecutionState = ExecutionState.Stopped;
 
-            switch (State.Value)
+            switch (State)
             {
                 case ExecutionState.Unspecified:
                 case ExecutionState.Uninitialized:
@@ -672,19 +663,6 @@ namespace LionFire.Trading
         #endregion
 
         #region Misc
-
-
-        #region INotifyPropertyChanged Implementation
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        #endregion
-
 
         public ILogger Logger { get { return logger; } }
         protected ILogger logger;

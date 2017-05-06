@@ -104,7 +104,11 @@ namespace LionFire.Trading.Bots
         public double BacktestProfitTPMultiplierOnSL { get; set; } = 0.0;
         public double BacktestMinTradesPerMonth { get; set; } = 0;
 
+        public double MaxStopLossPips { get; set; } = 0;
 
+        ///// <summary>
+        ///// TODO Updates  
+        ///// </summary>
         //public double MaxEquityExposurePercent { get; set; } = 0.0;
 
         //public bool UseTakeProfit {

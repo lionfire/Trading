@@ -71,9 +71,9 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             client.DefaultRequestHeaders.Add("Cookie", "_ga=GA1.2.1217132727.1477434575");
         }
 
-        public async static Task<string> RefreshToken(CTraderAccount account)
+        public  static Task<string> RefreshToken(CTraderAccount account)
         {
-            return "Notimplemented";
+            return Task.FromResult("Not implemented");
         }
 
         #region Positions

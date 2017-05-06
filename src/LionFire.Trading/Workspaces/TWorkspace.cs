@@ -32,7 +32,7 @@ namespace LionFire.Trading.Workspaces
 
     public static class TWorkspaceExtensions
     {
-        public static ValidationContext Validate(this TWorkspace tw)
+        public static ValidationContext Validate(this TWorkspace tw, ValidationContext validationContext)
         {
             return ((object)tw).Validate()
                 .NoDuplicateBots();
@@ -76,9 +76,9 @@ namespace LionFire.Trading.Workspaces
 
         #region Validation
 
-        public ValidationContext Validate(object kind = null)
+        public ValidationContext Validate(ValidationContext validationContext)
         {
-            return TWorkspaceExtensions.Validate(this);
+            return TWorkspaceExtensions.Validate(this, validationContext);
         }
 
 

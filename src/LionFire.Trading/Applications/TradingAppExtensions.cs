@@ -36,11 +36,11 @@ namespace LionFire.Trading.Applications
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="host"></param>
+        /// <param name="appHost"></param>
         /// <param name="defaultOptions"></param>
         /// <param name="accountModesAllowed">Override options with this mode (if not unspecified)</param>
         /// <returns></returns>
-        public static IAppHost AddTrading(this IAppHost host, TradingOptions defaultOptions, AccountMode accountModesAllowed = AccountMode.Unspecified)
+        public static IAppHost AddTrading(this IAppHost appHost, TradingOptions defaultOptions, AccountMode accountModesAllowed = AccountMode.Unspecified)
         {
             // FUTURE: find another way to get this to app during ConfigureServices
             TypeNamingContext tnc = ManualSingleton<TypeNamingContext>.GuaranteedInstance;
@@ -55,7 +55,7 @@ namespace LionFire.Trading.Applications
                 Prioritizer = new HistoricalDataJobPrioritizer(),
             });
 
-            host.ConfigureServices(serviceCollection =>
+            appHost.ConfigureServices(serviceCollection =>
             {
                 //var Configuration = LionFire.Structures.ManualSingleton<IConfigurationRoot>.Instance;
                 //serviceCollection.Configure<TradingOptions>(opt => Configuration.GetSection("Trading").Bind(opt));
@@ -73,8 +73,9 @@ namespace LionFire.Trading.Applications
                 //tradingOptions.EnableAutoSave();
 
                 var tradingContext = new TradingContext(tradingOptions);
-                InjectionContext.Current.AddSingleton(tradingOptions);
-                InjectionContext.Current.AddSingleton(tradingContext);
+
+                //InjectionContext.Current.AddSingleton(tradingOptions);
+                //InjectionContext.Current.AddSingleton(tradingContext);
                 serviceCollection.AddSingleton(tradingContext);
                 serviceCollection.AddSingleton(tradingContext.Options);
 
@@ -87,7 +88,7 @@ namespace LionFire.Trading.Applications
 
             AssetInstantiationStrategy.Enable();
 
-            return host;
+            return appHost;
         }
 
     }

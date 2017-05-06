@@ -18,6 +18,8 @@ using LionFire.Persistence;
 using LionFire.ExtensionMethods;
 using LionFire.Instantiating.Templating;
 using System.Diagnostics;
+using LionFire.DependencyInjection;
+using LionFire.Execution.Executables;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -28,7 +30,7 @@ namespace LionFire.Trading.Workspaces
     /// </summary>
     [AssetPath("Workspaces")]
     [State]
-    public class Workspace : ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated
+    public class Workspace : ExecutableBase, ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated
     {
         
         
@@ -185,8 +187,6 @@ namespace LionFire.Trading.Workspaces
 
         public ObservableCollection<Session> Sessions { get; private set; } = new ObservableCollection<Session>();
 
-        public IBehaviorObservable<ExecutionState> State { get { return state; } }
-        private BehaviorObservable<ExecutionState> state = new BehaviorObservable<Execution.ExecutionState>(ExecutionState.Uninitialized);
 
         public ObservableCollection<IAccount> LiveAccounts { get; private set; } = new ObservableCollection<IAccount>();
         public ObservableCollection<IAccount> DemoAccounts { get; private set; } = new ObservableCollection<IAccount>();
@@ -224,7 +224,7 @@ namespace LionFire.Trading.Workspaces
             Bots.Clear();
             Alerts.Clear();
             Sessions.Clear();
-            state.OnNext(ExecutionState.Uninitialized);
+            State = ExecutionState.Uninitialized;
         }
 
         #endregion
@@ -268,7 +268,7 @@ namespace LionFire.Trading.Workspaces
 
         public async Task<bool> Initialize()
         {
-            switch (state.Value)
+            switch (State)
             {
                 case ExecutionState.Unspecified:
                 case ExecutionState.Uninitialized:
@@ -298,14 +298,14 @@ namespace LionFire.Trading.Workspaces
                 default:
                     return true;
             }
-            state.OnNext(ExecutionState.Initializing);
+            State = ExecutionState.Initializing;
 
             if (Sessions.Count > 0) throw new Exception("Sessions already populated");
 
             ResetState();
             // TODO: Verify state
 
-            state.OnNext(Execution.ExecutionState.Starting);
+            State = Execution.ExecutionState.Starting;
 
             if ((Template.TradingOptions.AccountModes & AccountMode.Live) == AccountMode.Live)
             {
@@ -336,17 +336,12 @@ namespace LionFire.Trading.Workspaces
                 this.Sessions.Add(session);
             }
             LoadWorkspaceItems();
-            state.OnNext(ExecutionState.Ready);
+            State = ExecutionState.Ready;
             return true;
         }
 
-        public ITradingTypeResolver TradingTypeResolver
-        {
-            get
-            {
-                return LionFire.Structures.ManualSingleton<ITradingTypeResolver>.Instance;
-            }
-        }
+        public ITradingTypeResolver TradingTypeResolver => InjectionContext.Current.GetService<ITradingTypeResolver>();
+
 
         public async Task Start()
         {
@@ -363,7 +358,7 @@ namespace LionFire.Trading.Workspaces
                 }
             }
 
-            state.OnNext(ExecutionState.Started);
+            State = ExecutionState.Started;
         }
 
         public async Task StartAllSessions(bool forceStart = false)
@@ -434,17 +429,11 @@ namespace LionFire.Trading.Workspaces
 
         public event Action<object> Changed;
 
-        #region INotifyPropertyChanged Implementation
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        private void OnPropertyChanged(string propertyName)
+        protected override void OnPropertyChanged(string propertyName)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            base.OnPropertyChanged(propertyName);
             Changed?.Invoke(this);
         }
-
-        #endregion
 
         #endregion
 
@@ -463,13 +452,16 @@ namespace LionFire.Trading.Workspaces
 
         public void OnSaving(object context = null)
         {
-            foreach (var item in Template.Items)
-            {
-            }
+            //foreach (var item in Template.Items)
+            //{
+            //}
 
-            foreach (var s in Sessions)
+            if (Sessions != null)
             {
-                s.OnSaving(context);
+                foreach (var s in Sessions)
+                {
+                    s.OnSaving(context);
+                }
             }
         }
 

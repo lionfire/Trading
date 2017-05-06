@@ -21,6 +21,7 @@ using LionFire.Persistence;
 using LionFire.Types;
 using LionFire.States;
 using LionFire.Threading.Tasks;
+using LionFire.Execution.Executables;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -114,8 +115,28 @@ namespace LionFire.Trading.Workspaces
     ///     - scan
     ///     - paper
     /// </summary>
-    public class Session : TemplateInstanceBase<TSession>, IInitializable, IStartable, IStoppable, IExecutable, INotifyPropertyChanged, IChanged, INotifyOnSaving
+    public class Session : ExecutableBase, IInitializable, IStartable, IStoppable, IExecutable, INotifyPropertyChanged, IChanged, INotifyOnSaving
+        , ITemplateInstance<TSession>
     {
+
+        #region Identity
+
+        ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (TSession)value; } }
+
+        //[SetOnce]
+        public TSession Template { get; set; }
+
+        #endregion
+
+        #region Construction
+
+        public Session()
+        {
+
+            Bots.CollectionChanged += (s, e) => RaiseChanged();
+        }
+        
+        #endregion
 
         #region Properties
 
@@ -244,7 +265,7 @@ namespace LionFire.Trading.Workspaces
                 bots = value;
             }
         }
-        private ObservableCollection<IBot> bots;
+        private ObservableCollection<IBot> bots = new ObservableCollection<IBot>();
 
         private HashSet<string> BotIds = new HashSet<string>();
 
@@ -337,7 +358,7 @@ namespace LionFire.Trading.Workspaces
             {
                 try
                 {
-                    var result = await bot.Initialize().ConfigureAwait(continueOnCapturedContext: false);
+                    var result = await bot.Initialize().ConfigureAwait(false);
                     if (!result)
                     {
                         Debug.WriteLine($"Bot failed to initialize: {bot}{Environment.NewLine}{(bot as AccountParticipant)?.FaultException?.ToString()}");
@@ -363,19 +384,6 @@ namespace LionFire.Trading.Workspaces
         }
         private Task LoadBots(IEnumerable<IInstantiator> bots, ref ObservableCollection<IBot> target, BotMode mode)
         {
-            if (target == null) target = new ObservableCollection<IBot>();
-            target.CollectionChanged += (s, e) =>
-            {
-                RaiseChanged();
-                //if (e.NewItems != null)
-                //{
-                //    foreach (var newItem in e.NewItems)
-                //    {
-                //        newItem as IChanged
-                //    }
-                //}
-            };
-
             var target2 = target;
             if (bots == null || !bots.Any()) return Task.CompletedTask;
 
@@ -401,10 +409,10 @@ namespace LionFire.Trading.Workspaces
         public Task Start()
         {
             symbolsAvailable = null;
-            LiveAccount?.TryAdd(this);
-            DemoAccount?.TryAdd(this);
-            ScannerAccount?.TryAdd(this);
-            PaperAccount?.TryAdd(this);
+            //LiveAccount?.TryAdd(this);
+            //DemoAccount?.TryAdd(this);
+            //ScannerAccount?.TryAdd(this);
+            //PaperAccount?.TryAdd(this);
             return Task.CompletedTask;
         }
 
@@ -490,6 +498,8 @@ namespace LionFire.Trading.Workspaces
         {
             if (account == null) throw new ArgumentNullException(nameof(account));
 
+            if (backtestResult == null) backtestResult = backtestResultHandle?.Object;
+
             if (bot == null)
             {
                 if (pBot != null)
@@ -500,16 +510,17 @@ namespace LionFire.Trading.Workspaces
                 {
                     if (tBot == null)
                     {
-                        if (backtestResult == null) { backtestResult = backtestResultHandle?.Object; }
+                        tBot = backtestResult.TBot;
+                        //if (backtestResult == null) { backtestResult = backtestResultHandle?.Object; }
 
-                        var templateType = ResolveType(backtestResult.BotConfigType);
-                        //var templateType = Type.GetType(result.BotConfigType);
-                        if (templateType == null)
-                        {
-                            throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
-                        }
+                        //var templateType = ResolveType(backtestResult.BotConfigType);
+                        ////var templateType = Type.GetType(result.BotConfigType);
+                        //if (templateType == null)
+                        //{
+                        //    throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
+                        //}
 
-                        tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
+                        //tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
                     }
 
                     if (tBot == null)
@@ -627,13 +638,7 @@ namespace LionFire.Trading.Workspaces
         }
 
         #endregion
-
-        public Type ResolveType(string typeName)
-        {
-            typeName = typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary");
-
-            return TypeResolver.Default.TryResolve(typeName);
-        }
+        
 
         public override string ToString()
         {

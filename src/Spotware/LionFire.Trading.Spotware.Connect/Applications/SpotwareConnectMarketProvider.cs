@@ -6,13 +6,13 @@ using LionFire.Structures;
 
 namespace LionFire.Trading.Spotware.Connect.Applications
 {
-    public class SpotwareConnectMarketProvider : IKeyedRO<string>
+    public class SpotwareConnectMarketProvider : IKeyed<string>
     {
         #region Constants
 
         public const string Scheme = "ctrader";
 
-        string IKeyedRO<string>.Key { get { return Scheme; } }
+        string IKeyed<string>.Key { get { return Scheme; } }
 
         #endregion
 

@@ -8,14 +8,11 @@ using LionFire.Execution;
 
 namespace LionFire.Trading.Accounts
 {
-    [AssetPath(@"Accounts")]
-    public abstract class TAccount : IHierarchicalTemplate, ITemplate
-    {
-        public string AccountId { get; set; }
-        public string AccessToken { get; set; }
-        //public string AccountName { get; set; }
 
-        public string BrokerName { get; set; }
+    [AssetPath(@"Accounts")]
+    public abstract class TMarketAccount : TFeed
+    {
+        
         public double CommissionPerMillion { get; set; }
         public string Currency { get; set; }
         public bool IsLive { get; set; }
@@ -25,13 +22,10 @@ namespace LionFire.Trading.Accounts
 
         public double StopOutLevel { get; set; } = double.NaN;
 
-        public List<ITemplate> Children { get; set; }
-
         #region Derived
 
         public bool IsDemo { get { return !IsLive; } }
-
-        public ExecutionState DesiredExecutionState { get; set; }
+        
 
         #endregion
     }

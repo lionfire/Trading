@@ -1,4 +1,7 @@
 ﻿
+using LionFire.Messaging;
+using LionFire.Net;
+using LionFire.Net.Messages;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -36,16 +39,14 @@ namespace LionFire.ExtensionMethods
 
         public static bool DebugHttpSuccess = true;
 
-        
-
         public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount, Action<HttpResponseMessage> onFail = null, Func<bool> canContinue = null)
         {
+            HttpResponseMessage response = null;
             try
             {
                 if (retryCondition == null) { retryCondition = IsTimeError; }
 
                 int failCount = 0;
-                HttpResponseMessage response = null;
                 for (int retriesRemaining = retryCount; response == null || retriesRemaining > 0 && retryCondition(response); retriesRemaining--)
                 {
                     response = await client.GetAsync(uri).ConfigureAwait(false);
@@ -79,7 +80,8 @@ namespace LionFire.ExtensionMethods
             }
             catch (HttpRequestException hrex)
             {
-                new MInternetFailure { Url = uri };
+                new MInternetFailure { Exception = hrex, Url = uri, Message = response }.Publish();
+                return response;
             }
         }
     }

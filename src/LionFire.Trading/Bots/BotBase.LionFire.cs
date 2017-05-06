@@ -5,7 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using LionFire.Execution;
-using LionFire.Dependencies;
+using LionFire.DependencyInjection;
 using LionFire.Instantiating;
 using LionFire.States;
 

@@ -4,15 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Execution;
 using System.ComponentModel;
+using LionFire.Execution.Executables;
 
 namespace LionFire.Trading.Sessions
 {
-    public class SessionBase : IExecutable, IControllableExecutable, INotifyPropertyChanged
+    public class SessionBase : ExecutableBase, IExecutable, IControllableExecutable, INotifyPropertyChanged
     {
         public IAccount Account { get; set; }
-
-        public Reactive.IBehaviorObservable<ExecutionState> State { get { return state; } }
-        Reactive.Subjects.BehaviorObservable<ExecutionState> state = new Reactive.Subjects.BehaviorObservable<ExecutionState>(ExecutionState.Uninitialized);
 
         #region DesiredState
 
@@ -30,25 +28,7 @@ namespace LionFire.Trading.Sessions
 
         protected virtual void OnDesiredStateChanged()
         {
-
         }
-
-        #endregion
-
-        #region Misc
-
-
-        #region INotifyPropertyChanged Implementation
-
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
-
-        #endregion
-
 
         #endregion
 

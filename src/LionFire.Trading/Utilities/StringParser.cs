@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -17,6 +18,8 @@ namespace LionFire.Parsing.String
 
         public static bool ParseUnitValue(this string unitValue, Type type, out string unit, out object val, out PropertyInfo propertyInfo)
         {
+            // REVIEW TEMP - needed?
+            UnitAttribute a = new UnitAttribute("asdf");  Debug.WriteLineIf(false, a.ToString());
 
             var dict = TypePropertyDictionary.GetOrAdd(type, t =>
             {

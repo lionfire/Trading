@@ -2,10 +2,10 @@
 using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
-#if !cAlgo
 using LionFire.Parsing.String;
-#endif
+
 using System.Threading.Tasks;
+using LionFire.Trading.Bots;
 
 namespace LionFire.Trading.Backtesting
 {
@@ -90,6 +90,34 @@ namespace LionFire.Trading.Backtesting
         public double AD { get; set; }
 
 
+        public TBot TBot
+        {
+            get
+            {
+                if (tBot == null)
+                {
+                    var backtestResult = this;
+
+                    var templateType = ResolveType(backtestResult.BotConfigType);
+
+                    if (templateType == null)
+                    {
+                        throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
+                    }
+
+                    tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
+                }
+                return tBot;
+            }
+        }
+        private TBot tBot;
+
+        public Type ResolveType(string typeName)
+        {
+            typeName = typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary");
+
+            return TypeResolver.Default.TryResolve(typeName);
+        }
 
     }
 

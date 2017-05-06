@@ -19,7 +19,7 @@ namespace LionFire.Trading
     {
         #region Relationships
 
-        IAccount market;
+        IFeed market;
 
         #endregion
 
@@ -82,7 +82,7 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public MarketDataProvider(IAccount market)
+        public MarketDataProvider(IFeed market)
         {
             this.market = market;
             HistoricalDataSources = new DataSourceCollection(true, market);

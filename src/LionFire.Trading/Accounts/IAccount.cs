@@ -12,7 +12,7 @@ using LionFire.Trading.Statistics;
 namespace LionFire.Trading
 {
   
-    public interface IAccount
+    public interface IAccount : IFeed
     //: ITemplateInstance<TAccount>
     {
         bool AllowSubscribeToTicks { get; set; }
@@ -20,7 +20,7 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        TAccount Template { get; }
+        new TMarketAccount Template { get; }
 
         #endregion
 
@@ -39,14 +39,6 @@ namespace LionFire.Trading
         string StatusText { get; }
         event Action StatusTextChanged;
 
-        #region Server State
-
-        DateTime ServerTime { get; }
-        DateTime ExtrapolatedServerTime { get; }
-        TimeZoneInfo TimeZone { get; }
-
-        #endregion
-
         #endregion
 
 
@@ -56,22 +48,11 @@ namespace LionFire.Trading
 
         bool IsDemo { get; }
 
-
-
         bool IsBacktesting { get; }
         DateTime BacktestEndDate { get; }
 
         bool IsSimulation { get; }
         bool IsRealMoney { get; }
-
-        bool TicksAvailable { get; }
-
-
-        #endregion
-
-        #region Market Series
-
-        MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame);
 
         #endregion
 
@@ -79,46 +60,16 @@ namespace LionFire.Trading
 
         TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
 
-
         TradeResult ClosePosition(Position position);
         TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
 
         #endregion
 
-        #region Events
-
-        event Action Ticked;
-
-        IBehaviorObservable<bool> Started { get; }
-
-        #endregion
-
 #if !cAlgo
-        Symbol GetSymbol(string symbolCode);
-        void TryAdd(Session session);
-        MarketSeries GetMarketSeries(string symbol, TimeFrame tf);
-        MarketData MarketData { get; set; }
-        MarketDataProvider Data { get; }
         Server Server { get; }
-
-        Task Add(IAccountParticipant indicator);
-
-
-        IHistoricalDataProvider HistoricalDataProvider { get; }
-
+        Task AddAccountParticipant(IAccountParticipant indicator);
         bool IsTradeApiEnabled { get; set; }
 #endif
-
-        //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
-        IEnumerable<string> SymbolsAvailable { get; }
-        //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
-
-        #region Misc
-
-        // TODO: Move to internal interface and use friend assemblies
-        ILogger Logger { get; }
-
-        #endregion
 
     }
 

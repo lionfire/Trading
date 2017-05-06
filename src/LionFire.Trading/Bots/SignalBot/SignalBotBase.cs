@@ -60,7 +60,9 @@ namespace LionFire.Trading.Bots
         {
             get
             {
+#if !cAlgo // REVIEW
                 if (Indicator != null) { yield return Indicator; }
+#endif
                 foreach (var c in base.Children) yield return c;
             }
         }

@@ -95,7 +95,7 @@ namespace LionFire.Trading.Backtesting
 
         #region Account Info
 
-        protected TAccount EffecitveAccountInfo
+        protected TMarketAccount EffecitveAccountInfo
         {
             get
             {
@@ -157,7 +157,7 @@ namespace LionFire.Trading.Backtesting
 
             if (Template.SimulateAccount != null)
             {
-                TAccount simulatedAccount = Template.SimulateAccount.Load<TAccount>();
+                TMarketAccount simulatedAccount = Template.SimulateAccount.Load<TMarketAccount>();
                 Template.AssignPropertiesFrom(simulatedAccount);
             }
 

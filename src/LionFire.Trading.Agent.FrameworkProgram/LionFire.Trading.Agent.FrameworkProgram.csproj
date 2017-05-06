@@ -59,13 +59,6 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Applications.Abstractions.dll</HintPath>
     </Reference>
-    <Reference Include="LionFire.Assets, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\Core\src\LionFire.Assets\bin\Debug\net462\LionFire.Assets.dll</HintPath>
-    </Reference>
-    <Reference Include="LionFire.Assets.Abstractions">
-      <HintPath>..\..\..\Core\src\LionFire.Assets.Abstractions\bin\Debug\net462\LionFire.Assets.Abstractions.dll</HintPath>
-    </Reference>
     <Reference Include="LionFire.Environment">
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Environment.dll</HintPath>
     </Reference>
@@ -80,24 +73,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\Core\src\LionFire.Applications\bin\Debug\net462\LionFire.Runtime.Extensions.dll</HintPath>
     </Reference>
-    <Reference Include="LionFire.Templating, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Templating.dll</HintPath>
-    </Reference>
-    <Reference Include="LionFire.Trading, Version=1.0.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LionFire.Trading\bin\Debug\net462\LionFire.Trading.dll</HintPath>
-    </Reference>
     <Reference Include="LionFire.Trading.Abstractions">
       <HintPath>..\LionFire.Trading.Abstractions\bin\Debug\net462\LionFire.Trading.Abstractions.dll</HintPath>
-    </Reference>
-    <Reference Include="LionFire.Trading.Agent, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Agent.dll</HintPath>
-    </Reference>
-    <Reference Include="LionFire.Trading.Proprietary, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\LionFire.Trading.Agent\bin\Debug\net462\LionFire.Trading.Proprietary.dll</HintPath>
     </Reference>
     <Reference Include="LionFire.Trading.Spotware.Connect">
       <HintPath>..\Spotware\LionFire.Trading.Spotware.Connect\bin\Debug\net462\LionFire.Trading.Spotware.Connect.dll</HintPath>
@@ -208,6 +185,28 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets.Abstractions\LionFire.Persistence.Assets.Abstractions.csproj">
+      <Project>{b842d521-3f3c-4cb7-9daa-5f91bec7a8cf}</Project>
+      <Name>LionFire.Persistence.Assets.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets\LionFire.Persistence.Assets.csproj">
+      <Project>{4029ee49-9ece-43b4-b4be-794cc55b7fbb}</Project>
+      <Name>LionFire.Persistence.Assets</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Proprietary\LionFire.Trading.Proprietary.csproj">
+      <Project>{b67318f5-1fae-4b1c-8d82-389a6dc3aa1d}</Project>
+      <Name>LionFire.Trading.Proprietary</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LionFire.Trading.Agent\LionFire.Trading.Agent.csproj">
+      <Project>{5a97a46d-63d0-441a-a3d6-9cb00dd60b0c}</Project>
+      <Name>LionFire.Trading.Agent</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj">
+      <Project>{bb75938c-7cac-49de-aeba-502e6340f92b}</Project>
+      <Name>LionFire.Trading</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

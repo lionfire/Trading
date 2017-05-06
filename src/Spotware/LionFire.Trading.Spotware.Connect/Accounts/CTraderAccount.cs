@@ -37,7 +37,7 @@ namespace LionFire.Trading.Spotware.Connect
 {
 
     [AssetPath(@"Accounts/cTrader")]
-    public class TCTraderAccount : TAccount, ITemplate<CTraderAccount>
+    public class TCTraderAccount : TMarketAccount, ITemplate<CTraderAccount>
     {
     }
 
@@ -260,7 +260,7 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     await UpdatePositions().ConfigureAwait(false);
                 }
-                catch (AccessTokenInvalidException atie)
+                catch (AccessTokenInvalidException )
                 {
                     StatusText = "Access token invalid";
                     state.OnNext(ExecutionState.Faulted);

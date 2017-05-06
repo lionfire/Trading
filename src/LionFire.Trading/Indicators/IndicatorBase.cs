@@ -148,7 +148,7 @@ namespace LionFire.Trading.Indicators
 
         protected virtual void OnInitializing()
         {
-            state.OnNext(ExecutionState.Initializing);
+            State = ExecutionState.Initializing;
             try
             {
                 try
@@ -197,14 +197,14 @@ namespace LionFire.Trading.Indicators
                     // REvIEW - shouldn't be needed here?
                         child.Account = this.Account;
                     }
-#endif
                     child.Start();
+#endif
                 }
-                state.OnNext(ExecutionState.Ready);
+                State = ExecutionState.Ready;
             }
             catch (Exception)
             {
-                state.OnNext(ExecutionState.Uninitialized);
+                State = ExecutionState.Uninitialized;
                 throw;
             }
         }

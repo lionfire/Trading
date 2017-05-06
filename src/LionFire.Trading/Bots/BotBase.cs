@@ -10,8 +10,8 @@ using LionFire.Execution;
 using System.IO;
 using LionFire.Trading.Backtesting;
 using System.ComponentModel;
-using System.Collections.ObjectModel;
 using LionFire.Threading.Tasks;
+using System.Collections.ObjectModel;
 using LionFire.ExtensionMethods;
 using LionFire.States;
 #if cAlgo
@@ -29,10 +29,14 @@ namespace LionFire.Trading.Bots
     //    public IBot Bot { get; set; }
 
     //}
- 
+
     [InstantiatorType(typeof(PBot))]
     [State]
-    public partial class BotBase<_TBot> : IBot, IInitializable, INotifyPropertyChanged
+    public partial class BotBase<_TBot> :
+#if cAlgo
+        Robot,
+#endif
+        IBot, IInitializable, INotifyPropertyChanged, IExecutable
         // REVIEW OPTIMIZE - eliminate INPC for cAlgo?
         where _TBot : TBot, new()
     {
@@ -51,14 +55,22 @@ namespace LionFire.Trading.Bots
 
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
 
-        
+
 
         #region Modes
+
 
         [State]
         public BotMode Modes
         {
-            get { return mode; }
+            get
+            {
+#if cAlgo
+                return Account.IsLive ? BotMode.Live : BotMode.Demo; // REVIEW
+#else
+                 return mode;
+#endif
+            }
             set
             {
                 if (mode == value) return;
@@ -70,22 +82,28 @@ namespace LionFire.Trading.Bots
                 else
                 {
                     mode = value;
+#if !cAlgo
                     if (ExecutionStateFlags.HasFlag(ExecutionStateFlags.Autostart) && mode != BotMode.None)
                     {
                         TaskManager.OnNewTask(Start(), TaskFlags.Unowned);
                     }
+#endif
                 }
                 if (mode == BotMode.None)
                 {
+#if !cAlgo
                     if (this.IsStarted())
                     {
                         TaskManager.OnNewTask(this.Stop(), TaskFlags.Unowned);
                     }
+#endif
                 }
                 OnPropertyChanged(nameof(Modes));
             }
         }
         private BotMode mode;
+
+        //#endif
 
         #endregion
 
@@ -132,14 +150,23 @@ namespace LionFire.Trading.Bots
             InitExchangeRates();
         }
 
-        public override async Task<bool> Initialize()
+        public
+#if !cAlgo
+        override async
+#endif
+         Task<bool> Initialize()
         {
 #if !cAlgo
             if (!await base.Initialize().ConfigureAwait(false)) return false;
 #endif
             logger = this.GetLogger(this.ToString().Replace(' ', '.'), Template.Log);
+#if !cAlgo
             return true;
+#else
+            return Task.FromResult(true);
+#endif
         }
+
 
         // Handler for LionFire.  Invoked by cAlgo's OnStart
 #if cAlgo
@@ -148,7 +175,7 @@ namespace LionFire.Trading.Bots
         protected override Task OnStarting()
 #endif
         {
-            
+
             StartDate = null;
             EndDate = null;
 #if cAlgo
@@ -164,20 +191,39 @@ namespace LionFire.Trading.Bots
         partial void OnStarting_();
 
 #if cAlgo
-        protected virtual async Task OnStarted()
+        protected virtual Task OnStarted()
 #else
         protected override Task OnStarted()
 #endif
         {
-#if cAlgo
-#else
+            //#if cAlgo
+            //#else
             return Task.CompletedTask;
-#endif
+            //#endif
         }
 
         #endregion
 
         #region State
+
+        #region State
+
+        public ExecutionState State
+        {
+            get { return state; }
+            protected set
+            {
+                if (state == value) return;
+                state = value;
+                StateChangedToFor?.Invoke(state, this);
+            }
+        }
+        private ExecutionState state;
+
+        public event Action<ExecutionState, IExecutable> StateChangedToFor;
+
+        #endregion
+
 
         #region Derived
 
@@ -193,20 +239,20 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Event Handling
+        #region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-#endregion
+        #endregion
 
-#region Derived
+        #region Derived
 
         public bool CanOpenLong
         {
@@ -257,9 +303,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#region Backtesting
+        #region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.001;
@@ -455,7 +501,7 @@ namespace LionFire.Trading.Bots
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-#endregion
+        #endregion
 
 #if !cAlgo
         public Positions BotPositions
@@ -481,7 +527,7 @@ namespace LionFire.Trading.Bots
         //        private Positions positions =  new Positions<Position>();
         //#endif
 
-#region Position Events
+        #region Position Events
 
         public event Action<PositionEvent> BotPositionChanged;
 
@@ -490,9 +536,9 @@ namespace LionFire.Trading.Bots
             BotPositionChanged?.Invoke(e);
         }
 
-#endregion
+        #endregion
 
-#region Position Sizing
+        #region Position Sizing
 
 
         // MOVE?
@@ -780,15 +826,16 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#region Misc
+        #region Misc
 
         public virtual string Label
         {
             get
             {
-                return label ?? this.GetType().Name;
+                if (label != null) return label;
+                return Template?.Id + $" {this.GetType().Name}";
             }
             set
             {
@@ -806,7 +853,7 @@ namespace LionFire.Trading.Bots
         }
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
-#region INotifyPropertyChanged Implementation
+        #region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -815,11 +862,11 @@ namespace LionFire.Trading.Bots
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-#endregion
+        #endregion
 
 #endif
 
-#endregion
+        #endregion
     }
 
     public static class BacktestUtilities

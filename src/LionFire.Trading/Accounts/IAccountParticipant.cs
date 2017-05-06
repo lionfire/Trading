@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
+
     public interface IAccountParticipant
 #if !cAlgo
         : IHasExecutionStateFlags, IAcceptsExecutionStateFlags

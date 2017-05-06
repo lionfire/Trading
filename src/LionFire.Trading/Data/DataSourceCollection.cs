@@ -15,7 +15,7 @@ namespace LionFire.Trading
     {
         #region Relationships
 
-        public IAccount Market { get; protected set; }
+        public IFeed Feed { get; protected set; }
 
         #endregion
 
@@ -30,9 +30,9 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public DataSourceCollection(bool isHistorical, IAccount market)
+        public DataSourceCollection(bool isHistorical, IFeed feed)
         {
-            this.Market = market;
+            this.Feed = feed;
             this.IsHistorical = isHistorical;
 
             if (isHistorical)
@@ -120,7 +120,7 @@ namespace LionFire.Trading
             {
                 var split = key.Split(';');
                 // TODO: Return null if live data not available
-                var series = (MarketSeries) this.Market.GetMarketSeries(split[0],split[1]); // REVIEW Cast
+                var series = (MarketSeries) this.Feed.GetMarketSeries(split[0],split[1]); // REVIEW Cast
                 dict.Add(key, series);
                 return series;
             }

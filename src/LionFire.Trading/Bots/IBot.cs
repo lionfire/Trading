@@ -1,6 +1,7 @@
 ﻿#if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
+using Position = cAlgo.API.Position;
 #endif
 using Microsoft.Extensions.Logging;
 using System;
@@ -14,7 +15,14 @@ using System.Collections.ObjectModel;
 
 namespace LionFire.Trading.Bots
 {
-    public enum PositionEventKind // MOVE
+
+
+    public class PositionEvent // MOVE
+    {
+        public Position Position { get; set; }
+        public PositionEventKind Kind { get; set; }
+    }
+    public enum PositionEventKind 
     {
         Unspecified,
         Opened = 1 << 0,
@@ -22,12 +30,6 @@ namespace LionFire.Trading.Bots
         Modified = 1 << 2,
         StoppedOut = 1 << 3,
         PartialPosition = 1 << 4,
-    }
-
-    public class PositionEvent // MOVE
-    {
-        public Position Position { get; set; }
-        public PositionEventKind Kind { get; set; }
     }
 
     public interface IHasCustomFitness // MOVE
@@ -54,12 +56,12 @@ namespace LionFire.Trading.Bots
 
         Microsoft.Extensions.Logging.ILogger Logger { get; }
 
+#if !cAlgo
         /// <summary>
         /// Can have multiple modes set
         /// </summary>
         BotMode Modes { get; set; }
 
-#if !cAlgo
         Positions BotPositions { get; }
         event Action<PositionEvent> BotPositionChanged;
 #endif
@@ -67,6 +69,7 @@ namespace LionFire.Trading.Bots
 
     public static class IBotExtensions
     {
+#if !cAlgo
         public static void SetMode(this IBot bot, BotMode modeFlag, bool isEnabled = true)
         {
             if (isEnabled)
@@ -78,6 +81,7 @@ namespace LionFire.Trading.Bots
                 bot.Modes &= ~modeFlag;
             }
         }
+#endif
     }
 
 
