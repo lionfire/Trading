@@ -12,6 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging\LionFire.Extensions.Logging.csproj" />
     <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Proprietary\LionFire.Trading.Proprietary.csproj" />

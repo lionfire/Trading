@@ -114,5 +114,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj">
+      <Project>{62e82f33-2263-49a2-8a81-1403ab343ef1}</Project>
+      <Name>LionFire.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
