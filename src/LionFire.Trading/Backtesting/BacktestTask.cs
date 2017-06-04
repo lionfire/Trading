@@ -80,7 +80,7 @@ namespace LionFire.Applications.Trading
         #region Run
 
         Stopwatch runStopwatch;
-        protected override void Run()
+        protected override Task Run()
         {
             logger.LogInformation($"Starting backtest from {Config.StartDate} to {Config.EndDate}");
 
@@ -88,6 +88,7 @@ namespace LionFire.Applications.Trading
             BacktestAccount.Run();
             runStopwatch.Stop();
             OnFinished();
+            return Task.CompletedTask;
         }
 
         protected virtual void OnFinished()

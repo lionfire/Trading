@@ -10,6 +10,16 @@ namespace LionFire.Trading
 {
     public class TradingOptions : INotifyPropertyChanged
     {
+
+        #region Construction
+
+        public TradingOptions() { }
+        public TradingOptions(TradingFeatures features) { this.Features = features; }
+
+        #endregion
+
+
+
         /// <summary>
         /// If true:
         ///  - bots will connect to the account(s) that are available. 
@@ -17,7 +27,7 @@ namespace LionFire.Trading
         /// If false, 
         ///  - bots must specify the account to which they should be connected.
         /// </summary>
-        public bool AutoConfig { get; set; } = false;
+        public bool AutoAttachToAccounts { get; set; } = false;
 
         /// <summary>
         /// If true, bots will connect to 
@@ -31,28 +41,69 @@ namespace LionFire.Trading
 
         public string Test { get; set; }
 
+        /// <summary>
+        /// Leave null for no whitelist
+        /// </summary>
+        public List<string> SymbolsWhiteList { get; set; }
+
+        public List<string> SymbolsBlackList { get; set; }
+
+        public DateTime? HistoricalDataStart { get; set; }
+        public DateTime EffectiveHistoricalDataStart
+        {
+            get
+            {
+                if (HistoricalDataStart.HasValue)
+                {
+                    var val = HistoricalDataStart.Value;
+                    if (val > DateTime.UtcNow + TimeSpan.FromDays(2)) return DateTime.UtcNow + TimeSpan.FromDays(2);
+                    return val;
+                }
+                return DateTime.MinValue;
+            }
+        }
+        public DateTime? HistoricalDataEnd { get; set; }
+        public DateTime EffectiveHistoricalDataEnd
+        {
+            get
+            {
+                if (HistoricalDataEnd.HasValue && HistoricalDataEnd.Value < DateTime.UtcNow + TimeSpan.FromDays(2)) return HistoricalDataEnd.Value;
+                return DateTime.UtcNow + TimeSpan.FromDays(1);
+            }
+        }
+
+        public List<TimeFrame> HistoricalDataTimeFrames { get; set; }
+
         #region Static (Defaults)
 
-        public static TradingOptions Auto {
-            get {
+        public static TradingOptions Auto
+        {
+            get
+            {
                 return new TradingOptions
                 {
-                    AutoConfig = true,
+                    AutoAttachToAccounts = true,
                 };
             }
         }
-        public static TradingOptions AutoMultiAccount {
-            get {
+        public static TradingOptions AutoMultiAccount
+        {
+            get
+            {
                 return new TradingOptions
                 {
-                    AutoConfig = true,
+                    AutoAttachToAccounts = true,
                     AllowAutoMultipleAccounts = true,
                 };
             }
         }
 
         #endregion
-        
+
+        public TradingFeatures Features { get; set; }
+        public IEnumerable<string> ExcludeSymbols { get; set; }
+        public bool ForceReretrieveEmptyData { get; set; }
+
         //#region AllowSubscribeToTicks
 
         //public bool AllowSubscribeToTicks
@@ -84,6 +135,6 @@ namespace LionFire.Trading
         #endregion
 
         #endregion
-        
+
     }
 }

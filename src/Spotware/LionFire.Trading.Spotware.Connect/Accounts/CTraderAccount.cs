@@ -32,12 +32,13 @@ using LionFire.Trading.Spotware.Connect.AccountApi;
 using LionFire.Trading.Accounts;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
+using LionFire.Applications.Hosting;
 
 namespace LionFire.Trading.Spotware.Connect
 {
 
     [AssetPath(@"Accounts/cTrader")]
-    public class TCTraderAccount : TMarketAccount, ITemplate<CTraderAccount>
+    public class TCTraderAccount : TAccount, ITemplate<CTraderAccount>
     {
     }
 
@@ -50,6 +51,8 @@ namespace LionFire.Trading.Spotware.Connect
     //, IDataSource
     //, IHasExecutionState, IChangesExecutionState
     {
+
+        
 
         #region Compile-time
 
@@ -137,7 +140,6 @@ namespace LionFire.Trading.Spotware.Connect
         public ExecutionFlag ExecutionFlags { get { return executionFlags; } set { executionFlags = value; } }
         private volatile ExecutionFlag executionFlags = ExecutionFlag.WaitForRunCompletion;
 
-        //volatile bool isRestart;
         bool isRestart
         {
             get { return ExecutionFlags.HasFlag(ExecutionFlag.AutoRestart); }
@@ -148,25 +150,34 @@ namespace LionFire.Trading.Spotware.Connect
             }
         }
 
-        //public ExecutionState ExecutionState
-        //{
-        //    get { return ExecutionStates.Value; }
-        //    protected set { ExecutionStates.OnNext(value); }
-        //}
-        public IBehaviorObservable<ExecutionState> State { get { return state; } }
-        BehaviorObservable<ExecutionState> state = new BehaviorObservable<ExecutionState>(ExecutionState.Unspecified);
+        #region State
 
+        public ExecutionState State
+        {
+            get { return state; }
+            protected set
+            {
+                if (state == value) return;
+                state = value;
+                StateChangedToFor?.Invoke(state, this);
+            }
+        }
+        private ExecutionState state;
 
-        public async Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
+        public event Action<ExecutionState, IExecutable> StateChangedToFor;
+
+        #endregion
+
+        public async Task Stop()
         {
             if (this.IsStarted())
             {
-                state.OnNext(ExecutionState.Stopping);
+                State = ExecutionState.Stopping;
                 if (IsTradeApiEnabled)
                 {
                     await Task.Run(() => Stop_TradeApi()).ConfigureAwait(false);
                 }
-                state.OnNext(ExecutionState.Stopped);
+                State = ExecutionState.Stopped;
             }
         }
 
@@ -180,7 +191,7 @@ namespace LionFire.Trading.Spotware.Connect
             {
                 if (this.IsStarted()) return;
 
-                state.OnNext(ExecutionState.Starting);
+                State = ExecutionState.Starting;
             }
             await OnStarting().ConfigureAwait(false);
 
@@ -212,7 +223,7 @@ namespace LionFire.Trading.Spotware.Connect
             var sb = new StringBuilder();
 
             sb.AppendLine($"Positions for account {this}:");
-            
+
             foreach (var p in positions)
             {
                 sb.Append(" - ");
@@ -246,7 +257,7 @@ namespace LionFire.Trading.Spotware.Connect
         }
 
         public object connectLock = new object();
-        
+
 
         public async Task Run()
         {
@@ -260,15 +271,15 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     await UpdatePositions().ConfigureAwait(false);
                 }
-                catch (AccessTokenInvalidException )
+                catch (AccessTokenInvalidException)
                 {
                     StatusText = "Access token invalid";
-                    state.OnNext(ExecutionState.Faulted);
+                    State = ExecutionState.Faulted;
                     return;
                 }
 
                 StatusText = "Disconnected mode";
-                state.OnNext(ExecutionState.Started);
+                State = ExecutionState.Started;
             }
             else
             {
@@ -286,7 +297,7 @@ namespace LionFire.Trading.Spotware.Connect
                         Run_TradeApi();
 
                         StatusText = "Connected";
-                        state.OnNext(ExecutionState.Started);
+                        State = ExecutionState.Started;
                     }
                     else
                     {
@@ -314,13 +325,13 @@ namespace LionFire.Trading.Spotware.Connect
                     }
                 } while (isRestart);
 
-                state.OnNext(ExecutionState.Stopping);
+                State = ExecutionState.Stopping;
 
                 StatusText = "Disconnecting";
                 Stop_TradeApi();
                 StatusText = "Disconnected";
             }
-            state.OnNext(ExecutionState.Stopped);
+            State = ExecutionState.Stopped;
         }
 
         //public bool IsCommandLineEnabled { get; set;  } = true;
@@ -368,7 +379,12 @@ namespace LionFire.Trading.Spotware.Connect
         //    foreach(var s in subscriptionsQueued
         //}
 
-        protected override void Subscribe(string symbolCode, string timeFrame)
+
+        protected override
+#if NET462
+            async
+#endif
+            Task Subscribe(string symbolCode, string timeFrame)
         {
 #if NET462
             var key = symbolCode + ";" + timeFrame;
@@ -385,7 +401,7 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     try
                     {
-                        RequestSubscribeForSymbol(symbolCode);
+                        await RequestSubscribeForSymbol(symbolCode);
                         subscriptionRequested.AddOrUpdate(key, DateTime.UtcNow, (x, y) => y);
                     }
                     catch (NotConnectedException)
@@ -430,9 +446,10 @@ namespace LionFire.Trading.Spotware.Connect
             //}
 
 #else
+            return Task.CompletedTask;
 #endif
         }
-        
+
         ConcurrentDictionary<string, BarToOtherBarHandler> BarToOtherBarHandlers = new ConcurrentDictionary<string, BarToOtherBarHandler>();
 
 
@@ -475,16 +492,16 @@ namespace LionFire.Trading.Spotware.Connect
                 foreach (var kvp in tickToMinuteBars.ToArray())
                 {
                     // Skip bars with no data
-                    if (!kvp.Value.IsValid) continue; 
+                    if (!kvp.Value.IsValid) continue;
 
                     // Sanity check: skip if tick to minute bar is later than the minute that just passed
-                    if (!previousMinute.IsSameMinute( kvp.Value.OpenTime)
+                    if (!previousMinute.IsSameMinute(kvp.Value.OpenTime)
                         && kvp.Value.OpenTime > previousMinute // Shouldn't happen - TOSANITYCHECK
                         ) continue;
 
                     TickToMinuteBar(kvp.Key, kvp.Value);
                 }
-             
+
             }
         }
 
@@ -503,7 +520,7 @@ namespace LionFire.Trading.Spotware.Connect
         }
 
         Dictionary<string, TimedBar> tickToMinuteBars = new Dictionary<string, TimedBar>();
-       
+
         // Hardcoded to Bid prices
         // Move elsewhere, potentially reuse?
         private void TickToMinuteHandler(SymbolTick tick)
@@ -519,7 +536,7 @@ namespace LionFire.Trading.Spotware.Connect
             }
 
             TimedBar bar = tickToMinuteBars.TryGetValue(tick.Symbol, TimedBar.Invalid);
-            if (bar.IsValid && !bar.OpenTime.IsSameMinute( tick.Time))
+            if (bar.IsValid && !bar.OpenTime.IsSameMinute(tick.Time))
             {
                 // Immediately Trigger a finished bar even after starting the timer above.
                 TickToMinuteBar(tick.Symbol, bar);
@@ -628,25 +645,22 @@ namespace LionFire.Trading.Spotware.Connect
                 Result_TickHasObserversChanged(sym, symI.TickHasObservers);
             }
         }
-        
 
+
+        public bool AutoConnect { get; set; } = true;
+
+        Task<bool> connectingTask;
 
         private void Result_TickHasObserversChanged(Symbol symbol, bool hasSubscribers)
         {
-#if NET462
             if (hasSubscribers)
             {
-                Subscribe(symbol.Code, "t1");
-                //RequestSubscribeForSymbol(symbol.Code);
+                Subscribe(symbol.Code, "t1").FireAndForget();
             }
             else
             {
                 Unsubscribe(symbol.Code, "t1");
-                //RequestUnsubscribeForSymbol(symbol.Code);
             }
-#else
-            // Not implemented
-#endif
         }
 
         public Subject<Tick> GetTickSubject(string symbolCode, bool createIfMissing = true)
@@ -701,7 +715,10 @@ namespace LionFire.Trading.Spotware.Connect
             }
 
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
-            Data.EnsureDataAvailable(series, null, ExtrapolatedServerTime, barCount);
+            if (App.Get<TradingOptions>().Features.HasAnyFlag(TradingFeatures.Participants))
+            {
+                Data.EnsureDataAvailable(series, null, ExtrapolatedServerTime, barCount);
+            }
 #pragma warning restore CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
             ////barCount = 0; // TEMP DISABLE
             //var task = new SpotwareDataJob(symbol, timeFrame)

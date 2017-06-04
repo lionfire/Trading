@@ -1,4 +1,5 @@
-﻿using LionFire.Instantiating;
+﻿using LionFire.Execution.Executables;
+using LionFire.Instantiating;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,11 +67,10 @@ namespace LionFire.Trading.Feeds.TrueFx
     * USD/SEK
     */
 
-    public class QuoteReceiver : IDisposable
+    public class QuoteReceiver : ExecutableBase, IDisposable
     {
         public QuoteReceiver()
         {
-            Quote
             Run().Wait();
         }
 
@@ -80,10 +80,6 @@ namespace LionFire.Trading.Feeds.TrueFx
         public void Dispose() { isDisposed = true; }
 
         #endregion
-
-
-
-
 
         public async Task Run()
         {

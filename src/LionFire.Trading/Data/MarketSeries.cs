@@ -31,13 +31,13 @@ namespace LionFire.Trading
     {
         public ValidationContext ValidateCreate(ValidationContext context)
         {
-            context.MemberNonNull(Account, nameof(Account));
+            context.MemberNonNull(Feed, nameof(Feed));
             if (TimeFrame == "t1")
             {
                 context.AddIssue(new ValidationIssue
                 {
                     Message = "t1 not supported for TMarketSeries.  Use TMarketTickSeries instead.",
-                    MemberName = nameof(TimeFrame),
+                    VariableName = nameof(TimeFrame),
                     Kind = ValidationIssueKind.InvalidConfiguration | ValidationIssueKind.ParameterOutOfRange,
                 });
             }
@@ -59,10 +59,10 @@ namespace LionFire.Trading
         #region Construction
 
         public MarketSeries() : base() { }
-        public MarketSeries(IAccount account, string key) : base(account, key)
+        public MarketSeries(IFeed account, string key) : base(account, key)
         {
         }
-        public MarketSeries(IAccount market, string symbol, TimeFrame timeFrame) : base(market, symbol, timeFrame)
+        public MarketSeries(IFeed market, string symbol, TimeFrame timeFrame) : base(market, symbol, timeFrame)
         {
         }
 

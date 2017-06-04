@@ -37,39 +37,40 @@ namespace LionFire.ExtensionMethods
         public const int DefaultRetryDelayMilliseconds = 2000;
         public const int DefaultRetryCount = 30;
 
+        public const int ProbeCanContinuePredicateMillisecondsDelay = 200;
+
         public static bool DebugHttpSuccess = true;
 
-        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> retryCondition = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount, Action<HttpResponseMessage> onFail = null, Func<bool> canContinue = null)
+        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> failureDetector = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount, Action<HttpResponseMessage> onFail = null, Func<bool> canContinue = null, CancellationToken? cancellationToken = null)
         {
             HttpResponseMessage response = null;
             try
             {
-                if (retryCondition == null) { retryCondition = IsTimeError; }
+                if (failureDetector == null) { failureDetector = IsTimeError; }
 
                 int failCount = 0;
-                for (int retriesRemaining = retryCount; response == null || retriesRemaining > 0 && retryCondition(response); retriesRemaining--)
+                for (int retriesRemaining = retryCount; (response == null || retriesRemaining > 0 && failureDetector(response)); retriesRemaining--)
                 {
+                    if ((cancellationToken != null && cancellationToken.Value.IsCancellationRequested)) throw new OperationCanceledException(cancellationToken.Value);
                     response = await client.GetAsync(uri).ConfigureAwait(false);
-                    if (retryCondition(response))
+                    if (failureDetector(response))
                     {
-                        if (onFail != null) { onFail(response); }
-                        var msg = GetTimeErrorString(response);
+                        onFail?.Invoke(response);
+
+                        //var msg = GetTimeErrorString(response);
 
                         if (canContinue != null)
                         {
                             do
                             {
-                                if (canContinue != null)
-                                {
-                                    await Task.Delay(200);
-                                }
-                                else
-                                {
-                                    await Task.Delay(retryDelayMilliseconds + RetryIncreaseMilliseconds * failCount);
-                                }
+                                await Task.Delay(ProbeCanContinuePredicateMillisecondsDelay);
                                 //Debug.WriteLine($"{response.StatusCode} {msg} - {uri}");
                             }
-                            while (canContinue != null && !canContinue());
+                            while (!canContinue());
+                        }
+                        else
+                        {
+                            await Task.Delay(retryDelayMilliseconds + (RetryIncreaseMilliseconds * failCount));
                         }
 
                         failCount++;

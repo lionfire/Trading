@@ -9,6 +9,6 @@ namespace LionFire.Trading
     {
         Type GetTemplateType(string type);
         Type GetType(string type);
-        IAccount CreateAccount(string name);
+        IFeed CreateAccount(string name);
     }
 }

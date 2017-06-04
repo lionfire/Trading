@@ -25,7 +25,6 @@ namespace LionFire.Trading.Workspaces
     public class WorkspaceBot : ITemplateInstance<TWorkspaceBot>
     {
         public TWorkspaceBot Template { get; set; }
-        ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (TWorkspaceBot)value; } }
 
         public IBot Bot{get;set;}
 

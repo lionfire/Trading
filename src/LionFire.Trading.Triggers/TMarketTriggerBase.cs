@@ -1,16 +1,14 @@
-﻿using System;
+﻿using LionFire.Instantiating;
+using LionFire.Triggers;
 using System.Collections.Generic;
 using System.Text;
 
 namespace LionFire.Trading.Triggers
 {
-    public abstract class TMarketTriggerBase
+
+    public abstract class TMarketTriggerBase<InstanceType> : TTriggerBase, ITemplate<InstanceType>
+        where InstanceType : class, new()
     {
         public abstract IEnumerable<string> Symbols { get; }
-    }
-    public abstract class TSingleMarketTriggerBase : TMarketTriggerBase
-    {
-        public override IEnumerable<string> Symbols { get { if (Symbol != null) { yield return Symbol; } } }
-        public string Symbol { get; set; }
     }
 }

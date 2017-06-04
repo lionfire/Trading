@@ -18,7 +18,7 @@ namespace LionFire.Trading
         , IAccountParticipant
 #endif
     {
-        new ITIndicator Template { get; set; }
+        ITIndicator Template { get; set; }
 
         Task CalculateIndex(int index);
 

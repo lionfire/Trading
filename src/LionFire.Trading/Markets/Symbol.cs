@@ -74,7 +74,7 @@ namespace LionFire.Trading
 
     public class SymbolImpl : SymbolImplBase, IBacktestSymbol
     {
-        public SymbolImpl(string symbolCode, IAccount market) : base(symbolCode, market) { }
+        public SymbolImpl(string symbolCode, IFeed market) : base(symbolCode, market) { }
 
         public override Task<TimedBar> GetLastBar(TimeFrame timeFrame)
         {
@@ -124,7 +124,7 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        public IAccount Market { get; protected set; }
+        public IFeed Feed { get; protected set; }
 
         public IAccount Account { get; set; }
 
@@ -132,11 +132,11 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public SymbolImplBase(string symbolCode, IAccount market)
+        public SymbolImplBase(string symbolCode, IFeed feed)
         {
             this.Code = symbolCode;
-            this.Market = market;
-            this.Account = market as IAccount;
+            this.Feed = feed;
+            this.Account = feed as IAccount;
         }
 
         #endregion
@@ -461,12 +461,12 @@ namespace LionFire.Trading
 
         public double Convert(double amount, string from, string to, TradeType? tradeType)
         {
-            var symbol = Market.GetSymbol(to + from);
+            var symbol = Feed.GetSymbol(to + from);
             bool inverse = false;
             if (symbol == null)
             {
                 inverse = true;
-                symbol = Market.GetSymbol(from + to);
+                symbol = Feed.GetSymbol(from + to);
             }
             if (symbol == null) return double.NaN;
 

@@ -55,7 +55,7 @@ namespace LionFire.Trading.Workspaces
 
 
     [AssetPath("Workspaces")]
-    public class TWorkspace : ITemplate<Workspace>, INotifyPropertyChanged, IChanged, IValidatable, INotifyOnSaving
+    public class TWorkspace : ITemplate<Workspace>, INotifyPropertyChanged, IChanged, IValidatable, INotifyOnSaving, IEnableable
     {
         #region Identity
 
@@ -101,6 +101,9 @@ namespace LionFire.Trading.Workspaces
         private WindowSettings windowSettings;
 
         #endregion
+
+        [DefaultValue(true)]
+        public bool IsEnabled { get; set; } = true;
 
         public bool IsAutoSaveEnabled
         {
@@ -370,7 +373,7 @@ namespace LionFire.Trading.Workspaces
                     TradingOptions = new TradingOptions()
                     {
                         AccountModes = AccountMode.Demo,
-                        AutoConfig = true,
+                        AutoAttachToAccounts = true,
                     },
                     //LiveAccounts = new ObservableCollection<string>
                     //{

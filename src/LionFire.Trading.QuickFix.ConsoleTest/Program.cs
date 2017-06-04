@@ -12,13 +12,13 @@ namespace LionFire.Trading.QuickFixN.ConsoleTest
     class Program
     {
 
-        private static ILogger l = Log.Get();
+        //private static ILogger l = LionFire.Logging.Log.Get();
 
         //static string BrokerUID = "cServer";
 
         static void Main(string[] args)
         {
-            l.Info($"----- {typeof(Program).FullName}.Main() -----");
+            //l.Info($"----- {typeof(Program).FullName}.Main() -----");
 
             //SessionSettings settings = new SessionSettings(args[0]);
 
@@ -50,7 +50,7 @@ namespace LionFire.Trading.QuickFixN.ConsoleTest
             
             //acceptor.Stop();
 
-            l.Info($"----- {typeof(Program).FullName}.Main() end -----");
+            //l.Info($"----- {typeof(Program).FullName}.Main() end -----");
         }
     }
 }

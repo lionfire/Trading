@@ -28,13 +28,13 @@ namespace LionFire.Trading
     {
         public ValidationContext ValidateCreate(ValidationContext context)
         {
-            context.MemberNonNull(Account, nameof(Account));
+            context.MemberNonNull(Feed, nameof(Feed));
             if (TimeFrame != "t1")
             {
                 context.AddIssue(new ValidationIssue
                 {
                     Message = "Only t1 supported for TMarketTickSeries.  Use TMarketSeries instead for other timeframes.",
-                    MemberName = nameof(TimeFrame),
+                    VariableName = nameof(TimeFrame),
                     Kind = ValidationIssueKind.InvalidConfiguration | ValidationIssueKind.ParameterOutOfRange,
                 });
             }

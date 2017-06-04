@@ -34,6 +34,7 @@ namespace LionFire.Trading.Data
         public TimeFrame TimeFrame => MarketSeriesBase?.TimeFrame;
 
         public virtual IAccount Account => MarketSeriesBase?.Account;
+        public virtual IFeed Feed => MarketSeriesBase?.Feed;
 
         public MarketSeries MarketSeries { get { return MarketSeriesBase as MarketSeries; } }
         public MarketTickSeries MarketTickSeries { get { return MarketSeriesBase as MarketTickSeries; } }
@@ -52,6 +53,7 @@ namespace LionFire.Trading.Data
         public bool WriteCache { get; set; } = false;
         public TimeSpan? MaxOutOfDate { get; set; }
 
+        public bool Faulted { get; set; }
 
         public LoadHistoricalDataJob() {
             CreateDate = DateTime.UtcNow;

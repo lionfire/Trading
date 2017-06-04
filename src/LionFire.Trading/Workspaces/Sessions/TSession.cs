@@ -125,70 +125,17 @@ namespace LionFire.Trading.Workspaces
 
         #region Participants
 
-        //#region LiveBots
-
-        //public ObservableCollection<string> LiveBots
-        //{
-        //    get { return liveBots; }
-        //    set
-        //    {
-        //        if (liveBots != null) liveBots.CollectionChanged -= CollectionChangedToChanged;
-        //        liveBots = value;
-        //        if (liveBots != null) liveBots.CollectionChanged += CollectionChangedToChanged;
-        //    }
-        //}
-        //private ObservableCollection<string> liveBots;
-
-        //#endregion
-
-        //#region DemoBots
-
-        //public ObservableCollection<string> DemoBots
-        //{
-        //    get { return demoBots; }
-        //    set
-        //    {
-        //        if (demoBots != null) demoBots.CollectionChanged -= CollectionChangedToChanged;
-        //        demoBots = value;
-        //        if (demoBots != null) demoBots.CollectionChanged += CollectionChangedToChanged;
-        //    }
-        //}
-
-        //private ObservableCollection<string> demoBots;
-
-        //#endregion
-
-        #region Scanners
-
         public ObservableCollection<IInstantiator> Bots
         {
-            get { return scanners; }
+            get { return bots; }
             set
             {
-                if (scanners != null) scanners.CollectionChanged -= CollectionChangedToChanged;
-                scanners = value;
-                if (scanners != null) scanners.CollectionChanged += CollectionChangedToChanged;
+                if (bots != null) bots.CollectionChanged -= CollectionChangedToChanged;
+                bots = value;
+                if (bots != null) bots.CollectionChanged += CollectionChangedToChanged;
             }
         }
-        private ObservableCollection<IInstantiator> scanners;
-
-        #endregion
-
-        //#region PaperBots
-
-        //public ObservableCollection<string> PaperBots
-        //{
-        //    get { return paperBots; }
-        //    set
-        //    {
-        //        if (paperBots != null) paperBots.CollectionChanged += CollectionChangedToChanged;
-        //        paperBots = value;
-        //        if (paperBots != null) paperBots.CollectionChanged += CollectionChangedToChanged;
-        //    }
-        //}
-        //private ObservableCollection<string> paperBots;
-
-        //#endregion
+        private ObservableCollection<IInstantiator> bots;
 
         #endregion
 
@@ -198,7 +145,6 @@ namespace LionFire.Trading.Workspaces
         public override string ToString()
         {
             return this.ToXamlAttribute(nameof(Name), nameof(Mode));
-            //return $"{{TSession \"{Name}\" {Mode}}}";
         }
 
         public string[] BGColors { get; set; }

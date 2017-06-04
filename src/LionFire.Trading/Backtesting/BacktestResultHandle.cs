@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 using System.Reflection;
+using LionFire.Handles;
 #if !cAlgo
 using LionFire.Parsing.String;
 #endif
@@ -12,39 +13,33 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Backtesting
 {
-    public class BacktestResultHandle : IReadHandle<BacktestResult> // TODO: Use IReadHandle or something
+    public class BacktestResultHandle : ReadHandleBase<BacktestResult>
     {
         public static implicit operator BacktestResultHandle(BacktestResult r)
         {
             return new BacktestResultHandle { Object = r };
         }
 
-        public bool HasObject { get { return obj != null; } }
-
-        public BacktestResult Object
+        public override Task<bool> TryResolveObject(object persistenceContext = null)
         {
-            get
+            if (_object == null && Path != null)
             {
-                if (obj == null && Path != null)
+                try
                 {
-                    try
+                    _object = Newtonsoft.Json.JsonConvert.DeserializeObject<BacktestResult>(System.IO.File.ReadAllText(Path));
+                    if (_object.AD == 0.0)
                     {
-                        obj = Newtonsoft.Json.JsonConvert.DeserializeObject<BacktestResult>(System.IO.File.ReadAllText(Path));
-                        if (obj.AD == 0.0)
-                        {
-                            obj.AD = this.AD;
-                        }
+                        _object.AD = this.AD;
                     }
-                    catch { }
                 }
-                return obj;
+                catch { }
             }
-            set { obj = value; }
+            return Task.FromResult(HasObject);
         }
-        private BacktestResult obj;
+
 
         public BacktestResultHandle Self { get { return this; } } // REVIEW - another way to get context from datagrid: ancestor row?
-        public string Path { get; set; }
+        public string Path { get => Key; set => Key = value; }
 
         [Unit("id=")]
         public string Id { get; set; }
@@ -79,7 +74,7 @@ namespace LionFire.Trading.Backtesting
 
         public static List<BacktestResultHandle> Find(string filterText, Predicate<BacktestResultHandle> filterPredicate = null)
         {
-            
+
 
             List<BacktestResultHandle> results = new List<BacktestResultHandle>();
 
@@ -91,7 +86,7 @@ namespace LionFire.Trading.Backtesting
             {
                 var str = System.IO.Path.GetFileNameWithoutExtension(path);
 
-                
+
                 bool failedFilter = false;
                 if (filters != null)
                 {

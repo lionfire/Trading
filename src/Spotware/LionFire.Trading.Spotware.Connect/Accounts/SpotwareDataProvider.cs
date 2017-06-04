@@ -18,7 +18,7 @@ using LionFire.Execution.Jobs;
 
 namespace LionFire.Trading.Spotware.Connect
 {
-    
+
     public class SpotwareDataProvider : IHistoricalDataProvider
     {
         public IAccount Account { get { return account; } }
@@ -30,7 +30,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         ConcurrentDictionary<string, SpotwareDataJob> jobs = new ConcurrentDictionary<string, SpotwareDataJob>();
 
-        public async Task<DataLoadResult> RetrieveDataForChunk(MarketSeriesBase series, DateTime date, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null)
+        public async Task<DataLoadResult> RetrieveDataForChunk(MarketSeriesBase series, DateTime date, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, CancellationToken? token = null)
         {
             var result = new DataLoadResult(series);
 
@@ -43,7 +43,8 @@ namespace LionFire.Trading.Spotware.Connect
             bool created = false;
 
             tryagain:
-            var job = jobs.GetOrAdd(key, k=> {
+            var job = jobs.GetOrAdd(key, k =>
+            {
                 created = true;
                 return new SpotwareDataJob(series)
                 {
@@ -51,6 +52,7 @@ namespace LionFire.Trading.Spotware.Connect
                     EndTime = chunkEnd,
                     WriteCache = writeCache,
                     LinkWithAccountData = !cacheOnly,
+                    CancellationToken = token,
                 };
             });
             if (!created)
@@ -69,6 +71,11 @@ namespace LionFire.Trading.Spotware.Connect
             await job.Start().ConfigureAwait(false);
             await job.Wait().ConfigureAwait(false);
 
+            if (job.Faulted)
+            {
+                result.Faulted = true;
+                return result;
+            }
 
             if (job.ResultCount > 0)
             {

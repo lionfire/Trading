@@ -22,6 +22,7 @@ using LionFire.Types;
 using LionFire.States;
 using LionFire.Threading.Tasks;
 using LionFire.Execution.Executables;
+using LionFire.DependencyInjection;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -115,15 +116,13 @@ namespace LionFire.Trading.Workspaces
     ///     - scan
     ///     - paper
     /// </summary>
-    public class Session : ExecutableBase, IInitializable, IStartable, IStoppable, IExecutable, INotifyPropertyChanged, IChanged, INotifyOnSaving
+    public class Session : ExecutableBase, IInitializable, IStartable, IStoppableEx, IExecutable, INotifyPropertyChanged, IChanged, INotifyOnSaving
         , ITemplateInstance<TSession>
     {
 
         #region Identity
 
-        ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (TSession)value; } }
-
-        //[SetOnce]
+        [SetOnce]
         public TSession Template { get; set; }
 
         #endregion
@@ -286,7 +285,7 @@ namespace LionFire.Trading.Workspaces
             set
             {
                 bool wasStarted = false;
-                if (state.Value == ExecutionState.Started)
+                if (State == ExecutionState.Started)
                 {
                     wasStarted = true;
                 }
@@ -305,27 +304,28 @@ namespace LionFire.Trading.Workspaces
         public List<string> DisabledSymbols { get; set; }
         public object Lock { get; private set; } = new object();
 
+        TradingOptions TradingOptions => InjectionContext.Current.GetService<TradingOptions>();
         #region Lifecycle
-
-        public IBehaviorObservable<ExecutionState> State { get { return state; } }
-        BehaviorObservable<ExecutionState> state = new BehaviorObservable<ExecutionState>(ExecutionState.Uninitialized);
 
         public async Task<bool> Initialize()
         {
             this.Validate().PropertyNonDefault(nameof(Workspace), Workspace).EnsureValid();
 
-            state.OnNext(ExecutionState.Initializing);
+            State = ExecutionState.Initializing;
 
             LiveAccount = Workspace.GetAccount(Template.LiveAccount);
             DemoAccount = Workspace.GetAccount(Template.DemoAccount);
 
-            if (!await InitBots().ConfigureAwait(continueOnCapturedContext: false))
+            //if (TradingOptions.Features.HasFlag(TradingFeatures.Bots))
             {
-                state.OnNext(ExecutionState.Faulted);
-                return false;
+                if (!await InitBots().ConfigureAwait(continueOnCapturedContext: false))
+                {
+                    State = ExecutionState.Faulted;
+                    return false;
+                }
             }
 
-            state.OnNext(ExecutionState.Ready);
+            State = ExecutionState.Ready;
 
             return true;
         }
@@ -418,9 +418,9 @@ namespace LionFire.Trading.Workspaces
 
         public Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
         {
-            this.state.OnNext(ExecutionState.Stopping);
+            State = ExecutionState.Stopping;
 
-            this.state.OnNext(ExecutionState.Stopped);
+            State = ExecutionState.Stopped;
             return Task.CompletedTask;
         }
 
@@ -623,11 +623,9 @@ namespace LionFire.Trading.Workspaces
 
         #region INotifyPropertyChanged Implementation
 
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged(string propertyName)
+        protected override void OnPropertyChanged(string propertyName)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            base.OnPropertyChanged(propertyName);
             RaiseChanged();
 
         }

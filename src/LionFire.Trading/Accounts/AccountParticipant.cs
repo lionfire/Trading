@@ -463,7 +463,7 @@ namespace LionFire.Trading
                     //case ExecutionState.InvalidConfiguration:
                     //    break;
                     case ExecutionState.Unspecified:
-                    case ExecutionState.Finished:
+                    //case ExecutionState.Finished:
                     case ExecutionState.Uninitialized:
                     case ExecutionState.Stopped:
                         await Initialize().ConfigureAwait(false);
@@ -524,9 +524,17 @@ namespace LionFire.Trading
 
             try
             {
+                // FUTURE: StoppingContext
+                //var stopContext = new StoppingContext
+                //{
+                //    StopMode = StopMode.CriticalFailure,
+                //    StopOptions = StopOptions.StopChildren,
+                //};
                 foreach (var child in Children.OfType<IStoppable>())
                 {
-                    await child.Stop(StopMode.CriticalFailure, StopOptions.StopChildren).ConfigureAwait(false);
+                    //await child.Stop(StopMode.CriticalFailure, StopOptions.StopChildren).ConfigureAwait(false);
+
+                    await child.Stop().ConfigureAwait(false);
                 }
             }
             catch
@@ -534,6 +542,11 @@ namespace LionFire.Trading
                 // TODO EMPTYCATCH
             }
         }
+        //public class StoppingContext
+        //{
+        //    public StopMode StopMode { get; set; }
+        //    public StopOptions Stopoptions { get; set; }
+        //}
 
         public Exception FaultException { get; set; }
 
@@ -547,7 +560,7 @@ namespace LionFire.Trading
                 case ExecutionState.Uninitialized:
                 case ExecutionState.Faulted:
                 case ExecutionState.Stopped:
-                case ExecutionState.Finished:
+                //case ExecutionState.Finished:
                 case ExecutionState.Disposed:
                     return;
                 case ExecutionState.Initializing:
@@ -568,9 +581,13 @@ namespace LionFire.Trading
 
             OnStopping();
 
-            foreach (var child in Children.OfType<IStoppable>())
+            foreach (var child in Children.OfType<IStoppableEx>())
             {
                 await child.Stop(stopMode, options).ConfigureAwait(false);
+            }
+            foreach (var child in Children.OfType<IStoppable>())
+            {
+                await child.Stop().ConfigureAwait(false);
             }
 
             SetState(ExecutionState.Stopped);
@@ -586,7 +603,7 @@ namespace LionFire.Trading
             logger.LogInformation($"------- STOP {this} -------");
         }
 
-        public virtual async Task Stop(StopMode stopMode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
+        public virtual async Task Stop()
         {
             await DoStop().ConfigureAwait(false);
         }

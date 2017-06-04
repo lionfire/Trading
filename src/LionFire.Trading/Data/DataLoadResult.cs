@@ -31,6 +31,9 @@ namespace LionFire.Trading.Data
         }
 
         public static DataLoadResult AlreadyLoaded { get { return alreadyLoaded; } }
+
+        public bool Faulted { get; set; }
+
         private static DataLoadResult alreadyLoaded = new DataLoadResult(null)
         {
             IsAvailable = true, IsPartial  = false,

@@ -10,7 +10,7 @@ namespace LionFire.Trading.Accounts
 {
 
     [AssetPath(@"Accounts")]
-    public abstract class TMarketAccount : TFeed
+    public abstract class TAccount : TFeed
     {
         
         public double CommissionPerMillion { get; set; }

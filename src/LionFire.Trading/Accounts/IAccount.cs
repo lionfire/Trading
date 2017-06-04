@@ -15,12 +15,11 @@ namespace LionFire.Trading
     public interface IAccount : IFeed
     //: ITemplateInstance<TAccount>
     {
-        bool AllowSubscribeToTicks { get; set; }
         AccountStats AccountStats { get; }
 
         #region Relationships
 
-        new TMarketAccount Template { get; }
+        new TAccount Template { get; }
 
         #endregion
 

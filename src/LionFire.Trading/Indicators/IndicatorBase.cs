@@ -117,7 +117,6 @@ namespace LionFire.Trading.Indicators
         #endregion
 
         ITIndicator IIndicator.Template { get { return this.Template; } set { this.Template = (TIndicator)value; } }
-        ITemplate ITemplateInstance.Template { get { return Template; } set { this.Template = (TIndicator)value; } }
 
         #endregion
 

@@ -13,8 +13,11 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Accounts
 {
     public abstract class FeedBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, INotifyPropertyChanged, IFeed
-    where TTemplate : TFeed
+        where TTemplate : TFeed
     {
+
+        public virtual bool AllowSubscribeToTicks { get { return true; } set { } }
+
         public string BrokerName { get { return Template.BrokerName; } }
 
         #region Template
@@ -22,7 +25,6 @@ namespace LionFire.Trading.Accounts
         TFeed IFeed.Template => Template;
 
         public TTemplate Template { get; set; }
-        ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (TTemplate)value; } }
 
         #endregion
 
@@ -189,8 +191,9 @@ namespace LionFire.Trading.Accounts
             return new SubscriptionDecrementer(symbolCode, this);
         }
 
-        protected virtual void Subscribe(string symbolCode, string timeFrame)
+        protected virtual Task Subscribe(string symbolCode, string timeFrame)
         {
+            return Task.CompletedTask;
         }
         protected virtual void Unsubscribe(string symbolCode, string timeFrame)
         {

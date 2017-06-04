@@ -16,7 +16,7 @@ namespace LionFire.Trading.Accounts
 {
 
     public abstract class AccountBase<TTemplate> : FeedBase<TTemplate>, IAccount, ITemplateInstance, IFeed
-        where TTemplate : TMarketAccount
+        where TTemplate : TAccount
     {
 
         #region Relationships
@@ -27,7 +27,7 @@ namespace LionFire.Trading.Accounts
         TFeed IFeed.Template => Template;
 
 
-        TMarketAccount IAccount.Template { get { return Template; } }
+        TAccount IAccount.Template { get { return Template; } }
 
         #endregion
 
@@ -120,7 +120,7 @@ namespace LionFire.Trading.Accounts
                 OnPropertyChanged(nameof(IsTradeApiEnabled));
             }
         }
-        private bool isTradeApiEnabled = false;
+        private bool isTradeApiEnabled = true;
 
         #endregion
         protected virtual void OnTradeApiEnabledChanging()
@@ -136,7 +136,7 @@ namespace LionFire.Trading.Accounts
 
         #region AllowSubscribeToTicks
 
-        public virtual bool AllowSubscribeToTicks
+        public override bool AllowSubscribeToTicks
         {
             get
             {

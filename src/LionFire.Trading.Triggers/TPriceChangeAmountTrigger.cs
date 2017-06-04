@@ -1,10 +1,11 @@
-﻿using System;
+﻿using LionFire.Instantiating;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
 namespace LionFire.Trading.Triggers
 {
-    public class TPriceChangeAmountTrigger : TSingleMarketTriggerBase, ITemplate
+    public class TPriceChangeAmountTrigger : TSingleMarketTriggerBase<TPriceChangeAmountTrigger>, ITemplate
     {
 
         public decimal ChangeAmount { get; set; }

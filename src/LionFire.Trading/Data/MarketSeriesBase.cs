@@ -37,7 +37,9 @@ namespace LionFire.Trading
     {
         //[Ignore]
         //[Required]
-        public IAccount Account { get; set; }
+        public IFeed Feed { get; set; }
+
+        public IAccount Account => Feed as IAccount;
 
         //[Required]
         public string Symbol { get; set; }
@@ -50,23 +52,22 @@ namespace LionFire.Trading
 
 
 
-    public abstract class MarketSeriesBase<MarketSeriesTemplate, DataType> : MarketSeriesBase, ITemplateInstance
-    where MarketSeriesTemplate : TMarketSeriesBase, new()
+    public abstract class MarketSeriesBase<TMarketSeriesType, DataType> : MarketSeriesBase, ITemplateInstance
+    where TMarketSeriesType : TMarketSeriesBase, new()
         where DataType : IMarketDataPoint
     {
 
         #region Template
 
-        ITemplate ITemplateInstance.Template { get { return Template; } set { Template = (MarketSeriesTemplate)value; } }
-        public MarketSeriesTemplate Template
+        public TMarketSeriesType Template
         {
             get
             {
                 if (template == null)
                 {
-                    template = new MarketSeriesTemplate
+                    template = new TMarketSeriesType
                     {
-                        Account = this.Account,
+                        Feed = this.Feed,
                         Symbol = this.SymbolCode,
                         TimeFrame = this.TimeFrame.Name,
                     };
@@ -75,7 +76,7 @@ namespace LionFire.Trading
             }
             set { template = value; }
         }
-        public MarketSeriesTemplate template;
+        public TMarketSeriesType template;
 
         #endregion
 
@@ -84,10 +85,10 @@ namespace LionFire.Trading
         #region Construction
 
         public MarketSeriesBase() : base() { }
-        public MarketSeriesBase(IAccount account, string key) : base(account, key)
+        public MarketSeriesBase(IFeed feed, string key) : base(feed, key)
         {
         }
-        public MarketSeriesBase(IAccount market, string symbol, TimeFrame timeFrame) : base(market, symbol, timeFrame)
+        public MarketSeriesBase(IFeed feed, string symbol, TimeFrame timeFrame) : base(feed, symbol, timeFrame)
         {
         }
 
@@ -401,7 +402,7 @@ namespace LionFire.Trading
         {
             get; protected set;
         }
-        public Symbol Symbol { get { return Account.GetSymbol(SymbolCode); } } // MICROOPTIMIZE
+        public Symbol Symbol => Feed.GetSymbol(SymbolCode); // MICROOPTIMIZE
 
         public TimeFrame TimeFrame
         {
@@ -413,18 +414,18 @@ namespace LionFire.Trading
         #region Construction
 
         public MarketSeriesBase() { }
-        public MarketSeriesBase(IAccount account, string key)
+        public MarketSeriesBase(IFeed account, string key)
         {
-            this.Market = account;
+            this.Feed = account;
             string symbol;
             TimeFrame timeFrame;
             MarketSeriesUtilities.DecodeKey(key, out symbol, out timeFrame);
             this.SymbolCode = symbol;
             this.TimeFrame = timeFrame;
         }
-        public MarketSeriesBase(IAccount market, string symbol, TimeFrame timeFrame)
+        public MarketSeriesBase(IFeed market, string symbol, TimeFrame timeFrame)
         {
-            this.Market = market;
+            this.Feed = market;
             this.SymbolCode = symbol;
             this.TimeFrame = timeFrame;
         }
@@ -433,11 +434,12 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        public IAccount Market { get; protected set; }
+        public IFeed Feed { get; protected set; }
         // Obsolete?
         public IDataSource Source { get; set; }
 
-        public IAccount Account { get { return Market; } protected set { this.Market = value; } }
+        public IAccount Account { get { return Feed as IAccount; } protected set { this.Feed = value; } }
+        public bool HasAccount => Account != null;
 
         #endregion
 
@@ -602,7 +604,7 @@ namespace LionFire.Trading
 
         public Task EnsureDataAvailable(DateTime? startDate, DateTime endDate, int minBars = 0, bool forceRetrieve = false)
         {
-            return Account.Data.EnsureDataAvailable(this, startDate, endDate, minBars, forceRetrieve);
+            return Feed.Data.EnsureDataAvailable(this, startDate, endDate, minBars, forceRetrieve);
         }
 
         #endregion

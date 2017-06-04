@@ -47,7 +47,6 @@ namespace LionFire.Trading.Bots
 
         #region Configuration
 
-        ITemplate ITemplateInstance.Template { get { return Template; } set { this.Template = (_TBot)value; } }
 
         TBot IBot.Template { get { return Template; } set { Template = (_TBot)value; } }
 
@@ -68,7 +67,7 @@ namespace LionFire.Trading.Bots
 #if cAlgo
                 return Account.IsLive ? BotMode.Live : BotMode.Demo; // REVIEW
 #else
-                 return mode;
+                return mode;
 #endif
             }
             set
@@ -204,9 +203,10 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
-        #region State
+#region State
 
-        #region State
+        #region Execution State
+#if cAlgo
 
         public ExecutionState State
         {
@@ -221,11 +221,11 @@ namespace LionFire.Trading.Bots
         private ExecutionState state;
 
         public event Action<ExecutionState, IExecutable> StateChangedToFor;
+#endif
+#endregion
 
-        #endregion
 
-
-        #region Derived
+#region Derived
 
         public DateTime ExtrapolatedServerTime
         {
@@ -239,20 +239,20 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region Event Handling
+#region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-        #endregion
+#endregion
 
-        #region Derived
+#region Derived
 
         public bool CanOpenLong
         {
@@ -303,9 +303,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        #endregion
+#endregion
 
-        #region Backtesting
+#region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.001;
@@ -501,7 +501,7 @@ namespace LionFire.Trading.Bots
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-        #endregion
+#endregion
 
 #if !cAlgo
         public Positions BotPositions
@@ -527,7 +527,7 @@ namespace LionFire.Trading.Bots
         //        private Positions positions =  new Positions<Position>();
         //#endif
 
-        #region Position Events
+#region Position Events
 
         public event Action<PositionEvent> BotPositionChanged;
 
@@ -536,9 +536,9 @@ namespace LionFire.Trading.Bots
             BotPositionChanged?.Invoke(e);
         }
 
-        #endregion
+#endregion
 
-        #region Position Sizing
+#region Position Sizing
 
 
         // MOVE?
@@ -826,9 +826,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        #endregion
+#endregion
 
-        #region Misc
+#region Misc
 
         public virtual string Label
         {
@@ -853,7 +853,7 @@ namespace LionFire.Trading.Bots
         }
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
-        #region INotifyPropertyChanged Implementation
+#region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -862,11 +862,11 @@ namespace LionFire.Trading.Bots
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        #endregion
+#endregion
 
 #endif
 
-        #endregion
+#endregion
     }
 
     public static class BacktestUtilities

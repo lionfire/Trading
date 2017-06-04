@@ -156,7 +156,7 @@ string text = new string(
         {
             get
             {
-                return GetKey(Account?.Template?.BrokerName, SymbolCode, TimeFrame, StartDate, BrokerSubType);
+                return GetKey(Feed?.Template?.BrokerName, SymbolCode, TimeFrame, StartDate, BrokerSubType);
             }
         }
 
@@ -185,14 +185,14 @@ string text = new string(
         public HistoricalDataCacheFile(MarketSeriesBase series, DateTime chunkDate)
         {
             this.MarketSeriesBase = series;
-            this.Account = series.Account;
+            this.Feed = series.Feed;
             GetChunkRange(TimeFrame, chunkDate, out startDate, out endDate);
             FilePath = GetFilePath();
         }
 
         public string GetFilePath()
         {
-            var path = Path.Combine(LionFireEnvironment.AppProgramDataDir, "Data", Account.Template.BrokerName, SymbolCode, TimeFrame.Name);
+            var path = Path.Combine(LionFireEnvironment.AppProgramDataDir, "Data", Feed.Template.BrokerName, SymbolCode, TimeFrame.Name);
 
             switch (TimeFrame.Name)
             {
@@ -216,7 +216,7 @@ string text = new string(
         public HistoricalDataCacheFile(MarketSeriesBase series, DateTime start, DateTime end, DateTime queryDate)
         {
             this.MarketSeriesBase = series;
-            this.Account = series.Account;
+            this.Feed = series.Feed;
             this.StartDate = start;
             this.EndDate = end;
             this.QueryDate = queryDate;
@@ -228,7 +228,7 @@ string text = new string(
         public static async Task<HistoricalDataCacheFile> GetCacheFile(MarketSeriesBase marketSeries, DateTime chunkDate)
         {
             HistoricalDataCacheFile cacheFile = cache.GetOrAdd(
-                GetKey(marketSeries.Account.Template.BrokerName, marketSeries.SymbolCode, marketSeries.TimeFrame, chunkDate),
+                GetKey(marketSeries.Feed.Template.BrokerName, marketSeries.SymbolCode, marketSeries.TimeFrame, chunkDate),
                  _ => new HistoricalDataCacheFile(marketSeries, chunkDate)
              );
 
@@ -260,7 +260,7 @@ string text = new string(
 
         #region Relationships
 
-        public IAccount Account { get; set; }
+        public IFeed Feed { get; set; }
 
         #endregion
 
@@ -291,8 +291,11 @@ string text = new string(
 
         public string FilePath { get; private set; }
         public string PartFilePath { get { return FilePath.Replace(ExtensionWithDot, ".part" + ExtensionWithDot); } }
+        public string NoDataFilePath { get { return FilePath.Replace(ExtensionWithDot, ".unavailable" + ExtensionWithDot); } }
         public string ExtensionWithDot { get { return ".dat"; } }
 
+
+        public bool HasData => (Bars != null && Bars.Count > 0) || (Ticks != null && Ticks.Count > 0);
         public bool IsPartial
         {
             get
@@ -313,6 +316,8 @@ string text = new string(
             set { isAvailable = value; }
         }
         private bool? isAvailable = null;
+
+        public bool EmptyData { get; set; }
 
         public bool IsPersisted { get; set; }
 
@@ -337,7 +342,7 @@ string text = new string(
         {
             get
             {
-                return Path.Combine(CacheRoot, Account.Template.BrokerName);
+                return Path.Combine(CacheRoot, Feed.Template.BrokerName);
             }
         }
 
@@ -368,7 +373,11 @@ string text = new string(
                 // m1: Last expected + 2,
                 // h1: Last expected + 2h
 
-                var path = IsPartial ? PartFilePath : FilePath;
+                string path;
+                if (IsPartial) path = PartFilePath;
+                else if ((Bars != null && Bars.Count > 0) || (Ticks != null && Ticks.Count > 0)) path = FilePath;
+                else path = NoDataFilePath;
+
                 if (!Directory.Exists(System.IO.Path.GetDirectoryName(path))) { Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); }
 
                 if (File.Exists(path))
@@ -491,7 +500,21 @@ string text = new string(
                     {
                         Debug.WriteLine(ex.ToString());
                     }
-
+                }
+                if (!KeepOldData && HasData)
+                {
+                    try
+                    {
+                        var noDataPath = NoDataFilePath;
+                        if (File.Exists(noDataPath))
+                        {
+                            File.Delete(noDataPath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine(ex.ToString());
+                    }
                 }
 
                 IsPersisted = true;
@@ -502,20 +525,38 @@ string text = new string(
 
         #region Load
 
+        public bool EnforceFileMinimumSizes = true; // TEMP
+        public int MinFileSize = 3000;
+        public int MinPartialFileSize = 3000;
+
         public async Task<bool> Load(bool loadOnlyHeader = false)
         {
             string path = null;
             try
             {
+                again:
                 if (File.Exists(FilePath))
                 {
+                    if (EnforceFileMinimumSizes && new FileInfo(FilePath).Length < MinFileSize) { File.Delete(FilePath); goto again; }
                     IsPartial = false;
+                    IsAvailable = true;
+                    EmptyData = false;
                     path = FilePath;
                 }
                 else if (File.Exists(PartFilePath))
                 {
+                    if (EnforceFileMinimumSizes && new FileInfo(PartFilePath).Length < MinPartialFileSize) { File.Delete(PartFilePath); goto again; }
                     IsPartial = true;
+                    IsAvailable = true;
+                    EmptyData = false;
                     path = PartFilePath;
+                }
+                else if (File.Exists(NoDataFilePath))
+                {
+                    IsPartial = false;
+                    IsAvailable = false;
+                    EmptyData = true;
+                    path = NoDataFilePath;
                 }
                 else
                 {
@@ -527,51 +568,54 @@ string text = new string(
                 //http://stackoverflow.com/questions/17043631/using-stream-read-vs-binaryreader-read-to-process-binary-streams
 
 
-                await new Func<Task>(async () =>
+                await new Func<Task<bool>>(() =>
                 {
-                    await Task.Run(() =>
+#if SanityChecks
+                    if (!File.Exists(path)) throw new Exception("Unexpected: path doesn't exist: " + path);
+#endif
+                    //await Task.Run(() =>
+                    //{
+                    using (var br = new BinaryReader(new FileStream(path, FileMode.Open, FileAccess.Read)))
                     {
-                        using (var br = new BinaryReader(new FileStream(path, FileMode.Open)))
+                        try
                         {
-                            try
+                            //var deserializedHeader = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
+                            //if (deserializedHeader.StartDate != StartDate)
+                            //{
+                            //    throw new Exception("deserializedHeader.StartDate != StartDate");
+                            //}
+                            //if (deserializedHeader.EndDate != EndDate)
+                            //{
+                            //    throw new Exception("deserializedHeader.EndDate != EndDate");
+                            //}
+                            //this.Header = deserializedHeader;// Overwrites local properties
+
+                            int version = br.ReadInt32();
+                            if (version != 1)
                             {
-                                //var deserializedHeader = JsonConvert.DeserializeObject<HistoricalDataCacheFileHeader>(br.ReadString());
-                                //if (deserializedHeader.StartDate != StartDate)
-                                //{
-                                //    throw new Exception("deserializedHeader.StartDate != StartDate");
-                                //}
-                                //if (deserializedHeader.EndDate != EndDate)
-                                //{
-                                //    throw new Exception("deserializedHeader.EndDate != EndDate");
-                                //}
-                                //this.Header = deserializedHeader;// Overwrites local properties
-
-                                int version = br.ReadInt32();
-                                if (version != 1)
+                                int zeroCount = 1;
+                                if (version == 0)
                                 {
-                                    int zeroCount = 1;
-                                    if (version == 0)
+                                    try
                                     {
-                                        try
-                                        {
-                                            while (br.ReadInt32() == 0 && zeroCount < 10) { zeroCount++; }
-                                        }
-                                        catch { }
-                                        if (zeroCount > 5)
-                                        {
-                                            // Assume file is corrupt and delete it.
-                                            throw new DataCorruptException();
-                                        }
+                                        while (br.ReadInt32() == 0 && zeroCount < 10) { zeroCount++; }
                                     }
-                                    throw new InvalidDataException("Cache file data versions supported: 1");
+                                    catch { }
+                                    if (zeroCount > 5)
+                                    {
+                                        // Assume file is corrupt and delete it.
+                                        throw new DataCorruptException();
+                                    }
                                 }
+                                throw new InvalidDataException("Cache file data versions supported: 1");
+                            }
 
-                                this.StartDate = DateTime.FromBinary(br.ReadInt64());
-                                this.EndDate = DateTime.FromBinary(br.ReadInt64());
-                                this.QueryDate = DateTime.FromBinary(br.ReadInt64());
+                            this.StartDate = DateTime.FromBinary(br.ReadInt64());
+                            this.EndDate = DateTime.FromBinary(br.ReadInt64());
+                            this.QueryDate = DateTime.FromBinary(br.ReadInt64());
 
-                                if (loadOnlyHeader) return;
-
+                            if (!loadOnlyHeader)
+                            {
                                 if (TimeFrame == TimeFrame.t1)
                                 {
                                     var ticks = new List<Tick>();
@@ -602,21 +646,27 @@ string text = new string(
                                     this.Bars = bars;
                                 }
                             }
-                            catch (IOException ioe)
-                            {
-                                if (ioe.Message.Contains("end of stream")) throw new DataCorruptException("End of stream", ioe);
-                            }
+                            IsPersisted = true;
                         }
+                        catch (IOException ioe)
+                        {
+                            if (ioe.Message.Contains("end of stream")) throw new DataCorruptException("End of stream", ioe);
+                        }
+                    }
 
-                        //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded] Loaded {StartDate} - {EndDate} @ {QueryDate}, {Count} items");
-                        //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded]  - Info: {this.ToString()}");
-                    }).ConfigureAwait(false);
+                    //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded] Loaded {StartDate} - {EndDate} @ {QueryDate}, {Count} items");
+                    //Debug.WriteLine($"[{MarketSeriesBase} - cache loaded]  - Info: {this.ToString()}");
+                    //}
+                    //).ConfigureAwait(false);
+                    IsPersisted = true;
+
+                    return Task.FromResult(IsPersisted);
                 }).AutoRetry(allowException: e => e.GetType() != typeof(DataCorruptException)); // TOCONFIGUREAWAIT ?
-                IsPersisted = true;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("Error reading cache file: " + ex);
+                IsAvailable = false;
                 if (DeleteCacheOnLoadError && path != null)
                 {
                     try
@@ -629,6 +679,7 @@ string text = new string(
                     }
                 }
                 IsPersisted = false;
+                return IsPersisted;
             }
             return IsPersisted;
         }

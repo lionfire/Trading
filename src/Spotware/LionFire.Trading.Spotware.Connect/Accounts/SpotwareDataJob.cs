@@ -15,6 +15,7 @@ using System.Collections.Concurrent;
 using LionFire.Trading.Data;
 using LionFire.Threading.Tasks;
 using LionFire.Execution.Jobs;
+using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading.Spotware.Connect
 {
@@ -42,9 +43,9 @@ namespace LionFire.Trading.Spotware.Connect
         //public int MinBars = TradingOptions.DefaultHistoricalDataBarsDefault;
         public int MinItems = 0;
 
-        public DateTime GetEffectiveEndTime(DateTime endTime)
+        public DateTime CropTheFuture(DateTime endTime, int minutesIntoTheFuture = 5)
         {
-            var now = DateTime.UtcNow + TimeSpan.FromMinutes(5); // HARDCODE
+            var now = DateTime.UtcNow + TimeSpan.FromMinutes(minutesIntoTheFuture);
             if (now < endTime)
             {
                 return now;
@@ -122,6 +123,8 @@ namespace LionFire.Trading.Spotware.Connect
 
         public static int MaxTryAgainCount { get { return 4 * (24 / TryAgainRewindHours); } } // 4 days
         public static int TryAgainRewindHours = 8;
+        
+        public const double WaitTime429InSeconds = 2.2;
 
         static DateTime lastQuery = DateTime.MinValue;
 
@@ -224,6 +227,7 @@ namespace LionFire.Trading.Spotware.Connect
             }
 #endif
 
+                EndTime  = CropTheFuture(EndTime);
                 if (StartTime.HasValue)
                 {
                     startTime = StartTime.Value;
@@ -244,6 +248,8 @@ namespace LionFire.Trading.Spotware.Connect
                 {
                     throw new Exception("!StartTime.HasValue && requestBars <= 0");
                 }
+
+                startTime = CropTheFuture(startTime);
 
                 if (requestTimeFrame == "h1")
                 {
@@ -283,10 +289,11 @@ namespace LionFire.Trading.Spotware.Connect
                 }
 
                 string from, to, date;
+
                 if (useTicks)
                 {
                     from = startTime.ToSpotwareTimeUriParameter();
-                    to = GetEffectiveEndTime(endTimeIterator).ToSpotwareTimeUriParameter();
+                    to = CropTheFuture(endTimeIterator).ToSpotwareTimeUriParameter();
                     date = startTime.Date.ToString("yyyyMMdd");
 
                     if (startTime.Date != EndTime.Date)
@@ -297,7 +304,7 @@ namespace LionFire.Trading.Spotware.Connect
                 else
                 {
                     from = startTime.ToSpotwareUriParameter();
-                    to = GetEffectiveEndTime(endTimeIterator).ToSpotwareUriParameter();
+                    to = CropTheFuture(endTimeIterator).ToSpotwareUriParameter();
                     date = "";
                     //bidOrAsk = "";
                 }
@@ -317,11 +324,17 @@ namespace LionFire.Trading.Spotware.Connect
 
                 DateTime queryDate = DateTime.UtcNow;
 
-                UpdateProgress(0.11, $"Waiting to avoid 429");
-
-                while (DateTime.UtcNow - lastQuery < TimeSpan.FromSeconds(2.1))
                 {
-                    await Task.Delay(100);
+                    bool showedWaiting429 = false;
+                    while (DateTime.UtcNow - lastQuery < TimeSpan.FromSeconds(WaitTime429InSeconds))
+                    {
+                        if (!showedWaiting429)
+                        {
+                            showedWaiting429 = true;
+                            UpdateProgress(0.11, $"Waiting to avoid 429");
+                        }
+                        await Task.Delay(100);
+                    }
                 }
                 lastQuery = DateTime.UtcNow;
 
@@ -330,9 +343,15 @@ namespace LionFire.Trading.Spotware.Connect
                 int retryCount = 1;
 
                 var response1 = await client.GetAsyncWithRetries(uri.Replace("{bidOrAsk}", "bid"), retryDelayMilliseconds: 10000,
-                    onFail: hrm => UpdateProgress(0.21, $"Re-sending request (retry {retryCount++} after code {hrm.StatusCode})"),
-                    canContinue: () => DateTime.UtcNow - lastQuery < TimeSpan.FromSeconds(2.1)
-                    ).ConfigureAwait(false);
+                    onFail: hrm =>
+                    {
+                        UpdateProgress(0.21, $"Re-sending request (retry {retryCount++} after code {hrm.StatusCode})", LogLevel.Warning);
+                        //lastQuery = DateTime.UtcNow;
+                    },
+                    canContinue: () => (DateTime.UtcNow - lastQuery) < TimeSpan.FromSeconds(WaitTime429InSeconds)
+                    , cancellationToken: this.CancellationToken).ConfigureAwait(false);
+                
+                lastQuery = DateTime.UtcNow;
 
                 HttpResponseMessage response2 = null;
 
@@ -341,9 +360,10 @@ namespace LionFire.Trading.Spotware.Connect
                     response2 = await client.GetAsyncWithRetries(uri.Replace("{bidOrAsk}", "ask"),
                         retryDelayMilliseconds: 10000,
                         onFail: hrm => UpdateProgress(0.21, $"Re-sending request (retry {retryCount++} after code {hrm.StatusCode})"),
-                        canContinue: () => DateTime.UtcNow - lastQuery < TimeSpan.FromSeconds(2.1)
+                        canContinue: () => DateTime.UtcNow - lastQuery < TimeSpan.FromSeconds(2.1), cancellationToken: this.CancellationToken
                         )
                         .ConfigureAwait(false);
+                    lastQuery = DateTime.UtcNow;
                 }
 
                 UpdateProgress(0.30, "Receiving response");
@@ -505,12 +525,16 @@ namespace LionFire.Trading.Spotware.Connect
                     }
                 }
 
-                Debug.WriteLine($"[{Symbol}-{TimeFrame.Name} - DOWNLOADED] {firstDownloaded} to {lastDownloaded}");
+                var itemCountStr = ResultBars != null ? $"{ResultBars.Count} bars" : $"{ResultTicks?.Count} ticks";
+                var dateStr = firstDownloaded == DateTime.MaxValue ? "(no data)" : $"{firstDownloaded} to {lastDownloaded}";
+                logger.LogInformation($"[{Symbol}-{TimeFrame.Name} - DOWNLOADED {itemCountStr}] {dateStr}");
 
                 UpdateProgress(1, "Done");
+                Faulted = false;
             }
             catch (Exception ex)
             {
+                Faulted = true;
                 UpdateProgress(double.NaN, "Exception: " + ex.ToString());
                 throw;
             }
@@ -548,7 +572,7 @@ namespace LionFire.Trading.Spotware.Connect
             }
             return ticks;
         }
-
+        
         public const string DateFormat = "yyyy-MM-dd HH:mm:ss";
         public List<TimedBar> ResultBars { get; set; }
         public List<Tick> ResultTicks { get; set; }

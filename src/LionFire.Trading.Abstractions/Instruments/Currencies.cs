@@ -34,5 +34,31 @@ namespace LionFire.Trading.Instruments
                 "XAU",
                 "ZAR",
             };
+
+    }
+
+    public class Majors
+    {
+        public static List<string> Currencies = new List<string>()
+        {
+            "USD",
+            "EUR",
+            "JPY",
+            "GBP",
+            "CHF",
+            "CAD",
+            "AUD",
+            "NZD",
+        };
+        public static List<string> Symbols = new List<string>()
+            {
+                "EURUSD",
+                "USDJPY",
+                "GBPUSD",
+                "USDCHF",
+                "USDCAD",
+                "AUDUSD",
+                "NZDUSD",
+            };
     }
 }

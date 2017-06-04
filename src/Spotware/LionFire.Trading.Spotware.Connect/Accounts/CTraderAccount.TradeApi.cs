@@ -42,23 +42,23 @@ namespace LionFire.Trading.Spotware.Connect
 
     public partial class CTraderAccount
     {
-#region Derived (Convenience)
+        #region Derived (Convenience)
 
         string TradeApiHost => ApiInfo.TradeApiHost ?? SpotwareConnectAppInfo.DefaultTradeApiHost;
         int TradeApiPort => ApiInfo.TradeApiPort ?? SpotwareConnectAppInfo.DefaultTradeApiPort;
         string ClientPublicId => ApiInfo.ClientPublicId;
         string ClientSecret => ApiInfo.ClientSecret;
 
-#endregion
+        #endregion
 
-#region TradeApi Settings
+        #region TradeApi Settings
 
         int MaxMessageSize = 1000000;
         uint sendMsgTimeout = 20;
 
-#endregion
+        #endregion
 
-#region Testing
+        #region Testing
 
         bool isDebugIsOn = false;
 
@@ -71,9 +71,9 @@ namespace LionFire.Trading.Spotware.Connect
         //Dictionary<long, string> testOrdersMap = new Dictionary<long,string>();
         long testVolume = 1000000; // TEMP
 
-#endregion
+        #endregion
 
-#region Construction
+        #region Construction
 
         partial void CTraderAccount_NetFramework()
         {
@@ -81,9 +81,9 @@ namespace LionFire.Trading.Spotware.Connect
             readQueueSync = Queue.Synchronized(__readQueue);
         }
 
-#endregion
+        #endregion
 
-#region Internal fields
+        #region Internal fields
 
         SslStream apiSocket;
 
@@ -102,9 +102,9 @@ namespace LionFire.Trading.Spotware.Connect
 
         Random rndGenerator = new Random();
 
-#endregion
+        #endregion
 
-#region Threads
+        #region Threads
 
         Thread handlerThread;
         Thread listenerThread;
@@ -201,150 +201,188 @@ namespace LionFire.Trading.Spotware.Connect
         }
 
         // incoming data processing thread
-bool IncomingDataProcessingRunning = false;
+        bool IncomingDataProcessingRunning = false;
         void IncomingDataProcessing(OpenApiMessagesFactory msgFactory, Queue messagesQueue)
         {
             isShutdown = false;
-if(IncomingDataProcessingRunning)
-{
-//throw new System.Exception("IncomingDataProcessing Started twice");
-return;
-}
-try{
-            while (!isShutdown)
+            if (IncomingDataProcessingRunning)
             {
-IncomingDataProcessingRunning = true;
-                Thread.Sleep(0);
-
-                if (messagesQueue.Count <= 0) continue;
-
-                byte[] _message;
-                try
-                {
-                   _message = (byte[])messagesQueue.Dequeue();
-                }
-                catch (InvalidOperationException ioe)
-                {
-                    Debug.WriteLine("InvalidOperationException in IncomingDataProcessing at messagesQueue.Dequeue() " + ioe);
-                    continue;
-                }
-                ProcessIncomingDataStream(msgFactory, _message);
+                //throw new System.Exception("IncomingDataProcessing Started twice");
+                return;
             }
-}
-finally{
-IncomingDataProcessingRunning = false;
-}
-        }
-
-#endregion
-
-        private bool Connect()
-        {
-#region open ssl connection
-
-            logger.LogInformation("Establishing trading SSL connection to {0}:{1}...", TradeApiHost, TradeApiPort);
             try
             {
-                TcpClient client = new TcpClient(TradeApiHost, TradeApiPort);
-                apiSocket = new SslStream(client.GetStream(), false,
-                    new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
-                apiSocket.AuthenticateAsClient(TradeApiHost);
+                while (!isShutdown)
+                {
+                    IncomingDataProcessingRunning = true;
+                    Thread.Sleep(0);
+
+                    if (messagesQueue.Count <= 0) continue;
+
+                    byte[] _message;
+                    try
+                    {
+                        _message = (byte[])messagesQueue.Dequeue();
+                    }
+                    catch (InvalidOperationException ioe)
+                    {
+                        Debug.WriteLine("InvalidOperationException in IncomingDataProcessing at messagesQueue.Dequeue() " + ioe);
+                        continue;
+                    }
+                    ProcessIncomingDataStream(msgFactory, _message);
+                }
             }
-            catch (Exception e)
+            finally
             {
-                logger.LogError("Establishing SSL connection error: {0}", e);
-                return false;
+                IncomingDataProcessingRunning = false;
             }
-            logger.LogInformation("The connection is established successfully.");
-
-#endregion open ssl connection
-
-if(IncomingDataProcessingRunning) return true;
-#region start incoming data processing thread
-
-            handlerThread = new Thread(() =>
-            {
-                Thread.CurrentThread.IsBackground = true;
-                try
-                {
-                    IncomingDataProcessing(incomingMsgFactory, readQueueSync);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError("Message handler threw exception: {0}", e);
-                }
-            });
-            handlerThread.Start();
-
-#endregion
-
-#region start listener
-
-            listenerThread = new Thread(() =>
-            {
-                Thread.CurrentThread.IsBackground = true;
-                try
-                {
-                    Listen(apiSocket, readQueueSync);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError("Listener throws exception: {0}", e);
-                }
-            });
-            listenerThread.Start();
-
-#endregion
-
-#region start sender
-
-            senderThread = new Thread(() =>
-            {
-                Thread.CurrentThread.IsBackground = true;
-                try
-                {
-                    Transmit(apiSocket, writeQueueSync, lastSentMsgTimestamp);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError("Transmitter throws exception: {0}", e);
-                }
-            });
-            senderThread.Start();
-
-#endregion
-
-#region start timer
-
-            heartbeatThread = new Thread(() =>
-            {
-                Thread.CurrentThread.IsBackground = true;
-                try
-                {
-                    HeartbeatTimer(outgoingMsgFactory, writeQueueSync);
-                }
-                catch (Exception e)
-                {
-                    logger.LogError("Timer threw exception: {0}", e);
-                }
-            });
-            heartbeatThread.Start();
-
-#endregion
-
-            SendAuthorizationRequest();
-
-            for (int retries = 5; retries > 0 && !IsAuthorized; retries--)
-            {
-                logger.LogInformation("Waiting for authorization response...");
-                Thread.Sleep(1000);
-            }
-            var not = IsAuthorized ? "" : " NOT ";
-            logger.LogInformation($"Connected and {not} authorized");
-            return true;
         }
 
-#region Handlers
+        #endregion
+
+
+        //public void CancelConnect()
+        //{
+        //    if (connectingTask != null)
+        //    {
+        //        connectingTask = null;
+        //    }
+        //}
+        bool isConnecting = false;
+        private async Task<bool> Connect()
+        {
+            bool result;
+            try
+            {
+                //lock (connectLock)
+                {
+                    if (connectingTask != null)
+                    {
+                        return await connectingTask;
+                    }
+
+                    if (isConnecting) { throw new AlreadyException(); }
+                    isConnecting = true;
+
+                    connectingTask = Task.Run(async () =>
+                    {
+                    #region open ssl connection
+
+                    logger.LogInformation("Establishing trading SSL connection to {0}:{1}...", TradeApiHost, TradeApiPort);
+                        try
+                        {
+                            TcpClient client = new TcpClient(TradeApiHost, TradeApiPort);
+                            apiSocket = new SslStream(client.GetStream(), false,
+                                new RemoteCertificateValidationCallback(ValidateServerCertificate), null);
+                            apiSocket.AuthenticateAsClient(TradeApiHost);
+                        }
+                        catch (Exception e)
+                        {
+                            logger.LogError("Establishing SSL connection error: {0}", e);
+                            return false;
+                        }
+                        logger.LogInformation("The connection is established successfully.");
+
+                    #endregion open ssl connection
+
+                    if (IncomingDataProcessingRunning) return true;
+
+                    #region start incoming data processing thread
+
+                    handlerThread = new Thread(() =>
+                            {
+                                Thread.CurrentThread.IsBackground = true;
+                                try
+                                {
+                                    IncomingDataProcessing(incomingMsgFactory, readQueueSync);
+                                }
+                                catch (Exception e)
+                                {
+                                    logger.LogError("Message handler threw exception: {0}", e);
+                                }
+                            });
+                        handlerThread.Start();
+
+                    #endregion
+
+                    #region start listener
+
+                    listenerThread = new Thread(() =>
+                            {
+                                Thread.CurrentThread.IsBackground = true;
+                                try
+                                {
+                                    Listen(apiSocket, readQueueSync);
+                                }
+                                catch (Exception e)
+                                {
+                                    logger.LogError("Listener throws exception: {0}", e);
+                                }
+                            });
+                        listenerThread.Start();
+
+                    #endregion
+
+                    #region start sender
+
+                    senderThread = new Thread(() =>
+                            {
+                                Thread.CurrentThread.IsBackground = true;
+                                try
+                                {
+                                    Transmit(apiSocket, writeQueueSync, lastSentMsgTimestamp);
+                                }
+                                catch (Exception e)
+                                {
+                                    logger.LogError("Transmitter throws exception: {0}", e);
+                                }
+                            });
+                        senderThread.Start();
+
+                    #endregion
+
+                    #region start timer
+
+                    heartbeatThread = new Thread(() =>
+                            {
+                                Thread.CurrentThread.IsBackground = true;
+                                try
+                                {
+                                    HeartbeatTimer(outgoingMsgFactory, writeQueueSync);
+                                }
+                                catch (Exception e)
+                                {
+                                    logger.LogError("Timer threw exception: {0}", e);
+                                }
+                            });
+                        heartbeatThread.Start();
+
+                    #endregion
+
+                    SendAuthorizationRequest();
+
+                        for (int retries = 5; retries > 0 && !IsAuthorized; retries--)
+                        {
+                            logger.LogInformation("Waiting for authorization response...");
+                            await Task.Delay(1000).ConfigureAwait(false);
+                        }
+                        var not = IsAuthorized ? "" : " NOT ";
+                        logger.LogInformation($"Connected and {not} authorized");
+                        return true;
+                    });
+                }
+                result = await connectingTask.ConfigureAwait(false);
+            }
+            finally
+            {
+                connectingTask = null;
+                isConnecting = false;
+            }
+            return result;
+
+        }
+
+        #region Handlers
 
         bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
@@ -354,7 +392,7 @@ if(IncomingDataProcessingRunning) return true;
             return false;
         }
 
-#endregion Handlers
+        #endregion Handlers
 
         public bool IsAuthorized
         {
@@ -373,7 +411,7 @@ if(IncomingDataProcessingRunning) return true;
 
         partial void Run_TradeApi()
         {
-            if (!Connect()) return;
+            if (!Connect().Result) return;
 
             SendSubscribeForTradingEventsRequest(this.outgoingMsgFactory, writeQueueSync);
 
@@ -386,7 +424,7 @@ if(IncomingDataProcessingRunning) return true;
 
         partial void CloseConnection()
         {
-#region close ssl connection
+            #region close ssl connection
 
             isShutdown = true;
             if (apiSocket != null)
@@ -395,9 +433,9 @@ if(IncomingDataProcessingRunning) return true;
                 apiSocket = null;
             }
 
-#endregion
+            #endregion
 
-#region wait for shutting down threads
+            #region wait for shutting down threads
 
             Console.Write("Shutting down connection...");
             while (IsTradeConnectionAlive)
@@ -407,7 +445,7 @@ if(IncomingDataProcessingRunning) return true;
             }
             Console.WriteLine(" Done.");
 
-#endregion
+            #endregion
         }
 
         public bool IsTradeConnectionAlive
@@ -443,7 +481,7 @@ if(IncomingDataProcessingRunning) return true;
 
                 foreach (var s in defaultSymbols)
                 {
-                    RequestSubscribeForSymbol(s, defaultPeriods);
+                    RequestSubscribeForSymbol(s, defaultPeriods).FireAndForget();
                 }
             }
 
@@ -469,7 +507,7 @@ if(IncomingDataProcessingRunning) return true;
 
         }
 
-#region Auxilary functions
+        #region Auxilary functions
 
         public string GetHexadecimal(byte[] byteArray)
         {
@@ -479,9 +517,9 @@ if(IncomingDataProcessingRunning) return true;
             return hex.ToString();
         }
 
-#endregion
+        #endregion
 
-#region Incoming data stream processing
+        #region Incoming data stream processing
 
         DateTime lastHeartBeatReceived = default(DateTime);
 
@@ -719,11 +757,11 @@ if(IncomingDataProcessingRunning) return true;
             }
         }
 
-#endregion
+        #endregion
 
 
 
-#region Outgoing ProtoBuffer objects to Raw data
+        #region Outgoing ProtoBuffer objects to Raw data
 
         void SendPingRequest(OpenApiMessagesFactory msgFactory, Queue writeQueue)
         {
@@ -856,7 +894,7 @@ if(IncomingDataProcessingRunning) return true;
             Console.WriteLine("Action is NOT IMPLEMENTED!");
         }
 
-#region Request Messages
+        #region Request Messages
 
         Dictionary<string, HashSet<ProtoOATrendbarPeriod>> subscribedSymbols = new Dictionary<string, HashSet<ProtoOATrendbarPeriod>>();
 
@@ -868,17 +906,27 @@ if(IncomingDataProcessingRunning) return true;
             return set;
         }
 
-        private void ValidateConnected()
+        private async Task ValidateConnected()
         {
+            if (!IsAuthorized && AutoConnect)
+            {
+                await Connect().ConfigureAwait(false);
+            }
+            else if (connectingTask != null)
+            {
+                await connectingTask.ConfigureAwait(false);
+            }
+
             if (!IsAuthorized)
             {
                 throw new NotConnectedException("Connection is not authorized yet");
             }
         }
 
-        void RequestSubscribeForSymbol(string symbol, params ProtoOATrendbarPeriod[] periods)
+        private async Task RequestSubscribeForSymbol(string symbol, params ProtoOATrendbarPeriod[] periods)
         {
-            ValidateConnected();
+
+            await ValidateConnected();
 
             if (periods.Length == 0)
             {
@@ -923,7 +971,7 @@ if(IncomingDataProcessingRunning) return true;
 
             if (subscribed.Count > 0 || periods.Length > 0)
             {
-                RequestSubscribeForSymbol(symbol, subscribed.ToArray());
+                RequestSubscribeForSymbol(symbol, subscribed.ToArray()).FireAndForget();
             }
             else
             {
@@ -957,11 +1005,11 @@ if(IncomingDataProcessingRunning) return true;
             writeQueueSync.Enqueue(_msg.ToByteArray());
         }
 
-#endregion
+        #endregion
 
-#endregion Outgoing ProtoBuffer objects to Raw data...
+        #endregion Outgoing ProtoBuffer objects to Raw data...
 
-#region Command line interface
+        #region Command line interface
 
 
         private void DisplayMenu()
@@ -1005,10 +1053,10 @@ if(IncomingDataProcessingRunning) return true;
             return true;
         }
 
-#endregion
+        #endregion
 
 
-#region Main Menu
+        #region Main Menu
 
         struct MenuItem
         {
@@ -1062,7 +1110,7 @@ if(IncomingDataProcessingRunning) return true;
         }
         List<MenuItem> menuItems;
 
-#endregion Main Menu
+        #endregion Main Menu
 
     }
 }

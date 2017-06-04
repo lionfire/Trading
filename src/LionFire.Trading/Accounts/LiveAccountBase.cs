@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Accounts
 {
     public abstract class LiveAccountBase<TTemplate> : AccountBase<TTemplate>, IAccount
-        where TTemplate : TMarketAccount
+        where TTemplate : TAccount
     {
 
         #region State

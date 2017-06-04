@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Accounts
 {
-    public class TSimulatedAccountBase : TMarketAccount
+    public class TSimulatedAccountBase : TAccount
     {
         
         public double StartingBalance { get; set; } = 1000.0;

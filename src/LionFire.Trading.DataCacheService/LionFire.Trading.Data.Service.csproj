@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp1.1</TargetFramework>
+    <RootNamespace>LionFire.Trading</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="1.1.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="1.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="1.1.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="1.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Applications.Abstractions\LionFire.Applications.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Applications\LionFire.Applications.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging.NLog\LionFire.Extensions.Logging.NLog.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging\LionFire.Extensions.Logging.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets.Abstractions\LionFire.Persistence.Assets.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets\LionFire.Persistence.Assets.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Runtime.Extensions\LionFire.Core.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization.Json.Newtonsoft\LionFire.Serialization.Json.Newtonsoft.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization\LionFire.Serialization\LionFire.Serialization.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />
+    <ProjectReference Include="..\Spotware\LionFire.Trading.Spotware.Connect\LionFire.Trading.Spotware.Connect.csproj" />
+  </ItemGroup>
+
+</Project>

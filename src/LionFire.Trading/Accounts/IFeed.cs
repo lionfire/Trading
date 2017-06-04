@@ -14,6 +14,8 @@ namespace LionFire.Trading
     public interface IFeed
     //: ITemplateInstance<TFeed>
     {
+        bool AllowSubscribeToTicks { get; set; }
+
         TFeed Template { get; }
 
         #region Server State

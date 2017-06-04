@@ -10,31 +10,40 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Triggers
 {
-    
+    //public class TMarketTrigger : TMarketTriggerBase<MarketTrigger>
+    //{
+    //    public override IEnumerable<string> Symbols { get; set; }
+    //}
 
-    public class MarketTrigger : ITemplateInstance<TMarketTriggerBase>, IValidatable
+    public abstract class MarketTrigger<TemplateType, InstanceType> : ITemplateInstance<TemplateType>, IValidatable
+        where InstanceType : class, new()
+        where TemplateType : TMarketTriggerBase<InstanceType>, ITemplate
     {
         [Dependency]
-        public IAccount Account { get; set; }
-        public TMarketTriggerBase Template { get; set; }
-        ITemplate ITemplateInstance.Template { get => Template; set => Template = (TMarketTriggerBase)value; }
+        public IFeed Feed { get; set; }
+        public TemplateType Template { get; set; }
+        ITemplate ITemplateInstance.Template { get => Template; set => Template = (TemplateType)value; }
 
-        
 
         [Validate]
         public void HasSymbol(ValidationContext ctx)
         {
             foreach (var sym in Template.Symbols)
             {
-                if (!Account.SymbolsAvailable.Contains(sym))
+                if (!Feed.SymbolsAvailable.Contains(sym))
                 {
                     ctx.AddIssue($"Account does not provide symbol '{sym}'");
                 }
             }
         }
+
+        public ValidationContext Validate(ValidationContext validationContext)
+        {
+            return validationContext;
+        }
     }
 
-    public class PriceTrigger : IStartable, IInitializable2
+    public class PriceTrigger : MarketTrigger<TPriceTrigger, PriceTrigger>, IStartable, IInitializable2
     {
 
         [Dependency]
@@ -42,8 +51,8 @@ namespace LionFire.Trading.Triggers
 
         public Task<ValidationContext> Initialize()
         {
-            new ValidationContext
-                .Dep
+            //new ValidationContext
+            return Task.FromResult<ValidationContext>(null);   
         }
 
         public Task Start()

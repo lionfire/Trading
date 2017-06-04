@@ -15,9 +15,5 @@ namespace LionFire.Trading.Backtesting.Optimization
     public class OptimizationTask : AppTask
     {
         
-        protected override void Run()
-        {
-            base.Run();
-        }
     }
 }

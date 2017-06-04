@@ -30,10 +30,23 @@ namespace LionFire.Trading.Workspaces
     /// </summary>
     [AssetPath("Workspaces")]
     [State]
-    public class Workspace : ExecutableBase, ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated
+    public class Workspace : ExecutableBase, ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string>
     {
-        
-        
+       
+        public string Key { get { return Template?.Name; } }
+
+        public IEnumerable<IFeed> GetAccounts(AccountMode accountModes)
+        {
+            if (accountModes.HasFlag(AccountMode.Live) || accountModes.HasFlag(AccountMode.Any))
+            {
+                foreach (var a in LiveAccounts) yield return a;
+            }
+            if (accountModes.HasFlag(AccountMode.Demo) || accountModes.HasFlag(AccountMode.Any))
+            {
+                foreach (var a in DemoAccounts) yield return a;
+            }
+        }
+
         // FUTURE: Inject this after loading asset if it is not set
         // TEMP - TODO: Move subpath to be stored here, and inject it on load
         public string AssetSubPath { get { return Template?.Name; } set { Template.Name = value; } } 
@@ -84,8 +97,6 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-        ITemplate ITemplateInstance.Template { get { return Template; } set {
-                Template = (TWorkspace)value; } }
 
 
         public WorkspaceItem SelectedWorkspaceItem
@@ -191,6 +202,7 @@ namespace LionFire.Trading.Workspaces
         public ObservableCollection<IAccount> LiveAccounts { get; private set; } = new ObservableCollection<IAccount>();
         public ObservableCollection<IAccount> DemoAccounts { get; private set; } = new ObservableCollection<IAccount>();
         public ObservableCollection<IAccount> Accounts { get; private set; } = new ObservableCollection<IAccount>();
+        public ObservableCollection<IFeed> Feeds { get; private set; } = new ObservableCollection<IFeed>();
 
 
         public ObservableCollection<WorkspaceBot> Bots { get; private set; } = new ObservableCollection<WorkspaceBot>();
@@ -291,8 +303,8 @@ namespace LionFire.Trading.Workspaces
                 //    break;
                 //case ExecutionState.Stopped:
                 //    break;
-                case ExecutionState.Faulted:
-                case ExecutionState.Finished:
+                //case ExecutionState.Faulted:
+                //case ExecutionState.Finished:
                 case ExecutionState.Disposed:
                     return false;
                 default:
@@ -311,9 +323,13 @@ namespace LionFire.Trading.Workspaces
             {
                 foreach (var accountId in Template.LiveAccounts)
                 {
-                    var account = TradingTypeResolver.CreateAccount(accountId);
-                    LiveAccounts.Add(account);
-                    AddAccount(accountId, account);
+                    var feed = TradingTypeResolver.CreateAccount(accountId);
+                    if (feed is IAccount account)
+                    {
+                        LiveAccounts.Add(account);
+                        AddAccount(accountId, account);
+                    }
+                    Feeds.Add(feed);
                 }
             }
 
@@ -321,26 +337,43 @@ namespace LionFire.Trading.Workspaces
             {
                 foreach (var accountId in Template.DemoAccounts)
                 {
-                    var account = TradingTypeResolver.CreateAccount(accountId);
-                    DemoAccounts.Add(account);
-                    AddAccount(accountId, account);
+                    var feed = TradingTypeResolver.CreateAccount(accountId);
+                    if (feed is IAccount account)
+                    {
+                        DemoAccounts.Add(account);
+                        AddAccount(accountId, account);
+                    }
+                    Feeds.Add(feed);
                 }
             }
 
-            
-            foreach (var tSession in Template.Sessions)
+            if ((TradingOptions.Features &
+                 (
+                   TradingFeatures.Bots | TradingFeatures.Scanners
+                 )) != TradingFeatures.None)
             {
-                var session = tSession.Create();
-                session.Workspace = this;
-                await session.Initialize().ConfigureAwait(continueOnCapturedContext: false); // Loads child collections
-                this.Sessions.Add(session);
+                foreach (var tSession in Template.Sessions)
+                {
+                    var session = tSession.Create();
+                    session.Workspace = this;
+                    await session.Initialize().ConfigureAwait(continueOnCapturedContext: false); // Loads child collections
+                    this.Sessions.Add(session);
+                }
             }
-            LoadWorkspaceItems();
+
+            if (TradingOptions.Features.HasFlag(TradingFeatures.WorkspaceInterface))
+            {
+                LoadWorkspaceItems();
+            }
             State = ExecutionState.Ready;
             return true;
         }
 
-        public ITradingTypeResolver TradingTypeResolver => InjectionContext.Current.GetService<ITradingTypeResolver>();
+        public TradingOptions TradingOptions => InjectionContext.Current.GetService<TradingOptions>();
+        
+        [Dependency]
+        public ITradingTypeResolver TradingTypeResolver { get; set; }
+        //public ITradingTypeResolver TradingTypeResolver => InjectionContext.Current.GetService<ITradingTypeResolver>();
 
 
         public async Task Start()
@@ -472,9 +505,10 @@ namespace LionFire.Trading.Workspaces
 
         public void OnInstantiated(object instantiationContext = null)
         {
+            Debug.WriteLine($"Workspace '{this.Template.Name}' instantiated");
             foreach (var s in this.Template.Sessions)
             {
-                Debug.WriteLine($"Instantiated Workspace session '{s.Name}' with {s.Bots.Count} bots");
+                Debug.WriteLine($" - session '{s.Name}': {s.Bots.Count} bots");
             }
         }
     }
