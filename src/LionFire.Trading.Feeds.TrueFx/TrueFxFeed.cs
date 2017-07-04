@@ -101,7 +101,7 @@ namespace LionFire.Trading.TrueFx
 
         protected override Symbol CreateSymbol(string symbolCode)
         {
-            return new SymbolImpl(symbolCode, this);
+            return new SymbolImpl<TrueFxFeed>(symbolCode, this);
         }
     }
 }

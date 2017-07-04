@@ -183,7 +183,7 @@ namespace LionFire.Trading.Workspaces
 
         #region Workspace
 
-        public Workspace Workspace
+        public TradingWorkspace Workspace
         {
             get { return workspace; }
             set
@@ -194,7 +194,7 @@ namespace LionFire.Trading.Workspaces
                 workspace?.Add(this);
             }
         }
-        private Workspace workspace;
+        private TradingWorkspace workspace;
 
         #endregion
 

@@ -97,7 +97,7 @@ namespace LionFire.Trading
                 })
 
                 // FUTURE: Get accounts and interested symbols by loading one or more workspaces:
-                .AddAsset<Workspace>("Default")
+                .AddAsset<TradingWorkspace>("Default")
                 //.AddAllAssets<TWorkspace>()
                 .Add<DataCacheService>()
                 //.Add(new SeriesCacheService // FUTURE: Check run dir on local machine -- Don't start multiple services

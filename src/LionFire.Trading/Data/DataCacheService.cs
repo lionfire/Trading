@@ -77,7 +77,7 @@ namespace LionFire.Trading.Data
         public async Task Start()
         {
             State = ExecutionState.Starting;
-            foreach (var workspace in App.GetComponents<Workspace>())
+            foreach (var workspace in App.GetComponents<TradingWorkspace>())
             {
                 await StartWorkspace(workspace);
             }
@@ -90,7 +90,7 @@ namespace LionFire.Trading.Data
             }
         }
 
-        private async Task StartWorkspace(Workspace workspace)
+        private async Task StartWorkspace(TradingWorkspace workspace)
         {
             if (!workspace.Template.IsEnabled) return;
             if (startedWorkspaces.ContainsKey(workspace.Key)) return;
@@ -175,11 +175,11 @@ namespace LionFire.Trading.Data
 
         #region StartedWorkspaces
 
-        public ObservableDictionary<string, Workspace> StartedWorkspaces
+        public ObservableDictionary<string, TradingWorkspace> StartedWorkspaces
         {
             get { return startedWorkspaces; }
         }
-        private ObservableDictionary<string, Workspace> startedWorkspaces = new ObservableDictionary<string, Workspace>();
+        private ObservableDictionary<string, TradingWorkspace> startedWorkspaces = new ObservableDictionary<string, TradingWorkspace>();
 
         public IServiceProvider ServiceProvider { get; set; }
 

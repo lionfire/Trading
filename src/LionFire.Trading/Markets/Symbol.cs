@@ -72,9 +72,10 @@ namespace LionFire.Trading
 
     }
 
-    public class SymbolImpl : SymbolImplBase, IBacktestSymbol
+    public class SymbolImpl<FeedType> : SymbolImplBase<FeedType>, IBacktestSymbol
+        where FeedType : IFeed
     {
-        public SymbolImpl(string symbolCode, IFeed market) : base(symbolCode, market) { }
+        public SymbolImpl(string symbolCode, FeedType market) : base(symbolCode, market) { }
 
         public override Task<TimedBar> GetLastBar(TimeFrame timeFrame)
         {
@@ -86,8 +87,11 @@ namespace LionFire.Trading
         }
     }
 
-    public abstract class SymbolImplBase : Symbol, ISymbolInternal
+    public abstract class SymbolImplBase<AccountType> : Symbol, ISymbolInternal
+        where AccountType : IFeed
     {
+
+
         public string PriceStringFormat
         {
             get
@@ -124,19 +128,20 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        public IFeed Feed { get; protected set; }
+        //public IFeed Feed { get; protected set; }
 
-        public IAccount Account { get; set; }
+        public AccountType Feed { get; protected set; }
+
+        public IAccount Account => this.Feed as IAccount;
 
         #endregion
 
         #region Construction
 
-        public SymbolImplBase(string symbolCode, IFeed feed)
+        public SymbolImplBase(string symbolCode, AccountType feed)
         {
             this.Code = symbolCode;
             this.Feed = feed;
-            this.Account = feed as IAccount;
         }
 
         #endregion

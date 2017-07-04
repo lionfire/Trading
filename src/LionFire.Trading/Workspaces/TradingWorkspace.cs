@@ -19,10 +19,11 @@ using LionFire.ExtensionMethods;
 using LionFire.Instantiating.Templating;
 using System.Diagnostics;
 using LionFire.DependencyInjection;
-using LionFire.Execution.Executables;
+using LionFire.UI.Workspaces;
 
 namespace LionFire.Trading.Workspaces
 {
+
 
     /// <summary>
     /// Each user will typically work with one workspace.  
@@ -30,10 +31,19 @@ namespace LionFire.Trading.Workspaces
     /// </summary>
     [AssetPath("Workspaces")]
     [State]
-    public class Workspace : ExecutableBase, ITemplateInstance<TWorkspace>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string>
+    public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
     {
-       
-        public string Key { get { return Template?.Name; } }
+        // REVIEW - why is this needed -- does it make sense?
+        public string Key
+        {
+            get { return Template?.Name; }
+        }
+
+        // FUTURE: Inject this after loading asset if it is not set
+        // TEMP - TODO: Move subpath to be stored here, and inject it on load
+        public string AssetSubPath { get { return Template?.Name; } set { Template.Name = value; } }
+
+        //public IEnumerable<IFeed> NotificationFeeds { get; } // Feed(s) used for Price notfications??
 
         public IEnumerable<IFeed> GetAccounts(AccountMode accountModes)
         {
@@ -47,36 +57,26 @@ namespace LionFire.Trading.Workspaces
             }
         }
 
-        // FUTURE: Inject this after loading asset if it is not set
-        // TEMP - TODO: Move subpath to be stored here, and inject it on load
-        public string AssetSubPath { get { return Template?.Name; } set { Template.Name = value; } } 
-
         #region Relationships
 
         #region Template
-
-        public TWorkspace Template
+      
+        protected override void OnTemplateChanged(TTradingWorkspace oldValue, TTradingWorkspace template)
         {
-            get { return template; }
-            set
+            if (oldValue != null)
             {
-                if (template == value) return;
-                if (template != null)
-                {
-                    template.ControlSwitchChanged -= ControlSwitchChanged;
-                    template.IsAutoSaveEnabledChanged -= Template_IsAutoSaveEnabledChanged;
-                    template.PropertyChanged -= Template_PropertyChanged;
-                }
-                template = value;
-
-                if (template != null)
-                {
-                    template.ControlSwitchChanged += ControlSwitchChanged;
-                    template.IsAutoSaveEnabledChanged += Template_IsAutoSaveEnabledChanged;
-                    this.EnableAutoSave(Template.IsAutoSaveEnabled);
-                    ControlSwitchChanged();
-                    template.PropertyChanged += Template_PropertyChanged;
-                }
+                throw new NotImplementedException("Obsolete");
+                //oldValue.ControlSwitchChanged -= ControlSwitchChanged;
+                //oldValue.IsAutoSaveEnabledChanged -= Template_IsAutoSaveEnabledChanged;
+                //oldValue.PropertyChanged -= Template_PropertyChanged;
+            }
+            if (template != null)
+            {
+                template.ControlSwitchChanged += ControlSwitchChanged;
+                template.IsAutoSaveEnabledChanged += Template_IsAutoSaveEnabledChanged;
+                this.EnableAutoSave(Template.IsAutoSaveEnabled);
+                ControlSwitchChanged();
+                template.PropertyChanged += Template_PropertyChanged;
             }
         }
 
@@ -93,11 +93,7 @@ namespace LionFire.Trading.Workspaces
             this.EnableAutoSave(Template.IsAutoSaveEnabled);
         }
 
-        private TWorkspace template;
-
         #endregion
-
-
 
         public WorkspaceItem SelectedWorkspaceItem
         {
@@ -122,13 +118,14 @@ namespace LionFire.Trading.Workspaces
         {
             get; private set;
         } = new ObservableCollection<WorkspaceItem>();
+        public IEnumerable<object> Children => this.Items;
 
         internal void Add(WorkspaceItem item)
         {
             if (ItemsById.ContainsKey(item.Template.Id)) return;
             item.Workspace = this;
             ItemsById.AddOrUpdate(item.Template.Id, item);
-            if(!Items.Contains(item)) Items.Add(item);
+            if (!Items.Contains(item)) Items.Add(item);
         }
         internal void Remove(WorkspaceItem item)
         {
@@ -139,7 +136,7 @@ namespace LionFire.Trading.Workspaces
         }
 
         #endregion
-        
+
         #endregion
 
         public void LoadWorkspaceItems()
@@ -262,12 +259,12 @@ namespace LionFire.Trading.Workspaces
 
         #region Lifecycle
 
-        public Workspace()
+        public TradingWorkspace()
         {
             this.AttachChangedEventToCollections(() => Changed?.Invoke(this));
 
             Accounts.CollectionChanged += Accounts_CollectionChanged;
-            
+
         }
 
         private void Accounts_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
@@ -370,7 +367,7 @@ namespace LionFire.Trading.Workspaces
         }
 
         public TradingOptions TradingOptions => InjectionContext.Current.GetService<TradingOptions>();
-        
+
         [Dependency]
         public ITradingTypeResolver TradingTypeResolver { get; set; }
         //public ITradingTypeResolver TradingTypeResolver => InjectionContext.Current.GetService<ITradingTypeResolver>();

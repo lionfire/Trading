@@ -146,7 +146,7 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-        public Workspace Workspace { get; set; }
+        public TradingWorkspace Workspace { get; set; }
 
         #region Account
 

@@ -70,6 +70,15 @@ namespace LionFire.Trading
         bool IsTradeApiEnabled { get; set; }
 #endif
 
+
+        #region Symbol Query Methods
+
+        double UnrealizedGrossProfit(string symbol);
+
+        double UnrealizedNetProfit(string symbol);
+
+        #endregion
+
     }
 
     

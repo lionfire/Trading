@@ -1,0 +1,141 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.props" Condition="Exists('..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{6BF7DD6F-F0F1-4871-AE88-7CC6583B946F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>LionFire.Trading.Tests</RootNamespace>
+    <AssemblyName>LionFire.Trading.Tests</AssemblyName>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">15.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
+    <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
+    <IsCodedUITest>False</IsCodedUITest>
+    <TestProjectType>UnitTest</TestProjectType>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\MSTest.TestFramework.1.1.11\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\..\..\Trading.Proprietary\packages\MSTest.TestFramework.1.1.11\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="NotificationTests.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Applications.Abstractions\LionFire.Applications.Abstractions.csproj">
+      <Project>{2afb9c8b-9aeb-4b23-8782-91d9e93c769c}</Project>
+      <Name>LionFire.Applications.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Applications\LionFire.Applications.csproj">
+      <Project>{e4b27ae8-25af-4f17-b857-bf2edec416a9}</Project>
+      <Name>LionFire.Applications</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj">
+      <Project>{62e82f33-2263-49a2-8a81-1403ab343ef1}</Project>
+      <Name>LionFire.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Execution.Abstractions\LionFire.Execution.Abstractions.csproj">
+      <Project>{6ab6922e-dae5-442d-9835-13a37a1ebbfd}</Project>
+      <Name>LionFire.Execution.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Execution\LionFire.Execution.csproj">
+      <Project>{aee5fc2f-41f1-4e77-918e-16eced1e62bd}</Project>
+      <Name>LionFire.Execution</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating.Abstractions\LionFire.Instantiating.Abstractions.csproj">
+      <Project>{347ad689-f3c8-42df-98f4-3bd74502d229}</Project>
+      <Name>LionFire.Instantiating.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating\LionFire.Instantiating.csproj">
+      <Project>{2e9061dd-de8f-4354-a81e-54be033ef867}</Project>
+      <Name>LionFire.Instantiating</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications.Abstractions\LionFire.Notifications.Abstractions.csproj">
+      <Project>{af9d11e7-fc04-4791-96d0-886ae6ad2083}</Project>
+      <Name>LionFire.Notifications.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications.Twilio\LionFire.Notifications.Twilio.csproj">
+      <Project>{ba888848-29fb-4119-9280-7e435859120d}</Project>
+      <Name>LionFire.Notifications.Twilio</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications\LionFire.Notifications.csproj">
+      <Project>{574f06b4-514b-46df-b3a6-3dc97e4e1e32}</Project>
+      <Name>LionFire.Notifications</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets.Abstractions\LionFire.Persistence.Assets.Abstractions.csproj">
+      <Project>{b842d521-3f3c-4cb7-9daa-5f91bec7a8cf}</Project>
+      <Name>LionFire.Persistence.Assets.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets\LionFire.Persistence.Assets.csproj">
+      <Project>{4029ee49-9ece-43b4-b4be-794cc55b7fbb}</Project>
+      <Name>LionFire.Persistence.Assets</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization.Json.Newtonsoft\LionFire.Serialization.Json.Newtonsoft.csproj">
+      <Project>{41368335-bff6-45e1-a89b-31f93808cc2e}</Project>
+      <Name>LionFire.Serialization.Json.Newtonsoft</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization\LionFire.Serialization\LionFire.Serialization.csproj">
+      <Project>{5254cd3f-fffe-49c4-9159-71896305e496}</Project>
+      <Name>LionFire.Serialization</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj">
+      <Project>{26fb13f9-2095-425a-9904-86438a3482b1}</Project>
+      <Name>LionFire.Trading.Abstractions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LionFire.Trading.Feeds.Simulated\LionFire.Trading.Feeds.Simulated.csproj">
+      <Project>{0f33cdf9-6eb5-4100-a76f-d896a0af3ec3}</Project>
+      <Name>LionFire.Trading.Feeds.Simulated</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj">
+      <Project>{bb75938c-7cac-49de-aeba-502e6340f92b}</Project>
+      <Name>LionFire.Trading</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Spotware\LionFire.Trading.Spotware.Connect\LionFire.Trading.Spotware.Connect.csproj">
+      <Project>{3f5ce5bd-c8b7-48ad-9316-a4b397a6ef73}</Project>
+      <Name>LionFire.Trading.Spotware.Connect</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.props'))" />
+    <Error Condition="!Exists('..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.targets'))" />
+  </Target>
+  <Import Project="..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.targets" Condition="Exists('..\..\..\Trading.Proprietary\packages\MSTest.TestAdapter.1.1.11\build\net45\MSTest.TestAdapter.targets')" />
+</Project>

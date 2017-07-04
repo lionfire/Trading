@@ -6,19 +6,19 @@ namespace LionFire.Notifications.Wpf.App
 {
     public class TradingNotificationsService : ITemplate<STradingNotificationsService>
     {
-        public List<TPriceAlert> AlertRequests { get; set; } = new List<TPriceAlert>();
+        public List<PriceNotifier> AlertRequests { get; set; } = new List<PriceNotifier>();
 
         public List<string> AccountNames { get; set; }
 
         public void AddDefaults()
         {
-            AlertRequests.Add(new TPriceAlert
+            AlertRequests.Add(new PriceNotifier
             {
                 Symbol = "EURUSD",
                 Price = 1.12,
                 Operator = ">",
             });
-            AlertRequests.Add(new TPriceAlert("XAUUSD", ">", 1260));
+            AlertRequests.Add(new PriceNotifier("XAUUSD", ">", 1260));
         }
     }
 }

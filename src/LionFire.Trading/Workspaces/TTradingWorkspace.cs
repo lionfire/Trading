@@ -32,14 +32,14 @@ namespace LionFire.Trading.Workspaces
 
     public static class TWorkspaceExtensions
     {
-        public static ValidationContext Validate(this TWorkspace tw, ValidationContext validationContext)
+        public static ValidationContext Validate(this TTradingWorkspace tw, ValidationContext validationContext)
         {
             return ((object)tw).Validate()
                 .NoDuplicateBots();
         }
         public static ValidationContext NoDuplicateBots(this ValidationContext ctx)
         {
-            var tw = (TWorkspace)ctx.Object;
+            var tw = (TTradingWorkspace)ctx.Object;
 
             foreach (var s in tw.Sessions)
             {
@@ -55,7 +55,7 @@ namespace LionFire.Trading.Workspaces
 
 
     [AssetPath("Workspaces")]
-    public class TWorkspace : ITemplate<Workspace>, INotifyPropertyChanged, IChanged, IValidatable, INotifyOnSaving, IEnableable
+    public class TTradingWorkspace : ITemplate<TradingWorkspace>, INotifyPropertyChanged, IChanged, IValidatable, INotifyOnSaving, IEnableable
     {
         #region Identity
 
@@ -68,7 +68,7 @@ namespace LionFire.Trading.Workspaces
 
         #region Lifecycle
 
-        public TWorkspace()
+        public TTradingWorkspace()
         {
         }
 
@@ -363,11 +363,11 @@ namespace LionFire.Trading.Workspaces
 
         #region Static Default
 
-        public static TWorkspace Default
+        public static TTradingWorkspace Default
         {
             get
             {
-                return new TWorkspace()
+                return new TTradingWorkspace()
                 {
                     Name = "Default",
                     TradingOptions = new TradingOptions()

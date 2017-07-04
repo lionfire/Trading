@@ -11,6 +11,7 @@ namespace LionFire.Trading
         Unspecified = 0,
         Demo = 1 << 0,
         Live = 1 << 1,
+        Test = 1 << 2,
         Any = Demo | Live,
     }
 }

@@ -17,8 +17,9 @@ using LionFire.Execution;
 namespace LionFire.Trading.Accounts
 {
 
-    public abstract class SimulatedAccountBase<TTemplate> : AccountBase<TTemplate>, ISimulatedAccount, IInitializable
+    public abstract class SimulatedAccountBase<TTemplate, TAccount> : AccountBase<TTemplate>, ISimulatedAccount, IInitializable
         where TTemplate : TSimulatedAccountBase
+        where TAccount : IFeed
     {
 
         #region Parameters
@@ -180,7 +181,7 @@ namespace LionFire.Trading.Accounts
             while (ServerTime < StartDate && ExecuteNextStep(isBackfill: true)) ;
 #else
             // REVIEW - previous approach here did Execute, which executes forward until  it catches up to time.
-            return Task.Factory.StartNew(()=>Execute(time));
+            return Task.Factory.StartNew(() => Execute(time));
 #endif
 
             // TODO: Backfill the symbols that were missed
@@ -282,7 +283,7 @@ namespace LionFire.Trading.Accounts
 
                 if (time < (series.OpenTime.LastValue + series.TimeFrame.TimeSpan)) continue; // No new bar yet
 
-                var symbol = (SymbolImpl)this.GetSymbol(series.SymbolCode);
+                var symbol = (SymbolImpl<TAccount>)this.GetSymbol(series.SymbolCode);
 
                 HistoricalPlaybackState state = series.HistoricalPlaybackState;
                 if (state == null)
@@ -428,7 +429,7 @@ namespace LionFire.Trading.Accounts
 
         public Task Start()
         {
-            RunTask = Task.Factory.StartNew(()=>Run());
+            RunTask = Task.Factory.StartNew(() => Run());
             return Task.CompletedTask;
         }
 
@@ -537,10 +538,9 @@ namespace LionFire.Trading.Accounts
             if (symbols.TryGetValue(symbolCode, out symbol)) return symbol;
 
 
-            SymbolImpl result = new SymbolImpl(symbolCode, this);
+            var result = new SymbolImpl<TAccount>(symbolCode, (TAccount)(object)this);
             var symbolInfo = BrokerInfoUtils.GetSymbolInfo(BrokerName, symbolCode);
             result.LoadSymbolInfo(symbolInfo);
-            result.Account = this.Accounts.FirstOrDefault();
 
             return result;
         }

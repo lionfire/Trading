@@ -15,163 +15,56 @@ using System.ComponentModel;
 
 namespace LionFire.Trading.Spotware.Connect
 {
-    public class SeriesObservable<T> : SubjectBase<T>
-    {
-        public override bool HasObservers
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
+    //public class SeriesObservable<T> : SubjectBase<T>
+    //{
+    //    public override bool HasObservers
+    //    {
+    //        get
+    //        {
+    //            throw new NotImplementedException();
+    //        }
+    //    }
 
-        public override bool IsDisposed
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
+    //    public override bool IsDisposed
+    //    {
+    //        get
+    //        {
+    //            throw new NotImplementedException();
+    //        }
+    //    }
 
-        public override void Dispose()
-        {
-            throw new NotImplementedException();
-        }
+    //    public override void Dispose()
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public override void OnCompleted()
-        {
-            throw new NotImplementedException();
-        }
+    //    public override void OnCompleted()
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public override void OnError(Exception error)
-        {
-            throw new NotImplementedException();
-        }
+    //    public override void OnError(Exception error)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public override void OnNext(T value)
-        {
-            throw new NotImplementedException();
-        }
+    //    public override void OnNext(T value)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
 
-        public override IDisposable Subscribe(IObserver<T> observer)
-        {
-            throw new NotImplementedException();
-        }
-    }
-    public class X<T> : ObservableBase<T>
-    {
-        protected override IDisposable SubscribeCore(IObserver<T> observer)
-        {
-            throw new NotImplementedException();
-        }
-    }
-
-    public abstract class LiveSymbol<AccountType> : SymbolImplBase, INotifyPropertyChanged
-        where AccountType : IAccount
-    {
-        public new AccountType Account { get { return account; } }
-        protected AccountType account;
-
-        #region Construction
-
-        public LiveSymbol(string symbolCode, AccountType account) : base(symbolCode, account)
-        {
-            //System.Reactive.AnonymousObservable<TimedBar> a;
-
-            this.account = account;
-        }
-
-        #endregion
-
-        #region Observables
-
-        public IObservable<Tick> Ticks { get { return tickSubject; } }
-        Subject<Tick> tickSubject;
-
-        public IObservable<TimedBar> GetBars(TimeFrame timeFrame)
-        {
-            return barSubjects.GetOrAdd(timeFrame.Name, _ => new Subject<TimedBar>());
-        }
-        private Dictionary<string, Subject<TimedBar>> barSubjects = new Dictionary<string, Subject<TimedBar>>();
-
-        #region Convenience
-
-        public IObservable<TimedBar> M1Bars { get { return GetBars(TimeFrame.m1); } }
-        public IObservable<TimedBar> H1Bars { get { return GetBars(TimeFrame.h1); } }
-
-        #endregion
-
-        #endregion
-
-        
-
-        #region Handle Data from Server
-
-        //internal void Handle(TimeFrameBar bar)
-        //{
-        //    Console.WriteLine("ToDo: Handle TimeFrameBar: " + bar);
-
-        //}
-
-        internal void Handle(Tick tick)
-        {
-            var msg = this.Code;
-            if (tick.HasAsk)
-            {
-                msg += " Ask: " + tick.Ask;
-                this.Ask = tick.Ask;
-            }
-            if (tick.HasBid)
-            {
-                msg += " Bid: " + tick.Bid;
-                this.Bid = tick.Bid;
-            }
-
-            account.Logger.LogTrace(msg);
-
-            if (tickSubject != null && tickSubject.HasObservers)
-            {
-                tickSubject.OnNext(tick);
-            }
-            else
-            {
-                // Unsubscribe to reduce network traffic
-            }
-        }
-
-        #endregion
-
-        #region Account Current Positions
-
-        public override double UnrealizedGrossProfit
-        {
-            get
-            {
-                double sum = 0.0;
-                foreach (var position in account.Positions.Where(p => p.Symbol.Code == this.Code))
-                {
-                    sum += position.GrossProfit;
-                }
-                return sum;
-            }
-        }
-
-        public override double UnrealizedNetProfit
-        {
-            get
-            {
-                double sum = 0.0;
-                foreach (var position in account.Positions.Where(p => p.Symbol.Code == this.Code))
-                {
-                    sum += position.NetProfit;
-                }
-                return sum;
-            }
-        }
-
-        #endregion
-
-    }
+    //    public override IDisposable Subscribe(IObserver<T> observer)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
+    //public class X<T> : ObservableBase<T>
+    //{
+    //    protected override IDisposable SubscribeCore(IObserver<T> observer)
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
 
     public class CTraderSymbol : LiveSymbol<CTraderAccount>
     {
@@ -258,7 +151,7 @@ namespace LionFire.Trading.Spotware.Connect
             }
 
             // DefaultLagDelay is an extra buffer on top of LocalDelta. TODO: Account for StdDev, also see how far in the future Spotware will let me query
-            await series.EnsureDataAvailable(series.Last.Time + series.TimeFrame.TimeSpan, DateTime.UtcNow - Account.LocalDelta + DefaultLagDelay, forceRetrieve:true).ConfigureAwait(false);
+            await series.EnsureDataAvailable(series.Last.Time + series.TimeFrame.TimeSpan, DateTime.UtcNow - Feed.LocalDelta + DefaultLagDelay, forceRetrieve:true).ConfigureAwait(false);
 
             if (series.Count == 0) return Tick.Invalid;
             return new Tick(time, lastBid, lastAsk);

@@ -45,7 +45,7 @@ namespace LionFire.Trading.Accounts
 
         #region Workspace
 
-        public Workspace Workspace
+        public TradingWorkspace Workspace
         {
             get { return workspace; }
             set
@@ -63,7 +63,7 @@ namespace LionFire.Trading.Accounts
             }
         }
 
-        private Workspace workspace;
+        private TradingWorkspace workspace;
 
         #endregion
 
@@ -196,7 +196,7 @@ namespace LionFire.Trading.Accounts
         }
         protected Positions positions = new Positions();
 
-        
+
 
         public abstract double Equity { get; protected set; }
         public abstract double Balance { get; protected set; }
@@ -211,7 +211,7 @@ namespace LionFire.Trading.Accounts
         #endregion
 
         public virtual DateTime BacktestEndDate { get { return default(DateTime); } }
-        
+
         #region Informational Properties
 
         public abstract bool IsBacktesting { get; }
@@ -226,7 +226,7 @@ namespace LionFire.Trading.Accounts
         public virtual bool IsDemo { get { return Template.IsDemo; } }
 
         public virtual string Currency { get { return Template.Currency; } }
-        
+
         public double StopOutLevel
         {
             get
@@ -279,6 +279,31 @@ namespace LionFire.Trading.Accounts
         public abstract TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null);
         public abstract TradeResult ClosePosition(Position position);
         public abstract TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
+
+        #endregion
+
+        #region Per-Symbol Queries
+
+
+        public double UnrealizedGrossProfit(string symbol)
+        {
+                double sum = 0.0;
+                foreach (var position in Positions.Where(p => p.Symbol.Code == symbol))
+                {
+                    sum += position.GrossProfit;
+                }
+                return sum;
+        }
+
+        public double UnrealizedNetProfit(string symbol)
+        {
+            double sum = 0.0;
+            foreach (var position in Positions.Where(p => p.Symbol.Code == symbol))
+            {
+                sum += position.NetProfit;
+            }
+            return sum;
+        }
 
         #endregion
 

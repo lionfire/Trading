@@ -20,6 +20,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging\LionFire.Extensions.Logging.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications.Abstractions\LionFire.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating.Abstractions\LionFire.Instantiating.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications\LionFire.Notifications.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization\LionFire.Serialization\LionFire.Serialization.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Environment\LionFire.Environment.csproj" />

@@ -42,7 +42,7 @@ namespace LionFire.Notifications.Wpf.App
 
         public IFeed DefaultFeed => feeds.Values.FirstOrDefault() ?? accounts.Values.FirstOrDefault();
 
-        FsObjectCollection<TPriceAlert> alerts;
+        FsObjectCollection<PriceNotifier> alerts;
 
         public Task Start()
         {
@@ -70,7 +70,7 @@ namespace LionFire.Notifications.Wpf.App
                 }
             }
             
-            alerts = new FsObjectCollection<TPriceAlert>()
+            alerts = new FsObjectCollection<PriceNotifier>()
             {
 
                 RootPath = Path.Combine(LionFireEnvironment.GetProgramDataDir("Trading"), "Alerts")
@@ -96,7 +96,7 @@ namespace LionFire.Notifications.Wpf.App
             return Task.CompletedTask;
         }
 
-        private void OnObjectReset(IReadHandle<TPriceAlert> handle)
+        private void OnObjectReset(IReadHandle<PriceNotifier> handle)
         {
 
         }
@@ -110,7 +110,7 @@ namespace LionFire.Notifications.Wpf.App
             return Task.CompletedTask;
         }
 
-        List<TPriceAlert> priceAlerts = new List<TPriceAlert>();
+        List<PriceNotifier> priceAlerts = new List<PriceNotifier>();
 
     }
 
