@@ -96,7 +96,7 @@ namespace LionFire.Trading.Feeds.Simulated
 
         public int Index { get; set; }
 
-        public int MillisecondsUntilNext
+        //public int MillisecondsUntilNext
 
     }
     [HasDependencies]

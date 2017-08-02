@@ -20,6 +20,7 @@ using LionFire.Instantiating.Templating;
 using System.Diagnostics;
 using LionFire.DependencyInjection;
 using LionFire.UI.Workspaces;
+using LionFire.Validation;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -30,8 +31,9 @@ namespace LionFire.Trading.Workspaces
     /// FUTURE: Hierarchy of groups and sessions, allowing users to start/stop/view entire groups
     /// </summary>
     [AssetPath("Workspaces")]
+    [HasDependencies]
     [State]
-    public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutable, IStartable, IInitializable, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
+    public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutable, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
     {
         // REVIEW - why is this needed -- does it make sense?
         public string Key
@@ -114,24 +116,20 @@ namespace LionFire.Trading.Workspaces
             get; private set;
         } = new Dictionary<string, WorkspaceItem>();
 
-        public ObservableCollection<WorkspaceItem> Items
-        {
-            get; private set;
-        } = new ObservableCollection<WorkspaceItem>();
-        public IEnumerable<object> Children => this.Items;
+        public IEnumerable<WorkspaceItem> Items => base.Children.OfType<WorkspaceItem>();
 
         internal void Add(WorkspaceItem item)
         {
             if (ItemsById.ContainsKey(item.Template.Id)) return;
             item.Workspace = this;
             ItemsById.AddOrUpdate(item.Template.Id, item);
-            if (!Items.Contains(item)) Items.Add(item);
+            if (!Items.Contains(item)) Children.Add(item);
         }
         internal void Remove(WorkspaceItem item)
         {
             if (!ItemsById.ContainsKey(item.Template.Id)) return;
             ItemsById.Remove(item.Template.Id);
-            Items.Remove(item);
+            Children.Remove(item);
             item.Workspace = null;
         }
 
@@ -275,40 +273,10 @@ namespace LionFire.Trading.Workspaces
             }
         }
 
-        public async Task<bool> Initialize()
+        protected override async Task OnInitializing( Func<ValidationContext> validationContext)
         {
-            switch (State)
-            {
-                case ExecutionState.Unspecified:
-                case ExecutionState.Uninitialized:
-                    break;
-                //case ExecutionState.Initializing:
-                //    break;
-                //case ExecutionState.Ready:
-                //    break;
-                //case ExecutionState.Starting:
-                //    break;
-                //case ExecutionState.Started:
-                //    break;
-                //case ExecutionState.Pausing:
-                //    break;
-                //case ExecutionState.Paused:
-                //    break;
-                //case ExecutionState.Unpausing:
-                //    break;
-                //case ExecutionState.Stopping:
-                //    break;
-                //case ExecutionState.Stopped:
-                //    break;
-                //case ExecutionState.Faulted:
-                //case ExecutionState.Finished:
-                case ExecutionState.Disposed:
-                    return false;
-                default:
-                    return true;
-            }
-            State = ExecutionState.Initializing;
-
+            await base.OnInitializing(validationContext); // Injects dependencies
+  
             if (Sessions.Count > 0) throw new Exception("Sessions already populated");
 
             ResetState();

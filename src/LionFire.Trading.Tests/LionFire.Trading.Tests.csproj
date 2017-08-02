@@ -107,10 +107,6 @@
       <Project>{41368335-bff6-45e1-a89b-31f93808cc2e}</Project>
       <Name>LionFire.Serialization.Json.Newtonsoft</Name>
     </ProjectReference>
-    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization\LionFire.Serialization\LionFire.Serialization.csproj">
-      <Project>{5254cd3f-fffe-49c4-9159-71896305e496}</Project>
-      <Name>LionFire.Serialization</Name>
-    </ProjectReference>
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj">
       <Project>{26fb13f9-2095-425a-9904-86438a3482b1}</Project>
       <Name>LionFire.Trading.Abstractions</Name>

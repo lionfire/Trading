@@ -22,7 +22,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets.Abstractions\LionFire.Persistence.Assets.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets\LionFire.Persistence.Assets.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization.Json.Newtonsoft\LionFire.Serialization.Json.Newtonsoft.csproj" />
-    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization\LionFire.Serialization\LionFire.Serialization.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization\LionFire.Serialization.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />
     <ProjectReference Include="..\Spotware\LionFire.Trading.Spotware.Connect\LionFire.Trading.Spotware.Connect.csproj" />

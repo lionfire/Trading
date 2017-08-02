@@ -649,7 +649,6 @@ namespace LionFire.Trading.Spotware.Connect
 
         public bool AutoConnect { get; set; } = true;
 
-        Task<bool> connectingTask;
 
         private void Result_TickHasObserversChanged(Symbol symbol, bool hasSubscribers)
         {
@@ -734,14 +733,14 @@ namespace LionFire.Trading.Spotware.Connect
             return series;
         }
 
-        private void Series_BarHasObserversChanged(IMarketSeries series, bool hasSubscribers)
+        private async void Series_BarHasObserversChanged(IMarketSeries series, bool hasSubscribers)
         {
 #if NET462
             var period = (ProtoOATrendbarPeriod)Enum.Parse(typeof(ProtoOATrendbarPeriod), series.TimeFrame.ToString().ToUpper());
 
             if (hasSubscribers)
             {
-                Subscribe(series.SymbolCode, series.TimeFrame.Name);
+                await Subscribe(series.SymbolCode, series.TimeFrame.Name);
                 //RequestSubscribeForSymbol(series.SymbolCode, period);
             }
             else
