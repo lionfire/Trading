@@ -331,7 +331,7 @@ namespace LionFire.Trading.Workspaces
                 LoadWorkspaceItems();
             }
             State = ExecutionState.Ready;
-            return true;
+            //return true;
         }
 
         public TradingOptions TradingOptions => InjectionContext.Current.GetService<TradingOptions>();
