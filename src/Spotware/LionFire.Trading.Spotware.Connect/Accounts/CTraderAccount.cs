@@ -38,8 +38,9 @@ namespace LionFire.Trading.Spotware.Connect
 {
 
     [AssetPath(@"Accounts/cTrader")]
-    public class TCTraderAccount : TAccount, ITemplate<CTraderAccount>
+    public class TCTraderAccount : TAccount, ITemplate<CTraderAccount>, IAsset
     {
+        
     }
 
     public partial class CTraderAccount : LiveAccountBase<TCTraderAccount>,
@@ -180,8 +181,6 @@ namespace LionFire.Trading.Spotware.Connect
                 State = ExecutionState.Stopped;
             }
         }
-
-
 
         public async Task Start()
         {

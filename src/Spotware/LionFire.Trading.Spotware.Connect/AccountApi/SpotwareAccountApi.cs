@@ -1,4 +1,6 @@
-﻿using LionFire.ExtensionMethods;
+﻿using LionFire.Assets;
+using LionFire.ExtensionMethods;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -81,6 +83,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         public static readonly int PositionsPageSize = 500;  // HARDCONST  REVIEW
         public async static Task<List<Position>> GetPositions(CTraderAccount account)
         {
+            again:
             List<Position> Result = new List<Position>();
 
             var apiInfo = Defaults.TryGet<ISpotwareConnectAppInfo>();
@@ -143,7 +146,13 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
                 var error = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareErrorContainer>(json);
                 if (json.Contains("CH_ACCESS_TOKEN_INVALID"))
                 {
-                    throw new AccessTokenInvalidException();
+                    // TODO: Refactor to a reusable place
+                    bool renewResult = await TryRenewToken(account);
+                    if (renewResult) goto again;
+                    else
+                    {
+                        throw new AccessTokenInvalidException();
+                    }
                 }
                 else
                 {
@@ -153,6 +162,53 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
 
             //UpdateProgress(1, "Done");
             return Result;
+        }
+
+        public static async Task<bool> TryRenewToken(CTraderAccount account)
+        {
+            throw new NotImplementedException("TODO: get client id/secret");
+
+            ////account.Template.
+            //var redirectUri = "http://lionfire.software";
+            //var renewUri = $"https://connect.spotware.com/apps/token?grant_type=refresh_token&refresh_token={account.Template.AccessToken}&redirect_uri={redirectUri}&client_id={clientId}&client_secret={clientSecret}";
+
+            //var client = NewHttpClient();
+
+            //var uri = SpotwareAccountApi.PositionsUri;
+            //uri = uri
+            //    .Replace("{id}", account.Template.AccountId.ToString())
+            //    .Replace("{access_token}", account.Template.AccessToken)
+            //    .Replace("{limit}", "10000")  // HARDCODE REVIEW
+            //    ;
+            ////UpdateProgress(0.11, "Sending request");
+            //var response = await client.GetAsync(uri).ConfigureAwait(false);
+
+            //var receiveStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            //System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
+            //var json = readStream.ReadToEnd();
+            //var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareRenewTokenResult>(json);
+
+            //if(data.errorCode == null && !string.IsNullOrEmpty(data.accessToken))
+            //{
+            //    account.Template.AccessToken = data.accessToken;
+            //    account.Template.RefreshToken = data.refreshToken;
+            //    await account.Template.Save();
+            //    throw new NotImplementedException("UNTESTED -- did it work?");
+            //    //return true;
+                
+            //}
+            //return false;
+        }
+        public class SpotwareRenewTokenResult
+        { 
+            public string accessToken { get; set; }
+            public string tokenType { get; set; }
+            public int expiresIn { get; set; }
+            public string refreshToken { get; set; }
+            public object errorCode { get; set; }
+            public string access_token { get; set; }
+            public string refresh_token { get; set; }
+            public int expires_in { get; set; }
         }
 
         public static TradeType ToTradeType(this string tradeKind)

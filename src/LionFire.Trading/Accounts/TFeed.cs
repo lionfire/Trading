@@ -13,12 +13,17 @@ namespace LionFire.Trading.Accounts
     {
         public string AccountId { get; set; }
         public string AccessToken { get; set; }
+        public string RefreshToken { get; set; }
 
         /// <summary>
         /// E.g. CTrader, MT4 ECN, MT4 Pro, ...
         /// </summary>
         public string AccountType { get; internal set; }
-        //public string AccountName { get; set; }
+
+        // TODO: Set this from filename during load
+        public string AccountName { get; set; }
+
+        public string AssetSubPath => BrokerName +"." + AccountName;
 
         public string BrokerName { get; set; }
 
@@ -26,6 +31,7 @@ namespace LionFire.Trading.Accounts
 
         public List<ITemplate> Children { get; set; }
 
+        // MOVE this to Workspace, don't put startup preferences here.
         public ExecutionState DesiredExecutionState { get; set; }
     }
 }
