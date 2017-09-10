@@ -89,6 +89,7 @@ namespace LionFire.Trading.Backtesting
         [Unit("ad")]
         public double AD { get; set; }
 
+        public static bool RelaxedTypeResolving = true;
 
         public TBot TBot
         {
@@ -96,9 +97,18 @@ namespace LionFire.Trading.Backtesting
             {
                 if (tBot == null)
                 {
+                    if (Config as TBot != null)
+                    {
+                        return Config as TBot;
+                    }
+
                     var backtestResult = this;
 
                     var templateType = ResolveType(backtestResult.BotConfigType);
+                    if (templateType == null && RelaxedTypeResolving)
+                    {
+                        templateType = ResolveType(backtestResult.BotConfigType.Substring(0, backtestResult.BotConfigType.IndexOf(',')));
+                    }
 
                     if (templateType == null)
                     {
@@ -114,8 +124,10 @@ namespace LionFire.Trading.Backtesting
 
         public Type ResolveType(string typeName)
         {
-            typeName = typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary");
+            var result = TypeResolver.Default.TryResolve(typeName);
+            if (result != null) return result;
 
+            typeName = typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary");
             return TypeResolver.Default.TryResolve(typeName);
         }
 

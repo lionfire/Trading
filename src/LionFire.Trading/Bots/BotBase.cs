@@ -1,4 +1,5 @@
-﻿using System;
+﻿//#define BackTestResult_Debug
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -41,6 +42,7 @@ namespace LionFire.Trading.Bots
         where _TBot : TBot, new()
     {
         public string Version { get; set; } = "0.0.0";
+        public virtual string BotName => this.GetType().Name;
 
         protected DateTime? StartDate = null;
         protected DateTime? EndDate = null;
@@ -174,7 +176,10 @@ namespace LionFire.Trading.Bots
         protected override Task OnStarting()
 #endif
         {
-
+            if (IsBacktesting && String.IsNullOrWhiteSpace(Template.Id))
+            {
+                Template.Id = IdUtils.GenerateId();
+            }
             StartDate = null;
             EndDate = null;
 #if cAlgo
@@ -203,7 +208,7 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
-#region State
+        #region State
 
         #region Execution State
 #if cAlgo
@@ -222,10 +227,10 @@ namespace LionFire.Trading.Bots
 
         public event Action<ExecutionState, IExecutable> StateChangedToFor;
 #endif
-#endregion
+        #endregion
 
 
-#region Derived
+        #region Derived
 
         public DateTime ExtrapolatedServerTime
         {
@@ -239,20 +244,20 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Event Handling
+        #region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-#endregion
+        #endregion
 
-#region Derived
+        #region Derived
 
         public bool CanOpenLong
         {
@@ -303,9 +308,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#region Backtesting
+        #region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.001;
@@ -319,6 +324,7 @@ namespace LionFire.Trading.Bots
 #endif
          double GetFitness(GetFitnessArgs args)
         {
+
             try
             {
                 var dd = args.MaxEquityDrawdownPercentages;
@@ -340,6 +346,10 @@ namespace LionFire.Trading.Bots
                 if (Template.Symbol == null)
                 {
                     Template.Symbol = this.Symbol.Code;
+                }
+
+                if(!StartDate.HasValue || !EndDate.HasValue){
+                  throw new ArgumentException("StartDate or EndDate not set.  Are you calling base.OnBar in OnBar?"); 
                 }
 #endif
                 var backtestResult = new BacktestResult()
@@ -375,6 +385,7 @@ namespace LionFire.Trading.Bots
                 double fitness;
                 if (!EndDate.HasValue || !StartDate.HasValue)
                 {
+
                     fitness = 0.0;
                 }
                 else
@@ -416,15 +427,23 @@ namespace LionFire.Trading.Bots
                     DoLogBacktest(args, backtestResult);
                 }
 
+#if BackTestResult_Debug
+                this.BacktestResult = backtestResult;
+#endif
                 return fitness;
 
             }
             catch (Exception ex)
             {
                 Logger.LogError("GetFitness threw exception: " + ex);
-                return 0;
+                throw;
+                //return 0;
             }
         }
+
+#if BackTestResult_Debug
+        public BacktestResult BacktestResult { get; set; }
+#endif
 
         protected virtual void DoLogBacktest(GetFitnessArgs args, BacktestResult backtestResult)
         {
@@ -433,7 +452,7 @@ namespace LionFire.Trading.Bots
             TimeSpan timeSpan = backtestResult.Duration;
             double aroi = backtestResult.Aroi;
 
-            if (Template.LogBacktestThreshold != 0 && fitness > Template.LogBacktestThreshold)
+            if (!double.IsNaN(Template.LogBacktestThreshold) && fitness > Template.LogBacktestThreshold)
             {
 
                 BacktestLogger = this.GetLogger(this.ToString().Replace(' ', '.') + ".Backtest");
@@ -464,10 +483,12 @@ namespace LionFire.Trading.Bots
         }
 
 
+        public string BacktestResultSaveDir => Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results", Symbol.Code, this.BotName, TimeFrame.ToString());
+
+        public static bool CreateResultsDirIfMissing = true;
+
         private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan)
         {
-
-            var dir = Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results");
 
             //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
             var sym =
@@ -490,7 +511,9 @@ namespace LionFire.Trading.Bots
             var filename = fitness.ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
             var ext = ".json";
             int i = 0;
+            var dir = BacktestResultSaveDir;
             var path = Path.Combine(dir, filename + ext);
+            if (CreateResultsDirIfMissing && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
             for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
             using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
             {
@@ -501,7 +524,7 @@ namespace LionFire.Trading.Bots
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-#endregion
+        #endregion
 
 #if !cAlgo
         public Positions BotPositions
@@ -527,7 +550,7 @@ namespace LionFire.Trading.Bots
         //        private Positions positions =  new Positions<Position>();
         //#endif
 
-#region Position Events
+        #region Position Events
 
         public event Action<PositionEvent> BotPositionChanged;
 
@@ -536,9 +559,9 @@ namespace LionFire.Trading.Bots
             BotPositionChanged?.Invoke(e);
         }
 
-#endregion
+        #endregion
 
-#region Position Sizing
+        #region Position Sizing
 
 
         // MOVE?
@@ -826,9 +849,9 @@ namespace LionFire.Trading.Bots
             }
         }
 
-#endregion
+        #endregion
 
-#region Misc
+        #region Misc
 
         public virtual string Label
         {
@@ -853,7 +876,7 @@ namespace LionFire.Trading.Bots
         }
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
-#region INotifyPropertyChanged Implementation
+        #region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -862,11 +885,11 @@ namespace LionFire.Trading.Bots
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-#endregion
+        #endregion
 
 #endif
 
-#endregion
+        #endregion
     }
 
     public static class BacktestUtilities
