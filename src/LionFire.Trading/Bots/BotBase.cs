@@ -482,8 +482,11 @@ namespace LionFire.Trading.Bots
             }
         }
 
+#if !cAlgo
+        public TimeFrame TimeFrame => (this as IHasSingleSeries)?.MarketSeries?.TimeFrame;
+#endif
 
-        public string BacktestResultSaveDir => Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results", Symbol.Code, this.BotName, TimeFrame.ToString());
+        public  string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results", Symbol.Code, this.BotName, TimeFrame.ToShortString());
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -511,7 +514,7 @@ namespace LionFire.Trading.Bots
             var filename = fitness.ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
             var ext = ".json";
             int i = 0;
-            var dir = BacktestResultSaveDir;
+            var dir = BacktestResultSaveDir(TimeFrame);
             var path = Path.Combine(dir, filename + ext);
             if (CreateResultsDirIfMissing && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
             for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
@@ -568,7 +571,8 @@ namespace LionFire.Trading.Bots
         public long VolumeToStep(long amount, long step = 0)
         {
             if (step == 0) step = Symbol.VolumeStep;
-            return amount - (amount % Symbol.VolumeStep);
+            if (step == 0) step = 1; // REVIEW
+            return amount - (amount % step);
         }
 
 
@@ -616,7 +620,12 @@ namespace LionFire.Trading.Bots
         /// <returns></returns>
         public long GetPositionVolume(TradeType tradeType = TradeType.Buy)
         {
-            if (Symbol.VolumeStep != Symbol.VolumeMin)
+            var volumeStep = Symbol.VolumeStep;
+            if (volumeStep == 0) volumeStep = 1;
+            var volumeMin = Symbol.VolumeMin;
+            if (volumeMin == 0) volumeMin = 1;
+
+            if (volumeStep != volumeMin)
             {
                 throw new NotImplementedException("Position sizing not implemented when Symbol.VolumeStep != Symbol.VolumeMin");
             }
@@ -626,7 +635,7 @@ namespace LionFire.Trading.Bots
 
             if (Template.MinPositionSize > 0)
             {
-                volume_MinPositionSize = Symbol.VolumeMin + (Template.MinPositionSize - 1) * Symbol.VolumeStep;
+                volume_MinPositionSize = Symbol.VolumeMin + (Template.MinPositionSize - 1) * volumeStep;
             }
 
             long volume_PositionPercentOfEquity = long.MinValue;
@@ -677,21 +686,29 @@ namespace LionFire.Trading.Bots
 
         // TODO: Also Use PositionPercentOfEquity, REFACTOR to combine with above method
         // MOVE?
-        public long GetPositionVolume(double stopLossDistance, TradeType tradeType = TradeType.Buy)
+        public long GetPositionVolume(double? stopLossDistance, TradeType tradeType = TradeType.Buy)
         {
-            if (Symbol.VolumeStep != Symbol.VolumeMin)
+            if (!stopLossDistance.HasValue) return GetPositionVolume(tradeType);
+            if (stopLossDistance == 0) throw new ArgumentException("stopLossDistance is 0.  Use null for no stop loss.");
+
+            var volumeStep = Symbol.VolumeStep;
+            if (volumeStep == 0) volumeStep = 1;
+            var volumeMin = Symbol.VolumeMin;
+            if (volumeMin == 0) volumeMin = 1;
+
+            if (volumeStep != volumeMin)
             {
                 throw new NotImplementedException("Position sizing not implemented when Symbol.VolumeStep != Symbol.VolumeMin");
             }
 
-            var stopLossValuePerVolumeStep = stopLossDistance * Symbol.VolumeStep;
+            var stopLossValuePerVolumeStep = stopLossDistance * volumeStep;
 
             var price = (tradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask);
             long volume_MinPositionSize = long.MinValue;
 
             if (Template.MinPositionSize > 0)
             {
-                volume_MinPositionSize = Symbol.VolumeMin + (Template.MinPositionSize - 1) * Symbol.VolumeStep;
+                volume_MinPositionSize = volumeMin + (Template.MinPositionSize - 1) * volumeStep;
             }
 
             long volume_MinPositionRiskPercent = long.MinValue;
@@ -701,7 +718,7 @@ namespace LionFire.Trading.Bots
                 string fromCurrency = GetFromCurrency(Symbol.Code);
                 var toCurrency = Account.Currency;
 
-                var stopLossDistanceAccountCurrency = ConvertToCurrency(stopLossDistance, fromCurrency, toCurrency);
+                var stopLossDistanceAccountCurrency = ConvertToCurrency(stopLossDistance.Value, fromCurrency, toCurrency);
 
                 var equityRiskAmount = this.Account.Equity * (Template.PositionRiskPercent / 100.0);
 
@@ -781,39 +798,57 @@ namespace LionFire.Trading.Bots
         // MOVE
         public double ConvertToCurrency(double amount, string fromCurrency, string toCurrency = null)
         {
-            ValidateCurrency(fromCurrency, nameof(fromCurrency));
-            ValidateCurrency(toCurrency, nameof(toCurrency));
-
-            if (toCurrency == null) toCurrency = Account.Currency;
-            if (fromCurrency == toCurrency) return amount;
-
-            var conversionSymbolCode = fromCurrency + toCurrency;
-            var conversionSymbolCodeInverse = toCurrency + fromCurrency;
-
-            if (Symbol.Code == conversionSymbolCode)
+            try
             {
-                return Symbol.Bid * amount;
-            }
-            else if (Symbol.Code == conversionSymbolCodeInverse)
-            {
-                return amount / Symbol.Ask;
-            }
+                if (amount == 0) return 0;
 
-            if (IsBacktesting)
-            {
-                if (ExchangeRates != null && ExchangeRates.ContainsKey(conversionSymbolCode))
+                ValidateCurrency(fromCurrency, nameof(fromCurrency));
+                ValidateCurrency(toCurrency, nameof(toCurrency));
+
+                if (toCurrency == null) toCurrency = Account.Currency;
+                if (fromCurrency == toCurrency) return amount;
+
+                var conversionSymbolCode = fromCurrency + toCurrency;
+                var conversionSymbolCodeInverse = toCurrency + fromCurrency;
+
+                if (Symbol.Code == conversionSymbolCode)
                 {
-                    var rates = ExchangeRates[conversionSymbolCode];
-                    double rate = 0;
-                    if (rates.ContainsKey(Server.Time.Year))
+                    return Symbol.Bid * amount;
+                }
+                else if (Symbol.Code == conversionSymbolCodeInverse)
+                {
+                    return amount / Symbol.Ask;
+                }
+
+                if (IsBacktesting)
+                {
+                    if (ExchangeRates != null && ExchangeRates.ContainsKey(conversionSymbolCode))
                     {
-                        rate = rates[Server.Time.Year];
-                        var symbolAmount = amount / rate;
-                        return symbolAmount;
+                        var rates = ExchangeRates[conversionSymbolCode];
+                        double rate = 0;
+                        if (rates.ContainsKey(Server.Time.Year))
+                        {
+                            rate = rates[Server.Time.Year];
+                            var symbolAmount = amount / rate;
+                            return symbolAmount;
+                        }
+                        else
+                        {
+                            // REFACTOR - deduplicate with below
+                            if (UseParCurrencyConversionFallback)
+                            {
+                                logger.LogWarning($"Warning: Using par for currency conversion from {fromCurrency} to {toCurrency} --   Not implemented: No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
+                                return amount;
+                            }
+                            else
+                            {
+                                throw new NotImplementedException($"No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
+                            }
+                        }
                     }
                     else
                     {
-                        // REFACTOR - deduplicate with below
+                        // REFACTOR - deduplicate with above
                         if (UseParCurrencyConversionFallback)
                         {
                             logger.LogWarning($"Warning: Using par for currency conversion from {fromCurrency} to {toCurrency} --   Not implemented: No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
@@ -823,29 +858,20 @@ namespace LionFire.Trading.Bots
                         {
                             throw new NotImplementedException($"No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
                         }
+
+                        //throw new NotImplementedException($"cAlgo doesn't support currency conversion in backtesting.  Require conversion from {Symbol.Code.Substring(3)} to {toCurrency}");
                     }
                 }
                 else
                 {
-                    // REFACTOR - deduplicate with above
-                    if (UseParCurrencyConversionFallback)
-                    {
-                        logger.LogWarning($"Warning: Using par for currency conversion from {fromCurrency} to {toCurrency} --   Not implemented: No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
-                        return amount;
-                    }
-                    else
-                    {
-                        throw new NotImplementedException($"No exchange rate data available for {conversionSymbolCode} for {Server.Time}");
-                    }
-
-                    //throw new NotImplementedException($"cAlgo doesn't support currency conversion in backtesting.  Require conversion from {Symbol.Code.Substring(3)} to {toCurrency}");
+                    Symbol conversionSymbol = MarketData.GetSymbol(conversionSymbolCode);
+                    var symbolAmount = amount / conversionSymbol.Bid;
+                    return symbolAmount;
                 }
             }
-            else
+            catch(Exception ex)
             {
-                Symbol conversionSymbol = MarketData.GetSymbol(conversionSymbolCode);
-                var symbolAmount = amount / conversionSymbol.Bid;
-                return symbolAmount;
+                throw new Exception($"Error converting currency from {fromCurrency} to {toCurrency}", ex);
             }
         }
 
