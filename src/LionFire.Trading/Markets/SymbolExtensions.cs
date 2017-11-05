@@ -14,5 +14,9 @@ namespace LionFire.Trading
         {
             return symbol.Ask - symbol.Bid;
         }
+        public static double PointValue(this Symbol symbol)
+        {
+            return symbol.PipValue / symbol.PipSize;
+        }
     }
 }
