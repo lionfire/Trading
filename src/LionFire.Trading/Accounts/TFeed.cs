@@ -32,6 +32,6 @@ namespace LionFire.Trading.Accounts
         public List<ITemplate> Children { get; set; }
 
         // MOVE this to Workspace, don't put startup preferences here.
-        public ExecutionState DesiredExecutionState { get; set; }
+        public ExecutionStateEx DesiredExecutionState { get; set; }
     }
 }

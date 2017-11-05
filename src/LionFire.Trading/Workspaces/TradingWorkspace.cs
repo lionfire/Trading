@@ -33,7 +33,7 @@ namespace LionFire.Trading.Workspaces
     [AssetPath("Workspaces")]
     [HasDependencies]
     [State]
-    public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutable, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
+    public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
     {
         // REVIEW - why is this needed -- does it make sense?
         public string Key
@@ -231,7 +231,7 @@ namespace LionFire.Trading.Workspaces
             Bots.Clear();
             Alerts.Clear();
             Sessions.Clear();
-            State = ExecutionState.Uninitialized;
+            State = ExecutionStateEx.Uninitialized;
         }
 
         #endregion
@@ -273,16 +273,16 @@ namespace LionFire.Trading.Workspaces
             }
         }
 
-        protected override async Task OnInitializing( Func<ValidationContext> validationContext)
+        protected override  void OnInitializing(ref ValidationContext validationContext)
         {
-            await base.OnInitializing(validationContext); // Injects dependencies
+            base.OnInitializing(ref validationContext); // Injects dependencies
   
             if (Sessions.Count > 0) throw new Exception("Sessions already populated");
 
             ResetState();
             // TODO: Verify state
 
-            State = Execution.ExecutionState.Starting;
+            State = Execution.ExecutionStateEx.Starting;
 
             if ((Template.TradingOptions.AccountModes & AccountMode.Live) == AccountMode.Live)
             {
@@ -321,7 +321,8 @@ namespace LionFire.Trading.Workspaces
                 {
                     var session = tSession.Create();
                     session.Workspace = this;
-                    await session.Initialize().ConfigureAwait(continueOnCapturedContext: false); // Loads child collections
+                    //session.Initialize().ConfigureAwait(continueOnCapturedContext: false); // Loads child collections
+                    session.Initialize().Wait(); // Loads child collections;
                     this.Sessions.Add(session);
                 }
             }
@@ -330,7 +331,7 @@ namespace LionFire.Trading.Workspaces
             {
                 LoadWorkspaceItems();
             }
-            State = ExecutionState.Ready;
+            State = ExecutionStateEx.Ready;
             //return true;
         }
 
@@ -350,13 +351,13 @@ namespace LionFire.Trading.Workspaces
             foreach (var workspaceItem in Items.OfType<IStartable>())
             {
                 var ce = workspaceItem as IControllableExecutable;
-                if (ce == null || ce.DesiredExecutionState == ExecutionState.Started)
+                if (ce == null || ce.DesiredExecutionState == ExecutionStateEx.Started)
                 {
                     await workspaceItem.Start().ConfigureAwait(false);
                 }
             }
 
-            State = ExecutionState.Started;
+            State = ExecutionStateEx.Started;
         }
 
         public async Task StartAllSessions(bool forceStart = false)
@@ -365,7 +366,7 @@ namespace LionFire.Trading.Workspaces
             {
                 var startable = session as IStartable;
                 if (startable == null) continue;
-                if (forceStart || session.Template.DesiredExecutionState == ExecutionState.Started)
+                if (forceStart || session.Template.DesiredExecutionState == ExecutionStateEx.Started)
                 {
                     await session.Start().ConfigureAwait(false);
                 }
@@ -378,7 +379,7 @@ namespace LionFire.Trading.Workspaces
             {
                 var startable = account as IStartable;
                 if (startable == null) continue;
-                if (forceStart || account.Template.DesiredExecutionState == ExecutionState.Started)
+                if (forceStart || account.Template.DesiredExecutionState == ExecutionStateEx.Started)
                 {
                     await startable.Start().ConfigureAwait(false);
                 }
@@ -476,6 +477,8 @@ namespace LionFire.Trading.Workspaces
                 Debug.WriteLine($" - session '{s.Name}': {s.Bots.Count} bots");
             }
         }
+
+   
     }
 
 }

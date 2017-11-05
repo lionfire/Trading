@@ -1,5 +1,6 @@
 ﻿using LionFire.Assets;
 using LionFire.ExtensionMethods;
+using LionFire.Persistence;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Spotware.Connect.AccountApi
 {
-    
+
 
     public static class SpotwareAccountApi
     {
@@ -32,7 +33,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
 
 
         public const string RefreshTokenUri = @"/apps/token?grant_type=refresh_token&refresh_token={refresh_token}&client_id={client_id}&client_secret={client_secret}";
-        
+
 
         public static string ToSpotwareUriParameter(this DateTime time)
         {
@@ -50,30 +51,33 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc) + TimeSpan.FromMilliseconds(timestamp);
         }
 
-        public static HttpClient NewHttpClient(bool isSandbox = false)
+        public static HttpClient NewHttpClient(bool isSandbox = false, bool isJson = false)
         {
             var client = new HttpClient();
-            AddHeaders(client);
+            AddHeaders(client, isJson: isJson);
             client.BaseAddress = new Uri(SpotwareAccountApi.GetRoot(isSandbox));
             return client;
         }
 
 
-        public static void AddHeaders(HttpClient client)
+        public static void AddHeaders(HttpClient client, bool isJson = false)
         {
             // REVIEW unnecessary ones
 
             client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36");
-            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
-            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.8,en-CA;q=0.6");
-            client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, sdch, br");
-            client.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
-            client.DefaultRequestHeaders.Add("Connection", "keep-alive");
-            client.DefaultRequestHeaders.Add("Host", "api.spotware.com");
-            client.DefaultRequestHeaders.Add("Cookie", "_ga=GA1.2.1217132727.1477434575");
+            if (!isJson)
+            {
+                client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+                client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.8,en-CA;q=0.6");
+                client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, sdch, br");
+                client.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
+                client.DefaultRequestHeaders.Add("Connection", "keep-alive");
+                client.DefaultRequestHeaders.Add("Host", "api.spotware.com");
+                client.DefaultRequestHeaders.Add("Cookie", "_ga=GA1.2.1217132727.1477434575");
+            }
         }
 
-        public  static Task<string> RefreshToken(CTraderAccount account)
+        public static Task<string> RefreshToken(CTraderAccount account)
         {
             return Task.FromResult("Not implemented");
         }
@@ -166,41 +170,51 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
 
         public static async Task<bool> TryRenewToken(CTraderAccount account)
         {
-            throw new NotImplementedException("TODO: get client id/secret");
+            var connectAppInfo = Defaults.TryGet<ISpotwareConnectAppInfo>();
+            if (connectAppInfo == null) throw new ArgumentNullException("ISpotwareConnectAppInfo is not set in defaults.");
 
-            ////account.Template.
-            //var redirectUri = "http://lionfire.software";
-            //var renewUri = $"https://connect.spotware.com/apps/token?grant_type=refresh_token&refresh_token={account.Template.AccessToken}&redirect_uri={redirectUri}&client_id={clientId}&client_secret={clientSecret}";
+            var renewUri = $"https://connect.spotware.com/apps/token?grant_type=refresh_token&refresh_token={account.Template.RefreshToken}&client_id={connectAppInfo.ClientPublicId}&client_secret={connectAppInfo.ClientSecret}";
 
-            //var client = NewHttpClient();
+            var client = NewHttpClient(isJson: true);
 
-            //var uri = SpotwareAccountApi.PositionsUri;
-            //uri = uri
-            //    .Replace("{id}", account.Template.AccountId.ToString())
-            //    .Replace("{access_token}", account.Template.AccessToken)
-            //    .Replace("{limit}", "10000")  // HARDCODE REVIEW
-            //    ;
-            ////UpdateProgress(0.11, "Sending request");
-            //var response = await client.GetAsync(uri).ConfigureAwait(false);
+            var uri = renewUri;
 
-            //var receiveStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
-            //System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
-            //var json = readStream.ReadToEnd();
-            //var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareRenewTokenResult>(json);
+            var response = await client.GetAsync(uri).ConfigureAwait(false);
 
-            //if(data.errorCode == null && !string.IsNullOrEmpty(data.accessToken))
-            //{
-            //    account.Template.AccessToken = data.accessToken;
-            //    account.Template.RefreshToken = data.refreshToken;
-            //    await account.Template.Save();
-            //    throw new NotImplementedException("UNTESTED -- did it work?");
-            //    //return true;
-                
-            //}
-            //return false;
+
+            var receiveStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+            System.IO.StreamReader readStream = new System.IO.StreamReader(receiveStream, System.Text.Encoding.UTF8);
+            var json = readStream.ReadToEnd();
+            var data = Newtonsoft.Json.JsonConvert.DeserializeObject<SpotwareRenewTokenResult>(json);
+
+            if (!response.IsSuccessStatusCode || data.errorCode != null)
+            {
+                Debug.WriteLine("Failed refresh response: " + json);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                switch (response.StatusCode)
+                {
+
+                    case System.Net.HttpStatusCode.NotFound:
+
+                    default:
+                        throw new Exception("Refresh failed with HTTP status code: " + response.StatusCode + " " + response.ReasonPhrase);
+                }
+            }
+
+            if (data.errorCode == null && !string.IsNullOrEmpty(data.accessToken))
+            {
+                account.Template.AccessToken = data.accessToken;
+                account.Template.RefreshToken = data.refreshToken;
+                await account.Template.Save(new PersistenceContext { AllowInstantiator = false});
+                return true;
+            }
+            return false;
         }
         public class SpotwareRenewTokenResult
-        { 
+        {
             public string accessToken { get; set; }
             public string tokenType { get; set; }
             public int expiresIn { get; set; }
@@ -283,7 +297,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
                     {
                         throw new Exception("Invalid tradeSide from server: " + pos.tradeSide);
                     }
-                    
+
                     var position = new Position()
                     {
                         Id = pos.positionId,
@@ -385,7 +399,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             public string comment { get; set; }
             public string channel { get; set; }
             public string label { get; set; }
-            
+
         }
 
         private class SpotwareDealsResult
@@ -406,7 +420,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             public int volume { get; set; }
             public int filledVolume { get; set; }
 
-            public string symbolName { get; set;  }
+            public string symbolName { get; set; }
             public double commission { get; set; }
             public double executionPrice { get; set; }
             public double baseToUsdConversionRate { get; set; }

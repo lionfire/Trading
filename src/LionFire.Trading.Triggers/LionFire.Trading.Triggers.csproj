@@ -5,14 +5,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Assets.Abstractions\LionFire.Assets.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Assets\LionFire.Assets.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Environment\LionFire.Environment.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging\LionFire.Extensions.Logging.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating.Abstractions\LionFire.Instantiating.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating\LionFire.Instantiating.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications.Abstractions\LionFire.Notifications.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets.Abstractions\LionFire.Persistence.Assets.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Assets\LionFire.Persistence.Assets.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Triggers\LionFire.Triggers.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />

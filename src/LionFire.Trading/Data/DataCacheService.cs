@@ -29,7 +29,7 @@ namespace LionFire.Trading.Data
 
     // TODO: Job limiter for Spotware HTTP API: rank based on currency and timeframe priority
 
-    public class SDataCacheService : ITemplateInstance<DataCacheService>, IStartable, IStoppable, IExecutable, IHasRunTask
+    public class SDataCacheService : ITemplateInstance<DataCacheService>, IStartable, IStoppable, IExecutableEx, IHasRunTask
     //, IRequiresInjection
     {
         public int CompletionCount { get; set; }
@@ -45,11 +45,11 @@ namespace LionFire.Trading.Data
 
         #region Lifecycle State
 
-        //public ExecutionState State { get; }
+        //public ExecutionStateEx State { get; }
 
         #region State
 
-        public ExecutionState State
+        public ExecutionStateEx State
         {
             get { return state; }
             set
@@ -58,12 +58,12 @@ namespace LionFire.Trading.Data
                 state = value; StateChangedToFor?.Invoke(state, this);
             }
         }
-        private ExecutionState state;
+        private ExecutionStateEx state;
 
         #endregion
 
 
-        public event Action<ExecutionState, IExecutable> StateChangedToFor;
+        public event Action<ExecutionStateEx, object> StateChangedToFor;
 
         #endregion
 
@@ -76,7 +76,7 @@ namespace LionFire.Trading.Data
 
         public async Task Start()
         {
-            State = ExecutionState.Starting;
+            State = ExecutionStateEx.Starting;
             foreach (var workspace in App.GetComponents<TradingWorkspace>())
             {
                 await StartWorkspace(workspace);
@@ -86,7 +86,7 @@ namespace LionFire.Trading.Data
 
             if (!RunTask.IsCompleted)
             {
-                State = ExecutionState.Started;
+                State = ExecutionStateEx.Started;
             }
         }
 
@@ -152,13 +152,13 @@ namespace LionFire.Trading.Data
 
         public Task Stop()
         {
-            State = ExecutionState.Stopping;
+            State = ExecutionStateEx.Stopping;
             foreach (var workspace in startedWorkspaces.Keys.ToArray())
             {
                 StopWorkspace(workspace);
             }
 
-            State = ExecutionState.Stopped;
+            State = ExecutionStateEx.Stopped;
             return Task.CompletedTask;
         }
         private void StopWorkspace(string key)

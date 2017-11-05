@@ -21,12 +21,12 @@ namespace LionFire.Trading
 {
     //public abstract class StateDependency
     //{
-    //    public abstract ExecutionState State { get; }
+    //    public abstract ExecutionStateEx State { get; }
     //}
 
     //public class MarketDependency : StateDependency
     //{
-    //    public override ExecutionState State { get { return ExecutionState.Started; } }
+    //    public override ExecutionStateEx State { get { return ExecutionStateEx.Started; } }
     //}
 
     public interface IInterestedInMarketData
@@ -37,7 +37,7 @@ namespace LionFire.Trading
     /// <summary>
     /// Represents an entity that participates in the market, either passively (readonly, which will receive events for DesiredSubscriptions via OnBar) and/or actively (by creating orders)
     /// </summary>
-    public abstract class AccountParticipant : ExecutableBase, IAccountParticipant, IExecutable, INotifyPropertyChanged, IInterestedInMarketData
+    public abstract class AccountParticipant : ExecutableExBase, IAccountParticipant, IExecutableEx, INotifyPropertyChanged, IInterestedInMarketData
     {
 
         #region Desired Bars
@@ -255,9 +255,9 @@ namespace LionFire.Trading
 
         #region State
 
-        #region ExecutionState
+        #region ExecutionStateEx
 
-        protected void SetState(ExecutionState state)
+        protected void SetState(ExecutionStateEx state)
         {
             var oldState = this.State;
             this.State = state;
@@ -270,7 +270,7 @@ namespace LionFire.Trading
         #endregion
 
         [State]
-        public ExecutionState DesiredExecutionState
+        public ExecutionStateEx DesiredExecutionState
         {
             get
             {
@@ -283,34 +283,34 @@ namespace LionFire.Trading
 
                 switch (State)
                 {
-                    //case ExecutionState.Unspecified:
+                    //case ExecutionStateEx.Unspecified:
                     //    break;
-                    //case ExecutionState.Uninitialized:
+                    //case ExecutionStateEx.Uninitialized:
                     //    break;
-                    //case ExecutionState.Faulted:
+                    //case ExecutionStateEx.Faulted:
                     //    break;
-                    //case ExecutionState.Initializing:
+                    //case ExecutionStateEx.Initializing:
                     //    break;
-                    //case ExecutionState.Ready:
+                    //case ExecutionStateEx.Ready:
                     //    break;
-                    //case ExecutionState.Starting:
+                    //case ExecutionStateEx.Starting:
                     //    break;
-                    //case ExecutionState.Started:
+                    //case ExecutionStateEx.Started:
                     //    break;
-                    //case ExecutionState.Pausing:
+                    //case ExecutionStateEx.Pausing:
                     //    break;
-                    //case ExecutionState.Paused:
+                    //case ExecutionStateEx.Paused:
                     //    break;
-                    //case ExecutionState.Unpausing:
+                    //case ExecutionStateEx.Unpausing:
                     //    break;
-                    //case ExecutionState.Stopping:
+                    //case ExecutionStateEx.Stopping:
                     //    break;
-                    //case ExecutionState.Stopped:
+                    //case ExecutionStateEx.Stopped:
                     //    break;
-                    //case ExecutionState.Finished:
+                    //case ExecutionStateEx.Finished:
                     //    break;
-                    case ExecutionState.Disposed:
-                        if (value != ExecutionState.Disposed)
+                    case ExecutionStateEx.Disposed:
+                        if (value != ExecutionStateEx.Disposed)
                         {
                             throw new ObjectDisposedException(this.ToString());
                         }
@@ -321,33 +321,33 @@ namespace LionFire.Trading
 
                 switch (desiredExecutionState)
                 {
-                    //case ExecutionState.Unspecified:
+                    //case ExecutionStateEx.Unspecified:
                     //    break;
-                    //case ExecutionState.Uninitialized:
+                    //case ExecutionStateEx.Uninitialized:
                     //    break;
-                    //case ExecutionState.Faulted:
+                    //case ExecutionStateEx.Faulted:
                     //    break;
-                    //case ExecutionState.Initializing:
+                    //case ExecutionStateEx.Initializing:
                     //    break;
-                    //case ExecutionState.Ready:
+                    //case ExecutionStateEx.Ready:
                     //    break;
-                    //case ExecutionState.Starting:
-                    //case ExecutionState.Started:
+                    //case ExecutionStateEx.Starting:
+                    //case ExecutionStateEx.Started:
                     //    SetState(desiredExecutionState);
                     //    break;
-                    //case ExecutionState.Pausing:
+                    //case ExecutionStateEx.Pausing:
                     //    break;
-                    //case ExecutionState.Paused:
+                    //case ExecutionStateEx.Paused:
                     //    break;
-                    //case ExecutionState.Unpausing:
+                    //case ExecutionStateEx.Unpausing:
                     //    break;
-                    //case ExecutionState.Stopping:
+                    //case ExecutionStateEx.Stopping:
                     //    break;
-                    //case ExecutionState.Stopped:
+                    //case ExecutionStateEx.Stopped:
                     //    break;
-                    //case ExecutionState.Finished:
+                    //case ExecutionStateEx.Finished:
                     //    break;
-                    //case ExecutionState.Disposed:
+                    //case ExecutionStateEx.Disposed:
                     //    break;
                     default:
                         SetState(desiredExecutionState);
@@ -355,7 +355,7 @@ namespace LionFire.Trading
                 }
             }
         }
-        private ExecutionState desiredExecutionState;
+        private ExecutionStateEx desiredExecutionState;
 
         #endregion
 
@@ -367,50 +367,50 @@ namespace LionFire.Trading
                 this.ValidateDependencies();
                 switch (State)
                 {
-                    //case ExecutionState.Unspecified:
+                    //case ExecutionStateEx.Unspecified:
                     //    break;
-                    //case ExecutionState.Unconfigured:
+                    //case ExecutionStateEx.Unconfigured:
                     //    break;
-                    //case ExecutionState.InvalidConfiguration:
+                    //case ExecutionStateEx.InvalidConfiguration:
                     //    break;
-                    //case ExecutionState.Uninitialized:
+                    //case ExecutionStateEx.Uninitialized:
                     //    break;
-                    //case ExecutionState.Initializing:
+                    //case ExecutionStateEx.Initializing:
                     //    break;
-                    //case ExecutionState.Ready:
+                    //case ExecutionStateEx.Ready:
                     //    break;
-                    //case ExecutionState.Starting:
+                    //case ExecutionStateEx.Starting:
                     //    break;
-                    //case ExecutionState.Started:
+                    //case ExecutionStateEx.Started:
                     //    break;
-                    //case ExecutionState.Pausing:
+                    //case ExecutionStateEx.Pausing:
                     //    break;
-                    //case ExecutionState.Paused:
+                    //case ExecutionStateEx.Paused:
                     //    break;
-                    //case ExecutionState.Unpausing:
+                    //case ExecutionStateEx.Unpausing:
                     //    break;
-                    //case ExecutionState.Stopping:
+                    //case ExecutionStateEx.Stopping:
                     //    break;
-                    //case ExecutionState.Stopped:
+                    //case ExecutionStateEx.Stopped:
                     //    break;
-                    //case ExecutionState.Finished:
+                    //case ExecutionStateEx.Finished:
                     //    break;
-                    case ExecutionState.Disposed:
+                    case ExecutionStateEx.Disposed:
                         throw new ObjectDisposedException(this.ToString());
-                    //case ExecutionState.WaitingToStart:
+                    //case ExecutionStateEx.WaitingToStart:
                     //    break;
-                    //case ExecutionState.Faulted:
+                    //case ExecutionStateEx.Faulted:
                     //    break;
                     default:
                         break;
                 }
 
-                State = ExecutionState.Initializing;
+                State = ExecutionStateEx.Initializing;
                 foreach (var child in Children.OfType<IAccountParticipant>())
                 {
                     child.Account = this.Account;
                 }
-                State = ExecutionState.Ready;
+                State = ExecutionStateEx.Ready;
                 return true;
             }
             catch (Exception ex)
@@ -430,14 +430,14 @@ namespace LionFire.Trading
             if (this.IsStarted()) return;
 
 
-            desiredExecutionState = ExecutionState.Started; // REVIEW - have a single input/output
+            desiredExecutionState = ExecutionStateEx.Started; // REVIEW - have a single input/output
 
             if (!CanStart) return; // TODO: Error?
 
             StartOnMarketAvailable = true;
 
             // TODO: 
-            //DesiredExecutionState = ExecutionState.Started;
+            //DesiredExecutionState = ExecutionStateEx.Started;
 
             if (Account != null && Account.Started.Value)
             {
@@ -458,18 +458,18 @@ namespace LionFire.Trading
                 tryagain:
                 switch (State)
                 {
-                    //case ExecutionState.Unconfigured:
+                    //case ExecutionStateEx.Unconfigured:
                     //    break;
-                    //case ExecutionState.InvalidConfiguration:
+                    //case ExecutionStateEx.InvalidConfiguration:
                     //    break;
-                    case ExecutionState.Unspecified:
-                    //case ExecutionState.Finished:
-                    case ExecutionState.Uninitialized:
-                    case ExecutionState.Stopped:
+                    case ExecutionStateEx.Unspecified:
+                    //case ExecutionStateEx.Finished:
+                    case ExecutionStateEx.Uninitialized:
+                    case ExecutionStateEx.Stopped:
                         await Initialize().ConfigureAwait(false);
                         goto tryagain;
-                    case ExecutionState.Initializing:
-                    case ExecutionState.Stopping:
+                    case ExecutionStateEx.Initializing:
+                    case ExecutionStateEx.Stopping:
                         if (retriesRemaining-- > 0)
                         {
                             await Task.Delay(1000).ConfigureAwait(false);
@@ -479,26 +479,26 @@ namespace LionFire.Trading
                         {
                             throw new Exception("Cannot start, current state is Initializing.");
                         }
-                    case ExecutionState.Ready:
-                        //case ExecutionState.WaitingToStart:
+                    case ExecutionStateEx.Ready:
+                        //case ExecutionStateEx.WaitingToStart:
                         break;
-                    case ExecutionState.Starting:
-                    case ExecutionState.Started:
+                    case ExecutionStateEx.Starting:
+                    case ExecutionStateEx.Started:
                         return;
-                    //case ExecutionState.Pausing:
+                    //case ExecutionStateEx.Pausing:
                     //    break;
-                    //case ExecutionState.Paused:
+                    //case ExecutionStateEx.Paused:
                     //    break;
-                    //case ExecutionState.Unpausing:
+                    //case ExecutionStateEx.Unpausing:
                     //    break;
-                    case ExecutionState.Disposed:
+                    case ExecutionStateEx.Disposed:
                         throw new ObjectDisposedException(this.GetType().Name);
                     default:
                         throw new Exception("Unsupported state for Start(): " + State);
                 }
 
-                SetState(ExecutionState.Starting);
-                this.OnEnteringState(LionFire.Execution.ExecutionState.Starting);
+                SetState(ExecutionStateEx.Starting);
+                this.OnEnteringState(LionFire.Execution.ExecutionStateEx.Starting);
 
 
                 await OnStarting().ConfigureAwait(false);
@@ -514,13 +514,13 @@ namespace LionFire.Trading
                 return;
             }
 
-            SetState(ExecutionState.Started);
+            SetState(ExecutionStateEx.Started);
         }
 
         protected async Task OnFault(Exception ex)
         {
             FaultException = ex;
-            SetState(ExecutionState.Faulted);
+            SetState(ExecutionStateEx.Faulted);
 
             try
             {
@@ -552,32 +552,32 @@ namespace LionFire.Trading
 
         protected async Task DoStop(StopMode stopMode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
         {
-            DesiredExecutionState = ExecutionState.Stopped;
+            DesiredExecutionState = ExecutionStateEx.Stopped;
 
             switch (State)
             {
-                case ExecutionState.Unspecified:
-                case ExecutionState.Uninitialized:
-                case ExecutionState.Faulted:
-                case ExecutionState.Stopped:
-                //case ExecutionState.Finished:
-                case ExecutionState.Disposed:
+                case ExecutionStateEx.Unspecified:
+                case ExecutionStateEx.Uninitialized:
+                case ExecutionStateEx.Faulted:
+                case ExecutionStateEx.Stopped:
+                //case ExecutionStateEx.Finished:
+                case ExecutionStateEx.Disposed:
                     return;
-                case ExecutionState.Initializing:
-                case ExecutionState.Ready:
-                case ExecutionState.Starting:
-                case ExecutionState.Started:
-                case ExecutionState.Pausing:
-                case ExecutionState.Paused:
-                case ExecutionState.Unpausing:
+                case ExecutionStateEx.Initializing:
+                case ExecutionStateEx.Ready:
+                case ExecutionStateEx.Starting:
+                case ExecutionStateEx.Started:
+                case ExecutionStateEx.Pausing:
+                case ExecutionStateEx.Paused:
+                case ExecutionStateEx.Unpausing:
                     break;
-                case ExecutionState.Stopping:
+                case ExecutionStateEx.Stopping:
                     break;
                 default:
                     throw new Exception();
             }
 
-            SetState(ExecutionState.Stopping);
+            SetState(ExecutionStateEx.Stopping);
 
             OnStopping();
 
@@ -590,7 +590,7 @@ namespace LionFire.Trading
                 await child.Stop().ConfigureAwait(false);
             }
 
-            SetState(ExecutionState.Stopped);
+            SetState(ExecutionStateEx.Stopped);
 
             OnStopped();
         }

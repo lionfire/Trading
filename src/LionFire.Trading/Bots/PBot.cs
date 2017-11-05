@@ -24,7 +24,7 @@ namespace LionFire.Trading.Bots
 
             Id = bot.Template.Id;
             TypeName = bot.Template.GetType().FullName;
-            //DesiredExecutionState = bot.DesiredExecutionState;
+            //DesiredExecutionStateEx = bot.DesiredExecutionStateEx;
         }
         public PBot(string id)
         {
@@ -39,7 +39,7 @@ namespace LionFire.Trading.Bots
 
         public string Id { get; set; }
         public string TypeName { get; set; }
-        //public ExecutionState DesiredExecutionState { get; set; }
+        //public ExecutionStateEx DesiredExecutionStateEx { get; set; }
 
         //public BotMode Modes { get; set; }
         //    //public BotMode ModesEnabled { get; set; }
@@ -52,7 +52,7 @@ namespace LionFire.Trading.Bots
 
             if (tBot == null && !String.IsNullOrWhiteSpace(TypeName))
             {
-                foreach (var assetName in $"*id={Id}*".Find<BacktestResult>())
+                foreach (var assetName in  $"*id={Id}*".Find<BacktestResult>().GetResultSafe())
                 {
                     var backtestResult = assetName.Load<BacktestResult>();
                     tBot = (TBot)((JObject)backtestResult.Config).ToObject(TypeResolver.Resolve(TypeName, context.TypeNaming));

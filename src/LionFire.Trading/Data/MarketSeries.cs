@@ -23,7 +23,6 @@ using TickType = LionFire.Trading.Tick;
 using LionFire.Trading.Data;
 using System.Threading;
 using System.ComponentModel;
-using LionFire.Collections.Concurrent;
 
 namespace LionFire.Trading
 {

@@ -212,7 +212,7 @@ namespace LionFire.Trading.Data
         //    if (!this.IsInitailized())
         //    {
         //        Task.FromResult(this.TryResolveDependencies(ref validationContext));
-        //        if (validationContext.IsValid()) State = ExecutionState.Ready;
+        //        if (validationContext.IsValid()) State = ExecutionStateEx.Ready;
         //    }
         //    return Task.FromResult(validationContext);
         //}
@@ -229,7 +229,7 @@ namespace LionFire.Trading.Data
         {
             (await Initialize()).EnsureValid();
 
-            State = ExecutionState.Starting;
+            State = ExecutionStateEx.Starting;
             // TODO FIXME: Enable autosave on Template.  It would be cool to do it from ITemplate Create mechanism.
 
             if (!Directory.Exists(TimeFrameDirectory))
@@ -270,10 +270,10 @@ namespace LionFire.Trading.Data
                 {
                     logger.LogTrace($"{MarketSeries}: {result.Count} data points retrieved");
                 }
-                State = ExecutionState.Stopped;
+                State = ExecutionStateEx.Stopped;
             });
 
-            SetState(ExecutionState.Starting, ExecutionState.Started);
+            SetState(ExecutionStateEx.Starting, ExecutionStateEx.Started);
         }
 
         protected void OnFinished()
@@ -292,13 +292,13 @@ namespace LionFire.Trading.Data
 
         public Task Stop()
         {
-            SetState(ExecutionState.Started, ExecutionState.Stopping);
-            SetState(ExecutionState.Stopping, ExecutionState.Stopped);
+            SetState(ExecutionStateEx.Started, ExecutionStateEx.Stopping);
+            SetState(ExecutionStateEx.Stopping, ExecutionStateEx.Stopped);
             return Task.CompletedTask;
         }
 
         //#error NEXT: Figure out service vs job architecture.  How to run this, vs how to monitor?  Should monitor be a generic thing?
-        //public abstract class MonitorBase : ExecutableBase, IStartable, IStoppable
+        //public abstract class MonitorBase : ExecutableExBase, IStartable, IStoppable
         //{
         //    /// <summary>
         //    /// Return Validation items containing info about what needs to be done.  Empty or null if nothing to be done.

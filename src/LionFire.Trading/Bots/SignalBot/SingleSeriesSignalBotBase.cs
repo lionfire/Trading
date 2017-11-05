@@ -114,7 +114,7 @@ namespace LionFire.Trading.Bots
         public override void Evaluate() // TOASYNC
         {
 #if !cAlgo
-            if(State == ExecutionState.Faulted) return;
+            if(State == ExecutionStateEx.Faulted) return;
 #endif
 
             try
@@ -133,9 +133,9 @@ namespace LionFire.Trading.Bots
                 EndDate = ExtrapolatedServerTime;
 
 #if !cAlgo
-                if (State != ExecutionState.Started)
+                if (State != ExecutionStateEx.Started)
                 {
-                    throw new InvalidExecutionStateException(ExecutionState.Started, State);
+                    throw new InvalidExecutionStateException(ExecutionStateEx.Started, State);
                 }
 #endif
 #if NULLCHECKS
@@ -266,7 +266,7 @@ namespace LionFire.Trading.Bots
 #if cAlgo
                 Stop();
 #else
-                SetState(ExecutionState.Faulted);
+                SetState(ExecutionStateEx.Faulted);
 #endif
             }
 

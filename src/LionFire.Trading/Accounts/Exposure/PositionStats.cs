@@ -25,14 +25,12 @@ namespace LionFire.Trading
         {
             this.SymbolCode = code;
             this.Account = account;
-
         }
+
         public string SymbolCode { get; set; }
         public IAccount Account { get; set; }
         public IPositions Positions { get { return Account.Positions; } }
         public IPendingOrders Orders { get { return Account.PendingOrders; } }
-
-
 
         public double LongPositions {
             get {
@@ -44,7 +42,6 @@ namespace LionFire.Trading
                 return sum;
             }
         }
-
 
         public double GetExposure(AccountAssetType assetType, TradeType? tradeType = null, StakeType? stakeType=null, string symbol = null)
         {

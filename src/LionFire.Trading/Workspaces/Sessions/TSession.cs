@@ -64,7 +64,7 @@ namespace LionFire.Trading.Workspaces
 
         #region State
 
-        public ExecutionState DesiredExecutionState { get; set; } = ExecutionState.Started;
+        public ExecutionStateEx DesiredExecutionState { get; set; } = ExecutionStateEx.Started;
 
         /// <summary>
         /// Safety switch for live bots

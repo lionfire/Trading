@@ -8,13 +8,13 @@ using LionFire.Execution.Executables;
 
 namespace LionFire.Trading.Sessions
 {
-    public class SessionBase : ExecutableBase, IExecutable, IControllableExecutable, INotifyPropertyChanged
+    public class SessionBase : ExecutableExBase, IExecutableEx, IControllableExecutable, INotifyPropertyChanged
     {
         public IAccount Account { get; set; }
 
         #region DesiredState
 
-        public ExecutionState DesiredExecutionState
+        public ExecutionStateEx DesiredExecutionState
         {
             get { return desiredState; }
             set
@@ -24,7 +24,7 @@ namespace LionFire.Trading.Sessions
                 OnPropertyChanged(nameof(DesiredExecutionState));
             }
         }
-        private ExecutionState desiredState;
+        private ExecutionStateEx desiredState;
 
         protected virtual void OnDesiredStateChanged()
         {

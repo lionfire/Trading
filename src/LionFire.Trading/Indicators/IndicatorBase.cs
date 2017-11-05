@@ -19,7 +19,7 @@ using LionFire.Reactive;
 namespace LionFire.Trading.Indicators
 {
 
-    public abstract partial class IndicatorBase<TIndicator> : IIndicator, IExecutable
+    public abstract partial class IndicatorBase<TIndicator> : IIndicator, IExecutableEx
         where TIndicator : ITIndicator, new()
     {
         #region Relationships
@@ -147,7 +147,7 @@ namespace LionFire.Trading.Indicators
 
         protected virtual void OnInitializing()
         {
-            State = ExecutionState.Initializing;
+            State = ExecutionStateEx.Initializing;
             try
             {
                 try
@@ -199,11 +199,11 @@ namespace LionFire.Trading.Indicators
                     child.Start();
 #endif
                 }
-                State = ExecutionState.Ready;
+                State = ExecutionStateEx.Ready;
             }
             catch (Exception)
             {
-                State = ExecutionState.Uninitialized;
+                State = ExecutionStateEx.Uninitialized;
                 throw;
             }
         }

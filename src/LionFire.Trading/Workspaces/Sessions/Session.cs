@@ -116,7 +116,7 @@ namespace LionFire.Trading.Workspaces
     ///     - scan
     ///     - paper
     /// </summary>
-    public class Session : ExecutableBase, IInitializable, IStartable, IStoppableEx, IExecutable, INotifyPropertyChanged, IChanged, INotifyOnSaving
+    public class Session : ExecutableExBase, IInitializable, IStartable, IStoppableEx, IExecutableEx, INotifyPropertyChanged, IChanged, INotifyOnSaving
         , ITemplateInstance<TSession>
     {
 
@@ -285,7 +285,7 @@ namespace LionFire.Trading.Workspaces
             set
             {
                 bool wasStarted = false;
-                if (State == ExecutionState.Started)
+                if (State == ExecutionStateEx.Started)
                 {
                     wasStarted = true;
                 }
@@ -311,7 +311,7 @@ namespace LionFire.Trading.Workspaces
         {
             this.Validate().PropertyNonDefault(nameof(Workspace), Workspace).EnsureValid();
 
-            State = ExecutionState.Initializing;
+            State = ExecutionStateEx.Initializing;
 
             LiveAccount = Workspace.GetAccount(Template.LiveAccount);
             DemoAccount = Workspace.GetAccount(Template.DemoAccount);
@@ -320,12 +320,12 @@ namespace LionFire.Trading.Workspaces
             {
                 if (!await InitBots().ConfigureAwait(continueOnCapturedContext: false))
                 {
-                    State = ExecutionState.Faulted;
+                    State = ExecutionStateEx.Faulted;
                     return false;
                 }
             }
 
-            State = ExecutionState.Ready;
+            State = ExecutionStateEx.Ready;
 
             return true;
         }
@@ -418,9 +418,9 @@ namespace LionFire.Trading.Workspaces
 
         public Task Stop(StopMode mode = StopMode.GracefulShutdown, StopOptions options = StopOptions.StopChildren)
         {
-            State = ExecutionState.Stopping;
+            State = ExecutionStateEx.Stopping;
 
-            State = ExecutionState.Stopped;
+            State = ExecutionStateEx.Stopped;
             return Task.CompletedTask;
         }
 

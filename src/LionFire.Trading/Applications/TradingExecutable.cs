@@ -9,7 +9,7 @@ namespace LionFire.Trading
 {
     #if false
 
-    public class TradingExecutable : ExecutableBase, IStartable, IInitializable, 
+    public class TradingExecutable : ExecutableExBase, IStartable, IInitializable, 
     {
         #region Relationships
 

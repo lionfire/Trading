@@ -37,7 +37,7 @@ namespace LionFire.Trading.Bots
 #if cAlgo
         Robot,
 #endif
-        IBot, IInitializable, INotifyPropertyChanged, IExecutable
+        IBot, IInitializable, INotifyPropertyChanged, IExecutableEx
         // REVIEW OPTIMIZE - eliminate INPC for cAlgo?
         where _TBot : TBot, new()
     {
@@ -128,7 +128,7 @@ namespace LionFire.Trading.Bots
         //        {
         //            Id = Template.Id,
         //            TypeName = Template.GetType().FullName,
-        //            DesiredExecutionState = DesiredExecutionState,
+        //            DesiredExecutionStateEx = DesiredExecutionStateEx,
         //        },
         //        new StateRestorer(this),
         //    };
@@ -168,7 +168,7 @@ namespace LionFire.Trading.Bots
 #endif
         }
 
-
+        public bool GotTick;
         // Handler for LionFire.  Invoked by cAlgo's OnStart
 #if cAlgo
         protected virtual async Task OnStarting()
@@ -176,6 +176,7 @@ namespace LionFire.Trading.Bots
         protected override Task OnStarting()
 #endif
         {
+
             if (IsBacktesting && String.IsNullOrWhiteSpace(Template.Id))
             {
                 Template.Id = IdUtils.GenerateId();
@@ -213,7 +214,7 @@ namespace LionFire.Trading.Bots
         #region Execution State
 #if cAlgo
 
-        public ExecutionState State
+        public ExecutionStateEx State
         {
             get { return state; }
             protected set
@@ -223,9 +224,9 @@ namespace LionFire.Trading.Bots
                 StateChangedToFor?.Invoke(state, this);
             }
         }
-        private ExecutionState state;
+        private ExecutionStateEx state;
 
-        public event Action<ExecutionState, IExecutable> StateChangedToFor;
+        public event Action<ExecutionStateEx, object> StateChangedToFor;
 #endif
         #endregion
 
@@ -310,13 +311,14 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
+
         #region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.001;
 
-
-
+        public const string NoTicksIdPrefix = "NT-";
+        
 #if cAlgo
         protected override
 #else
@@ -324,7 +326,7 @@ namespace LionFire.Trading.Bots
 #endif
          double GetFitness(GetFitnessArgs args)
         {
-
+            
             try
             {
                 var dd = args.MaxEquityDrawdownPercentages;
@@ -352,6 +354,7 @@ namespace LionFire.Trading.Bots
                   throw new ArgumentException("StartDate or EndDate not set.  Are you calling base.OnBar in OnBar?"); 
                 }
 #endif
+                if (!GotTick && !Template.Id.StartsWith(NoTicksIdPrefix)) { Template.Id = NoTicksIdPrefix + NoTicksIdPrefix; }
                 var backtestResult = new BacktestResult()
                 {
                     BacktestDate = DateTime.UtcNow,
@@ -435,7 +438,7 @@ namespace LionFire.Trading.Bots
             }
             catch (Exception ex)
             {
-                Logger.LogError("GetFitness threw exception: " + ex);
+                Logger?.LogError("GetFitness threw exception: " + ex);
                 throw;
                 //return 0;
             }

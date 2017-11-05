@@ -32,7 +32,7 @@ namespace LionFire.Trading.Bots
 
         public MarketData MarketData { get; set; }
         
-        [RequiredToEnterState(ExecutionState.Starting)]
+        [RequiredToEnterState(ExecutionStateEx.Starting)]
         public Symbol Symbol
         {
             get;
