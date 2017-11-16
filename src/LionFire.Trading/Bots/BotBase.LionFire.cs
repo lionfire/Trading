@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿#if !cAlgo
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +14,18 @@ namespace LionFire.Trading.Bots
 {
 
 
-    public partial class BotBase<_TBot> : AccountParticipant, IBot, IStartable, IStoppable
+    public partial class BotBase<TBotType> : BotBase
+    {
+        public override bool CanStart
+        {
+            get
+            {
+                return this.Template.TimeFrame == "h1"; // TEMP FIXME - h1 only!
+            }
+        }
+    }
+
+    public partial class BotBase : AccountParticipant, IBot, IStartable, IStoppable
     {
 
         #region Relationships
@@ -60,14 +72,6 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        public override bool CanStart
-        {
-            get
-            {
-                return this.Template.TimeFrame == "h1"; // TEMP FIXME - h1 only!
-            }
-        }
-
         #region Position Methods
 
         public TradeResult ClosePosition(Position position)
@@ -104,15 +108,6 @@ namespace LionFire.Trading.Bots
         #endregion
 
         #endregion
-
-        
-
-        
-
-        
-
-        
-
-
     }
 }
+#endif

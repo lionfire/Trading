@@ -10,9 +10,13 @@ using LionFire.Persistence;
 
 namespace LionFire.Trading.Bots
 {
-
+    public interface ITBot
+    {
+        string Id { get; set; }
+        //string Symbol { get; }
+    }
     [AssetPath("Algos")]
-    public class TBot : ITemplateAsset
+    public class TBot : ITemplateAsset, ITBot
     {
 
         public string AssetSubPath { get { return Id; } set { Id = value; } }
@@ -48,8 +52,6 @@ namespace LionFire.Trading.Bots
         private List<string> symbols;
 
         #endregion
-
-
 
         //[Ignore]
         public string TimeFrame

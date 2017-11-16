@@ -21,6 +21,7 @@ using cAlgo.API;
 #endif
 using LionFire.Instantiating;
 
+
 namespace LionFire.Trading.Bots
 {
     // TODO: Rename BotBase to SingleSeriesBotBase  and make a new BotBase that is more generic
@@ -33,14 +34,39 @@ namespace LionFire.Trading.Bots
 
     [InstantiatorType(typeof(PBot))]
     [State]
-    public partial class BotBase<_TBot> :
-#if cAlgo
-        Robot,
-#endif
-        IBot, IInitializable, INotifyPropertyChanged, IExecutableEx
-        // REVIEW OPTIMIZE - eliminate INPC for cAlgo?
-        where _TBot : TBot, new()
+    public partial class BotBase<TBotType> : BotBase
+        //, ITemplateInstance<TBot>
+        , IBot
+where TBotType : TBot, ITBot, new()
     {
+        TBot IBot.Template { get { return Template; } set { Template = (TBotType)value; } }
+
+        public  TBotType Template { get; set; } = new TBotType();
+        protected override ITBot TBot => Template;
+
+        // FUTURE: Allow non-templated bots?
+        //public override TBot Template { get { return this.Template; } set { Template = value; } }
+    }
+    
+
+    public class Bot : BotBase, ITBot
+    {
+        protected override ITBot TBot { get { return this; } }
+
+        public string Id { get; set; }
+
+    }
+
+    public partial abstract class BotBase :
+#if cAlgo
+    Robot,
+#endif
+        // REVIEW OPTIMIZE - eliminate INPC for cAlgo?
+        IInitializable, INotifyPropertyChanged, IExecutableEx
+    {
+        protected abstract ITBot TBot { get; }
+        //public virtual TBot Template { get { return null;  } set { } }
+
         public string Version { get; set; } = "0.0.0";
         public virtual string BotName => this.GetType().Name;
 
@@ -49,14 +75,7 @@ namespace LionFire.Trading.Bots
 
         #region Configuration
 
-
-        TBot IBot.Template { get { return Template; } set { Template = (_TBot)value; } }
-
-        public _TBot Template { get; set; } = new _TBot();
-
         public LosingTradeLimiterConfig LosingTradeLimiterConfig { get; set; } = new LosingTradeLimiterConfig();
-
-
 
         #region Modes
 
@@ -151,6 +170,7 @@ namespace LionFire.Trading.Bots
             InitExchangeRates();
         }
 
+        public static bool LogIfNoTemplate = true;
         public
 #if !cAlgo
         override async
@@ -160,7 +180,7 @@ namespace LionFire.Trading.Bots
 #if !cAlgo
             if (!await base.Initialize().ConfigureAwait(false)) return false;
 #endif
-            logger = this.GetLogger(this.ToString().Replace(' ', '.'), Template.Log);
+            logger = this.GetLogger(this.ToString().Replace(' ', '.'), TBot != null ? TBot.Log : LogIfNoTemplate);
 #if !cAlgo
             return true;
 #else
@@ -169,6 +189,7 @@ namespace LionFire.Trading.Bots
         }
 
         public bool GotTick;
+        
         // Handler for LionFire.  Invoked by cAlgo's OnStart
 #if cAlgo
         protected virtual async Task OnStarting()
@@ -176,10 +197,11 @@ namespace LionFire.Trading.Bots
         protected override Task OnStarting()
 #endif
         {
+            if (TBot == null) tBot = new TBot();
 
-            if (IsBacktesting && String.IsNullOrWhiteSpace(Template.Id))
+            if (IsBacktesting && String.IsNullOrWhiteSpace(TBot.Id))
             {
-                Template.Id = IdUtils.GenerateId();
+                TBot.Id = IdUtils.GenerateId();
             }
             StartDate = null;
             EndDate = null;
@@ -187,7 +209,7 @@ namespace LionFire.Trading.Bots
             await Initialize();
 #endif
 
-            logger.LogInformation($"------- START {this} -------");
+            logger?.LogInformation($"------- START {this} -------");
 #if cAlgo
 #else
             return Task.CompletedTask;
@@ -265,7 +287,7 @@ namespace LionFire.Trading.Bots
             get
             {
                 var count = Positions.Where(p => p.TradeType == TradeType.Buy).Count();
-                return count < Template.MaxLongPositions;
+                return count < TBot.MaxLongPositions;
             }
         }
         public bool CanOpenShort
@@ -273,7 +295,7 @@ namespace LionFire.Trading.Bots
             get
             {
                 var count = Positions.Where(p => p.TradeType == TradeType.Sell).Count();
-                return count < Template.MaxShortPositions;
+                return count < TBot.MaxShortPositions;
             }
         }
         public bool CanOpen
@@ -291,7 +313,7 @@ namespace LionFire.Trading.Bots
                 }
 #endif
                 var count = Positions.Count;
-                return Template.MaxOpenPositions == 0 || count < Template.MaxOpenPositions;
+                return TBot.MaxOpenPositions == 0 || count < TBot.MaxOpenPositions;
             }
         }
 
@@ -318,7 +340,7 @@ namespace LionFire.Trading.Bots
         public const double FitnessMinDrawdown = 0.001;
 
         public const string NoTicksIdPrefix = "NT-";
-        
+
 #if cAlgo
         protected override
 #else
@@ -326,7 +348,7 @@ namespace LionFire.Trading.Bots
 #endif
          double GetFitness(GetFitnessArgs args)
         {
-            
+
             try
             {
                 var dd = args.MaxEquityDrawdownPercentages;
@@ -341,26 +363,30 @@ namespace LionFire.Trading.Bots
                 {
                     botType = this.GetType().GetTypeInfo().BaseType.FullName;
                 }
-                if (Template.TimeFrame == null)
+                if (TBot.TimeFrame == null)
                 {
-                    Template.TimeFrame = this.TimeFrame.ToShortString();
+                    TBot.TimeFrame = this.TimeFrame.ToShortString();
                 }
-                if (Template.Symbol == null)
+                if (TBot.Symbol == null)
                 {
-                    Template.Symbol = this.Symbol.Code;
+                    TBot.Symbol = this.Symbol.Code;
                 }
 
-                if(!StartDate.HasValue || !EndDate.HasValue){
-                  throw new ArgumentException("StartDate or EndDate not set.  Are you calling base.OnBar in OnBar?"); 
+                if (!StartDate.HasValue || !EndDate.HasValue)
+                {
+                    throw new ArgumentException("StartDate or EndDate not set.  Are you calling base.OnBar in OnBar?");
                 }
 #endif
-                if (!GotTick && !Template.Id.StartsWith(NoTicksIdPrefix)) { Template.Id = NoTicksIdPrefix + NoTicksIdPrefix; }
+
+                if(string.IsNullOrWhiteSpace(TBot.Id)) TBot.Id = IdUtils.GenerateId();
+
+                if (!GotTick && !TBot.Id.StartsWith(NoTicksIdPrefix)) { TBot.Id = NoTicksIdPrefix + TBot.Id; }
                 var backtestResult = new BacktestResult()
                 {
                     BacktestDate = DateTime.UtcNow,
                     BotType = botType,
-                    BotConfigType = this.Template.GetType().AssemblyQualifiedName,
-                    Config = this.Template,
+                    BotConfigType = this.TBot.GetType().AssemblyQualifiedName,
+                    Config = this.TBot,
                     InitialBalance = initialBalance,
                     //Start = this.MarketSeries?.OpenTime?[0],
                     //End = this.MarketSeries?.OpenTime?.LastValue,
@@ -409,7 +435,7 @@ namespace LionFire.Trading.Bots
                         fitness = aroi / dd;
                     }
 
-                    var minTrades = Template.BacktestMinTradesPerMonth;
+                    var minTrades = TBot.BacktestMinTradesPerMonth;
 
                     //#if cAlgo
                     //                logger.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
@@ -455,7 +481,7 @@ namespace LionFire.Trading.Bots
             TimeSpan timeSpan = backtestResult.Duration;
             double aroi = backtestResult.Aroi;
 
-            if (!double.IsNaN(Template.LogBacktestThreshold) && fitness > Template.LogBacktestThreshold)
+            if (!double.IsNaN(TBot.LogBacktestThreshold) && fitness > TBot.LogBacktestThreshold)
             {
 
                 BacktestLogger = this.GetLogger(this.ToString().Replace(' ', '.') + ".Backtest");
@@ -467,8 +493,8 @@ namespace LionFire.Trading.Bots
 
                     var profit = args.Equity / initialBalance;
 
-                    this.BacktestLogger.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
-                    var id = Template.Id;
+                    this.BacktestLogger?.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
+                    var id = TBot.Id;
 
 
                     backtestResult.GetAverageDaysPerTrade(args);
@@ -479,7 +505,7 @@ namespace LionFire.Trading.Bots
                 }
                 catch (Exception ex)
                 {
-                    this.BacktestLogger.LogError(ex.ToString());
+                    this.BacktestLogger?.LogError(ex.ToString());
                     throw;
                 }
             }
@@ -489,7 +515,7 @@ namespace LionFire.Trading.Bots
         public TimeFrame TimeFrame => (this as IHasSingleSeries)?.MarketSeries?.TimeFrame;
 #endif
 
-        public  string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results", Symbol.Code, this.BotName, TimeFrame.ToShortString());
+        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results", Symbol.Code, this.BotName, TimeFrame.ToShortString());
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -501,7 +527,7 @@ namespace LionFire.Trading.Bots
 #if cAlgo
             MarketSeries.SymbolCode;
 #else
-            Template.Symbol;
+            TBot.Symbol;
 #endif
 
             var tf =
@@ -636,19 +662,19 @@ namespace LionFire.Trading.Bots
             var price = (tradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask);
             long volume_MinPositionSize = long.MinValue;
 
-            if (Template.MinPositionSize > 0)
+            if (TBot.MinPositionSize > 0)
             {
-                volume_MinPositionSize = Symbol.VolumeMin + (Template.MinPositionSize - 1) * volumeStep;
+                volume_MinPositionSize = Symbol.VolumeMin + (TBot.MinPositionSize - 1) * volumeStep;
             }
 
             long volume_PositionPercentOfEquity = long.MinValue;
 
-            if (Template.PositionPercentOfEquity > 0)
+            if (TBot.PositionPercentOfEquity > 0)
             {
                 string fromCurrency = GetFromCurrency(Symbol.Code);
                 var toCurrency = Account.Currency;
 
-                var equityRiskAmount = this.Account.Equity * (Template.PositionPercentOfEquity / 100.0);
+                var equityRiskAmount = this.Account.Equity * (TBot.PositionPercentOfEquity / 100.0);
 
                 var quantity = (long)equityRiskAmount;
                 quantity = VolumeToStep(quantity);
@@ -709,21 +735,21 @@ namespace LionFire.Trading.Bots
             var price = (tradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask);
             long volume_MinPositionSize = long.MinValue;
 
-            if (Template.MinPositionSize > 0)
+            if (TBot.MinPositionSize > 0)
             {
-                volume_MinPositionSize = volumeMin + (Template.MinPositionSize - 1) * volumeStep;
+                volume_MinPositionSize = volumeMin + (TBot.MinPositionSize - 1) * volumeStep;
             }
 
             long volume_MinPositionRiskPercent = long.MinValue;
 
-            if (Template.PositionRiskPercent > 0)
+            if (TBot.PositionRiskPercent > 0)
             {
                 string fromCurrency = GetFromCurrency(Symbol.Code);
                 var toCurrency = Account.Currency;
 
                 var stopLossDistanceAccountCurrency = ConvertToCurrency(stopLossDistance.Value, fromCurrency, toCurrency);
 
-                var equityRiskAmount = this.Account.Equity * (Template.PositionRiskPercent / 100.0);
+                var equityRiskAmount = this.Account.Equity * (TBot.PositionRiskPercent / 100.0);
 
                 var quantity = (long)(equityRiskAmount / (stopLossDistanceAccountCurrency));
                 quantity = VolumeToStep(quantity);
@@ -872,7 +898,7 @@ namespace LionFire.Trading.Bots
                     return symbolAmount;
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw new Exception($"Error converting currency from {fromCurrency} to {toCurrency}", ex);
             }
@@ -887,7 +913,7 @@ namespace LionFire.Trading.Bots
             get
             {
                 if (label != null) return label;
-                return Template?.Id + $" {this.GetType().Name}";
+                return TBot?.Id + $" {this.GetType().Name}";
             }
             set
             {
@@ -919,8 +945,11 @@ namespace LionFire.Trading.Bots
 #endif
 
         #endregion
+
+
     }
 
+    // MOVE to separate class, reference in cTrader project
     public static class BacktestUtilities
     {
         public static void GetAverageDaysPerTrade(this BacktestResult results, GetFitnessArgs args)
@@ -954,8 +983,5 @@ namespace LionFire.Trading.Bots
             results.AverageDaysPerWinningTrade = winSum / winningTrades;
             results.AverageDaysPerLosingTrade = lossSum / losingTrades;
         }
-
-
     }
-
 }
