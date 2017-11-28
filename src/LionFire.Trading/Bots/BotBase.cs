@@ -44,20 +44,30 @@ where TBotType : TBot, ITBot, new()
         public  TBotType Template { get; set; } = new TBotType();
         protected override ITBot TBot => Template;
 
+        protected override void CreateDefaultTBot()
+        {
+            Template = new TBotType();
+        }
         // FUTURE: Allow non-templated bots?
         //public override TBot Template { get { return this.Template; } set { Template = value; } }
     }
     
 
-    public class Bot : BotBase, ITBot
-    {
-        protected override ITBot TBot { get { return this; } }
+    // Just use BotBase?  What's the point of this
+    //public abstract class Bot : BotBase
+    //    //, IBot
+    //{
+    //    protected override ITBot TBot { get { return this; } }
 
-        public string Id { get; set; }
+    //    public string Id { get; set; }
 
-    }
+    //    //protected override void CreateDefaultTBot()
+    //    //{
+    //    //    Template = new TBotType();
+    //    //}
+    //}
 
-    public partial abstract class BotBase :
+    public abstract partial class BotBase :
 #if cAlgo
     Robot,
 #endif
@@ -189,7 +199,9 @@ where TBotType : TBot, ITBot, new()
         }
 
         public bool GotTick;
-        
+
+        protected abstract void CreateDefaultTBot();
+
         // Handler for LionFire.  Invoked by cAlgo's OnStart
 #if cAlgo
         protected virtual async Task OnStarting()
@@ -197,7 +209,7 @@ where TBotType : TBot, ITBot, new()
         protected override Task OnStarting()
 #endif
         {
-            if (TBot == null) tBot = new TBot();
+            if (TBot == null) CreateDefaultTBot();
 
             if (IsBacktesting && String.IsNullOrWhiteSpace(TBot.Id))
             {

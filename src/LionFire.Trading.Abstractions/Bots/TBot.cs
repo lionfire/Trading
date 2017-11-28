@@ -12,8 +12,25 @@ namespace LionFire.Trading.Bots
 {
     public interface ITBot
     {
+        bool Log { get; }
         string Id { get; set; }
-        //string Symbol { get; }
+        string Symbol { get; set; }
+
+        int MaxOpenPositions { get; set; } 
+         int MaxLongPositions { get; set; }
+         int MaxShortPositions { get; set; }
+
+        string TimeFrame { get; set; }
+
+        double BacktestMinTradesPerMonth { get; set; }
+
+        double LogBacktestThreshold { get; set; }
+
+        long MinPositionSize { get; set; }
+
+        double PositionPercentOfEquity { get; set; }
+
+        double PositionRiskPercent { get; set; }
     }
     [AssetPath("Algos")]
     public class TBot : ITemplateAsset, ITBot
