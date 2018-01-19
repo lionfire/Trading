@@ -295,7 +295,7 @@ namespace LionFire.Trading.Bots
 
             var TakeProfitInPips = 0.0;
             var absStopLossDistance = Math.Abs(stopLossDistance);
-            var volumeInUnits = GetPositionVolume(absStopLossDistance == 0 ?(double?) null : absStopLossDistance);
+            var volumeInUnits = GetPositionVolume(absStopLossDistance == 0 ?(double?) null : absStopLossDistance, tradeType);
 
 #if TRACE_RISK
             logger.LogTrace($"Risk calc: Symbol.Ask {Symbol.Ask}, stopLoss {stopLoss} stopLossDist {stopLossDistance.ToString("N3")} SL-Pips: {stopLossDistancePips}");

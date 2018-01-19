@@ -47,7 +47,7 @@ namespace LionFire.Trading.Bots
 #endif
     {
 
-        TBot Template { get; set; }
+        ITBot Template { get; set; }
 
         string Version { get; set; }
 

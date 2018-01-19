@@ -12,25 +12,66 @@ namespace LionFire.Trading.Bots
 {
     public interface ITBot
     {
-        bool Log { get; }
+        #region Identity
+
         string Id { get; set; }
         string Symbol { get; set; }
-
-        int MaxOpenPositions { get; set; } 
-         int MaxLongPositions { get; set; }
-         int MaxShortPositions { get; set; }
-
         string TimeFrame { get; set; }
 
-        double BacktestMinTradesPerMonth { get; set; }
+        #endregion
 
-        double LogBacktestThreshold { get; set; }
+        #region Max Positions
+
+        // RENAME: MaxPositions
+        int MaxOpenPositions { get; set; }
+        int MaxLongPositions { get; set; }
+        int MaxShortPositions { get; set; }
+
+        #endregion
+
+        #region Position Sizing
 
         long MinPositionSize { get; set; }
 
         double PositionPercentOfEquity { get; set; }
 
         double PositionRiskPercent { get; set; }
+
+
+        #endregion
+
+        #region Settings
+
+        bool Log { get; }
+
+        #region Backtesting
+
+        double BacktestMinTradesPerMonth { get; set; }
+
+        double LogBacktestThreshold { get; set; }
+        #endregion
+
+        #endregion
+
+        #region SL / TP
+
+        double SLinAtr { get; set; }
+
+        double TPinAtr { get; set; }
+
+        double SLinDailyAtr { get; set; }
+        double TPinDailyAtr { get; set; }
+
+        #endregion
+
+        #region Filters
+
+        bool UseTradeInPivotDirection { get; set; }
+        bool TradeInPivotDirection { get; set; }
+
+
+        #endregion
+
     }
     [AssetPath("Algos")]
     public class TBot : ITemplateAsset, ITBot
@@ -113,6 +154,8 @@ namespace LionFire.Trading.Bots
         public bool AllowLong { get; set; } = true;
         public bool AllowShort { get; set; } = true;
 
+        #region Max Positions
+
         /// <summary>
         /// 0 or MaxValue means no limit
         /// </summary>
@@ -120,10 +163,48 @@ namespace LionFire.Trading.Bots
         public int MaxLongPositions { get; set; } = 1;
         public int MaxShortPositions { get; set; } = 1;
 
+        #endregion
+
+        #region Backtesting
+
+        /// <summary>
+        /// Trim huge gains
+        /// </summary>
         public double BacktestProfitTPMultiplierOnSL { get; set; } = 0.0;
+
         public double BacktestMinTradesPerMonth { get; set; } = 0;
 
+        #endregion
+
+        #region SL and TP
+
         public double MaxStopLossPips { get; set; } = 0;
+
+
+        #region in ATR
+
+        public double SLinAtr { get; set; }
+
+        public double TPinAtr { get; set; }
+        #endregion
+
+
+        #region in Daily ATR
+
+        public double SLinDailyAtr { get; set; }
+        public double TPinDailyAtr { get; set; }
+
+        #endregion
+
+        #endregion
+
+        #region Filters
+
+        public bool UseTradeInPivotDirection { get; set; }
+        public bool TradeInPivotDirection { get; set; }
+
+
+        #endregion
 
         ///// <summary>
         ///// TODO Updates  
