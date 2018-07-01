@@ -28,6 +28,12 @@ namespace LionFire.Trading.Bots
     public partial class BotBase : AccountParticipant, IBot, IStartable, IStoppable
     {
 
+        protected override void OnStopping()
+        {
+            base.OnStopping();
+            OnBotStopping();
+        }
+
         #region Relationships
 
         public Server Server { get { return base.Account.Server; } }

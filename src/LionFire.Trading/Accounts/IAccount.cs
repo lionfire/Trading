@@ -28,6 +28,8 @@ namespace LionFire.Trading
         double Equity { get; }
         double Balance { get; }
         string Currency { get; }
+        double Margin { get; }
+        double MarginLevel { get; }
 
         IPositions Positions { get; }
 
@@ -52,6 +54,14 @@ namespace LionFire.Trading
 
         bool IsSimulation { get; }
         bool IsRealMoney { get; }
+
+        string BrokerName { get; }
+        //string Platform { get; }
+        //string AccountMode { get; }
+        /// <summary>
+        /// TODO: What should this be?  What does cTrader return?  Hedged/netting?
+        /// </summary>
+        string AccountType { get; }
 
         #endregion
 

@@ -22,7 +22,7 @@ namespace LionFire.Trading.Triggers
         [Dependency]
         public IFeed Feed { get; set; }
         public TemplateType Template { get; set; }
-        ITemplate ITemplateInstance.Template { get => Template; set => Template = (TemplateType)value; }
+        //ITemplate ITemplateInstance.Template { get => Template; set => Template = (TemplateType)value; }
 
 
         [Validate]
@@ -51,8 +51,8 @@ namespace LionFire.Trading.Triggers
 
         public Task<ValidationContext> Initialize()
         {
-            //new ValidationContext
-            return Task.FromResult<ValidationContext>(null);   
+            var vc = new ValidationContext();
+            return Task.FromResult<ValidationContext>(vc);
         }
 
         public Task Start()

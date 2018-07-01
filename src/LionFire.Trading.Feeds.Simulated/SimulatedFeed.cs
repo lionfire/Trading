@@ -29,7 +29,7 @@ namespace LionFire.Trading.Feeds.Simulated
         public object EventData { get; set; }
     }
 
-    public class TScript : ITemplate<Script>
+    public class TFeedScript : TFeed, ITemplate<Script>
     {
         public ScriptOptions ScriptOptions { get; set; }
 
@@ -37,11 +37,11 @@ namespace LionFire.Trading.Feeds.Simulated
         //public List<ScriptEvent> SequentialEvents { get; set; }
         public Dictionary<string, List<ScriptEvent>> SequentialEvents { get; set; }
 
-        public static TScript Default
+        public static TFeedScript Default
         {
             get
             {
-                var result = new TScript();
+                var result = new TFeedScript();
                 var dict = new Dictionary<string, List<ScriptEvent>>();
 
                 var duration = TimeSpan.FromMinutes(5);
@@ -82,7 +82,7 @@ namespace LionFire.Trading.Feeds.Simulated
 
                 double ask = bid + averageSpread;
 
-                list.Add(new ScriptEvent(tickTime - lastTickTime, new SymbolTick { Symbol = symbol, Bid = bid, Ask = ask });
+                list.Add(new ScriptEvent(tickTime - lastTickTime, new SymbolTick { Symbol = symbol, Bid = bid, Ask = ask }));
                 lastTickTime = tickTime;
             }
 
@@ -100,9 +100,9 @@ namespace LionFire.Trading.Feeds.Simulated
 
     }
     [HasDependencies]
-    public class Script : ITemplateInstance<TScript>, IStartable
+    public class Script : ITemplateInstance<TFeedScript>, IStartable
     {
-        public TScript Template { get; set; }
+        public TFeedScript Template { get; set; }
 
         public Action<object> EventOccurred;
 
@@ -139,7 +139,7 @@ namespace LionFire.Trading.Feeds.Simulated
 
     
 
-    public class SimulatedFeed : FeedBase<TScript>, IStartable
+    public class SimulatedFeed : FeedBase<TFeedScript>, IStartable
     {
         public override bool IsSimulation => throw new NotImplementedException();
 
@@ -154,15 +154,21 @@ namespace LionFire.Trading.Feeds.Simulated
             throw new NotImplementedException();
         }
 
+        public Task Start()
+        {
+            throw new NotImplementedException();
+        }
+
         protected override Symbol CreateSymbol(string symbolCode)
         {
+            throw new NotImplementedException();
         }
     }
 
-    public class SimulatedSymbol : SymbolBase
-    {
-        public SimulatedSymbol(string symbol)
-        {
-        }
-    }
+    //public class SimulatedSymbol : SymbolBase
+    //{
+    //    public SimulatedSymbol(string symbol)
+    //    {
+    //    }
+    //}
 }

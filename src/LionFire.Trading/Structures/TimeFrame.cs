@@ -53,9 +53,9 @@ namespace LionFire.Trading
             h8 = new TimeFrame("h8");
             h12 = new TimeFrame("h12");
 
-            d1= new TimeFrame("d1");
-            d2= new TimeFrame("d2");
-            d3= new TimeFrame("d3");
+            d1 = new TimeFrame("d1");
+            d2 = new TimeFrame("d2");
+            d3 = new TimeFrame("d3");
 
             w1 = new TimeFrame("w1");
             mn1 = new TimeFrame("mn1");
@@ -84,6 +84,7 @@ namespace LionFire.Trading
         public static TimeFrame h8 { get; private set; }
         public static TimeFrame h12 { get; private set; }
         public static TimeFrame d1 { get; private set; }
+        public static TimeFrame Daily => d1;
         public static TimeFrame d2 { get; private set; }
         public static TimeFrame d3 { get; private set; }
         public static TimeFrame w1 { get; private set; }
@@ -102,7 +103,7 @@ namespace LionFire.Trading
             this.Name = name;
             string type = name[0].ToString();
 
-            if(name.Substring(0,2) == "mn") type = "mn";
+            if (name.Substring(0, 2) == "mn") type = "mn";
 
             switch (type)
             {

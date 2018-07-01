@@ -596,7 +596,7 @@ namespace LionFire.Trading
         }
         protected virtual void OnStopping()
         {
-            logger.LogInformation($"------- STOP {this} -------");
+            logger.LogInformation($"------- STOPPING {this} -------");
         }
         protected virtual void OnStopped()
         {

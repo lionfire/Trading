@@ -16,7 +16,7 @@ namespace LionFire.Trading.Accounts
         public string RefreshToken { get; set; }
 
         /// <summary>
-        /// E.g. CTrader, MT4 ECN, MT4 Pro, ...
+        /// E.g. CTrader, MT4 ECN, MT4 Pro, ...  RENAME to Platform
         /// </summary>
         public string AccountType { get; internal set; }
 

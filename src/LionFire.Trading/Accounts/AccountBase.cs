@@ -25,7 +25,8 @@ namespace LionFire.Trading.Accounts
 
 
         TFeed IFeed.Template => Template;
-
+        string IAccount.BrokerName => Template?.BrokerName;
+        string IAccount.AccountType => Template?.AccountType;
 
         TAccount IAccount.Template { get { return Template; } }
 
@@ -197,7 +198,6 @@ namespace LionFire.Trading.Accounts
         protected Positions positions = new Positions();
 
 
-
         public abstract double Equity { get; protected set; }
         public abstract double Balance { get; protected set; }
 
@@ -206,7 +206,9 @@ namespace LionFire.Trading.Accounts
         public event Action StatusTextChanged;
 
 
-        public double MarginUsed { get; set; }
+        public double MarginUsed { get; set; } // Rename to margin to be consistent with cTrader?
+        public double Margin => MarginUsed;
+        public virtual double MarginLevel { get; protected set; }
 
         #endregion
 

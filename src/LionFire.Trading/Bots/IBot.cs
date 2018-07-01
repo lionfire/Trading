@@ -46,7 +46,7 @@ namespace LionFire.Trading.Bots
         , IControllableExecutable
 #endif
     {
-
+        Guid Guid { get; }
         ITBot Template { get; set; }
 
         string Version { get; set; }

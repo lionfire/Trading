@@ -47,7 +47,7 @@ namespace LionFire.Trading.Spotware.Connect
         //IRequiresServices,
         IStartable, IHasExecutionFlags, IHasRunTask, IConfigures<IServiceCollection>
         , IStoppable
-        , IExecutable
+        , IExecutableEx
     //, IHandler<SymbolTick>
     //, IDataSource
     //, IHasExecutionState, IChangesExecutionState
@@ -153,7 +153,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         #region State
 
-        public ExecutionState State
+        public ExecutionStateEx State
         {
             get { return state; }
             protected set
@@ -163,9 +163,9 @@ namespace LionFire.Trading.Spotware.Connect
                 StateChangedToFor?.Invoke(state, this);
             }
         }
-        private ExecutionState state;
+        private ExecutionStateEx state;
 
-        public event Action<ExecutionState, IExecutable> StateChangedToFor;
+        public event Action<ExecutionStateEx, object> StateChangedToFor;
 
         #endregion
 
@@ -173,12 +173,12 @@ namespace LionFire.Trading.Spotware.Connect
         {
             if (this.IsStarted())
             {
-                State = ExecutionState.Stopping;
+                State = ExecutionStateEx.Stopping;
                 if (IsTradeApiEnabled)
                 {
                     await Task.Run(() => Stop_TradeApi()).ConfigureAwait(false);
                 }
-                State = ExecutionState.Stopped;
+                State = ExecutionStateEx.Stopped;
             }
         }
 
@@ -190,7 +190,7 @@ namespace LionFire.Trading.Spotware.Connect
             {
                 if (this.IsStarted()) return;
 
-                State = ExecutionState.Starting;
+                State = ExecutionStateEx.Starting;
             }
             await OnStarting().ConfigureAwait(false);
 
@@ -273,12 +273,12 @@ namespace LionFire.Trading.Spotware.Connect
                 catch (AccessTokenInvalidException)
                 {
                     StatusText = "Access token invalid";
-                    State = ExecutionState.Faulted;
+                    State = ExecutionStateEx.Faulted;
                     return;
                 }
 
                 StatusText = "Disconnected mode";
-                State = ExecutionState.Started;
+                State = ExecutionStateEx.Started;
             }
             else
             {
@@ -296,7 +296,7 @@ namespace LionFire.Trading.Spotware.Connect
                         Run_TradeApi();
 
                         StatusText = "Connected";
-                        State = ExecutionState.Started;
+                        State = ExecutionStateEx.Started;
                     }
                     else
                     {
@@ -324,13 +324,13 @@ namespace LionFire.Trading.Spotware.Connect
                     }
                 } while (isRestart);
 
-                State = ExecutionState.Stopping;
+                State = ExecutionStateEx.Stopping;
 
                 StatusText = "Disconnecting";
                 Stop_TradeApi();
                 StatusText = "Disconnected";
             }
-            State = ExecutionState.Stopped;
+            State = ExecutionStateEx.Stopped;
         }
 
         //public bool IsCommandLineEnabled { get; set;  } = true;

@@ -208,8 +208,9 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             {
                 account.Template.AccessToken = data.accessToken;
                 account.Template.RefreshToken = data.refreshToken;
-                await account.Template.Save(new PersistenceContext { AllowInstantiator = false});
-                return true;
+                throw new NotImplementedException("TODO: Sort out the Save call");
+                //await account.Template.Save(new PersistenceContext { AllowInstantiator = false});
+                //return true;
             }
             return false;
         }

@@ -16,6 +16,7 @@ namespace LionFire.Trading.Bots
 
         string Id { get; set; }
         string Symbol { get; set; }
+        List<string> Symbols { get; set; }
         string TimeFrame { get; set; }
 
         #endregion
@@ -93,7 +94,7 @@ namespace LionFire.Trading.Bots
         }
 
         #region Symbols
-
+        
         public List<string> Symbols
         {
             get { return symbols; }

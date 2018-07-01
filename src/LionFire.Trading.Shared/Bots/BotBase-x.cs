@@ -1,4 +1,5 @@
-﻿//#define BackTestResult_Debug
+﻿#if x
+//#define BackTestResult_Debug
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,7 @@ using LionFire.Threading.Tasks;
 using System.Collections.ObjectModel;
 using LionFire.ExtensionMethods;
 using LionFire.States;
+using Newtonsoft.Json;
 #if cAlgo
 using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
@@ -41,7 +43,7 @@ where TBotType : TBot, ITBot, new()
     {
         ITBot IBot.Template { get { return Template; } set { Template = (TBotType)value; } }
 
-        public TBotType Template { get; set; } = new TBotType();
+        public new TBotType Template { get; set; } = new TBotType();
         protected override ITBot TBot => Template;
 
         protected override void CreateDefaultTBot()
@@ -51,7 +53,6 @@ where TBotType : TBot, ITBot, new()
         // FUTURE: Allow non-templated bots?
         //public override TBot Template { get { return this.Template; } set { Template = value; } }
     }
-
 
     // Just use BotBase?  What's the point of this
     //public abstract class Bot : BotBase
@@ -71,6 +72,7 @@ where TBotType : TBot, ITBot, new()
 #if cAlgo
     Robot,
 #endif
+        IBot,
         // REVIEW OPTIMIZE - eliminate INPC for cAlgo?
         IInitializable, INotifyPropertyChanged, IExecutableEx
     {
@@ -145,6 +147,81 @@ where TBotType : TBot, ITBot, new()
 
         #endregion
 
+        public bool Link { get; set; } = true;
+
+
+        #region Configuration - External Settings
+
+        #region External Settings
+
+        public string BotSettingsDir { get; set; } = @"C:\st\Investing-Bots\cTrader\Settings";
+
+        public string BotSettingsFileName = "settings.json";
+
+        public string SettingsPath => Path.Combine(BotSettingsDir, BotSettingsFileName);
+
+        static BotSettings BotSettingsCache;
+
+        public static string Printable(string s)
+        {
+            return s.Replace("{", "{{").Replace("}", "}}");
+        }
+
+        public BotSettings LoadSettings()
+        {
+            try
+            {
+                if (File.Exists(SettingsPath))
+                {
+                    /*{
+                        var x = new BotSettings
+                        {
+                            LinkApi = "asdf"
+                        };
+                        var json = JsonConvert.SerializeObject(x);
+                        Print("Serialz test:" + json);
+                        File.WriteAllText(Path.GetFileNameWithoutExtension(SettingsPath) + "-test.json", json);
+                    }*/
+                    var settings = JsonConvert.DeserializeObject<BotSettings>(File.ReadAllText(SettingsPath));
+#if cAlgo
+                    Print("Loaded settings from "+ SettingsPath + " " + Printable(settings.ToXamlAttribute()));
+                    //Print(JsonConvert.SerializeObject(settings));
+#endif
+                    return settings;
+                }
+            }
+            catch(Exception ex)
+            {
+#if cAlgo
+                Print("Exception when loading settings: " + ex.ToString());
+#endif
+            }
+            return null;
+        }
+
+        public static BotSettingsCache SettingsCache;
+
+        public void LoadSettingsIfNeeded()
+        {
+            if (SettingsCache == null)
+            {
+                SettingsCache = new BotSettingsCache();
+            }
+
+            if (SettingsCache.IsExpired)
+            {
+                if(Diag)
+                {
+                    this.Logger.LogInformation("SettingsCache.IsExpired, Loading settings");
+                        
+                }
+                SettingsCache.Settings = LoadSettings();
+            }
+        }
+        #endregion
+
+        #endregion
+
         #region Lifecycle
 
         //public IInstantiator ToInstantiator(InstantiationContext context = null)
@@ -172,11 +249,18 @@ where TBotType : TBot, ITBot, new()
         //    }
         //}
 
+
+            /// <summary>
+            /// Turn this on during a backtest to make sure the bot is operating properly and to troubleshoot problems
+            /// </summary>
+            public bool Diag { get; set; }
+
         public BotBase()
         {
 #if cAlgo
             LionFireEnvironment.ProgramName = "Trading";
 #endif
+
             InitExchangeRates();
         }
 
@@ -191,6 +275,12 @@ where TBotType : TBot, ITBot, new()
             if (!await base.Initialize().ConfigureAwait(false)) return false;
 #endif
             logger = this.GetLogger(this.ToString().Replace(' ', '.'), TBot != null ? TBot.Log : LogIfNoTemplate);
+
+            if (Diag)
+            {
+                logger.LogInformation("Diagnostic mode enabled.");
+            }
+
 #if !cAlgo
             return true;
 #else
@@ -210,6 +300,11 @@ where TBotType : TBot, ITBot, new()
 #endif
         {
             if (TBot == null) CreateDefaultTBot();
+
+            if (!IsBacktesting && Link)
+            {
+                BotLinkExtensions.SendInfo(this).FireAndForget();
+            }
 
             if (IsBacktesting && String.IsNullOrWhiteSpace(TBot.Id))
             {
@@ -359,7 +454,7 @@ where TBotType : TBot, ITBot, new()
         AverageTrueRange DailyAtr;
 #endif
 
-#endregion
+        #endregion
 
         #region Entry
 
@@ -367,8 +462,12 @@ where TBotType : TBot, ITBot, new()
 
         public bool PassesFilters(TradeType tt)
         {
+            //#if !cAlgo
+            //            throw new NotImplementedException();
+            //#else
             foreach (var f in Filters)
             {
+
                 if (!f(tt, MarketSeries))
                 {
                     //Print("Failed " + tt + " filter:  pivot: " + DailyPivot);
@@ -377,6 +476,7 @@ where TBotType : TBot, ITBot, new()
                 //Print("Passed " + tt + " filter:  pivot: " + DailyPivot);
             }
             return true;
+            //#endif
         }
 
         #endregion
@@ -393,14 +493,21 @@ where TBotType : TBot, ITBot, new()
             if (!PassesFilters(tt))
                 return;
 
+#if cAlgo
             slPips = slPips.TightenPips(PointsToPips(DailyAtr.Result.Last(1) * (TBot.SLinDailyAtr)));
 
             tpPips = tpPips.TightenPips(PointsToPips(DailyAtr.Result.Last(1) * (TBot.TPinDailyAtr)));
 
 
-            slPips = slPips.TightenPips( PointsToPips(Atr.Result.Last(1) * (TBot.SLinAtr)));
+            slPips = slPips.TightenPips(PointsToPips(Atr.Result.Last(1) * (TBot.SLinAtr)));
 
-            tpPips = tpPips.TightenPips( PointsToPips(Atr.Result.Last(1) * (TBot.TPinAtr)));
+            tpPips = tpPips.TightenPips(PointsToPips(Atr.Result.Last(1) * (TBot.TPinAtr)));
+#else
+            if (TBot.SLinDailyAtr != 0 || TBot.TPinDailyAtr != 0 || TBot.SLinAtr != 0 || TBot.TPinAtr != 0)
+            {
+                throw new NotImplementedException("SL and TP Atr and DailyATR not implemented");
+            }
+#endif
 
             // REVIEW - Compare with SingleSeriesSignalBotBase _Open and consolidate?
             ExecuteMarketOrder(tt, Symbol, volume ?? GetPositionVolume(slPips, tt), Label, slPips, tpPips);
@@ -410,7 +517,11 @@ where TBotType : TBot, ITBot, new()
 
         #region Positions
 
+#if cAlgo
         public int BotPositionCount => BotPositions.Length;
+#else
+        public int BotPositionCount => BotPositions.Count;
+#endif
         public IEnumerable<Position> BotLongPositions => BotPositions.Where(p => p.TradeType == TradeType.Buy);
         public int BotLongPositionCount => BotLongPositions.Count();
         public IEnumerable<Position> BotShortPositions => BotPositions.Where(p => p.TradeType == TradeType.Sell);
@@ -421,7 +532,7 @@ where TBotType : TBot, ITBot, new()
         {
             get
             {
-        throw new NotImplementedException("TODO: Review that BotPositions actually works in lionFire mode.");
+                throw new NotImplementedException("TODO: Review that BotPositions actually works in lionFire mode.");
                 return botPositions;
             }
         }
@@ -803,6 +914,15 @@ where TBotType : TBot, ITBot, new()
 
         #endregion
 
+
+        public MarketSeries MarketSeries // REVIEW RECENTCHANGE
+        {
+            get
+            {
+                return MarketData.GetSeries(this.TimeFrame);
+            }
+        }
+
         #region On-demand extra inputs: DailySeries
 
         public MarketSeries DailySeries
@@ -825,7 +945,7 @@ where TBotType : TBot, ITBot, new()
         public List<Func<TradeType, MarketSeries, bool>> Filters = new List<Func<TradeType, MarketSeries, bool>>();
 
         #endregion
-        
+
         #region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
@@ -843,18 +963,55 @@ where TBotType : TBot, ITBot, new()
 
             try
             {
-                var dd = args.MaxEquityDrawdownPercentages;
-                dd = Math.Max(FitnessMinDrawdown, dd);
-
-                var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
-                if (dd > FitnessMaxDrawdown || args.Equity < initialBalance) { return -dd; }
-
                 var botType = this.GetType().FullName;
 #if cAlgo
                 if (this.GetType().FullName.StartsWith("cAlgo."))
                 {
                     botType = this.GetType().GetTypeInfo().BaseType.FullName;
                 }
+#endif
+
+                if (Diag && args == null)
+                {
+                    var fakeBacktestResult = new BacktestResult()
+                    {
+                        BacktestDate = DateTime.UtcNow,
+                        BotType = botType,
+                        BotConfigType = this.TBot.GetType().AssemblyQualifiedName,
+                        Config = this.TBot,
+                        InitialBalance = 999999,
+                        Start = StartDate.Value,
+                        End = EndDate.Value,
+
+                        AverageTrade = 5,
+                        Equity = 5,
+
+                        //History
+                        LosingTrades = 5,
+                        MaxBalanceDrawdown = 5,
+                        MaxBalanceDrawdownPercentages = 5,
+                        MaxEquityDrawdown = 5,
+                        MaxEquityDrawdownPercentages = 5,
+                        NetProfit = 5,
+                        //PendingOrders
+                        //Positions
+                        ProfitFactor = 5,
+                        SharpeRatio = 5,
+                        SortinoRatio = 5,
+                        TotalTrades = 5,
+                        WinningTrades = 5,
+                    };
+                    DoLogBacktest(args, fakeBacktestResult);
+                    return 5555.0;
+                }
+                var dd = args.MaxEquityDrawdownPercentages;
+                dd = Math.Max(FitnessMinDrawdown, dd);
+
+                var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
+                if (dd > FitnessMaxDrawdown || args.Equity < initialBalance) { return -dd; }
+
+                
+#if cAlgo                
                 if (TBot.TimeFrame == null)
                 {
                     TBot.TimeFrame = this.TimeFrame.ToShortString();
@@ -930,7 +1087,7 @@ where TBotType : TBot, ITBot, new()
                     var minTrades = TBot.BacktestMinTradesPerMonth;
 
                     //#if cAlgo
-                    //                logger.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
+                    //                logger?.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
                     //#endif
 
                     if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
@@ -975,8 +1132,11 @@ where TBotType : TBot, ITBot, new()
 
             if (!double.IsNaN(TBot.LogBacktestThreshold) && fitness > TBot.LogBacktestThreshold)
             {
-
-                BacktestLogger = this.GetLogger(this.ToString().Replace(' ', '.') + ".Backtest");
+                try
+                {
+                    BacktestLogger = this.GetLogger(this.ToString().Replace(' ', '.') + ".Backtest");
+                }
+                catch { } // EMPTYCATCH
 
                 try
                 {
@@ -1150,3 +1310,5 @@ where TBotType : TBot, ITBot, new()
         }
     }
 }
+
+#endif

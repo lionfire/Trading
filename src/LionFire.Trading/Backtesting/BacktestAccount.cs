@@ -22,6 +22,8 @@ namespace LionFire.Trading.Backtesting
 
         #region State
 
+        
+
         #region Equity
 
         public override double Equity
@@ -134,6 +136,7 @@ namespace LionFire.Trading.Backtesting
 
         #region Derived
 
+        
         public double MarginLevel { get { return Equity / MarginUsed; } }
         public double MarginLevelPercent { get { return 100.0 * Equity / MarginUsed; } }
 
