@@ -1,12 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    
-    public class Position
+
+    public interface IPosition_CTraderCompat
+    {
+        double VolumeInUnits { get; }
+    }
+    public class Position : IPosition_CTraderCompat
     {
         public IAccount Account { get; set; }
 
@@ -63,7 +64,8 @@ namespace LionFire.Trading
                 return result;
             }
             set { grossProfit = value; }
-        } private double grossProfit = double.NaN;
+        }
+        private double grossProfit = double.NaN;
 
         public string GrossProfitString { get { return GrossProfit.CentsToCurrencyString(); } }
         public int Id { get; set; }
@@ -83,8 +85,11 @@ namespace LionFire.Trading
 
         public double? TakeProfit { get; set; }
         public TradeType TradeType { get; set; }
-        public long Volume { get; set; }
-        public long FilledVolume { get; set; }
+        public double Volume { get; set; }
+        //double IPosition_CTraderCompat.VolumeInUnits => Volume;
+        public double VolumeInUnits => Volume;
+
+        public double FilledVolume { get; set; }
 
         #region Derived
 

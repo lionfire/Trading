@@ -23,6 +23,14 @@ namespace LionFire.Trading
 
         #endregion
 
+        #region From cTrader  - REVIEW
+
+         bool IsLive { get; }
+
+        string AccountId { get; }
+
+        #endregion
+
         #region State
 
         double Equity { get; }
@@ -67,7 +75,7 @@ namespace LionFire.Trading
 
         #region Methods
 
-        TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
+        TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
 
         TradeResult ClosePosition(Position position);
         TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);

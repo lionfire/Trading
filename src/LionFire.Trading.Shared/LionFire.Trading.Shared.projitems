@@ -9,7 +9,6 @@
     <Import_RootNamespace>LionFire.Trading.Shared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)Bots\BotBase-x.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bots\BotBase.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Link\BotLinkExtensions.cs" />
   </ItemGroup>

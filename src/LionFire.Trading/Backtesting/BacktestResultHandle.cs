@@ -44,6 +44,9 @@ namespace LionFire.Trading.Backtesting
         [Unit("id=")]
         public string Id { get; set; }
 
+        [Unit("bt=")]
+        public string BacktestFlags { get; set; }
+
         [Unit("bot=")]
         public string Bot { get; set; }
 

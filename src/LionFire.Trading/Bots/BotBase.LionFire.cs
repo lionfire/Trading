@@ -90,7 +90,7 @@ namespace LionFire.Trading.Bots
             return Account?.ModifyPosition(position, StopLoss, TakeProfit);
         }
 
-        public TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volumeInUnits, string label, double? stopLossInPips, double? takeProfitInPips = null, double? marketRangePips = null, string comment = null)
+        public TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volumeInUnits, string label, double? stopLossInPips, double? takeProfitInPips = null, double? marketRangePips = null, string comment = null)
         {
             if (!CanOpen)
             {

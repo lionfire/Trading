@@ -77,6 +77,12 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
+        #region Informational Properties
+
+        public string AccountType => "?"; // Netted / hedged, etc.
+
+        #endregion
+
         #region Lifecycle
 
         public AccountBase()
@@ -220,12 +226,16 @@ namespace LionFire.Trading.Accounts
 
         public abstract bool IsRealMoney { get; }
 
-        #region From Template
+        #region From Template (Override to confirm with live server)
 
         /// <summary>
         /// Override this to confirm at runtime with server
         /// </summary>
-        public virtual bool IsDemo { get { return Template.IsDemo; } }
+        public virtual bool IsDemo => this.Template.IsDemo;
+
+        public virtual bool IsLive => this.Template.IsLive;
+
+        public virtual string AccountId => Template.AccountId; // 
 
         public virtual string Currency { get { return Template.Currency; } }
 
@@ -278,7 +288,7 @@ namespace LionFire.Trading.Accounts
 
         #region Events
 
-        public abstract TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null);
+        public abstract TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null);
         public abstract TradeResult ClosePosition(Position position);
         public abstract TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
 

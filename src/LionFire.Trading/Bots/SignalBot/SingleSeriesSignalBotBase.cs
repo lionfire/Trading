@@ -291,7 +291,7 @@ namespace LionFire.Trading.Bots
             var stopLossDistance = Math.Abs(price - stopLoss);
             stopLossDistance = Math.Max(spread * MinStopLossTimesSpread, stopLossDistance);
             var stopLossDistancePips = stopLossDistance / Symbol.PipSize;
-            var risk = stopLossDistance * Symbol.VolumeStep;
+            var risk = stopLossDistance * Symbol.VolumeInUnitsStep;
 
             var TakeProfitInPips = 0.0;
             var absStopLossDistance = Math.Abs(stopLossDistance);
@@ -314,7 +314,7 @@ namespace LionFire.Trading.Bots
             OpenPosition(tradeType, stopLossDistancePips, UseTakeProfit ? TakeProfitInPips : double.NaN, volumeInUnits);
         }
 
-        private void OpenPosition(TradeType tradeType, double stopLossInPips, double takeProfitInPips, long volumeInUnits)
+        private void OpenPosition(TradeType tradeType, double stopLossInPips, double takeProfitInPips, double volumeInUnits)
         {
              
             if (volumeInUnits == 0) return;
@@ -429,7 +429,7 @@ p.onBars.Add(new StopLossTrailer(p)
             return tradeType == TradeType.Buy ? "LONG" : "SHORT";
         }
 
-        private void LogOpen(TradeType tradeType, long volumeInUnits, double risk, double stopLoss, double stopLossDistance)
+        private void LogOpen(TradeType tradeType, double volumeInUnits, double risk, double stopLoss, double stopLossDistance)
         {
             if (!Template.Log) return;
             string stopLossDistanceAccount = "";

@@ -11,5 +11,4 @@ namespace LionFire.Trading
         Sell = 1
 
     }
-
 }

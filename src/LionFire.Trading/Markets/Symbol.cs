@@ -38,6 +38,9 @@ namespace LionFire.Trading
         long VolumeMax { get; }
         long VolumeMin { get; }
         long VolumeStep { get; }
+        double VolumeInUnitsMax { get; }
+        double VolumeInUnitsMin { get; }
+        double VolumeInUnitsStep { get; }
 
         long NormalizeVolume(double volume, RoundingMode roundingMode = RoundingMode.ToNearest);
         long QuantityToVolume(double quantity);
@@ -361,7 +364,7 @@ namespace LionFire.Trading
             //if (double.IsNaN(TickValue)) { throw new ArgumentException("Failed to load TickValue for symbol: " + info.Code); }
         }
         private double QuantityPerHundredThousandVolume;
-        private long VolumePerHundredThousandQuantity;
+        private double VolumePerHundredThousandQuantity;
         public string Currency;
 
         public int Digits
@@ -403,11 +406,25 @@ namespace LionFire.Trading
         {
             get; private set;
         }
+        public double VolumeInUnitsMax
+        {
+            get; private set;
+        }
+
+        public double VolumeInUnitsMin
+        {
+            get; private set;
+        }
+        public double VolumeInUnitsStep
+        {
+            get; private set;
+        }
 
         public long VolumeStep
         {
             get; private set;
         }
+        //public long VolumeInUnitsStep => VolumeStep;
 
         public long NormalizeVolume(double volume, RoundingMode roundingMode = RoundingMode.ToNearest)
         {

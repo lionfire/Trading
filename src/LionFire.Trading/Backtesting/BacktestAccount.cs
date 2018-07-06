@@ -183,7 +183,7 @@ namespace LionFire.Trading.Backtesting
 
         #region (Public) Trading Methods
 
-        public override TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null)
+        public override TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null)
         {
             var slippage = 0;
             var entryPrice = tradeType == TradeType.Buy ? symbol.Bid + slippage : symbol.Ask - slippage;

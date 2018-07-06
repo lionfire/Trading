@@ -25,7 +25,7 @@ namespace LionFire.Trading
         double Swap { get; }
         string SymbolCode { get; }
         TradeType TradeType { get; }
-        long Volume { get; }
+        double Volume { get; }
     }
 
     public class _HistoricalTrade : HistoricalTrade
@@ -122,7 +122,7 @@ namespace LionFire.Trading
             get; set;
         }
 
-        public long Volume {
+        public double Volume {
             get; set;
         }
     }

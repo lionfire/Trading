@@ -12,7 +12,7 @@ namespace LionFire.Trading
         public bool IsLive { get; set;  }
         
         public int AccountNumber { get; set;  }
-        public double Leverage { get; set;  }
+        public double PreciseLeverage { get; set;  }
 
 
         public double CommissionPerMillion { get; set;  }

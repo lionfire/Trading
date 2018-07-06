@@ -58,11 +58,19 @@ namespace LionFire.Trading
 
         private static async Task _Send(this IBot bot, object msg, string url)
         {
-            var response = await HC.PostAsync("/api/bot/" + url,
-                new StringContent(Serialize(msg), Encoding.UTF8, "application/json"));
+            try
+            {
+                var response = await HC.PostAsync("/api/bot/" + url,
+                    new StringContent(Serialize(msg), Encoding.UTF8, "application/json"));
 
-            response.EnsureSuccessStatusCode();
+                response.EnsureSuccessStatusCode();
+            }
+            catch(Exception ex)
+            {
+                LinkSendException?.Invoke(ex);
+            }
         }
+        public static event Action<Exception> LinkSendException;
 
         private static JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
         {

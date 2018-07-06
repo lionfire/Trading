@@ -92,7 +92,7 @@ namespace LionFire.Trading
         #endregion
 
 
-        public BotPosition(Position position, IBot bot, Symbol symbol, TradeType tradeType, double stopLossInPips, double takeProfitInPips, long volumeInUnits)
+        public BotPosition(Position position, IBot bot, Symbol symbol, TradeType tradeType, double stopLossInPips, double takeProfitInPips, double volumeInUnits)
         {
             this.bot = bot;
             this.position = position;

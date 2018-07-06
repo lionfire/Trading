@@ -6,17 +6,15 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;
 using System.Reflection;
-using LionFire.Structures;
 using LionFire.Execution;
 using System.IO;
 using LionFire.Trading.Backtesting;
 using System.ComponentModel;
 using LionFire.Threading.Tasks;
-using System.Collections.ObjectModel;
-using LionFire.ExtensionMethods;
 using LionFire.States;
 using Newtonsoft.Json;
 using LionFire.Trading.Link.Messages;
+using LionFire.Trading.Link;
 #if cAlgo
 using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
@@ -138,7 +136,10 @@ where TBotType : TBot, ITBot, new()
             }
             set
             {
-                if (mode == value) return;
+                if (mode == value)
+                {
+                    return;
+                }
 
                 if (this.IsStarted())
                 {
@@ -187,20 +188,29 @@ where TBotType : TBot, ITBot, new()
         /// </summary>
         protected bool IsLinkEnabled;
 
-        public bool Link { get; set; } = true;
+        public bool Link => Template != null && Template.Link;
+
         public bool LinkBacktesting { get; set; } = true;
         public TimeSpan LinkStatusInterval { get; set; } = TimeSpan.FromSeconds(10);
 
         protected async Task LinkSendInfo()
         {
+
             var msg = new MBotInfo()
             {
                 Guid = this.guid,
                 Id = this.Template?.Id,
                 Time = DateTime.UtcNow,
                 Broker = this.Account.BrokerName,
-                Account = "??",
-                Mode = this.Account.AccountType.ToString(), // this.Modes.ToString(),  // REVIEW TODO
+                IsLive = this.Account.IsLive,
+                AccountType = this.Account.AccountType.ToString(),
+
+#if cTrader
+                AccountId = this.Account.Number.ToString(),
+#else
+                AccountId = this.Account.AccountId,
+#endif
+                //Mode = this.Account.AccountType.ToString(), // this.Modes.ToString(),  // REVIEW TODO
                 BotType = this.GetType().Name, // TODO: base class for cTrader
                 Platform = "?",
                 Hostname = Environment.MachineName,
@@ -213,18 +223,43 @@ where TBotType : TBot, ITBot, new()
 
         protected async Task LinkSendStatus()
         {
-            MStatus state = new MStatus()
+
+            List<LinkPosition> positions = null;
+            if (Positions.Count > 0)
+            {
+                positions = new List<LinkPosition>();
+                foreach (var p in Positions)
+                {
+                    positions.Add(new LinkPosition()
+                    {
+                        Comment = p.Comment,
+                        Commission = p.Commissions,
+                        Label = p.Label,
+                        NetProfit = p.NetProfit,
+                        OpenTime = p.EntryTime,
+                        Swap = p.Swap,
+                        Symbol = p.SymbolCode,
+                        TradeType = (LinkTradeType)Enum.Parse(typeof(LinkTradeType), p.TradeType.ToString()),
+                        Volume = p.VolumeInUnits
+                    });
+                }
+            }
+
+            MStatus msg = new MStatus()
             {
                 Guid = this.guid,
+                Bid = this.Symbol.Bid,
+                Ask = this.Symbol.Ask,
                 State = this.DesiredExecutionState,
-                StatusMessage = "test msg",
+                //StatusMessage = "test msg",
                 Balance = this.Account.Balance,
                 Equity = this.Account.Equity,
                 Margin = this.Account.Margin,
                 MarginLevel = this.Account.MarginLevel,
-                Time = DateTime.UtcNow
+                Time = DateTime.UtcNow,
+                Positions = positions
             };
-            await BotLinkExtensions.Send(this, state).ConfigureAwait(false);
+            await BotLinkExtensions.Send(this, msg).ConfigureAwait(false);
         }
 
         protected async void OnLinkStatusTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
@@ -244,7 +279,7 @@ where TBotType : TBot, ITBot, new()
 
         public string SettingsPath => Path.Combine(BotSettingsDir, BotSettingsFileName);
 
-        static BotSettings BotSettingsCache;
+        private static BotSettings BotSettingsCache;
 
         public static string Printable(string s)
         {
@@ -274,10 +309,13 @@ where TBotType : TBot, ITBot, new()
                     return settings;
                 }
             }
+#if cAlgo
             catch (Exception ex)
             {
-#if cAlgo
                 Print("Exception when loading settings: " + ex.ToString());
+#else
+                catch (Exception )
+                {
 #endif
             }
             return null;
@@ -348,13 +386,34 @@ where TBotType : TBot, ITBot, new()
 
         #region Initialization
 
+        private void Link_OnPositionClosed(PositionClosedEventArgs args)
+        {
+            //var position = args.Position;
+            //Print("Position closed with {0} profit", position.GrossProfit);
+            LinkSendStatus().FireAndForget();
+        }
+        private void Link_OnPositionOpened(PositionOpenedEventArgs args)
+        {
+            //var position = args.Position;
+            //Print("Position closed with {0} profit", position.GrossProfit);
+            LinkSendStatus().FireAndForget();
+        }
+
         public
 #if !cAlgo
         override async
 #endif
+
          Task<bool> Initialize()
         {
             IsLinkEnabled = Link && (!IsBacktesting || LinkBacktesting);
+
+            if (IsLinkEnabled)
+            {
+                //this.BotPositionChanged
+                Positions.Closed += Link_OnPositionClosed;
+                Positions.Opened += Link_OnPositionOpened;
+            }
 
 #if !cAlgo
             if (!await base.Initialize().ConfigureAwait(false)) return false;
@@ -388,8 +447,10 @@ where TBotType : TBot, ITBot, new()
         protected override Task OnStarting()
 #endif
         {
-            if (TBot == null) CreateDefaultTBot();
-            
+            if (TBot == null)
+            {
+                CreateDefaultTBot();
+            }
 
             if (IsBacktesting && String.IsNullOrWhiteSpace(TBot.Id))
             {
@@ -408,7 +469,7 @@ where TBotType : TBot, ITBot, new()
                 LinkSendInfo().FireAndForget();
                 linkStatusTimer = new System.Timers.Timer(LinkStatusInterval.TotalMilliseconds);
                 linkStatusTimer.Elapsed += OnLinkStatusTimerElapsed;
-                OnLinkStatusTimerElapsed(null,null);
+                OnLinkStatusTimerElapsed(null, null);
                 linkStatusTimer.Start();
             }
 
@@ -445,7 +506,7 @@ where TBotType : TBot, ITBot, new()
         {
             if (IsLinkEnabled)
             {
-                LinkSendStatus();
+                LinkSendStatus().FireAndForget();
                 linkStatusTimer.Stop();
                 linkStatusTimer.Elapsed -= OnLinkStatusTimerElapsed;
                 linkStatusTimer = null;
@@ -466,7 +527,11 @@ where TBotType : TBot, ITBot, new()
             get { return state; }
             protected set
             {
-                if (state == value) return;
+                if (state == value)
+                {
+                    return;
+                }
+
                 state = value;
                 StateChangedToFor?.Invoke(state, this);
             }
@@ -544,7 +609,11 @@ where TBotType : TBot, ITBot, new()
 
         public bool CanOpenType(TradeType tradeType)
         {
-            if (!CanOpen) return false;
+            if (!CanOpen)
+            {
+                return false;
+            }
+
             switch (tradeType)
             {
                 case TradeType.Buy:
@@ -563,8 +632,8 @@ where TBotType : TBot, ITBot, new()
 #if cAlgo
         // TODO: REARCH Make additional indicators modular?
 
-        AverageTrueRange Atr; // RENAME ATR
-        AverageTrueRange DailyAtr;
+        private AverageTrueRange Atr; // RENAME ATR
+        private AverageTrueRange DailyAtr;
 #endif
 
         #endregion
@@ -597,14 +666,24 @@ where TBotType : TBot, ITBot, new()
         public void TryEnter(TradeType tt, double? slPips = null, double? tpPips = null, int? volume = null)
         {
             if (BotPositionCount >= TBot.MaxOpenPositions)
+            {
                 return;
+            }
+
             if (BotLongPositionCount >= TBot.MaxLongPositions)
+            {
                 return;
+            }
+
             if (BotShortPositionCount >= TBot.MaxShortPositions)
+            {
                 return;
+            }
 
             if (!PassesFilters(tt))
+            {
                 return;
+            }
 
 #if cAlgo
             slPips = slPips.TightenPips(PointsToPips(DailyAtr.Result.Last(1) * (TBot.SLinDailyAtr)));
@@ -688,13 +767,20 @@ where TBotType : TBot, ITBot, new()
 
 
         // MOVE?
-        public long VolumeToStep(long amount, long step = 0)
+        public double VolumeToStep(double amount, double step = 0)
         {
-            if (step == 0) step = Symbol.VolumeStep;
-            if (step == 0) step = 1; // REVIEW
+            if (step == 0)
+            {
+                step = Symbol.VolumeInUnitsStep;
+            }
+
+            if (step == 0)
+            {
+                step = 1; // REVIEW
+            }
+
             return amount - (amount % step);
         }
-
 
         private string GetFromCurrency(string symbolCode)
         {
@@ -734,16 +820,23 @@ where TBotType : TBot, ITBot, new()
         }
 
         /// <summary>
-        /// PositionPercentOfEquity
+        /// PositionPercentOfEquity (REVIEW - cTrader recently changed from long to double)
         /// </summary>
         /// <param name="tradeType"></param>
         /// <returns></returns>
-        public long GetPositionVolume(TradeType tradeType = TradeType.Buy)
+        public double GetPositionVolume(TradeType tradeType = TradeType.Buy)
         {
-            var volumeStep = Symbol.VolumeStep;
-            if (volumeStep == 0) volumeStep = 1;
-            var volumeMin = Symbol.VolumeMin;
-            if (volumeMin == 0) volumeMin = 1;
+            var volumeStep = Symbol.VolumeInUnitsStep;
+            if (volumeStep == 0)
+            {
+                volumeStep = 1;
+            }
+
+            var volumeMin = Symbol.VolumeInUnitsMin;
+            if (volumeMin == 0)
+            {
+                volumeMin = 1;
+            }
 
             if (volumeStep != volumeMin)
             {
@@ -751,14 +844,14 @@ where TBotType : TBot, ITBot, new()
             }
 
             var price = (tradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask);
-            long volume_MinPositionSize = long.MinValue;
+            double volume_MinPositionSize = double.MinValue;
 
             if (TBot.MinPositionSize > 0)
             {
-                volume_MinPositionSize = Symbol.VolumeMin + (TBot.MinPositionSize - 1) * volumeStep;
+                volume_MinPositionSize = Symbol.VolumeInUnitsMin + (TBot.MinPositionSize - 1) * volumeStep;
             }
 
-            long volume_PositionPercentOfEquity = long.MinValue;
+            double volume_PositionPercentOfEquity = double.MinValue;
 
             if (TBot.PositionPercentOfEquity > 0)
             {
@@ -767,9 +860,9 @@ where TBotType : TBot, ITBot, new()
 
                 var equityRiskAmount = this.Account.Equity * (TBot.PositionPercentOfEquity / 100.0);
 
-                var quantity = (long)equityRiskAmount;
+                var quantity = equityRiskAmount;
                 quantity = VolumeToStep(quantity);
-                volume_PositionPercentOfEquity = (long)(quantity);
+                volume_PositionPercentOfEquity = quantity;
 
 
 #if TRACE_RISK
@@ -801,20 +894,37 @@ where TBotType : TBot, ITBot, new()
                 logger.LogWarning("volume == 0");
             }
             volume = VolumeToStep(volume);
+#if cTrader
+            volume = this.Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
+#endif
             return volume;
         }
 
         // TODO: Also Use PositionPercentOfEquity, REFACTOR to combine with above method
         // MOVE?
-        public long GetPositionVolume(double? stopLossDistance, TradeType tradeType)
+        public double GetPositionVolume(double? stopLossDistance, TradeType tradeType)
         {
-            if (!stopLossDistance.HasValue) return GetPositionVolume(tradeType);
-            if (stopLossDistance == 0) throw new ArgumentException("stopLossDistance is 0.  Use null for no stop loss.");
+            if (!stopLossDistance.HasValue)
+            {
+                return GetPositionVolume(tradeType);
+            }
 
-            var volumeStep = Symbol.VolumeStep;
-            if (volumeStep == 0) volumeStep = 1;
-            var volumeMin = Symbol.VolumeMin;
-            if (volumeMin == 0) volumeMin = 1;
+            if (stopLossDistance == 0)
+            {
+                throw new ArgumentException("stopLossDistance is 0.  Use null for no stop loss.");
+            }
+
+            var volumeStep = Symbol.VolumeInUnitsStep;
+            if (volumeStep == 0)
+            {
+                volumeStep = 1;
+            }
+
+            var volumeMin = Symbol.VolumeInUnitsMin;
+            if (volumeMin == 0)
+            {
+                volumeMin = 1;
+            }
 
             if (volumeStep != volumeMin)
             {
@@ -824,14 +934,14 @@ where TBotType : TBot, ITBot, new()
             var stopLossValuePerVolumeStep = stopLossDistance * volumeStep;
 
             var price = (tradeType == TradeType.Buy ? Symbol.Bid : Symbol.Ask);
-            long volume_MinPositionSize = long.MinValue;
+            double volume_MinPositionSize = double.MinValue;
 
             if (TBot.MinPositionSize > 0)
             {
                 volume_MinPositionSize = volumeMin + (TBot.MinPositionSize - 1) * volumeStep;
             }
 
-            long volume_MinPositionRiskPercent = long.MinValue;
+            double volume_MinPositionRiskPercent = double.MinValue;
 
             if (TBot.PositionRiskPercent > 0)
             {
@@ -842,10 +952,10 @@ where TBotType : TBot, ITBot, new()
 
                 var equityRiskAmount = this.Account.Equity * (TBot.PositionRiskPercent / 100.0);
 
-                var quantity = (long)(equityRiskAmount / (stopLossDistanceAccountCurrency));
+                var quantity = equityRiskAmount / (stopLossDistanceAccountCurrency);
                 quantity = VolumeToStep(quantity);
 
-                volume_MinPositionRiskPercent = (long)(quantity);
+                volume_MinPositionRiskPercent = quantity;
 
                 var slDistAcct = stopLossDistanceAccountCurrency.ToString("N3");
 
@@ -856,7 +966,7 @@ where TBotType : TBot, ITBot, new()
                 //var volumeByRisk = (long)(this.Account.Equity * BotConfig.MinPositionRiskPercent);
             }
 
-            long volume_PositionRiskPricePercent = long.MinValue;
+            double volume_PositionRiskPricePercent = double.MinValue;
 
             //if (BotConfig.PositionRiskPricePercent > 0)
             //{
@@ -880,10 +990,9 @@ where TBotType : TBot, ITBot, new()
             return volume;
         }
 
+        private Dictionary<string, SortedList<int, double>> ExchangeRates = new Dictionary<string, SortedList<int, double>>();
 
-        Dictionary<string, SortedList<int, double>> ExchangeRates = new Dictionary<string, SortedList<int, double>>();
-
-        void InitExchangeRates() // MOVE?
+        private void InitExchangeRates() // MOVE?
         {
             {
                 var rate = new SortedList<int, double>();
@@ -920,13 +1029,23 @@ where TBotType : TBot, ITBot, new()
         {
             try
             {
-                if (amount == 0) return 0;
+                if (amount == 0)
+                {
+                    return 0;
+                }
 
                 ValidateCurrency(fromCurrency, nameof(fromCurrency));
                 ValidateCurrency(toCurrency, nameof(toCurrency));
 
-                if (toCurrency == null) toCurrency = Account.Currency;
-                if (fromCurrency == toCurrency) return amount;
+                if (toCurrency == null)
+                {
+                    toCurrency = Account.Currency;
+                }
+
+                if (fromCurrency == toCurrency)
+                {
+                    return amount;
+                }
 
                 var conversionSymbolCode = fromCurrency + toCurrency;
                 var conversionSymbolCodeInverse = toCurrency + fromCurrency;
@@ -1027,7 +1146,7 @@ where TBotType : TBot, ITBot, new()
 
         #endregion
 
-
+#if !cTrader // MOVE
         public MarketSeries MarketSeries // REVIEW RECENTCHANGE
         {
             get
@@ -1035,6 +1154,7 @@ where TBotType : TBot, ITBot, new()
                 return MarketData.GetSeries(this.TimeFrame);
             }
         }
+#endif
 
         #region On-demand extra inputs: DailySeries
 
@@ -1062,9 +1182,9 @@ where TBotType : TBot, ITBot, new()
         #region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
-        public const double FitnessMinDrawdown = 0.001;
+        public const double FitnessMinDrawdown = 0.1;
 
-        public const string NoTicksIdPrefix = "NT-";
+        public const string NoTicksIdSuffix = "-NT";
 
 #if cAlgo
         protected override
@@ -1117,11 +1237,19 @@ where TBotType : TBot, ITBot, new()
                     DoLogBacktest(args, fakeBacktestResult);
                     return 5555.0;
                 }
-                var dd = args.MaxEquityDrawdownPercentages;
-                dd = Math.Max(FitnessMinDrawdown, dd);
+                var ddForFitness = args.MaxEquityDrawdownPercentages;
+                ddForFitness = Math.Max(FitnessMinDrawdown, ddForFitness);
 
                 var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
-                if (dd > FitnessMaxDrawdown || args.Equity < initialBalance) { return -dd; }
+                double fitness;
+
+                if (!EndDate.HasValue || !StartDate.HasValue)
+                {
+                    fitness = 0.0;
+                    return FitnessMaxDrawdown;
+                }
+
+                if (ddForFitness > FitnessMaxDrawdown || args.Equity < initialBalance) { return -ddForFitness; }
 
 
 #if cAlgo
@@ -1140,9 +1268,12 @@ where TBotType : TBot, ITBot, new()
                 }
 #endif
 
-                if (string.IsNullOrWhiteSpace(TBot.Id)) TBot.Id = IdUtils.GenerateId();
+                if (string.IsNullOrWhiteSpace(TBot.Id))
+                {
+                    TBot.Id = IdUtils.GenerateId() + "-Gen";
+                }
 
-                if (!GotTick && !TBot.Id.StartsWith(NoTicksIdPrefix)) { TBot.Id = NoTicksIdPrefix + TBot.Id; }
+                if (!GotTick && !TBot.Id.EndsWith(NoTicksIdSuffix)) { TBot.Id = TBot.Id + NoTicksIdSuffix; }
                 var backtestResult = new BacktestResult()
                 {
                     BacktestDate = DateTime.UtcNow,
@@ -1173,50 +1304,43 @@ where TBotType : TBot, ITBot, new()
                     WinningTrades = args.WinningTrades,
                 };
 
-                double fitness;
-                if (!EndDate.HasValue || !StartDate.HasValue)
+
+                var timeSpan = EndDate.Value - StartDate.Value;
+                var totalMonths = timeSpan.TotalDays / 31;
+                var tradesPerMonth = backtestResult.TradesPerMonth;
+
+                //var aroi = (args.NetProfit / initialBalance) / (timeSpan.TotalDays / 365);
+                var aroi = backtestResult.Aroi;
+
+                //if (ddForFitness < //args.LosingTrades == 0)
+                //{
+                //    fitness = aroi;
+                //}
+                //else
+                //{
+                fitness = aroi / ddForFitness;
+                //}
+
+                var minTrades = TBot.BacktestMinTradesPerMonth;
+
+                //#if cAlgo
+                //                logger?.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
+                //#endif
+
+                if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
                 {
-
-                    fitness = 0.0;
+                    fitness *= Math.Pow(tradesPerMonth / minTrades, this.TBot.BacktestMinTradesPerMonthExponent);
                 }
-                else
-                {
-                    var timeSpan = EndDate.Value - StartDate.Value;
-                    var totalMonths = timeSpan.TotalDays / 31;
-                    var tradesPerMonth = backtestResult.TradesPerMonth;
 
-                    //var aroi = (args.NetProfit / initialBalance) / (timeSpan.TotalDays / 365);
-                    var aroi = backtestResult.Aroi;
+                //#if cAlgo
+                //            Print($"Fitness: {StartDate.Value} - {EndDate.Value} profit: {args.NetProfit} years: {((EndDate.Value - StartDate.Value).TotalDays / 365)} constrained eqDD:{dd} aroi:{aroi} aroi/DD:{aroiVsDD}");
+                //#endif
 
-                    if (args.LosingTrades == 0)
-                    {
-                        fitness = aroi;
-                    }
-                    else
-                    {
-                        fitness = aroi / dd;
-                    }
+                fitness *= 100.0;
 
-                    var minTrades = TBot.BacktestMinTradesPerMonth;
+                backtestResult.Fitness = fitness;
+                DoLogBacktest(args, backtestResult);
 
-                    //#if cAlgo
-                    //                logger?.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
-                    //#endif
-
-                    if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
-                    {
-                        fitness *= tradesPerMonth / minTrades;
-                    }
-
-                    //#if cAlgo
-                    //            Print($"Fitness: {StartDate.Value} - {EndDate.Value} profit: {args.NetProfit} years: {((EndDate.Value - StartDate.Value).TotalDays / 365)} constrained eqDD:{dd} aroi:{aroi} aroi/DD:{aroiVsDD}");
-                    //#endif
-
-                    fitness *= 100.0;
-
-                    backtestResult.Fitness = fitness;
-                    DoLogBacktest(args, backtestResult);
-                }
 
 #if BackTestResult_Debug
                 this.BacktestResult = backtestResult;
@@ -1259,14 +1383,11 @@ where TBotType : TBot, ITBot, new()
                     var profit = args.Equity / initialBalance;
 
                     this.BacktestLogger?.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
-                    var id = TBot.Id;
 
 
                     backtestResult.GetAverageDaysPerTrade(args);
 
-
-
-                    SaveResult(args, backtestResult, fitness, resultJson, id, timeSpan);
+                    SaveResult(args, backtestResult, fitness, resultJson, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks", this.TBot.LogBacktestTrades);
                 }
                 catch (Exception ex)
                 {
@@ -1284,16 +1405,22 @@ where TBotType : TBot, ITBot, new()
 
         public static bool CreateResultsDirIfMissing = true;
 
-        private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan)
+        public enum BacktestSaveType
         {
+            Result,
+            Trades
+        }
 
-            //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
+        public string GetSavePath(BacktestSaveType type, GetFitnessArgs args, BacktestResult backtestResult, double fitness, string id, TimeSpan timeSpan, string backtestFlags = null)
+        {
             var sym =
 #if cAlgo
             MarketSeries.SymbolCode;
 #else
             TBot.Symbol;
 #endif
+
+            var tradesPerMonth = (args.TotalTrades / (timeSpan.TotalDays / 31)).ToString("F1");
 
             var tf =
 #if cAlgo
@@ -1302,22 +1429,63 @@ where TBotType : TBot, ITBot, new()
             (this as IHasSingleSeries)?.MarketSeries?.TimeFrame?.Name;
 #endif
 
-
-
-            var tradesPerMonth = (args.TotalTrades / (timeSpan.TotalDays / 31)).ToString("F1");
-            var filename = fitness.ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
+            var filename = fitness.ToString("0000.0") + $"f " + (100.0 * backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
+            if (backtestFlags != null)
+            {
+                filename += $" bt={backtestFlags}";
+            }
+            if (type == BacktestSaveType.Trades)
+            {
+                filename += ".trades";
+            }
             var ext = ".json";
-            int i = 0;
             var dir = BacktestResultSaveDir(TimeFrame);
             var path = Path.Combine(dir, filename + ext);
-            if (CreateResultsDirIfMissing && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
-            for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
-            using (var sw = new StreamWriter(new FileStream(path, FileMode.Create)))
+            if (CreateResultsDirIfMissing && !Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            for (int i = 0; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext))
+            {
+                ;
+            }
+
+            return path;
+        }
+
+        private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan, string backtestFlags = null, bool saveTrades = false)
+        {
+
+            //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
+
+
+
+            //var filename = fitness.ToString("0000.0") + $"f " + (backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
+            //if (backtestFlags != null)
+            //{
+            //    filename += $" bt={backtestFlags}";
+            //}
+
+            //var ext = ".json";
+            //int i = 0;
+            //var dir = BacktestResultSaveDir(TimeFrame);
+            //var path = Path.Combine(dir, filename + ext);
+            //if (CreateResultsDirIfMissing && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+            //for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
+            using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Result, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
             {
                 await sw.WriteAsync(json).ConfigureAwait(false);
             }
-        }
 
+            if (saveTrades)
+            {
+                using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Trades, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
+                {
+                    await sw.WriteAsync(Newtonsoft.Json.JsonConvert.SerializeObject(args.History.ToArray())).ConfigureAwait(false);
+                }
+            }
+        }
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
@@ -1329,7 +1497,11 @@ where TBotType : TBot, ITBot, new()
         {
             get
             {
-                if (label != null) return label;
+                if (label != null)
+                {
+                    return label;
+                }
+
                 return TBot?.Id + $" {this.GetType().Name}";
             }
             set
@@ -1372,16 +1544,25 @@ where TBotType : TBot, ITBot, new()
         public static double? SymbolPointsToPips(this Symbol symbol, double? points)
         {
             if (!points.HasValue)
+            {
                 return null;
+            }
+
             return points / symbol.PipSize;
         }
 
         public static double? TightenPips(this double? pips, double? otherPips, bool discardZeroes = true)
         {
             if (!pips.HasValue || (discardZeroes && pips.Value == 0))
+            {
                 return otherPips;
+            }
+
             if (!otherPips.HasValue || (discardZeroes && otherPips.Value == 0))
+            {
                 return pips;
+            }
+
             return Math.Min(pips.Value, otherPips.Value);
         }
 
@@ -1401,7 +1582,11 @@ where TBotType : TBot, ITBot, new()
             int losingTrades = 0;
             foreach (var trade in args.History)
             {
-                if (double.IsNaN(trade.ClosingPrice)) continue;
+                if (double.IsNaN(trade.ClosingPrice))
+                {
+                    continue;
+                }
+
                 sum += (trade.ClosingTime - trade.EntryTime).TotalDays;
                 trades++;
 
