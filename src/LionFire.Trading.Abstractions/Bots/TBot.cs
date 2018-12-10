@@ -13,7 +13,7 @@ namespace LionFire.Trading.Bots
     [AssetPath("Algos")]
     public class TBot : ITemplateAsset, ITBot
     {
-
+        public virtual Type Type => this.GetType();
         public string AssetSubPath { get { return Id; } set { Id = value; } }
         public string Id { get; set; } = IdUtils.GenerateId();
 

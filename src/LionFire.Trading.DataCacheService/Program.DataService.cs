@@ -54,7 +54,8 @@ namespace LionFire.Trading
                       .Add(new AppInfo
                       {
                           CompanyName = "LionFire",
-                          AppDataDirName = "Trading",
+                          //AppDataDirName = "Trading", // REVIEW - ok to replace with below?
+                          CustomAppDataDirName = "Trading",
                           ProgramName = "Data Cache Service",
                       })
                       .AddLogging(factory => factory.AddNLog())

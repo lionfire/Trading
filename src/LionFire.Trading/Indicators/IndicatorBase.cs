@@ -126,7 +126,14 @@ namespace LionFire.Trading.Indicators
         public IndicatorBase()
         {
 #if cAlgo
-            LionFireEnvironment.ProgramName = "Trading";
+            if (LionFireEnvironment.MainAppInfo != null)
+            {
+                LionFireEnvironment.MainAppInfo = new AppInfo()
+                {
+                    CompanyName = "LionFire",
+                    ProgramName = "Trading",
+                };
+            }
 #endif
         }
 

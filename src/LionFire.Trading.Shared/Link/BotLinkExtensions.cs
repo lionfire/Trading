@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,23 +9,66 @@ using Newtonsoft.Json;
 
 namespace LionFire.Trading
 {
+    public enum ReleaseMode
+    {
+        None = 0,
+        Prod,
+        Beta,
+        Alpha,
+        Local,
+    }
+
     public static class BotLinkConfig
     {
 
         public static string LinkUrl
         {
-            get { return linkUrl; }
+            get {
+                if(defaultUplinkUrls.ContainsKey(Environment.MachineName))
+                {
+                    return defaultUplinkUrls[Environment.MachineName];
+                }
+                switch (ReleaseMode)
+                {
+                    case ReleaseMode.Prod:
+                        return ProdLinkUrl;
+                    case ReleaseMode.Beta:
+                        return BetaLinkUrl;
+                    case ReleaseMode.Alpha:
+                        return AlphaLinkUrl;
+                    case ReleaseMode.Local:
+                        return LocalLinkUrl;
+                    default:
+                        break;
+                }
+                return AlphaLinkUrl;
+            }
             set
             {
-                linkUrl = value;
-                BotLinkExtensions.InitLinkUrl();
+                specificLinkUrl = value;
+                BotLinkExtensions.Reset();
             }
         }
-        public static string linkUrl = "http://localhost:5000/api";
+        private static string specificLinkUrl = null;
+
+        public const string AlphaLinkUrl = "https://alpha-link.firelynx.io/api";
+        public const string BetaLinkUrl = "https://beta-link.firelynx.io/api";
+        public const string ProdLinkUrl = "https://link.firelynx.io/api";
+        public const string LocalLinkUrl = "http://localhost:9230/api";
+
 #if DEBUG
 #else
         //public static string linkUrl = "https://link.firelynx.io/api";
 #endif
+
+        static Dictionary<string, string> defaultUplinkUrls = new Dictionary<string, string>();
+
+        static BotLinkConfig()
+        {
+            defaultUplinkUrls.Add("AHATEM", LocalLinkUrl);
+        }
+
+        public static ReleaseMode ReleaseMode { get; set; } = ReleaseMode.Alpha;
 
     }
 
@@ -44,6 +88,10 @@ namespace LionFire.Trading
             }
         }
         private static HttpClient _hc;
+        public static void Reset()
+        {
+            _hc = null;
+        }
 
         internal static void InitLinkUrl()
         {

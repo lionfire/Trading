@@ -39,15 +39,12 @@ namespace LionFire.Trading.Bots
         , IBot
 where TBotType : TBot, ITBot, new()
     {
-        ITBot IBot.Template { get { return Template; } set { Template = (TBotType)value; } }
+        ITBot IBot.Template { get => Template; set => Template = (TBotType)value; }
 
         public new TBotType Template { get; set; } = new TBotType();
         protected override ITBot TBot => Template;
 
-        protected override void CreateDefaultTBot()
-        {
-            Template = new TBotType();
-        }
+        protected override void CreateDefaultTBot() => Template = new TBotType();
         // FUTURE: Allow non-templated bots?
         //public override TBot Template { get { return this.Template; } set { Template = value; } }
     }
@@ -86,12 +83,12 @@ where TBotType : TBot, ITBot, new()
         private readonly Guid guid = Guid.NewGuid();
 
         protected abstract ITBot TBot { get; }
-        public virtual ITBot Template { get { return TBot; } set { throw new NotImplementedException(); } } // TODO: REFACTOR / remove this?
+        public virtual ITBot Template { get => TBot; set => throw new NotImplementedException(); } // TODO: REFACTOR / remove this?
         protected abstract void CreateDefaultTBot();
 
 
         public string Version { get; set; } = "0.0.0";
-        public virtual string BotName => this.GetType().Name;
+        public virtual string BotName => GetType().Name;
 
         #endregion
 
@@ -190,7 +187,7 @@ where TBotType : TBot, ITBot, new()
 
         public bool Link => Template != null && Template.Link;
 
-        public bool LinkBacktesting { get; set; } = true;
+        public bool LinkBacktesting { get; set; } = false;
         public TimeSpan LinkStatusInterval { get; set; } = TimeSpan.FromSeconds(10);
 
         protected async Task LinkSendInfo()
@@ -198,25 +195,25 @@ where TBotType : TBot, ITBot, new()
 
             var msg = new MBotInfo()
             {
-                Guid = this.guid,
-                Id = this.Template?.Id,
+                Guid = guid,
+                Id = Template?.Id,
                 Time = DateTime.UtcNow,
-                Broker = this.Account.BrokerName,
-                IsLive = this.Account.IsLive,
-                AccountType = this.Account.AccountType.ToString(),
+                Broker = Account.BrokerName,
+                IsLive = Account.IsLive,
+                AccountType = Account.AccountType.ToString(),
 
 #if cTrader
-                AccountId = this.Account.Number.ToString(),
+                AccountId = Account.Number.ToString(),
 #else
                 AccountId = this.Account.AccountId,
 #endif
                 //Mode = this.Account.AccountType.ToString(), // this.Modes.ToString(),  // REVIEW TODO
-                BotType = this.GetType().Name, // TODO: base class for cTrader
+                BotType = GetType().Name, // TODO: base class for cTrader
                 Platform = "?",
                 Hostname = Environment.MachineName,
-                Symbol = this.Symbol.Code,
-                Timeframe = this.TimeFrame.ToShortString(),
-                StatusInterval = this.LinkStatusInterval
+                Symbol = Symbol.Code,
+                Timeframe = TimeFrame.ToShortString(),
+                StatusInterval = LinkStatusInterval
             };
             await BotLinkExtensions.Send(this, msg).ConfigureAwait(false);
         }
@@ -224,12 +221,16 @@ where TBotType : TBot, ITBot, new()
         protected async Task LinkSendStatus()
         {
 
+            double netPosition = 0;
+
             List<LinkPosition> positions = null;
             if (Positions.Count > 0)
             {
                 positions = new List<LinkPosition>();
                 foreach (var p in Positions)
                 {
+                    netPosition += p.TradeType == TradeType.Buy ? p.VolumeInUnits : -p.VolumeInUnits;
+
                     positions.Add(new LinkPosition()
                     {
                         Comment = p.Comment,
@@ -247,25 +248,22 @@ where TBotType : TBot, ITBot, new()
 
             MStatus msg = new MStatus()
             {
-                Guid = this.guid,
-                Bid = this.Symbol.Bid,
-                Ask = this.Symbol.Ask,
-                State = this.DesiredExecutionState,
+                Guid = guid,
+                Bid = Symbol.Bid,
+                Ask = Symbol.Ask,
+                State = DesiredExecutionState,
                 //StatusMessage = "test msg",
-                Balance = this.Account.Balance,
-                Equity = this.Account.Equity,
-                Margin = this.Account.Margin,
-                MarginLevel = this.Account.MarginLevel,
+                Balance = Account.Balance,
+                Equity = Account.Equity,
+                Margin = Account.Margin,
+                MarginLevel = Account.MarginLevel,
                 Time = DateTime.UtcNow,
                 Positions = positions
             };
             await BotLinkExtensions.Send(this, msg).ConfigureAwait(false);
         }
 
-        protected async void OnLinkStatusTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
-        {
-            await LinkSendStatus().ConfigureAwait(false);
-        }
+        protected async void OnLinkStatusTimerElapsed(object sender, System.Timers.ElapsedEventArgs e) => await LinkSendStatus().ConfigureAwait(false);
 
         #endregion
 
@@ -279,12 +277,9 @@ where TBotType : TBot, ITBot, new()
 
         public string SettingsPath => Path.Combine(BotSettingsDir, BotSettingsFileName);
 
-        private static BotSettings BotSettingsCache;
+        //private static BotSettings BotSettingsCache;
 
-        public static string Printable(string s)
-        {
-            return s.Replace("{", "{{").Replace("}", "}}");
-        }
+        public static string Printable(string s) => s.Replace("{", "{{").Replace("}", "}}");
 
         public BotSettings LoadSettings()
         {
@@ -334,7 +329,7 @@ where TBotType : TBot, ITBot, new()
             {
                 if (Diag)
                 {
-                    this.Logger.LogInformation("SettingsCache.IsExpired, Loading settings");
+                    Logger.LogInformation("SettingsCache.IsExpired, Loading settings");
 
                 }
                 SettingsCache.Settings = LoadSettings();
@@ -376,7 +371,14 @@ where TBotType : TBot, ITBot, new()
         public BotBase()
         {
 #if cAlgo
-            LionFireEnvironment.ProgramName = "Trading";
+            if (LionFireEnvironment.MainAppInfo != null)
+            {
+                LionFireEnvironment.MainAppInfo = new AppInfo()
+                {
+                    CompanyName = "LionFire",
+                    ProgramName = "Trading",
+                };
+            }
 #endif
 
             InitExchangeRates();
@@ -418,7 +420,7 @@ where TBotType : TBot, ITBot, new()
 #if !cAlgo
             if (!await base.Initialize().ConfigureAwait(false)) return false;
 #endif
-            logger = this.GetLogger(this.ToString().Replace(' ', '.'), TBot != null ? TBot.Log : LogIfNoTemplate);
+            logger = this.GetLogger(ToString().Replace(' ', '.'), TBot != null ? TBot.Log : LogIfNoTemplate);
 
             if (Diag)
             {
@@ -464,6 +466,11 @@ where TBotType : TBot, ITBot, new()
 
             logger?.LogInformation($"------- START {this} -------");
 
+            if (TBot.MinPositionSize == 0)
+            {
+                TBot.MinPositionSize = 1;
+            }
+
             if (IsLinkEnabled)
             {
                 LinkSendInfo().FireAndForget();
@@ -492,6 +499,8 @@ where TBotType : TBot, ITBot, new()
 #if cAlgo
             InitializeIndicators_cAlgo();
 #endif
+
+
             //#if cAlgo
             //#else
             return Task.CompletedTask;
@@ -524,7 +533,7 @@ where TBotType : TBot, ITBot, new()
 
         public ExecutionStateEx State
         {
-            get { return state; }
+            get => state;
             protected set
             {
                 if (state == value)
@@ -725,18 +734,12 @@ where TBotType : TBot, ITBot, new()
             get
             {
                 throw new NotImplementedException("TODO: Review that BotPositions actually works in lionFire mode.");
-                return botPositions;
+                //return botPositions;
             }
         }
         protected Positions botPositions = new Positions();
 #else
-        public Position[] BotPositions
-        {
-            get
-            {
-                return Positions.FindAll(Label);
-            }
-        }
+        public Position[] BotPositions => Positions.FindAll(Label);
 #endif
 
         //        public new Positions Positions
@@ -756,10 +759,7 @@ where TBotType : TBot, ITBot, new()
 
         public event Action<PositionEvent> BotPositionChanged;
 
-        protected virtual void RaisePositionEvent(PositionEvent e)
-        {
-            BotPositionChanged?.Invoke(e);
-        }
+        protected virtual void RaisePositionEvent(PositionEvent e) => BotPositionChanged?.Invoke(e);
 
         #endregion
 
@@ -819,6 +819,44 @@ where TBotType : TBot, ITBot, new()
             return fromCurrency;
         }
 
+        public double GetFixedPositionVolume()
+        {
+            //var volumeStep = Symbol.VolumeInUnitsStep;
+            //if (volumeStep == 0)
+            //{
+            //    volumeStep = 1;
+            //}
+
+            //var volumeMin = Symbol.VolumeInUnitsMin;
+            //if (volumeMin == 0)
+            //{
+            //    volumeMin = 1;
+            //}
+
+            //if (volumeStep != volumeMin)
+            //{
+            //    throw new NotImplementedException("Position sizing not implemented when Symbol.VolumeStep != Symbol.VolumeMin");
+            //}
+
+            var tBotMin = TBot.MinPositionSize;
+            return Symbol.VolumeInUnitsMin * (tBotMin > 0 ? tBotMin : 1.0); // Simple, based on min size
+
+            //return Symbol.VolumeInUnitsMin + (effectiveMinPositionSize - 1) * Symbol.VolumeInUnitsStep;
+
+
+            #region Rounding (unnecessary here)
+
+            //volume = VolumeToStep(volume); // Unnecessary here
+
+            //#if cTrader
+            //            volume = this.Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
+            //#endif
+            //return volume;
+
+            #endregion
+
+        }
+
         /// <summary>
         /// PositionPercentOfEquity (REVIEW - cTrader recently changed from long to double)
         /// </summary>
@@ -858,7 +896,7 @@ where TBotType : TBot, ITBot, new()
                 string fromCurrency = GetFromCurrency(Symbol.Code);
                 var toCurrency = Account.Currency;
 
-                var equityRiskAmount = this.Account.Equity * (TBot.PositionPercentOfEquity / 100.0);
+                var equityRiskAmount = Account.Equity * (TBot.PositionPercentOfEquity / 100.0);
 
                 var quantity = equityRiskAmount;
                 quantity = VolumeToStep(quantity);
@@ -895,7 +933,7 @@ where TBotType : TBot, ITBot, new()
             }
             volume = VolumeToStep(volume);
 #if cTrader
-            volume = this.Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
+            volume = Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
 #endif
             return volume;
         }
@@ -950,7 +988,7 @@ where TBotType : TBot, ITBot, new()
 
                 var stopLossDistanceAccountCurrency = ConvertToCurrency(stopLossDistance.Value, fromCurrency, toCurrency);
 
-                var equityRiskAmount = this.Account.Equity * (TBot.PositionRiskPercent / 100.0);
+                var equityRiskAmount = Account.Equity * (TBot.PositionRiskPercent / 100.0);
 
                 var quantity = equityRiskAmount / (stopLossDistanceAccountCurrency);
                 quantity = VolumeToStep(quantity);
@@ -1118,14 +1156,33 @@ where TBotType : TBot, ITBot, new()
 
         #region Position Methods
 
-        public void CloseExistingOpposite(TradeType tt)
+        public void CloseExistingOpposite(TradeType tt, bool? inProfit = null)
         {
             foreach (var p in BotPositions)
             {
-                if (p.TradeType != tt)
+                if (p.TradeType == tt)
                 {
-                    ClosePosition(p);
+                    continue;
                 }
+
+                if (inProfit.HasValue)
+                {
+                    if (inProfit.Value)
+                    {
+                        if (p.NetProfit <= 0)
+                        {
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        if (p.NetProfit >= 0)
+                        {
+                            continue;
+                        }
+                    }
+                }
+                ClosePosition(p);
             }
         }
 
@@ -1135,14 +1192,22 @@ where TBotType : TBot, ITBot, new()
 
         #region Position Management
 
+        public  void CloseAllIfBacktesting()
+        {
+            if (IsBacktesting)
+            {
+                foreach (var p in Positions)
+                {
+                    ClosePosition(p);
+                }
+            }
+        }
+
         #endregion
 
         #region Symbol Utils
 
-        public double? PointsToPips(double? points)
-        {
-            return Symbol.SymbolPointsToPips(points);
-        }
+        public double? PointsToPips(double? points) => Symbol.SymbolPointsToPips(points);
 
         #endregion
 
@@ -1196,11 +1261,11 @@ where TBotType : TBot, ITBot, new()
 
             try
             {
-                var botType = this.GetType().FullName;
+                var botType = GetType().FullName;
 #if cAlgo
-                if (this.GetType().FullName.StartsWith("cAlgo."))
+                if (GetType().FullName.StartsWith("cAlgo."))
                 {
-                    botType = this.GetType().GetTypeInfo().BaseType.FullName;
+                    botType = GetType().GetTypeInfo().BaseType.FullName;
                 }
 #endif
 
@@ -1210,8 +1275,8 @@ where TBotType : TBot, ITBot, new()
                     {
                         BacktestDate = DateTime.UtcNow,
                         BotType = botType,
-                        BotConfigType = this.TBot.GetType().AssemblyQualifiedName,
-                        Config = this.TBot,
+                        BotConfigType = TBot.GetType().AssemblyQualifiedName,
+                        Config = TBot,
                         InitialBalance = 999999,
                         Start = StartDate.Value,
                         End = EndDate.Value,
@@ -1255,11 +1320,11 @@ where TBotType : TBot, ITBot, new()
 #if cAlgo
                 if (TBot.TimeFrame == null)
                 {
-                    TBot.TimeFrame = this.TimeFrame.ToShortString();
+                    TBot.TimeFrame = TimeFrame.ToShortString();
                 }
                 if (TBot.Symbol == null)
                 {
-                    TBot.Symbol = this.Symbol.Code;
+                    TBot.Symbol = Symbol.Code;
                 }
 
                 if (!StartDate.HasValue || !EndDate.HasValue)
@@ -1278,8 +1343,8 @@ where TBotType : TBot, ITBot, new()
                 {
                     BacktestDate = DateTime.UtcNow,
                     BotType = botType,
-                    BotConfigType = this.TBot.GetType().AssemblyQualifiedName,
-                    Config = this.TBot,
+                    BotConfigType = TBot.GetType().AssemblyQualifiedName,
+                    Config = TBot,
                     InitialBalance = initialBalance,
                     //Start = this.MarketSeries?.OpenTime?[0],
                     //End = this.MarketSeries?.OpenTime?.LastValue,
@@ -1326,10 +1391,14 @@ where TBotType : TBot, ITBot, new()
                 //#if cAlgo
                 //                logger?.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
                 //#endif
+                //Print("tpm " + tradesPerMonth + " fitness: " 
+                //    + fitness + " aroi " + aroi + " ddForFitness " + ddForFitness + " NetProfit " 
+                //    + backtestResult.NetProfit + " InitialBalance "  
+                //    + backtestResult.InitialBalance + " Duration.TotalDays " + backtestResult.Duration.TotalDays);
 
                 if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
                 {
-                    fitness *= Math.Pow(tradesPerMonth / minTrades, this.TBot.BacktestMinTradesPerMonthExponent);
+                    fitness *= Math.Pow(tradesPerMonth / minTrades, TBot.BacktestMinTradesPerMonthExponent);
                 }
 
                 //#if cAlgo
@@ -1350,6 +1419,9 @@ where TBotType : TBot, ITBot, new()
             }
             catch (Exception ex)
             {
+#if cAlgo
+                Print(ex.ToString());
+#endif
                 Logger?.LogError("GetFitness threw exception: " + ex);
                 throw;
                 //return 0;
@@ -1371,7 +1443,7 @@ where TBotType : TBot, ITBot, new()
             {
                 try
                 {
-                    BacktestLogger = this.GetLogger(this.ToString().Replace(' ', '.') + ".Backtest");
+                    BacktestLogger = this.GetLogger(ToString().Replace(' ', '.') + ".Backtest");
                 }
                 catch { } // EMPTYCATCH
 
@@ -1382,16 +1454,17 @@ where TBotType : TBot, ITBot, new()
 
                     var profit = args.Equity / initialBalance;
 
-                    this.BacktestLogger?.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
+                    BacktestLogger?.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
 
 
                     backtestResult.GetAverageDaysPerTrade(args);
 
-                    SaveResult(args, backtestResult, fitness, resultJson, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks", this.TBot.LogBacktestTrades);
+                    SaveResult(args, backtestResult, fitness, resultJson, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks", TBot.LogBacktestTrades);
                 }
                 catch (Exception ex)
                 {
-                    this.BacktestLogger?.LogError(ex.ToString());
+                    BacktestLogger?.LogError(ex.ToString());
+
                     throw;
                 }
             }
@@ -1401,7 +1474,7 @@ where TBotType : TBot, ITBot, new()
         public TimeFrame TimeFrame => (this as IHasSingleSeries)?.MarketSeries?.TimeFrame;
 #endif
 
-        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.AppProgramDataDir, "Results", Symbol.Code, this.BotName, TimeFrame.ToShortString());
+        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", Symbol.Code, BotName, TimeFrame.ToShortString());
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -1429,7 +1502,7 @@ where TBotType : TBot, ITBot, new()
             (this as IHasSingleSeries)?.MarketSeries?.TimeFrame?.Name;
 #endif
 
-            var filename = fitness.ToString("0000.0") + $"f " + (100.0 * backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
+            var filename = fitness.ToString("0000.0") + $"f " + (100.0 * backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={GetType().Name} sym={sym} tf={tf} id={id}";
             if (backtestFlags != null)
             {
                 filename += $" bt={backtestFlags}";
@@ -1502,32 +1575,23 @@ where TBotType : TBot, ITBot, new()
                     return label;
                 }
 
-                return TBot?.Id + $" {this.GetType().Name}";
+                return TBot?.Id + $" {GetType().Name}";
             }
-            set
-            {
-                label = value;
-            }
+            set => label = value;
         }
         private string label = null;
 
         //public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
 #if cAlgo
-        public Microsoft.Extensions.Logging.ILogger Logger
-        {
-            get { return logger; }
-        }
+        public Microsoft.Extensions.Logging.ILogger Logger => logger;
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
         #region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        protected void OnPropertyChanged(string propertyName)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+        protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
         #endregion
 
@@ -1607,4 +1671,5 @@ where TBotType : TBot, ITBot, new()
             results.AverageDaysPerLosingTrade = lossSum / losingTrades;
         }
     }
+
 }
