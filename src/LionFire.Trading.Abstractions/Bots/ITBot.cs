@@ -13,6 +13,9 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
+        bool AllowLong { get; set; }
+        bool AllowShort { get; set; }
+
         #region Max Positions
 
         // RENAME: MaxPositions

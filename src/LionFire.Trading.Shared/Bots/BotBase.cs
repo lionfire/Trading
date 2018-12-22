@@ -1308,14 +1308,10 @@ where TBotType : TBot, ITBot, new()
                 var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
                 double fitness;
 
-                if (!EndDate.HasValue || !StartDate.HasValue)
+                if(!TBot.AllowLong && !TBot.AllowShort)
                 {
-                    fitness = 0.0;
-                    return FitnessMaxDrawdown;
+                    return 0.0;
                 }
-
-                if (ddForFitness > FitnessMaxDrawdown || args.Equity < initialBalance) { return -ddForFitness; }
-
 
 #if cAlgo
                 if (TBot.TimeFrame == null)
@@ -1327,11 +1323,23 @@ where TBotType : TBot, ITBot, new()
                     TBot.Symbol = Symbol.Code;
                 }
 
-                if (!StartDate.HasValue || !EndDate.HasValue)
+                if (!StartDate.HasValue)
                 {
-                    throw new ArgumentException("StartDate or EndDate not set.  Are you calling base.OnBar in OnBar?");
+                    throw new ArgumentException("StartDate not set.  Are you calling base.OnBar in OnBar?");
+                }
+                if (!EndDate.HasValue)
+                {
+                    throw new ArgumentException("EndDate not set.  Are you calling base.OnBar in OnBar?");
                 }
 #endif
+
+                if (!EndDate.HasValue || !StartDate.HasValue)
+                {
+                    return -1000.0;
+                }
+
+                if (ddForFitness > FitnessMaxDrawdown || args.Equity < initialBalance) { return -ddForFitness; }
+
 
                 if (string.IsNullOrWhiteSpace(TBot.Id))
                 {
@@ -1474,7 +1482,15 @@ where TBotType : TBot, ITBot, new()
         public TimeFrame TimeFrame => (this as IHasSingleSeries)?.MarketSeries?.TimeFrame;
 #endif
 
-        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", Symbol.Code, BotName, TimeFrame.ToShortString());
+        public static string StandardizedSymbolCode(string unsanitizedSymbol) // MOVE
+        {
+            var result = unsanitizedSymbol;
+            result = result.Replace('-', '_');
+            result = result.Replace('/', '-');
+            result = result.Replace('\\','-');
+            return result;
+        }
+        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -1492,6 +1508,7 @@ where TBotType : TBot, ITBot, new()
 #else
             TBot.Symbol;
 #endif
+            sym = StandardizedSymbolCode(sym);
 
             var tradesPerMonth = (args.TotalTrades / (timeSpan.TotalDays / 31)).ToString("F1");
 

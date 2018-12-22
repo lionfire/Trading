@@ -6,6 +6,7 @@ using System.Linq;
 using System.IO;
 using System.Reflection;
 using LionFire.Handles;
+using LionFire.Referencing;
 #if !cAlgo
 using LionFire.Parsing.String;
 #endif
@@ -13,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Backtesting
 {
-    public class BacktestResultHandle : ReadHandleBase<BacktestResult>
+    public class BacktestResultHandle : RBase<BacktestResult>
     {
         public static implicit operator BacktestResultHandle(BacktestResult r)
         {
