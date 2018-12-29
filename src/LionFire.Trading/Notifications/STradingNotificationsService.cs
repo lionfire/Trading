@@ -73,7 +73,7 @@ namespace LionFire.Notifications.Wpf.App
             alerts = new FsObjectCollection<PriceNotifier>()
             {
 
-                RootPath = Path.Combine(LionFireEnvironment.GetProgramDataDir("Trading"), "Alerts")
+                RootPath = Path.Combine(LionFireEnvironment.Directories.GetProgramDataDir("Trading"), "Alerts")
             };
 
             alerts.Handles.Removed += (k, v) => {

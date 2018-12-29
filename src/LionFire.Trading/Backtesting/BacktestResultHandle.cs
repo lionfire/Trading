@@ -85,7 +85,7 @@ namespace LionFire.Trading.Backtesting
             //bool gotAD = false;
             var filters = filterText?.Split(' ');
 
-            var dir = System.IO.Path.Combine(LionFireEnvironment.AppProgramDataDir, @"Results");
+            var dir = System.IO.Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, @"Results");
             foreach (var path in Directory.GetFiles(dir))
             {
                 var str = System.IO.Path.GetFileNameWithoutExtension(path);
@@ -216,6 +216,8 @@ namespace LionFire.Trading.Backtesting
         {
             return this.ToXamlAttribute();
         }
+
+        public override Task<bool> TryRetrieveObject() => throw new NotImplementedException();
     }
 
 }
