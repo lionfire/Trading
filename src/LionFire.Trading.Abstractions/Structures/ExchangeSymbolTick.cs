@@ -20,6 +20,7 @@ namespace LionFire.Trading
         public string Symbol { get; set; }
         public double Bid { get; set; }
         public double Ask { get; set; }
+        public double Avg => (Bid + Ask) / 2;
         public double Last { get; set; }
         public DateTime Date { get; set; }
 
@@ -87,10 +88,10 @@ namespace LionFire.Trading
         public override string ToString() {
             var sb = new StringBuilder();
 
-            if (!double.IsNaN(Bid)) sb.Append($"b:{Bid}");
-            if (!double.IsNaN(Ask)) sb.Append($"a:{Ask}");
-            if (!double.IsNaN(Last)) sb.Append($"l:{Last}");
-            if (Date != default(DateTime)) sb.Append($"d:{Date}");
+            if (!double.IsNaN(Bid)) sb.Append($" b:{Bid}");
+            if (!double.IsNaN(Ask)) sb.Append($" a:{Ask}");
+            if (!double.IsNaN(Last)) sb.Append($" l:{Last}");
+            if (Date != default(DateTime)) sb.Append($" d:{Date}");
 
             return sb.ToString();
         }

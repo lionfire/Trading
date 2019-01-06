@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Microsoft.Extensions.Hosting;
+using System;
 
 namespace LionFire.Trading.Feeds
 {
-    public interface ITicksFeed
+    public interface ITicksFeed : IHostedService
     {
         event Action<ExchangeSymbolTick> Tick;
 
