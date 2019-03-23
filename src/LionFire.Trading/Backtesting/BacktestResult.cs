@@ -61,6 +61,7 @@ namespace LionFire.Trading.Backtesting
         public double WinningTrades { get; set; }
 
         public DateTime BacktestDate { get; set; }
+        public string Broker { get; set; }
         public string BotType { get; set; }
         public string BotTypeName { get { return BotType.Substring(BotType.LastIndexOf('.') + 1); } }
         public string BotConfigType { get; set; }

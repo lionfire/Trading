@@ -22,15 +22,12 @@ namespace LionFire.Trading.Bots
         //[Ignore]
         public string Symbol
         {
-            get { return Symbols?.FirstOrDefault(); }
-            set
-            {
-                Symbols = new List<string> { value };
-            }
+            get => Symbols?.FirstOrDefault();
+            set => Symbols = new List<string> { value };
         }
 
         #region Symbols
-        
+
         public List<string> Symbols
         {
             get { return symbols; }
@@ -51,17 +48,12 @@ namespace LionFire.Trading.Bots
         //[Ignore]
         public string TimeFrame
         {
-            get { return TimeFrames?.FirstOrDefault(); }
-            set { TimeFrames = new List<string> { value }; }
+            get => TimeFrames?.FirstOrDefault();
+            set => TimeFrames = new List<string> { value };
         }
         public List<string> TimeFrames { get; set; }
 
-        public bool Link { get; set; } = true;
-
-        public bool Log { get; set; } = false;
-
-        public string LogFile { get; set; } = "e:/temp/Trading.cAlgo.log";
-
+#if OLD
         [Parameter("Log Backtest Fitness Min", DefaultValue = 2.0)]
         public double LogBacktestThreshold { get; set; }
 
@@ -70,8 +62,7 @@ namespace LionFire.Trading.Bots
 
         [Parameter("Log Backtest Trades", DefaultValue = false)]
         public bool LogBacktestTrades { get; set; }
-
-        public bool UseTicks { get; set; } = false;
+#endif
 
         /// <summary>
         /// In units of quantity, not volume
@@ -92,7 +83,7 @@ namespace LionFire.Trading.Bots
         public bool AllowLong { get; set; } = true;
         public bool AllowShort { get; set; } = true;
 
-        #region Max Positions
+#region Max Positions
 
         /// <summary>
         /// 0 or MaxValue means no limit
@@ -101,9 +92,9 @@ namespace LionFire.Trading.Bots
         public int MaxLongPositions { get; set; } = 1;
         public int MaxShortPositions { get; set; } = 1;
 
-        #endregion
+#endregion
 
-        #region Backtesting
+#region Backtesting
 
         /// <summary>
         /// Trim huge gains
@@ -113,37 +104,37 @@ namespace LionFire.Trading.Bots
         public double BacktestMinTradesPerMonth { get; set; } = 0;
         public double BacktestMinTradesPerMonthExponent { get; set; } = 2;
 
-        #endregion
+#endregion
 
-        #region SL and TP
+#region SL and TP
 
         public double MaxStopLossPips { get; set; } = 0;
 
 
-        #region in ATR
+#region in ATR
 
         public double SLinAtr { get; set; }
 
         public double TPinAtr { get; set; }
-        #endregion
+#endregion
 
 
-        #region in Daily ATR
+#region in Daily ATR
 
         public double SLinDailyAtr { get; set; }
         public double TPinDailyAtr { get; set; }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region Filters
+#region Filters
 
         public bool UseTradeInPivotDirection { get; set; }
         public bool TradeInPivotDirection { get; set; }
 
 
-        #endregion
+#endregion
 
         ///// <summary>
         ///// TODO Updates  

@@ -431,7 +431,7 @@ p.onBars.Add(new StopLossTrailer(p)
 
         private void LogOpen(TradeType tradeType, double volumeInUnits, double risk, double stopLoss, double stopLossDistance)
         {
-            if (!Template.Log) return;
+            if (!RuntimeSettings.Log) return;
             string stopLossDistanceAccount = "";
             var purchaseCurrency = Symbol.Code.Substring(0, 3);
             if (purchaseCurrency != Account.Currency)

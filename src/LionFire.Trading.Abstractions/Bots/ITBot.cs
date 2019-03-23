@@ -36,29 +36,6 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
-        #region Runtime Settings
-
-        bool Log { get; }
-
-        bool Link { get; set; }
-
-
-        #endregion
-
-        #region Settings
-
-
-        #region Backtesting
-
-        double BacktestMinTradesPerMonth { get; set; }
-        double BacktestMinTradesPerMonthExponent { get; set; }
-
-        double LogBacktestThreshold { get; set; }
-        bool LogBacktestTrades { get; set; }
-        #endregion
-
-        #endregion
-
         #region SL / TP
 
         double SLinAtr { get; set; }

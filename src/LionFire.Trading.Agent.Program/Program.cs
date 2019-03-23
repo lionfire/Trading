@@ -86,7 +86,6 @@ namespace LionFire.Trading.Agent.Program
 #if Proprietary
                     new TLionTrender("XAUUSD", "h1")
                     {
-                        Log=false,
                         //LogBacktestThreshold = 2.0,
                         MinPositionSize = 1,
                         Indicator = new TLionTrending

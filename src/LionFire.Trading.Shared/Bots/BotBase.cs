@@ -73,7 +73,7 @@ where TBotType : TBot, ITBot, new()
     {
         #region (Static) Configuration
 
-        public static bool LogIfNoTemplate = true;
+        public static bool LogIfNoRuntimeSettings = true;
 
         #endregion
 
@@ -101,7 +101,7 @@ where TBotType : TBot, ITBot, new()
 
         #region Settings
 
-        public bool Diag { get; set; }
+        public bool Diag => RuntimeSettings.Diag;
 
         #endregion
 
@@ -185,7 +185,7 @@ where TBotType : TBot, ITBot, new()
         /// </summary>
         protected bool IsLinkEnabled;
 
-        public bool Link => Template != null && Template.Link;
+        public bool Link => RuntimeSettings != null && RuntimeSettings.Link;
 
         public bool LinkBacktesting { get; set; } = false;
         public TimeSpan LinkStatusInterval { get; set; } = TimeSpan.FromSeconds(10);
@@ -317,6 +317,7 @@ where TBotType : TBot, ITBot, new()
         }
 
         public static BotSettingsCache SettingsCache;
+        public static BotSettings RuntimeSettings => SettingsCache.Settings;
 
         public void LoadSettingsIfNeeded()
         {
@@ -325,21 +326,29 @@ where TBotType : TBot, ITBot, new()
                 SettingsCache = new BotSettingsCache();
             }
 
-            if (SettingsCache.IsExpired)
+            if (SettingsCache.IsExpired || SettingsCache.Settings == null)
             {
+                SettingsCache.Settings = LoadSettings();
                 if (Diag)
                 {
-                    Logger.LogInformation("SettingsCache.IsExpired, Loading settings");
-
+                    Logger.LogInformation("SettingsCache.IsExpired, Loaded settings");
                 }
-                SettingsCache.Settings = LoadSettings();
+            }
+            else
+            {
+#if cTrader
+                if (Diag)
+                {
+                    Print("Using cached settings");
+                }
+#endif
             }
         }
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region Lifecycle
+#region Lifecycle
 
         //public IInstantiator ToInstantiator(InstantiationContext context = null)
         //{
@@ -366,7 +375,7 @@ where TBotType : TBot, ITBot, new()
         //    }
         //}
 
-        #region Construction
+#region Construction
 
         public BotBase()
         {
@@ -384,9 +393,9 @@ where TBotType : TBot, ITBot, new()
             InitExchangeRates();
         }
 
-        #endregion
+#endregion
 
-        #region Initialization
+#region Initialization
 
         private void Link_OnPositionClosed(PositionClosedEventArgs args)
         {
@@ -420,7 +429,7 @@ where TBotType : TBot, ITBot, new()
 #if !cAlgo
             if (!await base.Initialize().ConfigureAwait(false)) return false;
 #endif
-            logger = this.GetLogger(ToString().Replace(' ', '.'), TBot != null ? TBot.Log : LogIfNoTemplate);
+            logger = this.GetLogger(ToString().Replace(' ', '.'), RuntimeSettings != null ? RuntimeSettings.Log : LogIfNoRuntimeSettings);
 
             if (Diag)
             {
@@ -434,11 +443,11 @@ where TBotType : TBot, ITBot, new()
 #endif
         }
 
-        #endregion
+#endregion
 
 
 
-        #region Start
+#region Start
 
         protected System.Timers.Timer linkStatusTimer;
 
@@ -507,9 +516,9 @@ where TBotType : TBot, ITBot, new()
             //#endif
         }
 
-        #endregion
+#endregion
 
-        #region Stop
+#region Stop
 
         protected void OnBotStopping()
         {
@@ -522,13 +531,13 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region State
+#region State
 
-        #region Execution State
+#region Execution State
 #if cAlgo
 
         public ExecutionStateEx State
@@ -549,10 +558,10 @@ where TBotType : TBot, ITBot, new()
 
         public event Action<ExecutionStateEx, object> StateChangedToFor;
 #endif
-        #endregion
+#endregion
 
 
-        #region Derived
+#region Derived
 
         public DateTime ExtrapolatedServerTime
         {
@@ -566,20 +575,20 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region Event Handling
+#region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-        #endregion
+#endregion
 
-        #region Derived
+#region Derived
 
         public bool CanOpenLong
         {
@@ -634,9 +643,9 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-        #endregion
+#endregion
 
-        #region Indicators
+#region Indicators
 
 #if cAlgo
         // TODO: REARCH Make additional indicators modular?
@@ -645,11 +654,11 @@ where TBotType : TBot, ITBot, new()
         private AverageTrueRange DailyAtr;
 #endif
 
-        #endregion
+#endregion
 
-        #region Entry
+#region Entry
 
-        #region Filters
+#region Filters
 
         public bool PassesFilters(TradeType tt)
         {
@@ -670,7 +679,7 @@ where TBotType : TBot, ITBot, new()
             //#endif
         }
 
-        #endregion
+#endregion
 
         public void TryEnter(TradeType tt, double? slPips = null, double? tpPips = null, int? volume = null)
         {
@@ -714,9 +723,9 @@ where TBotType : TBot, ITBot, new()
             ExecuteMarketOrder(tt, Symbol, volume ?? GetPositionVolume(slPips, tt), Label, slPips, tpPips);
         }
 
-        #endregion
+#endregion
 
-        #region Positions
+#region Positions
 
 #if cAlgo
         public int BotPositionCount => BotPositions.Length;
@@ -755,15 +764,15 @@ where TBotType : TBot, ITBot, new()
         //        private Positions positions =  new Positions<Position>();
         //#endif
 
-        #region Position Events
+#region Position Events
 
         public event Action<PositionEvent> BotPositionChanged;
 
         protected virtual void RaisePositionEvent(PositionEvent e) => BotPositionChanged?.Invoke(e);
 
-        #endregion
+#endregion
 
-        #region Position Sizing
+#region Position Sizing
 
 
         // MOVE?
@@ -844,7 +853,7 @@ where TBotType : TBot, ITBot, new()
             //return Symbol.VolumeInUnitsMin + (effectiveMinPositionSize - 1) * Symbol.VolumeInUnitsStep;
 
 
-            #region Rounding (unnecessary here)
+#region Rounding (unnecessary here)
 
             //volume = VolumeToStep(volume); // Unnecessary here
 
@@ -853,7 +862,7 @@ where TBotType : TBot, ITBot, new()
             //#endif
             //return volume;
 
-            #endregion
+#endregion
 
         }
 
@@ -1152,9 +1161,9 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-        #endregion
+#endregion
 
-        #region Position Methods
+#region Position Methods
 
         public void CloseExistingOpposite(TradeType tt, bool? inProfit = null)
         {
@@ -1186,11 +1195,11 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
-        #region Position Management
+#region Position Management
 
         public  void CloseAllIfBacktesting()
         {
@@ -1203,13 +1212,13 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-        #endregion
+#endregion
 
-        #region Symbol Utils
+#region Symbol Utils
 
         public double? PointsToPips(double? points) => Symbol.SymbolPointsToPips(points);
 
-        #endregion
+#endregion
 
 #if !cTrader // MOVE
         public MarketSeries MarketSeries // REVIEW RECENTCHANGE
@@ -1221,7 +1230,7 @@ where TBotType : TBot, ITBot, new()
         }
 #endif
 
-        #region On-demand extra inputs: DailySeries
+#region On-demand extra inputs: DailySeries
 
         public MarketSeries DailySeries
         {
@@ -1236,15 +1245,15 @@ where TBotType : TBot, ITBot, new()
         }
         private MarketSeries dailySeries;
 
-        #endregion
+#endregion
 
-        #region Filters
+#region Filters
 
         public List<Func<TradeType, MarketSeries, bool>> Filters = new List<Func<TradeType, MarketSeries, bool>>();
 
-        #endregion
+#endregion
 
-        #region Backtesting
+#region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.1;
@@ -1273,6 +1282,7 @@ where TBotType : TBot, ITBot, new()
                 {
                     var fakeBacktestResult = new BacktestResult()
                     {
+                        Broker = Account.BrokerName,
                         BacktestDate = DateTime.UtcNow,
                         BotType = botType,
                         BotConfigType = TBot.GetType().AssemblyQualifiedName,
@@ -1349,6 +1359,7 @@ where TBotType : TBot, ITBot, new()
                 if (!GotTick && !TBot.Id.EndsWith(NoTicksIdSuffix)) { TBot.Id = TBot.Id + NoTicksIdSuffix; }
                 var backtestResult = new BacktestResult()
                 {
+                    Broker = Account.BrokerName,
                     BacktestDate = DateTime.UtcNow,
                     BotType = botType,
                     BotConfigType = TBot.GetType().AssemblyQualifiedName,
@@ -1394,7 +1405,7 @@ where TBotType : TBot, ITBot, new()
                 fitness = aroi / ddForFitness;
                 //}
 
-                var minTrades = TBot.BacktestMinTradesPerMonth;
+                var minTrades = RuntimeSettings.MinTradesPerMonth;
 
                 //#if cAlgo
                 //                logger?.LogInformation($"dd: {args.MaxEquityDrawdownPercentages }  Template.BacktestMinTradesPerMonth {Template.BacktestMinTradesPerMonth} tradesPerMonth {tradesPerMonth}");
@@ -1406,7 +1417,7 @@ where TBotType : TBot, ITBot, new()
 
                 if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
                 {
-                    fitness *= Math.Pow(tradesPerMonth / minTrades, TBot.BacktestMinTradesPerMonthExponent);
+                    fitness *= Math.Pow(tradesPerMonth / minTrades, RuntimeSettings.BacktestMinTradesPerMonthExponent);
                 }
 
                 //#if cAlgo
@@ -1447,7 +1458,7 @@ where TBotType : TBot, ITBot, new()
             TimeSpan timeSpan = backtestResult.Duration;
             double aroi = backtestResult.Aroi;
 
-            if (!double.IsNaN(TBot.LogBacktestThreshold) && fitness > TBot.LogBacktestThreshold)
+            if (!double.IsNaN(RuntimeSettings.LogBacktestThreshold) && fitness > RuntimeSettings.LogBacktestThreshold)
             {
                 try
                 {
@@ -1467,7 +1478,7 @@ where TBotType : TBot, ITBot, new()
 
                     backtestResult.GetAverageDaysPerTrade(args);
 
-                    SaveResult(args, backtestResult, fitness, resultJson, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks", TBot.LogBacktestTrades);
+                    SaveResult(args, backtestResult, fitness, resultJson, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks");
                 }
                 catch (Exception ex)
                 {
@@ -1544,12 +1555,9 @@ where TBotType : TBot, ITBot, new()
             return path;
         }
 
-        private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan, string backtestFlags = null, bool saveTrades = false)
+        private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan, string backtestFlags = null)
         {
-
             //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
-
-
 
             //var filename = fitness.ToString("0000.0") + $"f " + (backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
             //if (backtestFlags != null)
@@ -1568,7 +1576,7 @@ where TBotType : TBot, ITBot, new()
                 await sw.WriteAsync(json).ConfigureAwait(false);
             }
 
-            if (saveTrades)
+            if (fitness >= RuntimeSettings.LogBacktestDetailThreshold)
             {
                 using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Trades, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
                 {
@@ -1579,9 +1587,9 @@ where TBotType : TBot, ITBot, new()
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-        #endregion
+#endregion
 
-        #region Misc
+#region Misc
 
         public virtual string Label
         {
@@ -1604,17 +1612,17 @@ where TBotType : TBot, ITBot, new()
         public Microsoft.Extensions.Logging.ILogger Logger => logger;
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
-        #region INotifyPropertyChanged Implementation
+#region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        #endregion
+#endregion
 
 #endif
 
-        #endregion
+#endregion
 
 
     }
