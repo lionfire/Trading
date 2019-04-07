@@ -35,6 +35,8 @@ namespace LionFire.Trading.Workspaces
     [State]
     public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
     {
+        public Type Type => typeof(TradingWorkspace);
+
         // REVIEW - why is this needed -- does it make sense?
         public string Key
         {
@@ -423,6 +425,8 @@ namespace LionFire.Trading.Workspaces
         #endregion
 
         public List<Type> BotTypes { get; set; } = new List<Type>();
+
+        
 
         #region Misc
 

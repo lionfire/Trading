@@ -4,17 +4,17 @@ using System.Text;
 
 namespace LionFire.Trading.Bots
 {
-    public class BotSettingsCache
+    public static class BotSettingsCache
     {
-        public string SymbolCode;
+        //public string SymbolCode;
 
-        public DateTime LastStart;
+        public static DateTime LastStart;
         //public DateTime LastEnd;
         //public KeyValuePair<DateTime, TimeSpan>[] BacktestDurations;
-        public static TimeSpan SettingsCacheExpire = TimeSpan.FromSeconds(180);
+        public static TimeSpan SettingsCacheExpire => Settings== null ? TimeSpan.FromSeconds(180) : TimeSpan.FromSeconds(Settings.SettingsCacheTimeout);
 
-        public BotSettings Settings;
-        public bool IsExpired
+        public static BotSettings Settings;
+        public static bool IsExpired
         {
             get
             {

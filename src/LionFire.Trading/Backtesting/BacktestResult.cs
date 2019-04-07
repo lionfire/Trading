@@ -6,26 +6,43 @@ using LionFire.Parsing.String;
 
 using System.Threading.Tasks;
 using LionFire.Trading.Bots;
+using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LionFire.Trading.Backtesting
 {
     [Assets.AssetPath("Results")]
     public class BacktestResult
     {
+        [Key]
+        [Required]
+        [MaxLength(20)]
+        [Unit("id", true)]
+        public string Id { get; set; }
+        public string Key => Id;
+        public string GetKey() => Id;
+
         public DateTime? Start { get; set; }
         public DateTime? End { get; set; }
+
+        [Required]
+        [MaxLength(17)]
+        [Unit("sym", true)]
+        public string Symbol { get; set; }
 
         #region Derived
 
         public TimeSpan Duration { get { if (!Start.HasValue || !Start.HasValue) { return TimeSpan.Zero; } return End.Value - Start.Value; } }
 
-        public double WinRate { get { return WinningTrades / TotalTrades; } }
+        public double WinRate => WinningTrades / TotalTrades;
 
         [Unit("tpm")]
-        public double TradesPerMonth { get { return TotalTrades / Months; } }
+        public double TradesPerMonth => TotalTrades / Months;
 
-        public double Days { get { return Duration.TotalDays; } }
-        public double Months { get { return Duration.TotalDays / 31; } }
+        [Unit("d")]
+        public double Days => Duration.TotalDays;
+        public double Months => Duration.TotalDays / 31;
 
         /// <summary>
         /// Annual equity return on investment percent
@@ -33,6 +50,10 @@ namespace LionFire.Trading.Backtesting
         public double Aroi { get { return (NetProfit / InitialBalance) / (Duration.TotalDays / 365); } }
 
         #endregion
+
+        [Unit("bt", true)]
+        public string BacktestInfo { get; set; }
+        public bool NoTicks => BacktestInfo != null && BacktestInfo.Split(' ').Contains("no-ticks");
 
         /// <summary>
         /// Average trade duration in days
@@ -54,19 +75,24 @@ namespace LionFire.Trading.Backtesting
         public double NetProfit { get; set; }
         //public PendingOrders PendingOrders { get; set; }
         //public Positions Positions { get; set; }
-        public double ProfitFactor { get; set; }
-        public double SharpeRatio { get; set; }
-        public double SortinoRatio { get; set; }
+        public double? ProfitFactor { get; set; }
+        public double? SharpeRatio { get; set; }
+        public double? SortinoRatio { get; set; }
         public double TotalTrades { get; set; }
         public double WinningTrades { get; set; }
 
         public DateTime BacktestDate { get; set; }
         public string Broker { get; set; }
+
+        [Unit("bot", true)]
         public string BotType { get; set; }
-        public string BotTypeName { get { return BotType.Substring(BotType.LastIndexOf('.') + 1); } }
+        public string BotTypeName => BotType.Substring(BotType.LastIndexOf('.') + 1);
         public string BotConfigType { get; set; }
+
+        [NotMapped]
         public object Config { get; set; }
 
+        [Unit("tf", true)]
         public string TimeFrame
         {
             get
@@ -80,6 +106,7 @@ namespace LionFire.Trading.Backtesting
         /// <summary>
         /// Computed at backtest time
         /// </summary>
+        [Unit("f")]
         public double Fitness { get; set; }
 
         public double InitialBalance { get; set; }
@@ -113,7 +140,9 @@ namespace LionFire.Trading.Backtesting
 
                     if (templateType == null)
                     {
-                        throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
+                        Debug.WriteLine($"Bot type not supported: {backtestResult.BotConfigType}");
+                        return null;
+                        //throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
                     }
 
                     tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
@@ -128,8 +157,12 @@ namespace LionFire.Trading.Backtesting
             var result = TypeResolver.Default.TryResolve(typeName);
             if (result != null) return result;
 
-            typeName = typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary");
-            return TypeResolver.Default.TryResolve(typeName);
+            result = TypeResolver.Default.TryResolve(typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary"));
+            if (result != null) return result;
+
+            result = TypeResolver.Default.TryResolve(typeName.Replace("cAlgo.Robots.", "LionFire.Trading.Proprietary.Algos."));
+
+            return result;
         }
 
     }

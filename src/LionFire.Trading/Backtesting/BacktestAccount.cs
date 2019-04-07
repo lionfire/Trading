@@ -3,6 +3,7 @@
 using LionFire.Assets;
 using LionFire.Execution;
 using LionFire.ExtensionMethods;
+using LionFire.ExtensionMethods.Copying;
 using LionFire.Extensions.Logging;
 using LionFire.Instantiating;
 using LionFire.Trading;

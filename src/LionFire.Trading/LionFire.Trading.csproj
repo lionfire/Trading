@@ -22,6 +22,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Assets.Abstractions\LionFire.Assets.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Assets\LionFire.Assets.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Base\LionFire.Base.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Console\LionFire.Console.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Execution.Abstractions\LionFire.Execution.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Execution\LionFire.Execution.csproj" />
@@ -34,6 +35,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Reactive\LionFire.Reactive.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing.Abstractions\LionFire.Referencing.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing\LionFire.Referencing.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization.Filesystem\LionFire.Serialization.Filesystem.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Link.Abstractions\LionFire.Trading.Link.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Environment\LionFire.Environment.csproj" />
@@ -45,7 +47,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
     <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
-    <PackageReference Include="System.Reactive" Version="4.1.2" />
+    <PackageReference Include="System.Reactive" Version="4.1.3" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.5.1" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />

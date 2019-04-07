@@ -27,6 +27,5 @@ namespace LionFire.Trading
         public string Currency { get; set; }
 
     }
-
 }
 

@@ -80,7 +80,7 @@ namespace LionFire.Trading.Workspaces
         {
             return TWorkspaceExtensions.Validate(this, validationContext);
         }
-
+        public void Validate(bool throwMany = true) => throw new NotImplementedException();
 
         #endregion
 
@@ -357,6 +357,9 @@ namespace LionFire.Trading.Workspaces
         {
             Saving?.Invoke();
         }
+
+        
+
         public event Action Saving;
 
         #endregion

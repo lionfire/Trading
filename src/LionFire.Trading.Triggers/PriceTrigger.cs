@@ -41,6 +41,8 @@ namespace LionFire.Trading.Triggers
         {
             return validationContext;
         }
+
+        public void Validate(bool throwMany = true) => throw new NotImplementedException();
     }
 
     public class PriceTrigger : MarketTrigger<TPriceTrigger, PriceTrigger>, IStartable, IInitializable2

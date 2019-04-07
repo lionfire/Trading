@@ -6,6 +6,11 @@ namespace LionFire.Trading.Bots
 {
     public class BotSettings
     {
+        /// <summary>
+        /// in Seconds.  TODO: Remove
+        /// </summary>
+        public int SettingsCacheTimeout { get; set; }
+
         #region Logging Levels
 
         public bool Diag { get; set; }
@@ -29,11 +34,11 @@ namespace LionFire.Trading.Bots
         #region Backtesting: Uplink to Backtest API
 
         public string BacktestApi { get; set; }
-        //public string BacktestTable { get; set; }
-        //public string BacktestTableKey { get; set; }
+        public string BacktestTable { get; set; }
+        public string BacktestTableKey { get; set; }
 
         #endregion
-        
+
 
         #region Live/Demo bots: uplink to Link / Monitoring
 

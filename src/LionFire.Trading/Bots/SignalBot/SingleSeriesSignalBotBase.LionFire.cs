@@ -55,7 +55,6 @@ namespace LionFire.Trading.Bots
                 this.MarketSeries.Bar += MarketSeries_Bar;
             }
             //this.Symbol.GetLastBar(TimeFrame.m1).Wait(); // Gets server time
-
         }
 
         protected override async Task OnStarted()

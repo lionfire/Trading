@@ -2,14 +2,14 @@
 using LionFire.Applications;
 using LionFire.Applications.Hosting;
 using LionFire.Trading.Backtesting;
-using LionFire.Trading.Proprietary.Bots;
-using LionFire.Trading.Proprietary.Indicators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Instantiating;
 using LionFire.Applications.Trading;
+using LionFire.Trading.Proprietary.Bots;
+using LionFire.Trading.Proprietary.Indicators;
 
 namespace LionFire.Trading.Agent.Program
 {
@@ -34,7 +34,7 @@ namespace LionFire.Trading.Agent.Program
 #if Proprietary         
                     new TLionTrender("XAUUSD", "h1")
                     {
-                        Log=false,
+                        //Log=false,
                         //LogBacktest = true,
                         MinPositionSize = 1,
                         Indicator = new TLionTrending

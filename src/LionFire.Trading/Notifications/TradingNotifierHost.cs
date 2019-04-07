@@ -20,7 +20,7 @@ namespace LionFire.Trading.Notifications
     {
         // FUTURE: Change this collection type to an interface?  IHandleDirectory?
         public FsObjectCollection<Notifier> Notifiers => notifiers;
-        FsObjectCollection<Notifier> notifiers = new FsObjectCollection<Notifier>(Path.Combine(LionFireEnvironment.GetProgramDataDir("Trading"), "Alerts"));
+        FsObjectCollection<Notifier> notifiers = new FsObjectCollection<Notifier>(Path.Combine(LionFireEnvironment.Directories.GetProgramDataDir("Trading"), "Alerts"));
 
         public IEnumerable<object> Children { get { return Notifiers.Objects; } }
 

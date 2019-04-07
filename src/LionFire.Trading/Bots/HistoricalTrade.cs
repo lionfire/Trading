@@ -26,6 +26,7 @@ namespace LionFire.Trading
         string SymbolCode { get; }
         TradeType TradeType { get; }
         double Volume { get; }
+        
     }
 
     public class _HistoricalTrade : HistoricalTrade
@@ -125,5 +126,10 @@ namespace LionFire.Trading
         public double Volume {
             get; set;
         }
+
+        public double NetVolume => TradeType == TradeType.Buy ? Volume : -Volume;
+
+        public override string ToString() => $"{(TradeType == TradeType.Buy ? "LONG" : "SHORT")} {Volume} {SymbolCode}";
+        public string ToLongString() => $"{(TradeType == TradeType.Buy ? "LONG" : "SHORT")} {Volume} {SymbolCode} from {EntryTime} to {ClosingTime} for {NetProfit}";
     }
 }

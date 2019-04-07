@@ -14,14 +14,15 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Backtesting
 {
+    // REFACTOR - Compare with BacktestResultItem
     public class BacktestResultHandle : RBase<BacktestResult>
     {
         public static implicit operator BacktestResultHandle(BacktestResult r)
         {
             return new BacktestResultHandle { Object = r };
         }
-
-        public override Task<bool> TryResolveObject(object persistenceContext = null)
+        
+        public override Task<bool> TryGetObject()
         {
             if (_object == null && Path != null)
             {

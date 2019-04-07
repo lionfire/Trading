@@ -187,7 +187,7 @@ where TBotType : TBot, ITBot, new()
 
         public bool Link => RuntimeSettings != null && RuntimeSettings.Link;
 
-        public bool LinkBacktesting { get; set; } = false;
+        
         public TimeSpan LinkStatusInterval { get; set; } = TimeSpan.FromSeconds(10);
 
         protected async Task LinkSendInfo()
@@ -290,7 +290,7 @@ where TBotType : TBot, ITBot, new()
                     /*{
                         var x = new BotSettings
                         {
-                            LinkApi = "asdf"
+                            LinkApi = "asdf"t
                         };
                         var json = JsonConvert.SerializeObject(x);
                         Print("Serialz test:" + json);
@@ -316,23 +316,24 @@ where TBotType : TBot, ITBot, new()
             return null;
         }
 
-        public static BotSettingsCache SettingsCache;
-        public static BotSettings RuntimeSettings => SettingsCache.Settings;
+        public static BotSettings RuntimeSettings => BotSettingsCache.Settings;
 
         public void LoadSettingsIfNeeded()
         {
-            if (SettingsCache == null)
-            {
-                SettingsCache = new BotSettingsCache();
-            }
+            //if (SettingsCache == null)
+            //{
+            //    SettingsCache = new BotSettingsCache();
+            //}
 
-            if (SettingsCache.IsExpired || SettingsCache.Settings == null)
+            if (BotSettingsCache.IsExpired || BotSettingsCache.Settings == null)
             {
-                SettingsCache.Settings = LoadSettings();
+                BotSettingsCache.Settings = LoadSettings();
+#if cTrader
                 if (Diag)
                 {
-                    Logger.LogInformation("SettingsCache.IsExpired, Loaded settings");
+                    Print("SettingsCache.IsExpired, Loaded settings");
                 }
+#endif
             }
             else
             {
@@ -417,7 +418,9 @@ where TBotType : TBot, ITBot, new()
 
          Task<bool> Initialize()
         {
-            IsLinkEnabled = Link && (!IsBacktesting || LinkBacktesting);
+            logger = this.GetLogger(ToString().Replace(' ', '.'), RuntimeSettings != null ? RuntimeSettings.Log : LogIfNoRuntimeSettings);
+
+            IsLinkEnabled = Link && (!IsBacktesting || RuntimeSettings.LinkBacktesting);
 
             if (IsLinkEnabled)
             {
@@ -429,7 +432,6 @@ where TBotType : TBot, ITBot, new()
 #if !cAlgo
             if (!await base.Initialize().ConfigureAwait(false)) return false;
 #endif
-            logger = this.GetLogger(ToString().Replace(' ', '.'), RuntimeSettings != null ? RuntimeSettings.Log : LogIfNoRuntimeSettings);
 
             if (Diag)
             {
@@ -1335,6 +1337,8 @@ where TBotType : TBot, ITBot, new()
 
                 if (!StartDate.HasValue)
                 {
+                    Print("StartDate not set.  Are you calling base.OnBar in OnBar?");
+                return -99999;
                     throw new ArgumentException("StartDate not set.  Are you calling base.OnBar in OnBar?");
                 }
                 if (!EndDate.HasValue)
@@ -1469,14 +1473,12 @@ where TBotType : TBot, ITBot, new()
                 try
                 {
                     string resultJson = "";
+                    backtestResult.GetAverageDaysPerTrade(args);
                     resultJson = Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
 
                     var profit = args.Equity / initialBalance;
 
                     BacktestLogger?.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
-
-
-                    backtestResult.GetAverageDaysPerTrade(args);
 
                     SaveResult(args, backtestResult, fitness, resultJson, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks");
                 }

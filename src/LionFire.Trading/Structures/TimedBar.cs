@@ -256,6 +256,15 @@ namespace LionFire.Trading
             return $"{date} o:{Open.ToString().PadRight(chars, padChar)} h:{High.ToString().PadRight(chars, padChar)} l:{Low.ToString().PadRight(chars, padChar)} c:{Close.ToString().PadRight(chars, padChar)}{vol}";
 
         }
+        public string ToString(int decimalPlaces)
+        {
+            var date = OpenTime.ToDefaultString();
+
+            var padChar = ' ';
+            //var padChar = '0';
+            var vol = Volume > 0 ? $" [v:{Volume.ToString().PadLeft(decimalPlaces)}]" : "";
+            return $"{date} o:{Open.ToString().PadRight(decimalPlaces, padChar)} h:{High.ToString().PadRight(decimalPlaces, padChar)} l:{Low.ToString().PadRight(decimalPlaces, padChar)} c:{Close.ToString().PadRight(decimalPlaces, padChar)}{vol}";
+        }
 
         #endregion
 

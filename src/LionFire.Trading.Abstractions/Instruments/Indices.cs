@@ -7,6 +7,10 @@ namespace LionFire.Trading.Instruments
 {
     public class Indices
     {
+        public static Dictionary<string, string> NormalizedSymbols = new Dictionary<string, string>() {
+            ["US SPX 500 (Mini)"] = "US500", // TVM
+        };
+
         // FUTURE: Set these symbols up per broker. 
         public static Dictionary<string, string> Symbols = new Dictionary<string, string>()
         {
@@ -22,7 +26,7 @@ namespace LionFire.Trading.Instruments
             ["IT40"] = "EUR",
             ["ES35"] = "EUR",
             ["F40"] = "EUR",
-            ["HK50"] = "HKD",
+            ["HK50"] = "HKD",            
         };
     }
 }

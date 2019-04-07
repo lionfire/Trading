@@ -15,6 +15,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications.Abstractions\LionFire.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Triggers\LionFire.Triggers.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />
   </ItemGroup>
 
 </Project>

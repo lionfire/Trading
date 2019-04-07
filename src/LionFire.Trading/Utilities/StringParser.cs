@@ -93,10 +93,9 @@ namespace LionFire.Parsing.String
             }
             return true;
         }
-
         public static bool IsNumeric(char x)
         {
-            return x == '.' || char.IsDigit(x);
+            return x == '.' || char.IsDigit(x) || x == '∞';
         }
 
         public static void AssignFromString(this object obj, string str)
@@ -114,6 +113,11 @@ namespace LionFire.Parsing.String
                 {
                     if (!pi.CanWrite) continue;
                     pi.SetValue(obj, val);
+                    Debug.WriteLine($"StringParser: {pi.Name} = {val}");
+                }
+                else
+                {
+                    Debug.WriteLine($"StringParser: ??? = {chunk}");
                 }
             }
         }
