@@ -424,6 +424,9 @@ where TBotType : TBot, ITBot, new()
 
             if (IsLinkEnabled)
             {
+#if cAlgo
+                Print("Link is enabled.  Will send position updates.");
+#endif
                 //this.BotPositionChanged
                 Positions.Closed += Link_OnPositionClosed;
                 Positions.Opened += Link_OnPositionOpened;
@@ -1288,6 +1291,7 @@ where TBotType : TBot, ITBot, new()
                         BacktestDate = DateTime.UtcNow,
                         BotType = botType,
                         BotConfigType = TBot.GetType().AssemblyQualifiedName,
+                        BotName = TBot.Name,
                         Config = TBot,
                         InitialBalance = 999999,
                         Start = StartDate.Value,
@@ -1465,27 +1469,12 @@ where TBotType : TBot, ITBot, new()
             if (!double.IsNaN(RuntimeSettings.LogBacktestThreshold) && fitness > RuntimeSettings.LogBacktestThreshold)
             {
                 try
-                {
-                    BacktestLogger = this.GetLogger(ToString().Replace(' ', '.') + ".Backtest");
-                }
-                catch { } // EMPTYCATCH
-
-                try
-                {
-                    string resultJson = "";
-                    backtestResult.GetAverageDaysPerTrade(args);
-                    resultJson = Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
-
-                    var profit = args.Equity / initialBalance;
-
-                    BacktestLogger?.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
-
-                    SaveResult(args, backtestResult, fitness, resultJson, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks");
+                {                    
+                    SaveResult(args, backtestResult, fitness, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks");
                 }
                 catch (Exception ex)
                 {
                     BacktestLogger?.LogError(ex.ToString());
-
                     throw;
                 }
             }
@@ -1503,7 +1492,8 @@ where TBotType : TBot, ITBot, new()
             result = result.Replace('\\','-');
             return result;
         }
-        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
+        public string MachineName => Environment.MachineName; // FUTURE: Get custom value from config
+        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", MachineName, StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -1543,11 +1533,12 @@ where TBotType : TBot, ITBot, new()
             }
             var ext = ".json";
             var dir = BacktestResultSaveDir(TimeFrame);
-            var path = Path.Combine(dir, filename + ext);
-            if (CreateResultsDirIfMissing && !Directory.Exists(dir))
+            if (dir != lastDirCreated && CreateResultsDirIfMissing && !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
+                lastDirCreated = dir;
             }
+            var path = Path.Combine(dir, filename + ext);
 
             for (int i = 0; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext))
             {
@@ -1556,9 +1547,23 @@ where TBotType : TBot, ITBot, new()
 
             return path;
         }
+        private static string lastDirCreated = null;
 
-        private async void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string json, string id, TimeSpan timeSpan, string backtestFlags = null)
+        
+        private  void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness,string id, TimeSpan timeSpan, string backtestFlags = null)
         {
+            
+#if LogBacktestResults
+            var profit = args.Equity / initialBalance;
+            backtestResult.GetAverageDaysPerTrade(args);
+            try
+            {
+                BacktestLogger = this.GetLogger(ToString().Replace(' ', '.') + ".Backtest");
+            }
+            catch { } // EMPTYCATCH
+            BacktestLogger?.LogInformation($"${args.Equity} ({profit.ToString("N1")}x) #{args.History.Count} {args.MaxEquityDrawdownPercentages.ToString("N2")}%dd [from ${initialBalance.ToString("N2")} to ${args.Equity.ToString("N2")}] [fit {fitness.ToString("N1")}] {Environment.NewLine} result = {resultJson} ");
+#endif
+
             //var filename = DateTime.Now.ToString("yyyy.MM.dd HH-mm-ss.fff ") + this.GetType().Name + " " + Symbol.Code + " " + id;
 
             //var filename = fitness.ToString("0000.0") + $"f " + (backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={this.GetType().Name} sym={sym} tf={tf} id={id}";
@@ -1573,16 +1578,21 @@ where TBotType : TBot, ITBot, new()
             //var path = Path.Combine(dir, filename + ext);
             //if (CreateResultsDirIfMissing && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
             //for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
+            JsonSerializer serializer = new JsonSerializer();
             using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Result, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
             {
-                await sw.WriteAsync(json).ConfigureAwait(false);
+                serializer.Serialize(sw, backtestResult);
+
+                    Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
+                //await sw.WriteAsync(json).ConfigureAwait(false);
             }
 
             if (fitness >= RuntimeSettings.LogBacktestDetailThreshold)
             {
                 using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Trades, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
                 {
-                    await sw.WriteAsync(Newtonsoft.Json.JsonConvert.SerializeObject(args.History.ToArray())).ConfigureAwait(false);
+                    serializer.Serialize(sw, args.History.ToArray());
+                    //await sw.WriteAsync(Newtonsoft.Json.JsonConvert.SerializeObject(args.History.ToArray())).ConfigureAwait(false);
                 }
             }
         }
