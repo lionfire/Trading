@@ -4,58 +4,53 @@ using System.Linq;
 
 namespace LionFire.Trading.Portfolios
 {
-    
-    public class PortfolioSimulationStats
+    public class PortfolioSimulation
     {
-
         public PortfolioAnalysisOptions Options { get; set; }
 
-        public double MaxEquityDrawdownPercent { get; set; }
-        public double MaxEquityDrawdown { get; set; }
-        public double MaxBalanceDrawdownPercent { get; set; }
-        public double MaxBalanceDrawdown { get; set; }
-        public double ProfitPercent { get; set; }
-
-
-    }
-    public class PortfolioSimulation : PortfolioSimulationStats
-    {
-        public static PortfolioSimulationStats operator -(PortfolioSimulation s1, PortfolioSimulation s2) {
-            var result = new PortfolioSimulationStats {
-                Options = s1.Options,
-                MaxEquityDrawdownPercent = s1.MaxEquityDrawdownPercent - s2.MaxEquityDrawdownPercent,
-                MaxEquityDrawdown = s1.MaxEquityDrawdown - s2.MaxEquityDrawdown,
-                MaxBalanceDrawdownPercent = s1.MaxBalanceDrawdownPercent - s2.MaxBalanceDrawdownPercent,
-                MaxBalanceDrawdown = s1.MaxBalanceDrawdown - s2.MaxBalanceDrawdown,
-                ProfitPercent = s1.ProfitPercent - s2.ProfitPercent
-            };
-
-            return result;
-        }
+        #region Construction
 
         public Portfolio Portfolio { get; set; }
-        public PortfolioSimulation(Portfolio portfolio, PortfolioAnalysisOptions options) {
+        public PortfolioSimulation(Portfolio portfolio, PortfolioAnalysisOptions options)
+        {
             this.Portfolio = portfolio;
             this.Options = options;
         }
 
+        #endregion
+
         public double Max { get; set; } = double.NaN;
 
+        [Ignore]
         public List<PortfolioBacktestBar> EquityBars { get; set; }
         public List<PortfolioBacktestBar> BalanceBars { get; set; }
 
+        #region State
+
+        #region Exceptions
+
+        public List<Exception> Exceptions { get; set; }
+
+        /// <returns>true if processing should continue, if possible</returns>
+        public bool OnException(Exception ex)
+        {
+            if (Exceptions == null)
+            {
+                Exceptions = new List<Exception>();
+            }
+            Exceptions.Add(ex);
+
+            return Options.ContinueOnError;
+        }
+
+        #endregion
+
+        #endregion
 
         #region (Derived) Stats
 
-        private double GetProfitPercent() {
-            double profitPercent;
-            if (BalanceBars == null || BalanceBars.Count == 0) { profitPercent = double.NaN; } else {
-                profitPercent = (BalanceBars.Last().Close - Options.InitialBalance) / Options.InitialBalance;
-            }
-            return profitPercent;
-        }
+        #region Time
 
-        public Dictionary<string, List<PortfolioBacktestBar>> AssetExposureBars { get; set; }
         public DateTime EffectiveStartTime {
             get {
                 if (!Portfolio.Start.HasValue) return Options.StartTime;
@@ -65,21 +60,36 @@ namespace LionFire.Trading.Portfolios
 
         #endregion
 
-        public void OnStopped() {
-            ProfitPercent = GetProfitPercent();
+        public PortfolioSimulationStats Stats { get; set; } = new PortfolioSimulationStats();
+
+        #region Asset Exposure
+
+        public Dictionary<string, List<PortfolioBacktestBar>> AssetExposureBars { get; set; }
+
+        #endregion
+
+        private double GetProfitPercent()
+        {
+            double profitPercent;
+            if (BalanceBars == null || BalanceBars.Count == 0) { profitPercent = double.NaN; }
+            else
+            {
+                profitPercent = (BalanceBars.Last().Close - Options.InitialBalance) / Options.InitialBalance;
+            }
+            return profitPercent;
         }
+
+        #endregion
+
+        #region Event Handling
+
+        public void OnStopped()
+        {            
+            Stats.ProfitPercent = GetProfitPercent();
+        }
+
+        #endregion
+
+        
     }
-
-    //public class PortfolioBacktest
-    //{
-    //    public string Id { get; set; }
-
-    //    public double AD { get; set; }
-    //    public double MaxEquityDrawdown { get; set; }
-    //    public double MaxEquityDrawdownPercent { get; set; }
-    //    public double MaxBalanceDrawdown { get; set; }
-    //    public double MaxBalanceDrawdownPercent { get; set; }
-    //    public double NetProfit { get; set; }
-    //}
-
 }

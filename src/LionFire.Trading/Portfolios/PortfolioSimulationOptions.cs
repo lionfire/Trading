@@ -17,6 +17,12 @@ namespace LionFire.Trading.Portfolios
 
         #endregion
 
+        #region ErrorHandlingFeatures
+
+        public bool ContinueOnError { get; set; }
+
+        #endregion
+
         #region Precision
 
         public PortfolioEquityCurveMode Mode { get; set; }

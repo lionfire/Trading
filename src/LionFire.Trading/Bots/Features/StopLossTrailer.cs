@@ -18,10 +18,9 @@ namespace LionFire.Trading.Bots.Features
         StopLossTrailerConfig config;
         BotPosition position;
 
-        Microsoft.Extensions.Logging.ILogger l { get { return position.Logger; } }
+        ILogger l => position.Logger;
 
         #endregion
-
 
         #region Construction
 
@@ -46,9 +45,7 @@ namespace LionFire.Trading.Bots.Features
         
 
         public double BreakEvenTriggerSpreadMultiple = 5;
-        public double Spread {
-            get { return position.Symbol.CurrentSpread(); }
-        }
+        public double Spread => position.Symbol.CurrentSpread();
 
         public double Cap(bool increaseOnly, double? existingValue, double newValue, TradeType tradeType)
         {
@@ -180,8 +177,5 @@ namespace LionFire.Trading.Bots.Features
                     break;
             }
         }
-
     }
-
-
 }

@@ -209,7 +209,10 @@ namespace LionFire.Trading.Portfolios
             if (Options.AssetExposureBars) {
                 assetExposureBars = new Dictionary<string, List<PortfolioBacktestBar>>();
             }
-
+            if (!Sim.Portfolio.Components.Any())
+            {
+                throw new Exception("Portfolio has no components");
+            }
             startDate = Sim.Portfolio.Start.Value;
             if (Options.StartTime != default && Options.StartTime > openTime) {
                 startDate = Options.StartTime;
@@ -358,13 +361,13 @@ namespace LionFire.Trading.Portfolios
                     var dd = SimEquityDrawdownFrom - equityBar.Close;
                     var ddp = dd / SimEquityDrawdownFrom;
 
-                    if (dd > Sim.MaxEquityDrawdown) {
-                        Sim.MaxEquityDrawdown = dd;
+                    if (dd > Sim.Stats.MaxEquityDrawdown) {
+                        Sim.Stats.MaxEquityDrawdown = dd;
                         //Sim.MaxEquityDrawdownPercent = dd / SimEquityDrawdownFrom;
                         //Console.WriteLine($"{openTime} >>>  Eq dd from {SimEquityDrawdownFrom} to cur {equityBar.Close}.  DD: {dd}, {Sim.MaxEquityDrawdownPercent.ToPercentString(1)}");
                     }
-                    if (ddp > Sim.MaxEquityDrawdownPercent) {
-                        Sim.MaxEquityDrawdownPercent = dd / SimBalanceDrawdownFrom;
+                    if (ddp > Sim.Stats.MaxEquityDrawdownPercent) {
+                        Sim.Stats.MaxEquityDrawdownPercent = dd / SimBalanceDrawdownFrom;
                         //Console.WriteLine($"{openTime} >>>%  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, {Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}");
                     }
                 }
@@ -383,12 +386,12 @@ namespace LionFire.Trading.Portfolios
                     var dd = SimBalanceDrawdownFrom - balanceBar.Close;
                     var ddp = dd / SimBalanceDrawdownFrom;
 
-                    if (dd > Sim.MaxBalanceDrawdown) {
-                        Sim.MaxBalanceDrawdown = dd;
+                    if (dd > Sim.Stats.MaxBalanceDrawdown) {
+                        Sim.Stats.MaxBalanceDrawdown = dd;
                         //Console.WriteLine($"{openTime} >>>$  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  [DD: {dd}], {Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}");
                     }
-                    if(ddp > Sim.MaxBalanceDrawdownPercent) {
-                        Sim.MaxBalanceDrawdownPercent = dd / SimBalanceDrawdownFrom;
+                    if(ddp > Sim.Stats.MaxBalanceDrawdownPercent) {
+                        Sim.Stats.MaxBalanceDrawdownPercent = dd / SimBalanceDrawdownFrom;
                         //Console.WriteLine($"{openTime} >>>%  Bal dd% from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, [{Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}]");
                     }
                 }
@@ -402,6 +405,8 @@ namespace LionFire.Trading.Portfolios
         #region (Public) Methods
 
         public async Task Simulate(CancellationToken? t) {
+            if (!this.Sim.Portfolio.Components.Any()) return;
+
             switch (Options.Mode) {
                 case PortfolioEquityCurveMode.Unspecified:
                     throw new ArgumentException("Options.Mode must be specified");

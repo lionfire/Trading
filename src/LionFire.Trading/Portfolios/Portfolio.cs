@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.Analysis;
+﻿using LionFire.Structures;
+using LionFire.Trading.Analysis;
 using LionFire.Trading.Bots;
 using System;
 using System.Collections.Generic;
@@ -15,6 +16,8 @@ namespace LionFire.Trading.Portfolios
 
         [Key]
         public string PortfolioId { get; set; }
+
+        public bool IsHistoricalBackup { get; set; }
 
         public string Name { get; set; }
 
@@ -42,9 +45,9 @@ namespace LionFire.Trading.Portfolios
 
         #region Derived Properties (OPTIMIZE - calculate once)
 
-        public int TotalTrades => (int)Components.Select(b => b.BacktestResult.TotalTrades).Sum();
-        public int WinningTrades => (int)Components.Select(b => b.BacktestResult.WinningTrades).Sum();
-        public int LosingTrades => (int)Components.Select(b => b.BacktestResult.LosingTrades).Sum();
+        public int TotalTrades => (int)Components.Where(b=>b.BacktestResult != null).Select(b => b.BacktestResult.TotalTrades).Sum();
+        public int WinningTrades => (int)Components.Where(b => b.BacktestResult != null).Select(b => b.BacktestResult.WinningTrades).Sum();
+        public int LosingTrades => (int)Components.Where(b => b.BacktestResult != null).Select(b => b.BacktestResult.LosingTrades).Sum();
 
         public DateTime? Start {
             get {
@@ -52,7 +55,7 @@ namespace LionFire.Trading.Portfolios
                 {
                     DateTime date = DateTime.MaxValue;
 
-                    foreach (var b in Components)
+                    foreach (var b in Components.Where(b => b.BacktestResult != null))
                     {
                         if (b.BacktestResult.Start.HasValue && b.BacktestResult.Start.Value < date)
                         {
@@ -70,7 +73,7 @@ namespace LionFire.Trading.Portfolios
             get {
                 DateTime date = DateTime.MinValue;
 
-                foreach (var b in Components)
+                foreach (var b in Components.Where(b => b.BacktestResult != null))
                 {
                     if (b.BacktestResult.End.HasValue && b.BacktestResult.End.Value > date)
                     {
@@ -91,8 +94,20 @@ namespace LionFire.Trading.Portfolios
             }
         }
         private IEnumerable<string> allCorrelations;
-
+               
         #endregion
+
+        public void SetComponents(List<string> backtestResultIds, bool addOnly = false)
+        {
+            if (addOnly) {
+                Components.AddMissingFrom(backtestResultIds,
+                        id => new PortfolioComponent(id),
+                        (component, id) => component.BacktestResultId == id);
+            }
+            else {
+                Components.SetTo(backtestResultIds, id => new PortfolioComponent(id), (component, id) => component.BacktestResultId == id);
+            }
+        }
 
         #region Add
 
@@ -103,6 +118,7 @@ namespace LionFire.Trading.Portfolios
 
         public void Add(PortfolioComponent component)
         {
+            if (Components == null) Components = new List<PortfolioComponent>();
             Components.Add(component);
         }
 

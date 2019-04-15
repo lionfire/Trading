@@ -12,9 +12,23 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace LionFire.Trading.Backtesting
 {
+    public class BacktestResultConfig
+    {
+        public BacktestResult BacktestResult { get; set; }
+
+        [Key]
+        //[ForeignKey(BacktestResult)]
+        [Required]
+        public string BacktestResultId { get; set; }
+
+        public byte[] ConfigDocument { get; set; }
+    }
+
     [Assets.AssetPath("Results")]
     public class BacktestResult
     {
+        #region Identity
+
         [Key]
         [Required]
         [MaxLength(20)]
@@ -22,6 +36,23 @@ namespace LionFire.Trading.Backtesting
         public string Id { get; set; }
         public string Key => Id;
         public string GetKey() => Id;
+
+        #endregion
+
+        #region Relationships
+
+        public BacktestResultConfig BacktestResultConfig { get; set; }
+
+        /// <summary>
+        /// True if there is an associated BacktestResultConfig
+        /// </summary>
+        public bool HasTradeData { get; set; }
+
+
+        #endregion
+
+        public string BotName { get; set; }
+        public string Tags { get; set; }
 
         public DateTime? Start { get; set; }
         public DateTime? End { get; set; }
@@ -102,7 +133,7 @@ namespace LionFire.Trading.Backtesting
                 return tbot?.TimeFrame.Value;
             }
         }
-
+                
         /// <summary>
         /// Computed at backtest time
         /// </summary>
