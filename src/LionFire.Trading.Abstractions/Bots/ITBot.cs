@@ -13,6 +13,8 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
+        string Name { get; }
+
         bool AllowLong { get; set; }
         bool AllowShort { get; set; }
 

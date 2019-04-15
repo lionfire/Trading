@@ -19,20 +19,33 @@ namespace LionFire.Trading.Bots
 
         public string Account { get; set; }
 
+        public virtual string Name {
+            get {
+                if (this.name == null)
+                {
+                    var n = this.GetType().Name;
+                    if (n.StartsWith("T") && n.Length > 1 && char.IsUpper(n[1]))
+                    {
+                        n = n.Substring(1);
+                    }
+                    name = n;
+                }
+                return name;
+            }
+        }
+        private string name;
+
         //[Ignore]
-        public string Symbol
-        {
+        public string Symbol {
             get => Symbols?.FirstOrDefault();
             set => Symbols = new List<string> { value };
         }
 
         #region Symbols
 
-        public List<string> Symbols
-        {
+        public List<string> Symbols {
             get { return symbols; }
-            set
-            {
+            set {
                 // TODO - Fix - why are there duplicates in here?
                 if (value != null)
                 {
@@ -46,8 +59,7 @@ namespace LionFire.Trading.Bots
         #endregion
 
         //[Ignore]
-        public string TimeFrame
-        {
+        public string TimeFrame {
             get => TimeFrames?.FirstOrDefault();
             set => TimeFrames = new List<string> { value };
         }
@@ -83,7 +95,7 @@ namespace LionFire.Trading.Bots
         public bool AllowLong { get; set; } = true;
         public bool AllowShort { get; set; } = true;
 
-#region Max Positions
+        #region Max Positions
 
         /// <summary>
         /// 0 or MaxValue means no limit
@@ -92,9 +104,9 @@ namespace LionFire.Trading.Bots
         public int MaxLongPositions { get; set; } = 1;
         public int MaxShortPositions { get; set; } = 1;
 
-#endregion
+        #endregion
 
-#region Backtesting
+        #region Backtesting
 
         /// <summary>
         /// Trim huge gains
@@ -104,37 +116,37 @@ namespace LionFire.Trading.Bots
         public double BacktestMinTradesPerMonth { get; set; } = 0;
         public double BacktestMinTradesPerMonthExponent { get; set; } = 2;
 
-#endregion
+        #endregion
 
-#region SL and TP
+        #region SL and TP
 
         public double MaxStopLossPips { get; set; } = 0;
 
 
-#region in ATR
+        #region in ATR
 
         public double SLinAtr { get; set; }
 
         public double TPinAtr { get; set; }
-#endregion
+        #endregion
 
 
-#region in Daily ATR
+        #region in Daily ATR
 
         public double SLinDailyAtr { get; set; }
         public double TPinDailyAtr { get; set; }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Filters
+        #region Filters
 
         public bool UseTradeInPivotDirection { get; set; }
         public bool TradeInPivotDirection { get; set; }
 
 
-#endregion
+        #endregion
 
         ///// <summary>
         ///// TODO Updates  
