@@ -10,15 +10,19 @@ namespace LionFire.Trading.Portfolios
     {
         #region Construction
 
-        public PortfolioComponent() { ComponentId = IdUtils.GenerateId(4);  }
-        public PortfolioComponent(string backtestResultId) :this() { BacktestResultId = backtestResultId; }
+        public PortfolioComponent() { ComponentId = IdUtils.GenerateId(4); }
+        public PortfolioComponent(string backtestResultId, BacktestResult backtestResult = null) : this()
+        {
+            BacktestResultId = backtestResultId;
+            this.BacktestResult = backtestResult;
+        }
 
         #endregion
 
         #region Identity
 
         public string PortfolioId { get; set; }
-        public string ComponentId { get; set; }       
+        public string ComponentId { get; set; }
 
         #endregion
 
@@ -52,17 +56,18 @@ namespace LionFire.Trading.Portfolios
 
         public SymbolHandle SymbolHandle {
             get {
-                if(symbolHandle == null && BacktestResult?.Symbol != null)
+                if (symbolHandle == null && BacktestResult?.Symbol != null)
                 {
                     symbolHandle = new SymbolHandle(BacktestResult.Symbol);
                 }
                 return symbolHandle;
             }
-        } private SymbolHandle symbolHandle;
+        }
+        private SymbolHandle symbolHandle;
 
-        public string Symbol => BacktestResult.Symbol;
-        public string LongAsset => SymbolHandle.LongAsset;
-        public string ShortAsset => SymbolHandle.ShortAsset;
+        public string Symbol => BacktestResult?.Symbol;
+        public string LongAsset => SymbolHandle?.LongAsset;
+        public string ShortAsset => SymbolHandle?.ShortAsset;
 
         /// <summary>
         /// True if this component trades multiple symbols.
@@ -72,9 +77,11 @@ namespace LionFire.Trading.Portfolios
 
         public double MaxAbsoluteVolume {
             get {
-                if (!maxAbsoluteVolume.HasValue) {
+                if (!maxAbsoluteVolume.HasValue && this.Trades != null)
+                {
                     var max = 0.0;
-                    foreach (var t in this.Trades) {
+                    foreach (var t in this.Trades)
+                    {
                         max = Math.Max(max, t.Volume);
                     }
                     maxAbsoluteVolume = max;
@@ -86,9 +93,11 @@ namespace LionFire.Trading.Portfolios
 
         public double MinAbsoluteVolume {
             get {
-                if (!minAbsoluteVolume.HasValue) {
+                if (!minAbsoluteVolume.HasValue && this.Trades != null)
+                {
                     var min = double.MaxValue;
-                    foreach (var t in this.Trades) {
+                    foreach (var t in this.Trades)
+                    {
                         min = Math.Min(min, t.Volume);
                     }
                     minAbsoluteVolume = min;
@@ -97,7 +106,7 @@ namespace LionFire.Trading.Portfolios
             }
         }
         double? minAbsoluteVolume;
-               
+
         #endregion
 
         #region Misc

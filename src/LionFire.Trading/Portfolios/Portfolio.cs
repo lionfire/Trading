@@ -1,38 +1,90 @@
-﻿using LionFire.Structures;
+﻿using DeferredEvents;
+using LionFire.Structures;
 using LionFire.Trading.Analysis;
 using LionFire.Trading.Bots;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Portfolios
 {
-    public class Portfolio
+    public class Portfolio : INotifyPropertyChanged
     {
         #region Identity
 
         [Key]
         public string PortfolioId { get; set; }
 
-        public bool IsHistoricalBackup { get; set; }
-
-        public string Name { get; set; }
-
         #endregion
-
+        
         #region Construction
 
-        public Portfolio() { PortfolioId = IdUtils.GenerateId(5); }
-        public Portfolio(IEnumerable<string> ids) : this() { Components = ids.Select(id => new PortfolioComponent(id)).ToList(); }
+        public Portfolio() { EnsureHasId(); }
+        public Portfolio(IEnumerable<string> ids) : this()
+        {
+            foreach (var id in ids)
+            {
+                Components.Add(new PortfolioComponent(id));
+            }
+        }
+
+        public Portfolio(IEnumerable<PortfolioComponent> components)
+        {
+            foreach (var component in components)
+            {
+                Components.Add(component);
+            }
+        }
+
+        public void EnsureHasId()
+        {
+            if (PortfolioId == null) PortfolioId = IdUtils.GenerateId(5);
+        }
+        #endregion
+
+        #region Properties
+
+        #region Name
+
+        public string Name {
+            get => name;
+            set {
+                if (name == value) return;
+                name = value;
+                OnPropertyChanged(nameof(Name));
+            }
+        }
+        private string name;
+
+        #endregion
+        
+        #region Comments
+
+        public string Comments {
+            get => comments;
+            set {
+                if (comments == value) return;
+                comments = value;
+                OnPropertyChanged(nameof(Comments));
+            }
+        }
+        private string comments;
 
         #endregion
 
+        public DateTime? Deleted { get; set; }
+
+        #endregion
+        
         #region Owned Objects
 
-        public List<PortfolioComponent> Components { get; set; }
+        public ObservableCollection<PortfolioComponent> Components { get; set; } = new ObservableCollection<PortfolioComponent>();
 
         #endregion
 
@@ -45,7 +97,15 @@ namespace LionFire.Trading.Portfolios
 
         #region Derived Properties (OPTIMIZE - calculate once)
 
-        public int TotalTrades => (int)Components.Where(b=>b.BacktestResult != null).Select(b => b.BacktestResult.TotalTrades).Sum();
+        [NotMapped]
+        public IEnumerable<string> ComponentIds {
+            get => Components.Select(c => c.BacktestResultId);
+            set {
+                this.SetComponents(value);
+            }
+        }
+
+        public int TotalTrades => (int)Components.Where(b => b.BacktestResult != null).Select(b => b.BacktestResult.TotalTrades).Sum();
         public int WinningTrades => (int)Components.Where(b => b.BacktestResult != null).Select(b => b.BacktestResult.WinningTrades).Sum();
         public int LosingTrades => (int)Components.Where(b => b.BacktestResult != null).Select(b => b.BacktestResult.LosingTrades).Sum();
 
@@ -80,7 +140,7 @@ namespace LionFire.Trading.Portfolios
                         date = b.BacktestResult.End.Value;
                     }
                 }
-                return date == DateTime.MaxValue ? (DateTime?)null : date;
+                return date == DateTime.MinValue ? (DateTime?)null : date;
             }
         }
 
@@ -94,35 +154,57 @@ namespace LionFire.Trading.Portfolios
             }
         }
         private IEnumerable<string> allCorrelations;
-               
+
         #endregion
 
-        public void SetComponents(List<string> backtestResultIds, bool addOnly = false)
+        public async Task SetComponents(IEnumerable<string> backtestResultIds, bool addOnly = false)
         {
-            if (addOnly) {
+            if (addOnly)
+            {
                 Components.AddMissingFrom(backtestResultIds,
                         id => new PortfolioComponent(id),
                         (component, id) => component.BacktestResultId == id);
             }
-            else {
+            else
+            {
                 Components.SetTo(backtestResultIds, id => new PortfolioComponent(id), (component, id) => component.BacktestResultId == id);
             }
+            
+            await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
         }
+        public event EventHandler<DeferredEventArgs> ComponentsChanged;
 
         #region Add
 
-        public void AddRange(IEnumerable<PortfolioComponent> backtestResults)
+        public async Task AddRange(IEnumerable<PortfolioComponent> backtestResults)
         {
-            foreach (var item in backtestResults) { Add(item); }
+            foreach (var item in backtestResults) { Add(item, false); }
+            await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
         }
 
-        public void Add(PortfolioComponent component)
+        public async Task Add(PortfolioComponent component, bool raiseEvents = true)
         {
-            if (Components == null) Components = new List<PortfolioComponent>();
             Components.Add(component);
+            if(raiseEvents) await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
         }
 
         #endregion
 
+
+        #region Misc
+
+        #region INotifyPropertyChanged Implementation
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+
+        #endregion
+
+        #endregion
     }
+
 }

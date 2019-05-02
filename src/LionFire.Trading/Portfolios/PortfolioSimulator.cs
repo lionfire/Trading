@@ -321,7 +321,10 @@ namespace LionFire.Trading.Portfolios
         public void CloseBar() {
             if (UseEquity) {
                 lastEquityBar = equityBar;
-                equityBars.Add(lastEquityBar);
+                if (lastEquityBar != null)
+                {
+                    equityBars.Add(lastEquityBar);
+                }
 #if DEBUG
                 if (Options.JournalLevel >= 2) {
                     Console.WriteLine("Eq: " + lastEquityBar);
@@ -331,7 +334,10 @@ namespace LionFire.Trading.Portfolios
 
             if (UseBalance) {
                 lastBalanceBar = balanceBar;
-                balanceBars.Add(lastBalanceBar);
+                if (lastBalanceBar != null)
+                {
+                    balanceBars.Add(lastBalanceBar);
+                }
 #if DEBUG
                 if (Options.JournalLevel >= 2) {
                     Console.WriteLine("Bal: " + lastBalanceBar);
@@ -438,7 +444,7 @@ namespace LionFire.Trading.Portfolios
         }
 
         public async Task Simulate_EquityInterpolation(CancellationToken? token) {
-            await Task.Run(async () => {
+            await Task.Run(() => {
                 Start();
 
                 var allTrades = AllTrades;
@@ -515,7 +521,6 @@ namespace LionFire.Trading.Portfolios
                     //    lastEquityBar = equityBar;
                 }
                 Stop();
-
             });
         }
 
@@ -526,7 +531,7 @@ namespace LionFire.Trading.Portfolios
         /// <param name="tf"></param>
         /// <returns></returns>
         public async Task Simulate_BalanceOnly(CancellationToken? token) {
-            await Task.Run(async () => {
+            await Task.Run(() => {
                 Start();
 
                 var allTrades = AllTrades;

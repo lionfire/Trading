@@ -66,7 +66,7 @@ namespace LionFire.Trading.Backtesting
 
         public TimeSpan Duration { get { if (!Start.HasValue || !Start.HasValue) { return TimeSpan.Zero; } return End.Value - Start.Value; } }
 
-        public double WinRate => WinningTrades / TotalTrades;
+        public double WinRate => 100.0 * WinningTrades / TotalTrades;
 
         [Unit("tpm")]
         public double TradesPerMonth => TotalTrades / Months;
