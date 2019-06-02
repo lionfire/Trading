@@ -11,7 +11,13 @@ namespace LionFire.Trading.Analysis
 
         int BacktestResultsCountInDatabase();
         Task<int> InjestBacktests(InjestOptions options = null, CancellationToken? token = null);
+
+        /// <summary>
+        /// Load backtest results
+        /// Load trades if options.Needstrades
+        /// </summary>
         Task LoadPortfolio(Portfolio portfolio, PortfolioAnalysisOptions options, CancellationToken? token = null);
+
         object Entities { get; }
 
 

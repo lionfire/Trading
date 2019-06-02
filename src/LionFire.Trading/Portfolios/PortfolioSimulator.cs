@@ -1,7 +1,9 @@
 ﻿using LionFire.ConsoleUtils;
 using LionFire.ExtensionMethods;
+using LionFire.Extensions.Logging;
 using LionFire.Trading.Analysis;
 using LionFire.Trading.Instruments;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +19,8 @@ namespace LionFire.Trading.Portfolios
         /// </summary>
         /// <param name="trade"></param>
         /// <param name="longAsset"></param>
-        internal static void PopulateEntryVolumes(this ref PortfolioHistoricalTradeVM trade) {
+        internal static void PopulateEntryVolumes(this ref PortfolioHistoricalTradeVM trade)
+        {
             trade.LongVolumeAtEntry = trade.Trade.Volume;
             trade.ShortVolumeAtEntry = trade.Trade.Volume * trade.Trade.EntryPrice;
         }
@@ -32,19 +35,26 @@ namespace LionFire.Trading.Portfolios
 
         #endregion
 
+        ILogger log;
+
         #region Construction and Static Methods
 
-        public static async Task<PortfolioSimulation> Simulate(Portfolio portfolio, PortfolioAnalysisOptions options, CancellationToken? token = null) {
+        public static async Task<PortfolioSimulation> Simulate(Portfolio portfolio, PortfolioAnalysisOptions options, CancellationToken? token = null)
+        {
             var sim = new PortfolioSimulation(portfolio, options);
             await new PortfolioSimulator(sim).Simulate(token);
             return sim;
         }
 
-        public PortfolioSimulator(PortfolioSimulation sim) {
+        public PortfolioSimulator(PortfolioSimulation sim)
+        {
             this.Sim = sim;
             if (Sim == null) throw new ArgumentNullException("Sim must be set");
             this.Options = sim.Options;
             if (sim.Options == null) throw new ArgumentNullException("Sim.Options must be set");
+
+            //this.log = Log.Get();
+            this.log = this.GetLogger();
         }
 
         #endregion
@@ -62,9 +72,11 @@ namespace LionFire.Trading.Portfolios
 
         internal List<PortfolioHistoricalTradeVM> OpenTrades = new List<PortfolioHistoricalTradeVM>();
 
-        internal void EnterOpenTrade(PortfolioHistoricalTradeVM trade) {
+        internal void EnterOpenTrade(PortfolioHistoricalTradeVM trade)
+        {
 #if DEBUG
-            if (Options.Verbosity >= 4) {
+            if (Options.Verbosity >= 4)
+            {
                 Console.WriteLine(trade.Trade.DumpProperties());
             }
 #endif
@@ -73,7 +85,8 @@ namespace LionFire.Trading.Portfolios
 
             string longAsset, shortAsset;
 
-            if (Options.AssetExposureBars) {
+            if (Options.AssetExposureBars)
+            {
                 if (trade.Component.IsMultiSymbol)
                 {
                     (longAsset, shortAsset) = AssetNameResolver.ResolvePair(symbol);
@@ -97,7 +110,8 @@ namespace LionFire.Trading.Portfolios
 
                 trade.PopulateEntryVolumes();
 
-                if (Options.JournalLevel >= 1) {
+                if (Options.JournalLevel >= 1)
+                {
                     Console.WriteLine($"{trade.Trade.EntryTime} OPEN   LONG {longAsset} x {trade.LongVolumeAtEntry}  |  SHORT {shortAsset} x {trade.ShortVolumeAtEntry}");
                 }
 
@@ -105,17 +119,21 @@ namespace LionFire.Trading.Portfolios
                 shortAssetBar.Close -= trade.ShortVolumeAtEntry;
             }
             OpenTrades.Add(trade);
-            if (Options.ComponentExposureBars) {
+            if (Options.ComponentExposureBars)
+            {
                 trade.Component.OpenTrade(trade.Trade);
             }
         }
 
-        internal void CloseOpenTrade(PortfolioHistoricalTradeVM trade, int openTradesIndex) {
-            if (Options.AssetExposureBars) {
+        internal void CloseOpenTrade(PortfolioHistoricalTradeVM trade, int openTradesIndex)
+        {
+            if (Options.AssetExposureBars)
+            {
                 var longAssetBar = GetAssetExposureBar(trade.LongAsset, openTime);
                 var shortAssetBar = GetAssetExposureBar(trade.ShortAsset, openTime);
 
-                if (Options.JournalLevel >= 1) {
+                if (Options.JournalLevel >= 1)
+                {
                     Console.WriteLine($"{trade.Trade.EntryTime} CLOSE  LONG {trade.LongAsset} x {trade.LongVolumeAtEntry}  |  SHORT {trade.ShortAsset} x {trade.ShortVolumeAtEntry}");
                 }
 
@@ -127,7 +145,8 @@ namespace LionFire.Trading.Portfolios
 
             CurrentBalance += trade.Trade.NetProfit / trade.Component.BacktestResult.InitialBalance;
 
-            if (Options.ComponentExposureBars) {
+            if (Options.ComponentExposureBars)
+            {
                 trade.Component.CloseTrade(trade.Trade);
             }
         }
@@ -159,19 +178,23 @@ namespace LionFire.Trading.Portfolios
         /// <param name="symbol"></param>
         /// <param name="openTime"></param>
         /// <returns></returns>
-        public PortfolioBacktestBar GetAssetExposureBar(string symbol, DateTime openTime) {
+        public PortfolioBacktestBar GetAssetExposureBar(string symbol, DateTime openTime)
+        {
 #if DEBUG
             if (symbol == null) { throw new ArgumentNullException(nameof(symbol)); }
 #endif
             List<PortfolioBacktestBar> list = assetExposureBars.GetOrAdd(symbol, s => new List<PortfolioBacktestBar>());
             PortfolioBacktestBar last = null;
-            if (list.Count > 0) {
+            if (list.Count > 0)
+            {
                 last = list.Last();
-                if (last.OpenTime == openTime) {
+                if (last.OpenTime == openTime)
+                {
                     return last;
                 }
 #if DEBUG
-                if (openTime < last.OpenTime) {
+                if (openTime < last.OpenTime)
+                {
                     throw new InvalidOperationException("Attempt to get older bar via GetAssetExposureBar, which can only return current bar or a new bar");
                 }
 #endif
@@ -205,42 +228,57 @@ namespace LionFire.Trading.Portfolios
 
         #endregion
 
-        protected void Start() {
-            if (Options.AssetExposureBars) {
+        protected void Start()
+        {
+            if (Options.AssetExposureBars)
+            {
                 assetExposureBars = new Dictionary<string, List<PortfolioBacktestBar>>();
             }
             if (!Sim.Portfolio.Components.Any())
             {
                 throw new Exception("Portfolio has no components");
             }
-            startDate = Sim.Portfolio.Start.Value;
-            if (Options.StartTime != default && Options.StartTime > openTime) {
+            if (Options.StartTime != default && Options.StartTime > openTime)
+            {
                 startDate = Options.StartTime;
+            }
+            else if (Sim.Portfolio.Start.HasValue)
+            {
+                startDate = Sim.Portfolio.Start.Value;
             }
 
             openTime = startDate;
 
-            end = Sim.Portfolio.End.Value;
-            if (Options.EndTime != default && Options.EndTime < end) {
+            if (Options.EndTime != default && Options.EndTime < end)
+            {
                 end = Options.EndTime;
             }
+            else if (Sim.Portfolio.End.HasValue)
+            {
+                end = Sim.Portfolio.End.Value;
+            }
 
-            if (UseEquity) {
+            if (UseEquity)
+            {
                 equityBars = Sim.EquityBars = new List<PortfolioBacktestBar>();
                 SimEquityDrawdownFrom = Options.InitialBalance;
             }
-            if (UseBalance) {
+            if (UseBalance)
+            {
                 balanceBars = Sim.BalanceBars = new List<PortfolioBacktestBar>();
                 SimBalanceDrawdownFrom = Options.InitialBalance;
             }
 
-            if (Options.ComponentExposureBars) {
-                foreach (var component in Sim.Portfolio.Components) {
+            if (Options.ComponentExposureBars)
+            {
+                foreach (var component in Sim.Portfolio.Components)
+                {
                     component.Start();
                 }
             }
         }
-        protected void Stop() {
+        protected void Stop()
+        {
             CloseBar();
 
             Sim.AssetExposureBars = assetExposureBars;
@@ -280,7 +318,8 @@ namespace LionFire.Trading.Portfolios
             get { return currentBarEquity; }
             set {
                 currentBarEquity = value;
-                if (double.IsNaN(Sim.Max) || currentBarEquity > Sim.Max) {
+                if (double.IsNaN(Sim.Max) || currentBarEquity > Sim.Max)
+                {
                     Sim.Max = currentBarEquity;
                 }
             }
@@ -291,25 +330,40 @@ namespace LionFire.Trading.Portfolios
 
         #region Open and Close Current Bar
 
-        public void OpenBar() {
+        public void OpenBar()
+        {
+            if (openTime == default)
+            {
+                log.LogWarning("Options.StartTime == default, not running simulation for portfolio " + Sim?.Portfolio?.ToString());
+                openTime = Options.EndTime;
+                return;
+            }
+
             bool firstBar;
-            if (openTime > startDate) {
+            if (openTime > startDate)
+            {
                 firstBar = false;
                 CloseBar();
-            } else {
+            }
+            else
+            {
                 firstBar = true;
             }
-            if (UseEquity) {
+            if (UseEquity)
+            {
                 equityBar = new PortfolioBacktestBar(openTime, firstBar ? Sim.Options.InitialBalance : lastEquityBar.Close);
             }
-            if (UseBalance) {
+            if (UseBalance)
+            {
                 balanceBar = new PortfolioBacktestBar(openTime, firstBar ? Sim.Options.InitialBalance : lastBalanceBar.Close);
             }
 
             barEndTime = openTime + Options.TimeFrame.TimeSpan;
 
-            if (Options.ComponentExposureBars) {
-                foreach (var component in Sim.Portfolio.Components) {
+            if (Options.ComponentExposureBars)
+            {
+                foreach (var component in Sim.Portfolio.Components)
+                {
                     component.OpenBar(openTime);
                 }
             }
@@ -318,35 +372,42 @@ namespace LionFire.Trading.Portfolios
         /// <summary>
         /// Call this at start of OpenBar, or after end of simulation
         /// </summary>
-        public void CloseBar() {
-            if (UseEquity) {
+        public void CloseBar()
+        {
+            if (UseEquity)
+            {
                 lastEquityBar = equityBar;
                 if (lastEquityBar != null)
                 {
                     equityBars.Add(lastEquityBar);
                 }
 #if DEBUG
-                if (Options.JournalLevel >= 2) {
+                if (Options.JournalLevel >= 2)
+                {
                     Console.WriteLine("Eq: " + lastEquityBar);
                 }
 #endif
             }
 
-            if (UseBalance) {
+            if (UseBalance)
+            {
                 lastBalanceBar = balanceBar;
                 if (lastBalanceBar != null)
                 {
                     balanceBars.Add(lastBalanceBar);
                 }
 #if DEBUG
-                if (Options.JournalLevel >= 2) {
+                if (Options.JournalLevel >= 2)
+                {
                     Console.WriteLine("Bal: " + lastBalanceBar);
                 }
 #endif
             }
 
-            if (Options.ComponentExposureBars) {
-                foreach (var component in Sim.Portfolio.Components) {
+            if (Options.ComponentExposureBars)
+            {
+                foreach (var component in Sim.Portfolio.Components)
+                {
                     component.OpenBar(openTime);
                 }
             }
@@ -361,42 +422,52 @@ namespace LionFire.Trading.Portfolios
             set {
                 equityBar.Close = value;
 
-                if (equityBar.Close > SimEquityDrawdownFrom) {
+                if (equityBar.Close > SimEquityDrawdownFrom)
+                {
                     SimEquityDrawdownFrom = equityBar.Close;
-                } else {
+                }
+                else
+                {
                     var dd = SimEquityDrawdownFrom - equityBar.Close;
                     var ddp = dd / SimEquityDrawdownFrom;
 
-                    if (dd > Sim.Stats.MaxEquityDrawdown) {
+                    if (dd > Sim.Stats.MaxEquityDrawdown)
+                    {
                         Sim.Stats.MaxEquityDrawdown = dd;
                         //Sim.MaxEquityDrawdownPercent = dd / SimEquityDrawdownFrom;
                         //Console.WriteLine($"{openTime} >>>  Eq dd from {SimEquityDrawdownFrom} to cur {equityBar.Close}.  DD: {dd}, {Sim.MaxEquityDrawdownPercent.ToPercentString(1)}");
                     }
-                    if (ddp > Sim.Stats.MaxEquityDrawdownPercent) {
+                    if (ddp > Sim.Stats.MaxEquityDrawdownPercent)
+                    {
                         Sim.Stats.MaxEquityDrawdownPercent = dd / SimBalanceDrawdownFrom;
                         //Console.WriteLine($"{openTime} >>>%  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, {Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}");
                     }
                 }
             }
-        } 
+        }
 
         private double CurrentBalance {
             get => balanceBar.Close;
             set {
                 balanceBar.Close = value;
 
-                if (balanceBar.Close > SimBalanceDrawdownFrom) {
+                if (balanceBar.Close > SimBalanceDrawdownFrom)
+                {
                     SimBalanceDrawdownFrom = balanceBar.Close;
                     //Console.WriteLine($">> {openTime} SimBalanceDrawdownFrom up to {SimBalanceDrawdownFrom}");
-                } else {
+                }
+                else
+                {
                     var dd = SimBalanceDrawdownFrom - balanceBar.Close;
                     var ddp = dd / SimBalanceDrawdownFrom;
 
-                    if (dd > Sim.Stats.MaxBalanceDrawdown) {
+                    if (dd > Sim.Stats.MaxBalanceDrawdown)
+                    {
                         Sim.Stats.MaxBalanceDrawdown = dd;
                         //Console.WriteLine($"{openTime} >>>$  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  [DD: {dd}], {Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}");
                     }
-                    if(ddp > Sim.Stats.MaxBalanceDrawdownPercent) {
+                    if (ddp > Sim.Stats.MaxBalanceDrawdownPercent)
+                    {
                         Sim.Stats.MaxBalanceDrawdownPercent = dd / SimBalanceDrawdownFrom;
                         //Console.WriteLine($"{openTime} >>>%  Bal dd% from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, [{Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}]");
                     }
@@ -410,10 +481,12 @@ namespace LionFire.Trading.Portfolios
 
         #region (Public) Methods
 
-        public async Task Simulate(CancellationToken? t) {
+        public async Task Simulate(CancellationToken? t)
+        {
             if (!this.Sim.Portfolio.Components.Any()) return;
 
-            switch (Options.Mode) {
+            switch (Options.Mode)
+            {
                 case PortfolioEquityCurveMode.Unspecified:
                     throw new ArgumentException("Options.Mode must be specified");
                 case PortfolioEquityCurveMode.Precise:
@@ -434,8 +507,10 @@ namespace LionFire.Trading.Portfolios
 
         #region Simulation Main Logic
 
-        public async Task Simulate_Precise(CancellationToken? token) {
-            await Task.Run(() => {
+        public async Task Simulate_Precise(CancellationToken? token)
+        {
+            await Task.Run(() =>
+            {
                 Start();
                 throw new NotImplementedException();
                 Stop();
@@ -443,8 +518,17 @@ namespace LionFire.Trading.Portfolios
             });
         }
 
-        public async Task Simulate_EquityInterpolation(CancellationToken? token) {
-            await Task.Run(() => {
+        public async Task Simulate_EquityInterpolation(CancellationToken? token)
+        {
+            foreach(var component in Sim.Portfolio.Components)
+            {
+                if(component.Trades == null)
+                {
+                    throw new ArgumentException($"Simulation component with backtest id {component.BacktestResultId} does not have trades loaded.");
+                }
+            }
+            await Task.Run(() =>
+            {
                 Start();
 
                 var allTrades = AllTrades;
@@ -452,16 +536,19 @@ namespace LionFire.Trading.Portfolios
                 var tradesByEntryTime = TradesByEntryTime;
 
                 int indexTradesByEntryTime = 0;
-                for (; openTime < end; openTime += Options.TimeFrame.TimeSpan) {
+                for (; openTime < end; openTime += Options.TimeFrame.TimeSpan)
+                {
                     if (token.HasValue && token.Value.IsCancellationRequested) return;
                     OpenBar();
 
                     #region Entries
 
                     // Fast-forward through trades until we get to the end of this bar
-                    for (; indexTradesByEntryTime < tradesByEntryTime.Count && tradesByEntryTime[indexTradesByEntryTime].Trade.EntryTime < barEndTime; indexTradesByEntryTime++) {
+                    for (; indexTradesByEntryTime < tradesByEntryTime.Count && tradesByEntryTime[indexTradesByEntryTime].Trade.EntryTime < barEndTime; indexTradesByEntryTime++)
+                    {
                         var trade = tradesByEntryTime[indexTradesByEntryTime];
-                        if (trade.Trade.ClosingTime < barEndTime) {
+                        if (trade.Trade.ClosingTime < barEndTime)
+                        {
                             continue;
                         }
                         EnterOpenTrade(tradesByEntryTime[indexTradesByEntryTime]);
@@ -474,9 +561,11 @@ namespace LionFire.Trading.Portfolios
 
                     #region Exits
 
-                    for (int openTradesIndex = OpenTrades.Count - 1; openTradesIndex >= 0; openTradesIndex--) {
+                    for (int openTradesIndex = OpenTrades.Count - 1; openTradesIndex >= 0; openTradesIndex--)
+                    {
                         var trade = OpenTrades[openTradesIndex];
-                        if (trade.Trade.ClosingTime < barEndTime) {
+                        if (trade.Trade.ClosingTime < barEndTime)
+                        {
                             CloseOpenTrade(trade, openTradesIndex);
                             continue;
                         }
@@ -484,11 +573,13 @@ namespace LionFire.Trading.Portfolios
 
                     #endregion
 
-                    if (UseEquity) {
+                    if (UseEquity)
+                    {
                         if (Options.Mode == PortfolioEquityCurveMode.InterpolateEquityFromBalance) // REDUNDANT REFACTOR?
                         {
                             double interpolatedEquityDeltaVsBalance = 0;
-                            foreach (var trade in OpenTrades) {
+                            foreach (var trade in OpenTrades)
+                            {
                                 var interpolatedNetProfit = trade.InterpolatedNetProfit(barEndTime);
                                 interpolatedEquityDeltaVsBalance += (interpolatedNetProfit / trade.Component.BacktestResult.InitialBalance);
                             }
@@ -530,20 +621,24 @@ namespace LionFire.Trading.Portfolios
         /// </summary>
         /// <param name="tf"></param>
         /// <returns></returns>
-        public async Task Simulate_BalanceOnly(CancellationToken? token) {
-            await Task.Run(() => {
+        public async Task Simulate_BalanceOnly(CancellationToken? token)
+        {
+            await Task.Run(() =>
+            {
                 Start();
 
                 var allTrades = AllTrades;
                 var tradesByClosingTime = TradesByClosingTime;
 
                 int tradesByClosingTimeIndex = 0;
-                for (; openTime < end; openTime += Options.TimeFrame.TimeSpan) {
+                for (; openTime < end; openTime += Options.TimeFrame.TimeSpan)
+                {
                     if (token.HasValue && token.Value.IsCancellationRequested) return;
                     OpenBar();
 
                     // Fast-forward through trades until we get to the end of this bar
-                    for (; tradesByClosingTimeIndex < tradesByClosingTime.Count && tradesByClosingTime[tradesByClosingTimeIndex].Trade.ClosingTime < barEndTime; tradesByClosingTimeIndex++) {
+                    for (; tradesByClosingTimeIndex < tradesByClosingTime.Count && tradesByClosingTime[tradesByClosingTimeIndex].Trade.ClosingTime < barEndTime; tradesByClosingTimeIndex++)
+                    {
                         if (token.HasValue && token.Value.IsCancellationRequested) return;
 
                         var trade = tradesByClosingTime[tradesByClosingTimeIndex];

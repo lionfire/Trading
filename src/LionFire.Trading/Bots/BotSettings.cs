@@ -6,20 +6,44 @@ namespace LionFire.Trading.Bots
 {
     public class BotSettings
     {
+        public static BotSettings Default = new BotSettings
+        {
+            BacktestApi = null,
+            BacktestMinTradesPerMonthExponent = 2,
+            BacktestTable = null,
+            BacktestTableKey = null,
+            Debug = false,
+            Diag = false,
+            FromEmail = null,
+            Link = false,
+            LinkApi = null, 
+            LinkBacktesting = false,
+            Log = false,
+            LogBacktestDetailThreshold = null,
+            LogBacktestThreshold = 1.7,
+            LogFile = null,
+            MinTradesPerMonth = null,
+            MonitoringApi = null,
+            RobustnessMode = false,
+            SettingsCacheTimeout = 60,
+            ToEmail = null,
+            UseTicks = false,
+        };
+
         /// <summary>
         /// in Seconds.  TODO: Remove
         /// </summary>
-        public int SettingsCacheTimeout { get; set; }
+        public int? SettingsCacheTimeout { get; set; }
 
         #region Logging Levels
 
-        public bool Diag { get; set; }
-        public bool Debug { get; set; }
+        public bool? Diag { get; set; }
+        public bool? Debug { get; set; }
 
         /// <summary>
         /// Useful for debugging Algos
         /// </summary>
-        public bool Log { get; set; }
+        public bool? Log { get; set; }
         public string LogFile { get; set; } = "e:/temp/LionFire.Trading.Algos.cTrader.log";
 
         #endregion
@@ -47,20 +71,20 @@ namespace LionFire.Trading.Bots
         /// <summary>
         /// Enable Link
         /// </summary>
-        public bool Link { get; set; }
+        public bool? Link { get; set; }
 
         /// <summary>
         /// Enable Link during Backtesting
         /// </summary>
-        public bool LinkBacktesting { get; set; }
+        public bool? LinkBacktesting { get; set; }
         public string LinkApi { get; set; }
 
         #endregion
         
         #region Fitness scoring
 
-        public double MinTradesPerMonth { get; set; }
-        public double BacktestMinTradesPerMonthExponent { get; set; }
+        public double? MinTradesPerMonth { get; set; }
+        public double? BacktestMinTradesPerMonthExponent { get; set; }
 
         #endregion
 
@@ -69,17 +93,24 @@ namespace LionFire.Trading.Bots
         /// <summary>
         /// 
         /// </summary>
-        public double LogBacktestThreshold { get; set; }
+        public double? LogBacktestThreshold { get; set; }
 
-        public double LogBacktestDetailThreshold { get; set; }
+        public double? LogBacktestDetailThreshold { get; set; }
 
+        #endregion
+
+        #region RobustnessMode
+
+        /// <summary>
+        /// If true, log all backtests
+        /// </summary>
+        public bool? RobustnessMode { get; set; }
 
         #endregion
 
         #region Algo Settings
 
-        public bool UseTicks { get; set; } = false;
-        
+        public bool? UseTicks { get; set; } = false;
 
         #endregion
     }

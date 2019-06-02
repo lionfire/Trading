@@ -15,6 +15,7 @@ using LionFire.States;
 using Newtonsoft.Json;
 using LionFire.Trading.Link.Messages;
 using LionFire.Trading.Link;
+using LionFire.ExtensionMethods.Copying;
 #if cAlgo
 using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
@@ -101,7 +102,7 @@ where TBotType : TBot, ITBot, new()
 
         #region Settings
 
-        public bool Diag => RuntimeSettings.Diag;
+        public bool Diag => RuntimeSettings.Diag == true;
 
         #endregion
 
@@ -185,9 +186,8 @@ where TBotType : TBot, ITBot, new()
         /// </summary>
         protected bool IsLinkEnabled;
 
-        public bool Link => RuntimeSettings != null && RuntimeSettings.Link;
+        public bool Link => RuntimeSettings?.Link == true;
 
-        
         public TimeSpan LinkStatusInterval { get; set; } = TimeSpan.FromSeconds(10);
 
         protected async Task LinkSendInfo()
@@ -222,12 +222,12 @@ where TBotType : TBot, ITBot, new()
         {
 
             double netPosition = 0;
-
+            var botPositions = BotPositions;
             List<LinkPosition> positions = null;
-            if (Positions.Count > 0)
+            if (botPositions.Length > 0)
             {
                 positions = new List<LinkPosition>();
-                foreach (var p in Positions)
+                foreach (var p in botPositions)
                 {
                     netPosition += p.TradeType == TradeType.Buy ? p.VolumeInUnits : -p.VolumeInUnits;
 
@@ -276,6 +276,7 @@ where TBotType : TBot, ITBot, new()
         public string BotSettingsFileName = "settings.json";
 
         public string SettingsPath => Path.Combine(BotSettingsDir, BotSettingsFileName);
+        public string MachineSettingsPath => Path.Combine(BotSettingsDir, Environment.MachineName, BotSettingsFileName);
 
         //private static BotSettings BotSettingsCache;
 
@@ -285,32 +286,32 @@ where TBotType : TBot, ITBot, new()
         {
             try
             {
+                var settings = new BotSettings();
+                settings.AssignPropertiesFrom(BotSettings.Default);
+
                 if (File.Exists(SettingsPath))
                 {
-                    /*{
-                        var x = new BotSettings
-                        {
-                            LinkApi = "asdf"t
-                        };
-                        var json = JsonConvert.SerializeObject(x);
-                        Print("Serialz test:" + json);
-                        File.WriteAllText(Path.GetFileNameWithoutExtension(SettingsPath) + "-test.json", json);
-                    }*/
-                    var settings = JsonConvert.DeserializeObject<BotSettings>(File.ReadAllText(SettingsPath));
+                    settings.AssignNonNullPropertiesFrom(JsonConvert.DeserializeObject<BotSettings>(File.ReadAllText(SettingsPath)));
 #if cAlgo
                     Print("Loaded settings from " + SettingsPath + " " + Printable(settings.ToXamlAttribute()));
-                    //Print(JsonConvert.SerializeObject(settings));
 #endif
-                    return settings;
                 }
+                if (File.Exists(MachineSettingsPath))
+                {
+                    settings.AssignNonNullPropertiesFrom(JsonConvert.DeserializeObject<BotSettings>(File.ReadAllText(MachineSettingsPath)));
+#if cAlgo
+                    Print("Loaded machine-specific settings from " + MachineSettingsPath + " " + Printable(settings.ToXamlAttribute()));
+#endif
+                }
+                return settings;
             }
 #if cAlgo
             catch (Exception ex)
             {
                 Print("Exception when loading settings: " + ex.ToString());
 #else
-                catch (Exception )
-                {
+            catch (Exception)
+            {
 #endif
             }
             return null;
@@ -345,11 +346,11 @@ where TBotType : TBot, ITBot, new()
 #endif
             }
         }
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Lifecycle
+        #region Lifecycle
 
         //public IInstantiator ToInstantiator(InstantiationContext context = null)
         //{
@@ -376,7 +377,7 @@ where TBotType : TBot, ITBot, new()
         //    }
         //}
 
-#region Construction
+        #region Construction
 
         public BotBase()
         {
@@ -394,9 +395,9 @@ where TBotType : TBot, ITBot, new()
             InitExchangeRates();
         }
 
-#endregion
+        #endregion
 
-#region Initialization
+        #region Initialization
 
         private void Link_OnPositionClosed(PositionClosedEventArgs args)
         {
@@ -420,7 +421,7 @@ where TBotType : TBot, ITBot, new()
         {
             logger = this.GetLogger(ToString().Replace(' ', '.'), RuntimeSettings != null ? RuntimeSettings.Log : LogIfNoRuntimeSettings);
 
-            IsLinkEnabled = Link && (!IsBacktesting || RuntimeSettings.LinkBacktesting);
+            IsLinkEnabled = Link && (!IsBacktesting || RuntimeSettings.LinkBacktesting == true);
 
             if (IsLinkEnabled)
             {
@@ -448,11 +449,11 @@ where TBotType : TBot, ITBot, new()
 #endif
         }
 
-#endregion
+        #endregion
 
 
 
-#region Start
+        #region Start
 
         protected System.Timers.Timer linkStatusTimer;
 
@@ -521,9 +522,9 @@ where TBotType : TBot, ITBot, new()
             //#endif
         }
 
-#endregion
+        #endregion
 
-#region Stop
+        #region Stop
 
         protected void OnBotStopping()
         {
@@ -536,13 +537,13 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region State
+        #region State
 
-#region Execution State
+        #region Execution State
 #if cAlgo
 
         public ExecutionStateEx State
@@ -563,10 +564,10 @@ where TBotType : TBot, ITBot, new()
 
         public event Action<ExecutionStateEx, object> StateChangedToFor;
 #endif
-#endregion
+        #endregion
 
 
-#region Derived
+        #region Derived
 
         public DateTime ExtrapolatedServerTime
         {
@@ -580,35 +581,35 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Event Handling
+        #region Event Handling
 
 
         protected virtual void OnNewBar()
         {
         }
 
-#endregion
+        #endregion
 
-#region Derived
+        #region Derived
 
         public bool CanOpenLong
         {
             get
             {
-                var count = Positions.Where(p => p.TradeType == TradeType.Buy).Count();
-                return count < TBot.MaxLongPositions;
+                var count = BotPositions.Where(p => p.TradeType == TradeType.Buy).Count();
+                return TBot.MaxLongPositions == 0 || count < TBot.MaxLongPositions;
             }
         }
         public bool CanOpenShort
         {
             get
             {
-                var count = Positions.Where(p => p.TradeType == TradeType.Sell).Count();
-                return count < TBot.MaxShortPositions;
+                var count = BotPositions.Where(p => p.TradeType == TradeType.Sell).Count();
+                return TBot.MaxShortPositions == 0 || count < TBot.MaxShortPositions;
             }
         }
         public bool CanOpen
@@ -625,7 +626,7 @@ where TBotType : TBot, ITBot, new()
                     return false;
                 }
 #endif
-                var count = Positions.Count;
+                var count = BotPositions.Length;
                 return TBot.MaxOpenPositions == 0 || count < TBot.MaxOpenPositions;
             }
         }
@@ -648,9 +649,9 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-#endregion
+        #endregion
 
-#region Indicators
+        #region Indicators
 
 #if cAlgo
         // TODO: REARCH Make additional indicators modular?
@@ -659,11 +660,11 @@ where TBotType : TBot, ITBot, new()
         private AverageTrueRange DailyAtr;
 #endif
 
-#endregion
+        #endregion
 
-#region Entry
+        #region Entry
 
-#region Filters
+        #region Filters
 
         public bool PassesFilters(TradeType tt)
         {
@@ -684,7 +685,7 @@ where TBotType : TBot, ITBot, new()
             //#endif
         }
 
-#endregion
+        #endregion
 
         public void TryEnter(TradeType tt, double? slPips = null, double? tpPips = null, int? volume = null)
         {
@@ -728,9 +729,9 @@ where TBotType : TBot, ITBot, new()
             ExecuteMarketOrder(tt, Symbol, volume ?? GetPositionVolume(slPips, tt), Label, slPips, tpPips);
         }
 
-#endregion
+        #endregion
 
-#region Positions
+        #region Positions
 
 #if cAlgo
         public int BotPositionCount => BotPositions.Length;
@@ -769,15 +770,15 @@ where TBotType : TBot, ITBot, new()
         //        private Positions positions =  new Positions<Position>();
         //#endif
 
-#region Position Events
+        #region Position Events
 
         public event Action<PositionEvent> BotPositionChanged;
 
         protected virtual void RaisePositionEvent(PositionEvent e) => BotPositionChanged?.Invoke(e);
 
-#endregion
+        #endregion
 
-#region Position Sizing
+        #region Position Sizing
 
 
         // MOVE?
@@ -858,7 +859,7 @@ where TBotType : TBot, ITBot, new()
             //return Symbol.VolumeInUnitsMin + (effectiveMinPositionSize - 1) * Symbol.VolumeInUnitsStep;
 
 
-#region Rounding (unnecessary here)
+            #region Rounding (unnecessary here)
 
             //volume = VolumeToStep(volume); // Unnecessary here
 
@@ -867,7 +868,7 @@ where TBotType : TBot, ITBot, new()
             //#endif
             //return volume;
 
-#endregion
+            #endregion
 
         }
 
@@ -1166,9 +1167,9 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-#endregion
+        #endregion
 
-#region Position Methods
+        #region Position Methods
 
         public void CloseExistingOpposite(TradeType tt, bool? inProfit = null)
         {
@@ -1200,30 +1201,30 @@ where TBotType : TBot, ITBot, new()
             }
         }
 
-#endregion
+        #endregion
 
-#endregion
+        #endregion
 
-#region Position Management
+        #region Position Management
 
-        public  void CloseAllIfBacktesting()
+        public void CloseAllIfBacktesting()
         {
             if (IsBacktesting)
             {
-                foreach (var p in Positions)
+                foreach (var p in BotPositions)
                 {
                     ClosePosition(p);
                 }
             }
         }
 
-#endregion
+        #endregion
 
-#region Symbol Utils
+        #region Symbol Utils
 
         public double? PointsToPips(double? points) => Symbol.SymbolPointsToPips(points);
 
-#endregion
+        #endregion
 
 #if !cTrader // MOVE
         public MarketSeries MarketSeries // REVIEW RECENTCHANGE
@@ -1235,7 +1236,7 @@ where TBotType : TBot, ITBot, new()
         }
 #endif
 
-#region On-demand extra inputs: DailySeries
+        #region On-demand extra inputs: DailySeries
 
         public MarketSeries DailySeries
         {
@@ -1250,15 +1251,15 @@ where TBotType : TBot, ITBot, new()
         }
         private MarketSeries dailySeries;
 
-#endregion
+        #endregion
 
-#region Filters
+        #region Filters
 
         public List<Func<TradeType, MarketSeries, bool>> Filters = new List<Func<TradeType, MarketSeries, bool>>();
 
-#endregion
+        #endregion
 
-#region Backtesting
+        #region Backtesting
 
         public const double FitnessMaxDrawdown = 95;
         public const double FitnessMinDrawdown = 0.1;
@@ -1324,7 +1325,7 @@ where TBotType : TBot, ITBot, new()
                 var initialBalance = args.History.Count == 0 ? args.Equity : args.History[0].Balance - args.History[0].NetProfit;
                 double fitness;
 
-                if(!TBot.AllowLong && !TBot.AllowShort)
+                if (!TBot.AllowLong && !TBot.AllowShort)
                 {
                     return 0.0;
                 }
@@ -1441,6 +1442,8 @@ where TBotType : TBot, ITBot, new()
 #if BackTestResult_Debug
                 this.BacktestResult = backtestResult;
 #endif
+                backtestResult.Dispose();
+                backtestResult = null;
                 return fitness;
 
             }
@@ -1462,14 +1465,11 @@ where TBotType : TBot, ITBot, new()
         protected virtual void DoLogBacktest(GetFitnessArgs args, BacktestResult backtestResult)
         {
             double fitness = backtestResult.Fitness;
-            double initialBalance = backtestResult.InitialBalance;
-            TimeSpan timeSpan = backtestResult.Duration;
-            double aroi = backtestResult.Aroi;
 
-            if (!double.IsNaN(RuntimeSettings.LogBacktestThreshold) && fitness > RuntimeSettings.LogBacktestThreshold)
+            if (RuntimeSettings.RobustnessMode == true || RuntimeSettings.LogBacktestThreshold!= null && !double.IsNaN(RuntimeSettings.LogBacktestThreshold.Value) && fitness > RuntimeSettings.LogBacktestThreshold)
             {
                 try
-                {                    
+                {
                     SaveResult(args, backtestResult, fitness, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks");
                 }
                 catch (Exception ex)
@@ -1489,11 +1489,13 @@ where TBotType : TBot, ITBot, new()
             var result = unsanitizedSymbol;
             result = result.Replace('-', '_');
             result = result.Replace('/', '-');
-            result = result.Replace('\\','-');
+            result = result.Replace('\\', '-');
             return result;
         }
-        public string MachineName => Environment.MachineName; // FUTURE: Get custom value from config
-        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", MachineName, StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
+        public static string MachineName => Environment.MachineName; // FUTURE: Get custom value from config
+        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
+        public string RobustnessBacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, "Robustness", $"{StandardizedSymbolCode(Symbol.Code)} {BotName} {TimeFrame.ToShortString()}");
+        public static string BacktestResultSaveDirBase = Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", MachineName) 
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -1532,7 +1534,7 @@ where TBotType : TBot, ITBot, new()
                 filename += ".trades";
             }
             var ext = ".json";
-            var dir = BacktestResultSaveDir(TimeFrame);
+            var dir = RuntimeSettings.RobustnessMode == true ? RobustnessBacktestResultSaveDir(TimeFrame) : BacktestResultSaveDir(TimeFrame);
             if (dir != lastDirCreated && CreateResultsDirIfMissing && !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
@@ -1549,10 +1551,12 @@ where TBotType : TBot, ITBot, new()
         }
         private static string lastDirCreated = null;
 
-        
-        private  void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness,string id, TimeSpan timeSpan, string backtestFlags = null)
+        private static int saveCounter = 0;
+
+        private void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string id,  string backtestFlags = null)
         {
-            
+            var timeSpan = backtestResult.Duration;
+
 #if LogBacktestResults
             var profit = args.Equity / initialBalance;
             backtestResult.GetAverageDaysPerTrade(args);
@@ -1578,12 +1582,12 @@ where TBotType : TBot, ITBot, new()
             //var path = Path.Combine(dir, filename + ext);
             //if (CreateResultsDirIfMissing && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
             //for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
-            JsonSerializer serializer = new JsonSerializer();
+            var serializer = new JsonSerializer();
             using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Result, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
             {
                 serializer.Serialize(sw, backtestResult);
 
-                    Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
+                //Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
                 //await sw.WriteAsync(json).ConfigureAwait(false);
             }
 
@@ -1594,14 +1598,19 @@ where TBotType : TBot, ITBot, new()
                     serializer.Serialize(sw, args.History.ToArray());
                     //await sw.WriteAsync(Newtonsoft.Json.JsonConvert.SerializeObject(args.History.ToArray())).ConfigureAwait(false);
                 }
+                if (saveCounter++ > 50)
+                {
+                    GC.Collect();
+                    saveCounter = 0;
+                }
             }
         }
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-#endregion
+        #endregion
 
-#region Misc
+        #region Misc
 
         public virtual string Label
         {
@@ -1624,17 +1633,17 @@ where TBotType : TBot, ITBot, new()
         public Microsoft.Extensions.Logging.ILogger Logger => logger;
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
-#region INotifyPropertyChanged Implementation
+        #region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-#endregion
+        #endregion
 
 #endif
 
-#endregion
+        #endregion
 
 
     }

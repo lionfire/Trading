@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -8,11 +9,14 @@ namespace LionFire.Trading.Portfolios
     {
         public PortfolioAnalysisOptions Options { get; set; }
 
+        ILogger log;
+
         #region Construction
 
         public Portfolio Portfolio { get; set; }
         public PortfolioSimulation(Portfolio portfolio, PortfolioAnalysisOptions options)
         {
+            this.log = Log.Get();
             this.Portfolio = portfolio;
             this.Options = options;
         }
@@ -39,6 +43,7 @@ namespace LionFire.Trading.Portfolios
                 Exceptions = new List<Exception>();
             }
             Exceptions.Add(ex);
+            log.LogError(ex, "Simulation exception");
 
             return Options.ContinueOnError;
         }

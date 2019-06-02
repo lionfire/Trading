@@ -9,6 +9,7 @@ using LionFire.Trading.Bots;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.ComponentModel.DataAnnotations.Schema;
+using Newtonsoft.Json;
 
 namespace LionFire.Trading.Backtesting
 {
@@ -25,8 +26,9 @@ namespace LionFire.Trading.Backtesting
     }
 
     [Assets.AssetPath("Results")]
-    public class BacktestResult
+    public class BacktestResult : IDisposable
     {
+
         #region Identity
 
         [Key]
@@ -172,6 +174,14 @@ namespace LionFire.Trading.Backtesting
                     if (templateType == null)
                     {
                         Debug.WriteLine($"Bot type not supported: {backtestResult.BotConfigType}");
+                        try
+                        {
+                            this.TBotJObject = (JObject)backtestResult.Config;
+                        }
+                        catch(Exception )
+                        {
+                            Debug.WriteLine($"Failed to assign Config to JObject.  Type: " + backtestResult.Config?.GetType()?.FullName);
+                        }
                         return null;
                         //throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
                     }
@@ -182,6 +192,12 @@ namespace LionFire.Trading.Backtesting
             }
         }
         private TBot tBot;
+
+        [JsonIgnore]
+        [NotMapped]
+        public JObject TBotJObject {
+            get;private set;
+        }
 
         public Type ResolveType(string typeName)
         {
@@ -195,6 +211,34 @@ namespace LionFire.Trading.Backtesting
 
             return result;
         }
+
+        #region IDisposable Support
+
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+                BacktestResultConfig = null;
+                Config = null;
+                tBot = null;
+                TBotJObject = null;
+
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose() => Dispose(true);
+
+        #endregion
 
     }
 

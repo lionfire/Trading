@@ -84,7 +84,7 @@ namespace LionFire.Trading.Portfolios
         
         #region Owned Objects
 
-        public ObservableCollection<PortfolioComponent> Components { get; set; } = new ObservableCollection<PortfolioComponent>();
+        public List<PortfolioComponent> Components { get; set; } = new List<PortfolioComponent>();
 
         #endregion
 
@@ -98,12 +98,16 @@ namespace LionFire.Trading.Portfolios
         #region Derived Properties (OPTIMIZE - calculate once)
 
         [NotMapped]
-        public IEnumerable<string> ComponentIds {
-            get => Components.Select(c => c.BacktestResultId);
-            set {
-                this.SetComponents(value);
-            }
+        public IEnumerable<string> ComponentIds { // RENAME BacktestIds
+            get => Components.Select(c=>c.BacktestResultId);
+            //set {
+            //    componentIds = value;
+            //    OnComponentIdsChanged().Wait();
+            //}
         }
+        //private IEnumerable<string> componentIds;
+
+        //protected async Task OnComponentIdsChanged() => await SetComponents(ComponentIds);
 
         public int TotalTrades => (int)Components.Where(b => b.BacktestResult != null).Select(b => b.BacktestResult.TotalTrades).Sum();
         public int WinningTrades => (int)Components.Where(b => b.BacktestResult != null).Select(b => b.BacktestResult.WinningTrades).Sum();
@@ -157,39 +161,21 @@ namespace LionFire.Trading.Portfolios
 
         #endregion
 
-        public async Task SetComponents(IEnumerable<string> backtestResultIds, bool addOnly = false)
-        {
-            if (addOnly)
-            {
-                Components.AddMissingFrom(backtestResultIds,
-                        id => new PortfolioComponent(id),
-                        (component, id) => component.BacktestResultId == id);
-            }
-            else
-            {
-                Components.SetTo(backtestResultIds, id => new PortfolioComponent(id), (component, id) => component.BacktestResultId == id);
-            }
-            
-            await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
-        }
-        public event EventHandler<DeferredEventArgs> ComponentsChanged;
-
         #region Add
 
-        public async Task AddRange(IEnumerable<PortfolioComponent> backtestResults)
+        public void AddRange(IEnumerable<PortfolioComponent> backtestResults)
         {
             foreach (var item in backtestResults) { Add(item, false); }
-            await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
+            //await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
         }
 
-        public async Task Add(PortfolioComponent component, bool raiseEvents = true)
+        public void Add(PortfolioComponent component, bool raiseEvents = true)
         {
             Components.Add(component);
-            if(raiseEvents) await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
+            //if(raiseEvents) await ComponentsChanged.InvokeAsync(this, DeferredEventArgs.Empty);
         }
 
         #endregion
-
 
         #region Misc
 
@@ -203,6 +189,8 @@ namespace LionFire.Trading.Portfolios
         }
 
         #endregion
+
+        public override string ToString() => $"{{Portfolio {Name}, PortfolioId={PortfolioId}}}";
 
         #endregion
     }
