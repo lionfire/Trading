@@ -36,12 +36,10 @@ namespace LionFire.Trading.Workspaces
     public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
     {
         public Type Type => typeof(TradingWorkspace);
+        AssetID IAsset.ID => throw new NotImplementedException();
 
         // REVIEW - why is this needed -- does it make sense?
-        public string Key
-        {
-            get { return Template?.Name; }
-        }
+        public string Key => Template?.Name;
 
         // FUTURE: Inject this after loading asset if it is not set
         // TEMP - TODO: Move subpath to be stored here, and inject it on load
@@ -337,11 +335,11 @@ namespace LionFire.Trading.Workspaces
             //return true;
         }
 
-        public TradingOptions TradingOptions => InjectionContext.Current.GetService<TradingOptions>();
+        public TradingOptions TradingOptions => DependencyContext.Current.GetService<TradingOptions>();
 
         [Dependency]
         public ITradingTypeResolver TradingTypeResolver { get; set; }
-        //public ITradingTypeResolver TradingTypeResolver => InjectionContext.Current.GetService<ITradingTypeResolver>();
+        //public ITradingTypeResolver TradingTypeResolver => DependencyContext.Current.GetService<ITradingTypeResolver>();
 
 
         public async Task Start()

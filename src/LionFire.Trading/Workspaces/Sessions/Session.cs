@@ -304,7 +304,7 @@ namespace LionFire.Trading.Workspaces
         public List<string> DisabledSymbols { get; set; }
         public object Lock { get; private set; } = new object();
 
-        TradingOptions TradingOptions => InjectionContext.Current.GetService<TradingOptions>();
+        TradingOptions TradingOptions => DependencyContext.Current.GetService<TradingOptions>();
         #region Lifecycle
 
         public async Task<bool> Initialize()

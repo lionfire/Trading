@@ -48,7 +48,7 @@ namespace LionFire.Notifications.Wpf.App
         {
             foreach (var accountName in Template.AccountNames)
             {
-                foreach (var feed in InjectionContext.Current.GetServices<IFeed>().Concat(InjectionContext.Current.GetServices<IAccount>()))
+                foreach (var feed in DependencyContext.Current.GetServices<IFeed>().Concat(DependencyContext.Current.GetServices<IAccount>()))
                 {
 
                     // FUTURE: Match wildcard

@@ -12,7 +12,9 @@ using LionFire.Trading.Backtesting;
 using System.ComponentModel;
 using LionFire.Threading.Tasks;
 using LionFire.States;
+#if NewtonsoftJson
 using Newtonsoft.Json;
+#endif
 using LionFire.Trading.Link.Messages;
 using LionFire.Trading.Link;
 using LionFire.ExtensionMethods.Copying;
@@ -282,6 +284,24 @@ where TBotType : TBot, ITBot, new()
 
         public static string Printable(string s) => s.Replace("{", "{{").Replace("}", "}}");
 
+        public static T Deserialize<T>(string json)
+        {
+#if NewtonsoftJson
+            return JsonConvert.DeserializeObject<BotSettings>(json);
+#else
+            return Utf8Json.JsonSerializer.Deserialize<T>(json);
+#endif
+        }
+        public static void Serialize<T>(Stream stream, T obj)
+        {
+            throw new NotImplementedException();
+//#if NewtonsoftJson
+//            JsonConvert.SerializeObject<BotSettings>(json);
+//#else
+//            Utf8Json.JsonSerializer.Serialize<T>(json);
+//#endif
+        }
+
         public BotSettings LoadSettings()
         {
             try
@@ -291,14 +311,16 @@ where TBotType : TBot, ITBot, new()
 
                 if (File.Exists(SettingsPath))
                 {
-                    settings.AssignNonNullPropertiesFrom(JsonConvert.DeserializeObject<BotSettings>(File.ReadAllText(SettingsPath)));
+                    settings.AssignNonNullPropertiesFrom(Deserialize<BotSettings>(File.ReadAllText(SettingsPath)));
+
 #if cAlgo
                     Print("Loaded settings from " + SettingsPath + " " + Printable(settings.ToXamlAttribute()));
 #endif
                 }
                 if (File.Exists(MachineSettingsPath))
                 {
-                    settings.AssignNonNullPropertiesFrom(JsonConvert.DeserializeObject<BotSettings>(File.ReadAllText(MachineSettingsPath)));
+                    settings.AssignNonNullPropertiesFrom(Deserialize<BotSettings>(File.ReadAllText(MachineSettingsPath)));
+
 #if cAlgo
                     Print("Loaded machine-specific settings from " + MachineSettingsPath + " " + Printable(settings.ToXamlAttribute()));
 #endif
@@ -419,7 +441,7 @@ where TBotType : TBot, ITBot, new()
 
          Task<bool> Initialize()
         {
-            logger = this.GetLogger(ToString().Replace(' ', '.'), RuntimeSettings != null ? RuntimeSettings.Log : LogIfNoRuntimeSettings);
+            logger = this.GetLogger(ToString().Replace(' ', '.'), RuntimeSettings?.Log ?? LogIfNoRuntimeSettings);
 
             IsLinkEnabled = Link && (!IsBacktesting || RuntimeSettings.LinkBacktesting == true);
 
@@ -733,26 +755,24 @@ where TBotType : TBot, ITBot, new()
 
         #region Positions
 
-#if cAlgo
         public int BotPositionCount => BotPositions.Length;
-#else
-        public int BotPositionCount => BotPositions.Count;
-#endif
+
         public IEnumerable<Position> BotLongPositions => BotPositions.Where(p => p.TradeType == TradeType.Buy);
         public int BotLongPositionCount => BotLongPositions.Count();
         public IEnumerable<Position> BotShortPositions => BotPositions.Where(p => p.TradeType == TradeType.Sell);
         public int BotShortPositionCount => BotShortPositions.Count();
 
 #if !cAlgo
-        public Positions BotPositions
+        public Position[] BotPositions
         {
             get
             {
+
                 throw new NotImplementedException("TODO: Review that BotPositions actually works in lionFire mode.");
                 //return botPositions;
             }
         }
-        protected Positions botPositions = new Positions();
+        //protected Position[] botPositions = new Positions();
 #else
         public Position[] BotPositions => Positions.FindAll(Label);
 #endif
@@ -1397,9 +1417,8 @@ where TBotType : TBot, ITBot, new()
                     WinningTrades = args.WinningTrades,
                 };
 
-
-                var timeSpan = EndDate.Value - StartDate.Value;
-                var totalMonths = timeSpan.TotalDays / 31;
+                var duration = EndDate.Value - StartDate.Value; // Slight optimization of backtestResult.Duration
+                var totalMonths = duration.TotalDays / 31;
                 var tradesPerMonth = backtestResult.TradesPerMonth;
 
                 //var aroi = (args.NetProfit / initialBalance) / (timeSpan.TotalDays / 365);
@@ -1424,9 +1443,9 @@ where TBotType : TBot, ITBot, new()
                 //    + backtestResult.NetProfit + " InitialBalance "  
                 //    + backtestResult.InitialBalance + " Duration.TotalDays " + backtestResult.Duration.TotalDays);
 
-                if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0)
+                if (minTrades > 0 && tradesPerMonth < minTrades && fitness > 0 && RuntimeSettings.BacktestMinTradesPerMonthExponent.HasValue)
                 {
-                    fitness *= Math.Pow(tradesPerMonth / minTrades, RuntimeSettings.BacktestMinTradesPerMonthExponent);
+                    fitness *= Math.Pow(tradesPerMonth / minTrades.Value, RuntimeSettings.BacktestMinTradesPerMonthExponent.Value);
                 }
 
                 //#if cAlgo
@@ -1466,11 +1485,11 @@ where TBotType : TBot, ITBot, new()
         {
             double fitness = backtestResult.Fitness;
 
-            if (RuntimeSettings.RobustnessMode == true || RuntimeSettings.LogBacktestThreshold!= null && !double.IsNaN(RuntimeSettings.LogBacktestThreshold.Value) && fitness > RuntimeSettings.LogBacktestThreshold)
+            if (RuntimeSettings.RobustnessMode == true || RuntimeSettings.LogBacktestThreshold != null && !double.IsNaN(RuntimeSettings.LogBacktestThreshold.Value) && fitness > RuntimeSettings.LogBacktestThreshold)
             {
                 try
                 {
-                    SaveResult(args, backtestResult, fitness, TBot.Id, timeSpan, GotTick ? "ticks" : "no-ticks");
+                    SaveResult(args, backtestResult, fitness, TBot.Id, GotTick ? "ticks" : "no-ticks");
                 }
                 catch (Exception ex)
                 {
@@ -1495,7 +1514,7 @@ where TBotType : TBot, ITBot, new()
         public static string MachineName => Environment.MachineName; // FUTURE: Get custom value from config
         public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
         public string RobustnessBacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, "Robustness", $"{StandardizedSymbolCode(Symbol.Code)} {BotName} {TimeFrame.ToShortString()}");
-        public static string BacktestResultSaveDirBase = Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", MachineName) 
+        public static string BacktestResultSaveDirBase = Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", MachineName);
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -1553,9 +1572,9 @@ where TBotType : TBot, ITBot, new()
 
         private static int saveCounter = 0;
 
-        private void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string id,  string backtestFlags = null)
+        private void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string id, string backtestFlags = null)
         {
-            var timeSpan = backtestResult.Duration;
+            var duration = backtestResult.End.Value - backtestResult.Start.Value;
 
 #if LogBacktestResults
             var profit = args.Equity / initialBalance;
@@ -1582,7 +1601,11 @@ where TBotType : TBot, ITBot, new()
             //var path = Path.Combine(dir, filename + ext);
             //if (CreateResultsDirIfMissing && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
             //for (; File.Exists(path); i++, path = Path.Combine(dir, filename + $" ({i})" + ext)) ;
+
+#if NewtonsoftJson
             var serializer = new JsonSerializer();
+#endif
+#if NewtonsoftJson
             using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Result, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
             {
                 serializer.Serialize(sw, backtestResult);
@@ -1590,14 +1613,28 @@ where TBotType : TBot, ITBot, new()
                 //Newtonsoft.Json.JsonConvert.SerializeObject(backtestResult);
                 //await sw.WriteAsync(json).ConfigureAwait(false);
             }
+#else
+            using (var stream = new FileStream(GetSavePath(BacktestSaveType.Result, args, backtestResult, fitness, id, duration, backtestFlags), FileMode.Create))
+            {
+                Utf8Json.JsonSerializer.Serialize(stream, backtestResult);
+            }
+#endif
 
             if (fitness >= RuntimeSettings.LogBacktestDetailThreshold)
             {
+#if NewtonsoftJson
                 using (var sw = new StreamWriter(new FileStream(GetSavePath(BacktestSaveType.Trades, args, backtestResult, fitness, id, timeSpan, backtestFlags), FileMode.Create)))
                 {
                     serializer.Serialize(sw, args.History.ToArray());
                     //await sw.WriteAsync(Newtonsoft.Json.JsonConvert.SerializeObject(args.History.ToArray())).ConfigureAwait(false);
                 }
+#else
+                using (var stream = new FileStream(GetSavePath(BacktestSaveType.Trades, args, backtestResult, fitness, id, duration, backtestFlags), FileMode.Create))
+                {
+                    Utf8Json.JsonSerializer.Serialize(stream, args.History.ToArray());
+                }
+#endif
+
                 if (saveCounter++ > 50)
                 {
                     GC.Collect();

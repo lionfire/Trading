@@ -62,7 +62,7 @@ namespace LionFire.Trading.Bots
         /// </summary>
         BotMode Modes { get; set; }
 
-        Positions BotPositions { get; }
+        Position[] BotPositions { get; }
         event Action<PositionEvent> BotPositionChanged;
 #endif
     }

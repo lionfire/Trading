@@ -95,12 +95,12 @@ namespace LionFire.Trading
 
                 var tradingContext = new TradingContext((TradingOptions)tradingOptions);
 
-                //InjectionContext.Current.AddSingleton(tradingOptions);
-                //InjectionContext.Current.AddSingleton(tradingContext);
+                //DependencyContext.Current.AddSingleton(tradingOptions);
+                //DependencyContext.Current.AddSingleton(tradingContext);
                 serviceCollection.AddSingleton((TradingContext)tradingContext);
                 serviceCollection.AddSingleton((TradingOptions)tradingContext.Options);
 
-                //InjectionContext.SetSingletonDefault<TypeNamingContext>(tnc);  RECENTCHANGE - should no lonber be needed now that the app's IServiceProvider is used as the default for InjectionContext.
+                //DependencyContext.SetSingletonDefault<TypeNamingContext>(tnc);  RECENTCHANGE - should no lonber be needed now that the app's IServiceProvider is used as the default for DependencyContext.
 
                 serviceCollection.AddSingleton(tnc);
             }));

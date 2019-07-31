@@ -11,7 +11,8 @@ namespace LionFire.Trading.Bots
         public static DateTime LastStart;
         //public DateTime LastEnd;
         //public KeyValuePair<DateTime, TimeSpan>[] BacktestDurations;
-        public static TimeSpan SettingsCacheExpire => Settings== null ? TimeSpan.FromSeconds(180) : TimeSpan.FromSeconds(Settings.SettingsCacheTimeout);
+        public static TimeSpan SettingsCacheExpire
+            => Settings?.SettingsCacheTimeout.HasValue == true ? TimeSpan.FromSeconds(Settings.SettingsCacheTimeout.Value) : TimeSpan.FromSeconds(180);
 
         public static BotSettings Settings;
         public static bool IsExpired

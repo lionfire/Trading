@@ -10,12 +10,16 @@ using LionFire.Persistence;
 
 namespace LionFire.Trading.Bots
 {
+    
     [AssetPath("Algos")]
-    public class TBot : ITemplateAsset, ITBot
+    public class TBot :  ITBot
+        , ITemplate
+        //ITemplateAsset
     {
         public virtual Type Type => this.GetType();
         public string AssetSubPath { get { return Id; } set { Id = value; } }
         public string Id { get; set; } = IdUtils.GenerateId();
+        //AssetID IAsset.ID { get; }
 
         public string Account { get; set; }
 

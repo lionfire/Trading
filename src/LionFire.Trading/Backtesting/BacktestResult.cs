@@ -10,6 +10,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.ComponentModel.DataAnnotations.Schema;
 using Newtonsoft.Json;
+using System.Runtime.Serialization;
 
 namespace LionFire.Trading.Backtesting
 {
@@ -66,7 +67,7 @@ namespace LionFire.Trading.Backtesting
 
         #region Derived
 
-        public TimeSpan Duration { get { if (!Start.HasValue || !Start.HasValue) { return TimeSpan.Zero; } return End.Value - Start.Value; } }
+        public TimeSpan Duration { get { return !Start.HasValue || !End.HasValue ? TimeSpan.Zero : End.Value - Start.Value; } }
 
         public double WinRate => 100.0 * WinningTrades / TotalTrades;
 
@@ -135,7 +136,7 @@ namespace LionFire.Trading.Backtesting
                 return tbot?.TimeFrame.Value;
             }
         }
-                
+
         /// <summary>
         /// Computed at backtest time
         /// </summary>
@@ -178,7 +179,7 @@ namespace LionFire.Trading.Backtesting
                         {
                             this.TBotJObject = (JObject)backtestResult.Config;
                         }
-                        catch(Exception )
+                        catch (Exception)
                         {
                             Debug.WriteLine($"Failed to assign Config to JObject.  Type: " + backtestResult.Config?.GetType()?.FullName);
                         }
@@ -194,9 +195,11 @@ namespace LionFire.Trading.Backtesting
         private TBot tBot;
 
         [JsonIgnore]
+        [IgnoreDataMember]
         [NotMapped]
-        public JObject TBotJObject {
-            get;private set;
+        public JObject TBotJObject
+        {
+            get; private set;
         }
 
         public Type ResolveType(string typeName)
