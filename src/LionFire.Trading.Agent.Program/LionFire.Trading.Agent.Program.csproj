@@ -1,11 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <TargetFramework>netcoreapp3.0</TargetFramework>
     <AssemblyName>LionFire.Trading.Agent.Program</AssemblyName>
     <OutputType>Exe</OutputType>
     <PackageId>LionFire.Trading.Agent.Program</PackageId>
-    <RuntimeFrameworkVersion>1.1.1</RuntimeFrameworkVersion>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
@@ -18,6 +17,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging.NLog\LionFire.Extensions.Logging.NLog.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Proprietary.Algos\LionFire.Trading.Proprietary.Algos.csproj" />
     <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />
+    <ProjectReference Include="..\Spotware\LionFire.Trading.Spotware.Connect\LionFire.Trading.Spotware.Connect.csproj" />
   </ItemGroup>
 
   <ItemGroup>

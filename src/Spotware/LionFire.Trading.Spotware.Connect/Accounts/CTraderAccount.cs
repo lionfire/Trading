@@ -33,6 +33,7 @@ using LionFire.Trading.Accounts;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
 using LionFire.Applications.Hosting;
+using LionFire.Threading;
 
 namespace LionFire.Trading.Spotware.Connect
 {
@@ -40,7 +41,9 @@ namespace LionFire.Trading.Spotware.Connect
     [AssetPath(@"Accounts/cTrader")]
     public class TCTraderAccount : TAccount, ITemplate<CTraderAccount>, IAsset
     {
-        
+        public Type Type => throw new NotImplementedException();
+
+        public AssetID ID => throw new NotImplementedException();
     }
 
     public partial class CTraderAccount : LiveAccountBase<TCTraderAccount>,
@@ -757,9 +760,10 @@ namespace LionFire.Trading.Spotware.Connect
         #endregion
 
 
-        #region Order Execution
+        #region Order Exe
+       
 
-        public override TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, long volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null)
+        public override TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default, double? takeProfitPips = default, double? marketRangePips = default, string comment = null)
         {
             logger.LogError($"NOT IMPLEMENTED: ExecuteMarketOrder {tradeType} {volume} {symbol.Code} sl:{stopLossPips} tp:{takeProfitPips}");
             return TradeResult.NotImplemented;
@@ -776,6 +780,8 @@ namespace LionFire.Trading.Spotware.Connect
             logger.LogError($"NOT IMPLEMENTED: ModifyPosition {position.Id} sl:{stopLoss} tp:{takeProfit}");
             return TradeResult.NotImplemented;
         }
+
+        
 
         #endregion
 

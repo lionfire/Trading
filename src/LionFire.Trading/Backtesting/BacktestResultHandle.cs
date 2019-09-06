@@ -2,11 +2,10 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.IO;
 using System.Reflection;
-using LionFire.Handles;
-using LionFire.Referencing;
+using LionFire.Persistence.Handles;
+using LionFire.Persistence;
 #if !cAlgo
 using LionFire.Parsing.String;
 #endif
@@ -21,8 +20,8 @@ namespace LionFire.Trading.Backtesting
         {
             return new BacktestResultHandle { Object = r };
         }
-        
-        public override Task<bool> TryGetObject()
+
+        public override Task<IRetrieveResult<BacktestResult>> RetrieveImpl()
         {
             if (_object == null && Path != null)
             {
@@ -36,9 +35,8 @@ namespace LionFire.Trading.Backtesting
                 }
                 catch { }
             }
-            return Task.FromResult(HasObject);
+            return Task.FromResult(HasObject ? (IRetrieveResult<BacktestResult>)RetrieveResult<BacktestResult>.Success(_object) : RetrieveResult<BacktestResult>.NotFound);
         }
-
 
         public BacktestResultHandle Self { get { return this; } } // REVIEW - another way to get context from datagrid: ancestor row?
         public string Path { get => Key; set => Key = value; }
@@ -213,12 +211,8 @@ namespace LionFire.Trading.Backtesting
         }
 
 
-        public override string ToString()
-        {
-            return this.ToXamlAttribute();
-        }
-
-        public override Task<bool> TryRetrieveObject() => throw new NotImplementedException();
+        public override string ToString() => this.ToXamlAttribute();
+        
     }
 
 }

@@ -9,8 +9,6 @@ using System.Threading.Tasks;
 using LionFire.Applications;
 using LionFire.Applications.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using LionFire.Trading.Proprietary.Indicators;
-using LionFire.Trading.Proprietary.Bots;
 using LionFire.Trading.Backtesting;
 using Microsoft.Extensions.Logging;
 using LionFire.Extensions.Logging;

@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using LionFire.Trading.Backtesting;
-
+using LionFire.Threading;
 
 namespace LionFire.Trading.Bots
 {
@@ -54,7 +54,7 @@ namespace LionFire.Trading.Bots
             {
                 foreach (var assetName in  $"*id={Id}*".Find<BacktestResult>().GetResultSafe())
                 {
-                    var backtestResult = assetName.Load<BacktestResult>();
+                    var backtestResult = assetName.Load<BacktestResult>().Result;
                     tBot = (TBot)((JObject)backtestResult.Config).ToObject(TypeResolver.Resolve(TypeName, context.TypeNaming));
                     var bot = tBot.Create();
                     return bot;

@@ -161,7 +161,7 @@ namespace LionFire.Trading.Backtesting
 
             if (Template.SimulateAccount != null)
             {
-                TAccount simulatedAccount = Template.SimulateAccount.Load<TAccount>();
+                TAccount simulatedAccount = await Template.SimulateAccount.Load<TAccount>();
                 Template.AssignPropertiesFrom(simulatedAccount);
             }
 

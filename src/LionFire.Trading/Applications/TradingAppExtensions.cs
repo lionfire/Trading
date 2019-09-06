@@ -66,6 +66,7 @@ namespace LionFire.Trading
         /// <param name="defaultOptions"></param>
         /// <param name="accountModesAllowed">Override options with this mode (if not unspecified)</param>
         /// <returns></returns>
+        [Blocking]
         public static IAppHost AddTrading(this IAppHost appHost, TradingOptions defaultOptions = null, AccountMode accountModesAllowed = AccountMode.Unspecified)
         {
             if (defaultOptions == null) { defaultOptions = DefaultTradingOptions; }
@@ -82,7 +83,7 @@ namespace LionFire.Trading
                 //serviceCollection.Configure<TradingOptions>(opt => Configuration.GetSection("Trading").Bind(opt));
 
                 //app.ServiceCollection.AddSingleton<IAccountProvider, AccountProvider>(); FUTURE
-                var tradingOptions = "Default".Load<TradingOptions>();
+                var tradingOptions = "Default".Load<TradingOptions>().Result;
                 if (tradingOptions == null)
                 {
                     tradingOptions = defaultOptions;

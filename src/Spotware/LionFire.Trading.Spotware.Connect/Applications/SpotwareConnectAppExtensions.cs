@@ -38,7 +38,7 @@ namespace LionFire.Applications.Hosting
 
             var info = clientConfigName.Load<SpotwareConnectAppInfo>();
 
-            Defaults.Set<ISpotwareConnectAppInfo>(info);
+            Defaults.Set<ISpotwareConnectAppInfo>((ISpotwareConnectAppInfo)info);
 
             return host;
         }

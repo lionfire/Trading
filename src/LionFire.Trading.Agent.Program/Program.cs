@@ -21,6 +21,7 @@ using LionFire.Assets;
 using LionFire.Trading.Applications;
 using LionFire.Extensions.Options;
 using LionFire.Instantiating;
+using LionFire.Trading.Connect;
 
 namespace LionFire.Trading.Agent.Program
 {
@@ -31,7 +32,7 @@ namespace LionFire.Trading.Agent.Program
 
             try
             {
-                var basePath = LionFireEnvironment.ProgramDataDir;
+                var basePath = LionFireEnvironment.Directories.AppProgramDataDir;
 
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
 
@@ -39,7 +40,7 @@ namespace LionFire.Trading.Agent.Program
                     //.AddOptions(basePath)
 
                 #region Bootstrap
-                    .AddJsonAssetProvider(LionFireEnvironment.ProgramDataDir)
+                    .AddJsonAssetProvider(LionFireEnvironment.Directories.ProgramDataDir)
                     .Bootstrap()
                 #endregion
 

@@ -27,7 +27,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Execution.Abstractions\LionFire.Execution.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Execution\LionFire.Execution.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging\LionFire.Extensions.Logging.csproj" />
-    <ProjectReference Include="..\..\..\Core\src\LionFire.Handles\LionFire.Handles.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Handles\LionFire.Persistence.Handles.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications.Abstractions\LionFire.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating.Abstractions\LionFire.Instantiating.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications\LionFire.Notifications.csproj" />
@@ -47,9 +47,9 @@
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
-    <PackageReference Include="System.Collections.Immutable" Version="1.5.0" />
-    <PackageReference Include="System.Reactive" Version="4.1.5" />
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.5.1" />
+    <PackageReference Include="System.Collections.Immutable" Version="1.6.0-preview8.19405.3" />
+    <PackageReference Include="System.Reactive" Version="4.2.0-preview.625" />
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.6.0-preview8.19405.3" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="2.2.0" />

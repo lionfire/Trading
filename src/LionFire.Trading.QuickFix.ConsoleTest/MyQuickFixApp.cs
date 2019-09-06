@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using QuickFix;
 using QuickFix.Fields;
 using QuickFix.FIX44;

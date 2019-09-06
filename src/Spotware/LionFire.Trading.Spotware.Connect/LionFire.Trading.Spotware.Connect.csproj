@@ -26,9 +26,9 @@
   <ItemGroup>
     <PackageReference Include="Flurl" Version="2.7.1" />
     <PackageReference Include="Flurl.Http" Version="2.3.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.1.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
-    <PackageReference Include="System.Reactive.Linq" Version="4.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="2.2.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="System.Reactive.Linq" Version="4.2.0-preview.625" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
   </ItemGroup>
 
