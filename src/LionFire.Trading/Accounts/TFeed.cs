@@ -29,9 +29,11 @@ namespace LionFire.Trading.Accounts
 
         public string Key => BrokerName + "^" + AccountId;
 
-        public List<ITemplate> Children { get; set; }
+        public List<IInstantiation> Children { get; set; }
+        IEnumerable<IInstantiation> IHierarchicalTemplate.Children => Children;
 
         // MOVE this to Workspace, don't put startup preferences here.
         public ExecutionStateEx DesiredExecutionState { get; set; }
+
     }
 }

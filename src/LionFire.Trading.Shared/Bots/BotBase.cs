@@ -19,6 +19,7 @@ using LionFire.Trading.Link.Messages;
 using LionFire.Trading.Link;
 using LionFire.ExtensionMethods.Copying;
 using LionFire.Threading;
+using System.Text.Json;
 #if cAlgo
 using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
@@ -404,8 +405,8 @@ where TBotType : TBot, ITBot, new()
 
         public BotBase()
         {
-#if cAlgo
-            if (LionFireEnvironment.MainAppInfo != null)
+#if cTrader
+            if (!LionFireEnvironment.IsMainAppInfoSet)
             {
                 LionFireEnvironment.MainAppInfo = new AppInfo()
                 {
@@ -1573,6 +1574,10 @@ where TBotType : TBot, ITBot, new()
 
         private static int saveCounter = 0;
 
+        private static JsonSerializerOptions JsonSerializerOptions = new JsonSerializerOptions()
+        {
+           //PropertyNamingPolicy  
+        };
         private void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string id, string backtestFlags = null)
         {
             var duration = backtestResult.End.Value - backtestResult.Start.Value;
@@ -1618,6 +1623,7 @@ where TBotType : TBot, ITBot, new()
             using (var stream = new FileStream(GetSavePath(BacktestSaveType.Result, args, backtestResult, fitness, id, duration, backtestFlags), FileMode.Create))
             {
                 Utf8Json.JsonSerializer.Serialize(stream, backtestResult);
+                //System.Text.Json.JsonSerializer.SerializeAsync(stream, backtestResult);
             }
 #endif
 
@@ -1633,6 +1639,8 @@ where TBotType : TBot, ITBot, new()
                 using (var stream = new FileStream(GetSavePath(BacktestSaveType.Trades, args, backtestResult, fitness, id, duration, backtestFlags), FileMode.Create))
                 {
                     Utf8Json.JsonSerializer.Serialize(stream, args.History.ToArray());
+                    // System.Text.Json.JsonSerializer.SerializeAsync(stream, args.History.ToArray());
+                    //System.Text.Json.JsonSerializer.SerializeAsync(stream, args.History);
                 }
 #endif
 

@@ -12,6 +12,7 @@ using System;
 using System.Collections.Specialized;
 using LionFire.Structures;
 using System.IO;
+using LionFire.Persistence;
 
 namespace LionFire.Notifications.Wpf.App
 {
@@ -42,7 +43,7 @@ namespace LionFire.Notifications.Wpf.App
 
         public IFeed DefaultFeed => feeds.Values.FirstOrDefault() ?? accounts.Values.FirstOrDefault();
 
-        FsObjectCollection<PriceNotifier> alerts;
+        //FsObjectCollection<PriceNotifier> alerts; // TODO
 
         public Task Start()
         {
@@ -69,29 +70,30 @@ namespace LionFire.Notifications.Wpf.App
                     }
                 }
             }
-            
-            alerts = new FsObjectCollection<PriceNotifier>()
-            {
 
-                RootPath = Path.Combine(LionFireEnvironment.Directories.GetProgramDataDir("Trading"), "Alerts")
-            };
+            //alerts = new FsObjectCollection<PriceNotifier>() // TODO
+            //{
 
-            alerts.Handles.Removed += (k, v) => {
-                if (v.HasObject) {
-                    v.Object.Detach();
-                }
-            };
-            
+            //    RootPath = Path.Combine(LionFireEnvironment.Directories.GetProgramDataDir("Trading"), "Alerts")
+            //};
+
+            //alerts.Handles.Removed += (k, v) => { // TODO
+            //    if (v.HasObject) {
+            //        v.Object.Detach();
+            //    }
+            //};
+
 
             //foreach (var alert in AssetProviderExtensions.Find<TPriceAlert>())
-            foreach (var alert in alerts.Handles)
-            {
-                var priceAlert = alert.Value.Object;
-                priceAlert.Attach(DefaultFeed);
-                //await (priceAlert as IStartable)?.Start();
-                priceAlerts.Add(priceAlert);
+            throw new NotImplementedException("TODO: FsObjectCollection alerts");
+            //foreach (var alert in alerts.Handles) // TODO
+            //{
+            //    var priceAlert = alert.Value.Object;
+            //    priceAlert.Attach(DefaultFeed);
+            //    //await (priceAlert as IStartable)?.Start();
+            //    priceAlerts.Add(priceAlert);
 
-            }
+            //}
 
             return Task.CompletedTask;
         }

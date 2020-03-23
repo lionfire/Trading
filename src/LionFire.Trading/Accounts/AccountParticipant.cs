@@ -16,6 +16,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using LionFire.States;
 using LionFire.Messaging;
+using LionFire.Dependencies;
 
 namespace LionFire.Trading
 {

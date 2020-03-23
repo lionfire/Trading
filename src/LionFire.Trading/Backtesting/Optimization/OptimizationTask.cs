@@ -10,6 +10,8 @@ namespace LionFire.Trading.Backtesting.Optimization
     public class TOptimizationTask : IHierarchicalTemplate, ITemplate<OptimizationTask>
     {
         public List<ITemplate> Children { get; set; }
+
+        IEnumerable<IInstantiation> IHierarchicalTemplate.Children => Children?.OfType<IInstantiation>(); // TODO: Cast/wrap to IInstantiation?  REVIEW the IHierarchicalTemplate interface.
     }
 
     public class OptimizationTask : AppTask

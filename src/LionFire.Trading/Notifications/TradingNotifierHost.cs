@@ -19,13 +19,15 @@ namespace LionFire.Trading.Notifications
     public class TradingNotifierHost : InitializableExecutableBase, ITradingNotifierHost, IStartable, IStoppable, IComposition
     {
         // FUTURE: Change this collection type to an interface?  IHandleDirectory?
-        public FsObjectCollection<Notifier> Notifiers => notifiers;
-        FsObjectCollection<Notifier> notifiers = new FsObjectCollection<Notifier>(Path.Combine(LionFireEnvironment.Directories.GetProgramDataDir("Trading"), "Alerts"));
+        //public FsObjectCollection<Notifier> Notifiers => notifiers;
+        //FsObjectCollection<Notifier> notifiers = new FsObjectCollection<Notifier>(Path.Combine(LionFireEnvironment.Directories.GetProgramDataDir("Trading"), "Alerts"));
+        // TODO: FsObjectCollection Notifiers
 
         public IEnumerable<object> Children { get { return Notifiers.Objects; } }
 
         public TradingNotifierHost()
         {
+            throw new NotImplementedException("TODO: FsObjectCollection Notifiers");
             notifiers.IsObjectsEnabled = true;
             notifiers.ObjectsCollectionChanged += Notifiers_ObjectsCollectionChanged;
         }

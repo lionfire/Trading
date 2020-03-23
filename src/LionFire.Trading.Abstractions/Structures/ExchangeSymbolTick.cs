@@ -20,6 +20,7 @@ namespace LionFire.Trading
         public string Symbol { get; set; }
         public double Bid { get; set; }
         public double Ask { get; set; }
+        public double Spread => Ask - Bid;
         public double Avg => (Bid + Ask) / 2;
         public double Last { get; set; }
         public DateTime Date { get; set; }

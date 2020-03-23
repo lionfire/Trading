@@ -6,6 +6,9 @@ using System.IO;
 using System.Reflection;
 using LionFire.Persistence.Handles;
 using LionFire.Persistence;
+using MorseCode.ITask;
+using LionFire.Resolves;
+using LionFire.Persistence.Filesystem;
 #if !cAlgo
 using LionFire.Parsing.String;
 #endif
@@ -14,17 +17,23 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Backtesting
 {
     // REFACTOR - Compare with BacktestResultItem
-    public class BacktestResultHandle : RBase<BacktestResult>
+    public class BacktestResultHandle : ReadHandleBase<FileReference, BacktestResult>
     {
-        public static implicit operator BacktestResultHandle(BacktestResult r)
+        public static implicit operator BacktestResultHandle(BacktestResult r) => new BacktestResultHandle(r);
+
+        public BacktestResultHandle() { }
+        public BacktestResultHandle(BacktestResult backtestResult)
         {
-            return new BacktestResultHandle { Object = r };
+            base.ProtectedValue = backtestResult;
         }
 
+        protected override ITask<IResolveResult<BacktestResult>> ResolveImpl() => throw new NotImplementedException();
+#if TODO
         public override Task<IRetrieveResult<BacktestResult>> RetrieveImpl()
         {
             if (_object == null && Path != null)
             {
+#if NewtonsoftJson
                 try
                 {
                     _object = Newtonsoft.Json.JsonConvert.DeserializeObject<BacktestResult>(System.IO.File.ReadAllText(Path));
@@ -34,9 +43,13 @@ namespace LionFire.Trading.Backtesting
                     }
                 }
                 catch { }
+#else
+                throw new NotImplementedException("TODO: JSON deserialize");
+#endif
             }
-            return Task.FromResult(HasObject ? (IRetrieveResult<BacktestResult>)RetrieveResult<BacktestResult>.Success(_object) : RetrieveResult<BacktestResult>.NotFound);
+            return Task.FromResult(HasValue ? (IRetrieveResult<BacktestResult>)RetrieveResult<BacktestResult>.Success(_object) : RetrieveResult<BacktestResult>.NotFound);
         }
+#endif
 
         public BacktestResultHandle Self { get { return this; } } // REVIEW - another way to get context from datagrid: ancestor row?
         public string Path { get => Key; set => Key = value; }
@@ -212,7 +225,7 @@ namespace LionFire.Trading.Backtesting
 
 
         public override string ToString() => this.ToXamlAttribute();
-        
+
     }
 
 }

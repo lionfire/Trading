@@ -498,7 +498,7 @@ namespace LionFire.Trading.Workspaces
         {
             if (account == null) throw new ArgumentNullException(nameof(account));
 
-            if (backtestResult == null) backtestResult = backtestResultHandle?.Object;
+            if (backtestResult == null) backtestResult = backtestResultHandle?.Value;
 
             if (bot == null)
             {

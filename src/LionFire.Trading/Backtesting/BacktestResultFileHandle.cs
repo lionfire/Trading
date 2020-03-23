@@ -1,7 +1,9 @@
 ﻿//using BlazorComponents.ChartJS;
 using LionFire.Trading;
 using LionFire.Trading.Backtesting;
+#if NewtonsoftJson
 using Newtonsoft.Json;
+#endif
 using System.IO;
 using System.Threading.Tasks;
 using LionFire.Parsing.String;
@@ -20,7 +22,7 @@ namespace LionFire.Trading.Backtesting
         public string Id => Meta.Id;
                 
 
-        #region Path
+#region Path
 
         public string Path
         {
@@ -39,7 +41,7 @@ namespace LionFire.Trading.Backtesting
         }
         private string path;
 
-        #endregion
+#endregion
 
         public void Load()
         {

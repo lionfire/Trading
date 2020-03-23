@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using LionFire.Trading.Workspaces;
 using LionFire.Trading.Statistics;
 using LionFire.DependencyInjection;
+using LionFire.Dependencies;
 
 namespace LionFire.Trading.Accounts
 {

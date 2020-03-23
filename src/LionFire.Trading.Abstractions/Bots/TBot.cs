@@ -11,7 +11,7 @@ using LionFire.Persistence;
 namespace LionFire.Trading.Bots
 {
     
-    [AssetPath("Algos")]
+    //[AssetPath("Algos")]
     public class TBot :  ITBot
         , ITemplate
         //ITemplateAsset

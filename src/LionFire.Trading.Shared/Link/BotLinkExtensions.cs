@@ -5,7 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using LionFire.Trading.Bots;
 using LionFire.Trading.Link.Messages;
+#if NewtonsoftJson
 using Newtonsoft.Json;
+#else
+using System.Text.Json;
+#endif
 
 namespace LionFire.Trading
 {
@@ -120,14 +124,29 @@ namespace LionFire.Trading
         }
         public static event Action<Exception> LinkSendException;
 
+
+#if NewtonsoftJson
         private static JsonSerializerSettings JsonSerializerSettings = new JsonSerializerSettings
         {
             TypeNameHandling = TypeNameHandling.All
         };
+#else
+        private static JsonSerializerOptions JsonSerializerSettings = new JsonSerializerOptions
+        {
+            AllowTrailingCommas = true, 
+            PropertyNameCaseInsensitive = false,
+            //TypeNameHandling = TypeNameHandling.All // TODO: Is there an equivalient?
+        };
+
+#endif
 
         private static string Serialize(object obj)
         {
+#if NewtonsoftJson
             string json = JsonConvert.SerializeObject(obj, Formatting.None, JsonSerializerSettings);
+#else
+            string json = JsonSerializer.Serialize(obj, obj.GetType(), JsonSerializerSettings);
+#endif
             return json;
         }
     }

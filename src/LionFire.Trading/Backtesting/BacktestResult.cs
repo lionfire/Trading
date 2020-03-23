@@ -1,5 +1,4 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
 using System.Collections.Generic;
 using System.Linq;
 using LionFire.Parsing.String;
@@ -9,7 +8,10 @@ using LionFire.Trading.Bots;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.ComponentModel.DataAnnotations.Schema;
+#if NewtonsoftJson
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+#endif
 using System.Runtime.Serialization;
 
 namespace LionFire.Trading.Backtesting
@@ -30,7 +32,7 @@ namespace LionFire.Trading.Backtesting
     public class BacktestResult : IDisposable
     {
 
-        #region Identity
+#region Identity
 
         [Key]
         [Required]
@@ -40,9 +42,9 @@ namespace LionFire.Trading.Backtesting
         public string Key => Id;
         public string GetKey() => Id;
 
-        #endregion
+#endregion
 
-        #region Relationships
+#region Relationships
 
         public BacktestResultConfig BacktestResultConfig { get; set; }
 
@@ -52,7 +54,7 @@ namespace LionFire.Trading.Backtesting
         public bool HasTradeData { get; set; }
 
 
-        #endregion
+#endregion
 
         public string BotName { get; set; }
         public string Tags { get; set; }
@@ -65,7 +67,7 @@ namespace LionFire.Trading.Backtesting
         [Unit("sym", true)]
         public string Symbol { get; set; }
 
-        #region Derived
+#region Derived
 
         public TimeSpan Duration { get { return !Start.HasValue || !End.HasValue ? TimeSpan.Zero : End.Value - Start.Value; } }
 
@@ -83,7 +85,7 @@ namespace LionFire.Trading.Backtesting
         /// </summary>
         public double Aroi { get { return (NetProfit / InitialBalance) / (Duration.TotalDays / 365); } }
 
-        #endregion
+#endregion
 
         [Unit("bt", true)]
         public string BacktestInfo { get; set; }
@@ -131,9 +133,13 @@ namespace LionFire.Trading.Backtesting
         {
             get
             {
+#if NewtonsoftJson
                 dynamic tbot = (Config as JObject);
                 //var tbot = Config as Bots.TBot;
                 return tbot?.TimeFrame.Value;
+#else
+                return (Config as Bots.TBot)?.TimeFrame;
+#endif
             }
         }
 
@@ -175,6 +181,7 @@ namespace LionFire.Trading.Backtesting
                     if (templateType == null)
                     {
                         Debug.WriteLine($"Bot type not supported: {backtestResult.BotConfigType}");
+#if NewtonsoftJson
                         try
                         {
                             this.TBotJObject = (JObject)backtestResult.Config;
@@ -183,17 +190,23 @@ namespace LionFire.Trading.Backtesting
                         {
                             Debug.WriteLine($"Failed to assign Config to JObject.  Type: " + backtestResult.Config?.GetType()?.FullName);
                         }
+#endif
                         return null;
                         //throw new NotSupportedException($"Bot type not supported: {backtestResult.BotConfigType}");
                     }
 
+#if NewtonsoftJson
                     tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
+#else
+                    throw new NotImplementedException("TODO: Get TBot from backtestResult.Config");
+#endif
                 }
                 return tBot;
             }
         }
         private TBot tBot;
 
+#if NewtonsoftJson
         [JsonIgnore]
         [IgnoreDataMember]
         [NotMapped]
@@ -201,6 +214,7 @@ namespace LionFire.Trading.Backtesting
         {
             get; private set;
         }
+#endif // #else TODO
 
         public Type ResolveType(string typeName)
         {
@@ -215,7 +229,7 @@ namespace LionFire.Trading.Backtesting
             return result;
         }
 
-        #region IDisposable Support
+#region IDisposable Support
 
         private bool disposedValue = false; // To detect redundant calls
 
@@ -233,7 +247,9 @@ namespace LionFire.Trading.Backtesting
                 BacktestResultConfig = null;
                 Config = null;
                 tBot = null;
+#if NewtonsoftJson
                 TBotJObject = null;
+#endif
 
                 disposedValue = true;
             }
@@ -241,7 +257,7 @@ namespace LionFire.Trading.Backtesting
 
         public void Dispose() => Dispose(true);
 
-        #endregion
+#endregion
 
     }
 

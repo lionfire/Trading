@@ -17,6 +17,7 @@ using LionFire.Assets;
 using LionFire.Execution.Jobs;
 using LionFire.Trading.Data;
 using LionFire.Composables;
+using LionFire.Dependencies;
 
 namespace LionFire.Trading
 {
@@ -114,7 +115,7 @@ namespace LionFire.Trading
 
         public static void PrioritizeAndThrottleDataJobs(int maxJobs = 5)
         {
-            var jm = Defaults.Get<JobManager>();
+            var jm = DependencyLocator.Get<JobManager>();
 
             //jm.AddQueueWithPrioritizer<HistoricalDataJobPrioritizer>();
             jm.AddQueue(new JobQueue
