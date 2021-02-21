@@ -45,7 +45,7 @@ namespace LionFire.Notifications.Wpf.App
 
         //FsObjectCollection<PriceNotifier> alerts; // TODO
 
-        public Task Start()
+        public Task StartAsync(CancellationToken cancellationToken = default)
         {
             foreach (var accountName in Template.AccountNames)
             {

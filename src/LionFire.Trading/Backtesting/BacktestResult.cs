@@ -8,6 +8,7 @@ using LionFire.Trading.Bots;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.ComponentModel.DataAnnotations.Schema;
+using LionFire.Assets;
 #if NewtonsoftJson
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
@@ -28,11 +29,11 @@ namespace LionFire.Trading.Backtesting
         public byte[] ConfigDocument { get; set; }
     }
 
-    [Assets.AssetPath("Results")]
+    [Asset("Results")]
     public class BacktestResult : IDisposable
     {
 
-#region Identity
+        #region Identity
 
         [Key]
         [Required]
@@ -42,9 +43,9 @@ namespace LionFire.Trading.Backtesting
         public string Key => Id;
         public string GetKey() => Id;
 
-#endregion
+        #endregion
 
-#region Relationships
+        #region Relationships
 
         public BacktestResultConfig BacktestResultConfig { get; set; }
 
@@ -54,7 +55,7 @@ namespace LionFire.Trading.Backtesting
         public bool HasTradeData { get; set; }
 
 
-#endregion
+        #endregion
 
         public string BotName { get; set; }
         public string Tags { get; set; }
@@ -67,7 +68,7 @@ namespace LionFire.Trading.Backtesting
         [Unit("sym", true)]
         public string Symbol { get; set; }
 
-#region Derived
+        #region Derived
 
         public TimeSpan Duration { get { return !Start.HasValue || !End.HasValue ? TimeSpan.Zero : End.Value - Start.Value; } }
 
@@ -85,7 +86,7 @@ namespace LionFire.Trading.Backtesting
         /// </summary>
         public double Aroi { get { return (NetProfit / InitialBalance) / (Duration.TotalDays / 365); } }
 
-#endregion
+        #endregion
 
         [Unit("bt", true)]
         public string BacktestInfo { get; set; }
@@ -229,7 +230,7 @@ namespace LionFire.Trading.Backtesting
             return result;
         }
 
-#region IDisposable Support
+        #region IDisposable Support
 
         private bool disposedValue = false; // To detect redundant calls
 
@@ -257,7 +258,7 @@ namespace LionFire.Trading.Backtesting
 
         public void Dispose() => Dispose(true);
 
-#endregion
+        #endregion
 
     }
 

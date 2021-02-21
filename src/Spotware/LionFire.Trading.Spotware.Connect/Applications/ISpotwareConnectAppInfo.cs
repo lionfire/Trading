@@ -23,7 +23,7 @@ namespace LionFire.Trading.Spotware.Connect
         int? TradeApiPort { get; set; }
     }
 
-    [AssetPath("Apis/SpotwareConnect")]
+    [Asset("Apis/SpotwareConnect")]
     public class SpotwareConnectAppInfo : ISpotwareConnectAppInfo
     {
         public bool IsSandbox { get; set; }

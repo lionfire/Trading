@@ -9,5 +9,9 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating.Abstractions\LionFire.Instantiating.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />
   </ItemGroup>
-
+  
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
+  </ItemGroup>
+  
 </Project>

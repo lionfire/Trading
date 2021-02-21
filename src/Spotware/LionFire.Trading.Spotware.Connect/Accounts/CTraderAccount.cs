@@ -38,7 +38,7 @@ using LionFire.Threading;
 namespace LionFire.Trading.Spotware.Connect
 {
 
-    [AssetPath(@"Accounts/cTrader")]
+    [Asset(@"Accounts/cTrader")]
     public class TCTraderAccount : TAccount, ITemplate<CTraderAccount>, IAsset
     {
         public Type Type => throw new NotImplementedException();
@@ -56,7 +56,7 @@ namespace LionFire.Trading.Spotware.Connect
     //, IHasExecutionState, IChangesExecutionState
     {
 
-        
+
 
         #region Compile-time
 
@@ -172,7 +172,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         #endregion
 
-        public async Task Stop()
+        public async Task StopAsync(CancellationToken cancellationToken = default)
         {
             if (this.IsStarted())
             {
@@ -185,7 +185,7 @@ namespace LionFire.Trading.Spotware.Connect
             }
         }
 
-        public async Task Start()
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             if (this.IsStarted()) return;
 
@@ -761,7 +761,7 @@ namespace LionFire.Trading.Spotware.Connect
 
 
         #region Order Exe
-       
+
 
         public override TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default, double? takeProfitPips = default, double? marketRangePips = default, string comment = null)
         {
@@ -781,7 +781,7 @@ namespace LionFire.Trading.Spotware.Connect
             return TradeResult.NotImplemented;
         }
 
-        
+
 
         #endregion
 

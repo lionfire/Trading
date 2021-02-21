@@ -19,7 +19,7 @@ using LionFire.ExtensionMethods;
 using LionFire.Instantiating.Templating;
 using System.Diagnostics;
 using LionFire.DependencyInjection;
-using LionFire.UI.Workspaces;
+using LionFire.UI;
 using LionFire.Validation;
 
 namespace LionFire.Trading.Workspaces
@@ -30,7 +30,7 @@ namespace LionFire.Trading.Workspaces
     /// Each user will typically work with one workspace.  
     /// FUTURE: Hierarchy of groups and sessions, allowing users to start/stop/view entire groups
     /// </summary>
-    [AssetPath("Workspaces")]
+    [Asset("Workspaces")]
     [HasDependencies]
     [State]
     public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 

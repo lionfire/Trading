@@ -35,6 +35,8 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Reactive\LionFire.Reactive.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing.Abstractions\LionFire.Referencing.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing\LionFire.Referencing.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.UI.Entities\LionFire.UI.Entities.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.UI.Workspaces\LionFire.UI.Workspaces.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Link.Abstractions\LionFire.Trading.Link.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Environment\LionFire.Environment.csproj" />
@@ -44,15 +46,15 @@
   <ItemGroup>
     <PackageReference Include="DeferredEvents" Version="1.0.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.7" />
-    <PackageReference Include="System.Collections.Immutable" Version="1.7.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="5.0.0" />
+    <PackageReference Include="System.Collections.Immutable" Version="5.0.0" />
     <PackageReference Include="System.Reactive" Version="4.3.2" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="3.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="5.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="5.0.0" />
     <PackageReference Include="System.ObjectModel" Version="4.3.0" />
     <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
     <PackageReference Include="System.Reflection" Version="4.3.0" />
@@ -67,12 +69,6 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'net462' ">
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Reference Include="LionFire.Persistence.Filesystem">
-      <HintPath>..\..\..\Core\bin\LionFire.Persistence.Filesystem\Debug\netstandard2.0\LionFire.Persistence.Filesystem.dll</HintPath>
-    </Reference>
   </ItemGroup>
 
   <Import Project="..\LionFire.Trading.Shared\LionFire.Trading.Shared.projitems" Label="Shared" />

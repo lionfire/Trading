@@ -54,7 +54,7 @@ namespace LionFire.Trading.Workspaces
     }
 
 
-    [AssetPath("Workspaces")]
+    [Asset("Workspaces")]
     public class TTradingWorkspace : ITemplate<TradingWorkspace>, INotifyPropertyChanged, IChanged, IValidatable, INotifyOnSaving, IEnableable
     {
         #region Identity

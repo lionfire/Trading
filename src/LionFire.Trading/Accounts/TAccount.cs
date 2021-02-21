@@ -9,7 +9,7 @@ using LionFire.Execution;
 namespace LionFire.Trading.Accounts
 {
 
-    [AssetPath(@"Accounts")]
+    [Asset(@"Accounts")] 
     public abstract class TAccount : TFeed
     {
         
@@ -24,8 +24,8 @@ namespace LionFire.Trading.Accounts
 
         #region Derived
 
-        public bool IsDemo { get { return !IsLive; } }
-        
+        public bool IsDemo => !IsLive;
+
 
         #endregion
     }
