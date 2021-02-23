@@ -3,6 +3,7 @@ using System.Text;
 
 namespace LionFire.Trading
 {
+    
     /// <remarks>
     /// Used by: Bitfinex redis feed
     /// </remarks>

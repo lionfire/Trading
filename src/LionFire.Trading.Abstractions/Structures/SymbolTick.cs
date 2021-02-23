@@ -5,7 +5,15 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public struct SymbolTick
+    public struct SymbolTick2 // RENAME to SymbolTick
+    {
+        public DateTime DateTime { get; set; }
+        public string Symbol { get; set; }
+        public PriceKind Kind { get; set; }
+        public decimal Price { get; set; }
+    }
+
+    public struct SymbolTick // RENAME to SymbolBidAskTick
     {
         public string Symbol;
 
