@@ -1,16 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using LionFire.Collections;
 using LionFire.Trading.Notifications;
 
 namespace LionFire.Trading.Notifications
 {
-    public interface IPriceAlerts
+    public interface IPriceWatchRepository : INotifyCollectionChanged<PriceWatch>
     {
-        //[Obsolete]
-        //void Add(TPriceAlert priceAlert);
+        // TODO: List
 
-        event Action<ExchangeSymbolTick> PriceChanged;
-        
+        IAsyncEnumerable<PriceWatch> List();
+
         Task Add(PriceWatch priceWatch);
         Task Remove(PriceWatch priceWatch);
     }

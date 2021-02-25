@@ -69,7 +69,11 @@ namespace LionFire.Trading.Notifications
 
         #region Parameters
 
-        public Notifier Notifier { get; set; }
+        /// <summary>
+        /// Named profile owned by the User
+        /// </summary>
+        public string Profile { get; set; }
+
         public string Exchange { get; set; }
 
         public PriceKind PriceKind { get; set; }
@@ -118,23 +122,30 @@ namespace LionFire.Trading.Notifications
 
         public PriceWatch()
         {
-            Notifier = new Notifier();
         }
-
-        public PriceWatch(string symbol, string op, decimal price) : this()
+        public PriceWatch(string key, string value, decimal price) : this()
         {
-            this.Symbol = symbol;
-            this.Operator = op;
-            this.Price = price;
+            this.DecodeValue(key, value, price);
         }
 
-        public PriceWatch(Importance importance, Urgency urgency, string symbol, string op, decimal price)
-            : this(symbol, op, price)
-        {
-            Notifier.Importance = importance;
-            Notifier.Urgency = urgency;
+        //public static PriceWatch Deserialize(string key, string value, decimal price) : this()
+        //{
+        //    this.DecodeValue(key, value, price);
+        //}
 
-        }
+        //public PriceWatch(string symbol, string op, decimal price) : this()
+        //{
+        //    this.Symbol = symbol;
+        //    this.Operator = op;
+        //    this.Price = price;
+        //}
+
+        //public PriceWatch(Importance importance, Urgency urgency, string symbol, string op, decimal price)
+        //    : this(symbol, op, price)
+        //{
+        //    Notifier.Importance = importance;
+        //    Notifier.Urgency = urgency;
+        //}
 
         #endregion
 
@@ -154,63 +165,133 @@ namespace LionFire.Trading.Notifications
 
         // REVIEW
 
+        public uint UserId { get; set; }
+
         public string EncodeValue()
         {
-            var sb = new StringBuilder($"e:{Exchange} s:{Symbol} o:{Operator} p:{Price} r:{Notifier?.Profile}");
+                var sb = new StringBuilder();
+                sb.Append("u:");
+                sb.Append(UserId);
 
-            if (Notifier.Importance != default(int))
+                sb.Append(" p:");
+                sb.Append(Price);
+
+            //var sb = new StringBuilder($"e:{Exchange} s:{Symbol} o:{Operator} p:{Price} r:{Notifier?.Profile}");
+            
+            if (Profile != default)
             {
-                sb.Append(" !:");
-                sb.Append(Notifier.Importance.ToString());
+                sb.Append(" r:");
+                sb.Append(Profile);
             }
 
-            if (Notifier.Urgency != default(int))
-            {
-                sb.Append(" ^:");
-                sb.Append(Notifier.Urgency.ToString());
-            }
+            //if (Notifier.Importance != default(int))
+            //{
+            //    sb.Append(" !:");
+            //    sb.Append(Notifier.Importance.ToString());
+            //}
 
-            if (PriceKind != default(PriceKind))
-            {
-                sb.Append(" t:");
-                sb.Append(PriceKind.ToString());
-            }
+            //if (Notifier.Urgency != default(int))
+            //{
+            //    sb.Append(" ^:");
+            //    sb.Append(Notifier.Urgency.ToString());
+            //}
+
+            //if (PriceKind != default(PriceKind))
+            //{
+            //    sb.Append(" t:");
+            //    sb.Append(PriceKind.ToString());
+            //}
 
             return sb.ToString();
         }
 
-        public void DecodeValue(string val)
+        public void DecodeParentKey(string parentKey)
         {
+            var chunks = parentKey.Split(':');
+
+            if (chunks.Length != 5) throw new ArgumentException("Format: watch:{ExchangeCode}:{Symbol}:{PriceKind}:{up | down}");
+
+            Exchange = chunks[1];
+            Symbol = chunks[2];
+            PriceKind = (PriceKind)Enum.Parse(typeof(PriceKind), chunks[3]);
+            Operator = chunks[4] == "Up" ? ">" : (chunks[4] == "Down" ? "<" : throw new ArgumentException("up/down missing"));
+
+            //foreach (var chunk in chunks)
+            //{
+
+            //    var kvp = chunk.Split(new char[] { ':' }, 2);
+            //    switch (kvp[0])
+            //    {
+            //        case "u":
+            //            UserId = UInt32.Parse(kvp[1]);
+            //            break;
+            //        case "e":
+            //            Exchange = kvp[1];
+            //            break;
+            //        case "s":
+            //            Symbol = kvp[1];
+            //            break;
+            //        case "o":
+            //            Operator = kvp[1];
+            //            break;
+            //        case "p":
+            //            Price = decimal.Parse(kvp[1]);
+            //            break;
+            //        case "r":
+            //            Profile = kvp[1];
+            //            break;
+            //        //case "!":
+            //        //    Notifier.Importance = (Importance)Enum.Parse(typeof(Importance), kvp[1]);
+            //        //    break;
+            //        //case "^":
+            //        //    Notifier.Urgency = (Urgency)Enum.Parse(typeof(Urgency), kvp[1]);
+            //        //    break;
+            //        case "t":
+            //            PriceKind = (PriceKind)Enum.Parse(typeof(PriceKind), kvp[1]);
+            //            break;
+            //        default:
+            //            break;
+            //    }
+            //}
+        }
+        public void DecodeValue(string parentKey, string val, decimal price)
+        {
+            Price = price;
+            DecodeParentKey(parentKey);
+
             var chunks = val.Split(' ');
             foreach (var chunk in chunks)
             {
                 var kvp = chunk.Split(new char[] { ':' }, 2);
                 switch (kvp[0])
                 {
-                    case "e":
-                        Exchange = kvp[1];
+                    case "u":
+                        UserId = UInt32.Parse(kvp[1]);
                         break;
-                    case "s":
-                        Symbol = kvp[1];
-                        break;
-                    case "o":
-                        Operator = kvp[1];
-                        break;
-                    case "p":
-                        Price = decimal.Parse(kvp[1]);
-                        break;
+                    //case "e":
+                    //    Exchange = kvp[1];
+                    //    break;
+                    //case "s":
+                    //    Symbol = kvp[1];
+                    //    break;
+                    //case "o":
+                    //    Operator = kvp[1];
+                    //    break;
+                    //case "p":
+                    //    Price = decimal.Parse(kvp[1]);
+                    //    break;
                     case "r":
-                        Notifier.Profile = kvp[1];
+                        Profile = kvp[1];
                         break;
-                    case "!":
-                        Notifier.Importance = (Importance)Enum.Parse(typeof(Importance), kvp[1]);
-                        break;
-                    case "^":
-                        Notifier.Urgency = (Urgency)Enum.Parse(typeof(Urgency), kvp[1]);
-                        break;
-                    case "t":
-                        PriceKind = (PriceKind)Enum.Parse(typeof(PriceKind), kvp[1]);
-                        break;
+                    //case "!":
+                    //    Notifier.Importance = (Importance)Enum.Parse(typeof(Importance), kvp[1]);
+                    //    break;
+                    //case "^":
+                    //    Notifier.Urgency = (Urgency)Enum.Parse(typeof(Urgency), kvp[1]);
+                    //    break;
+                    //case "t":
+                    //    PriceKind = (PriceKind)Enum.Parse(typeof(PriceKind), kvp[1]);
+                    //    break;
                     default:
                         break;
                 }
