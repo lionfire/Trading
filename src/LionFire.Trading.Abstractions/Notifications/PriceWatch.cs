@@ -72,7 +72,51 @@ namespace LionFire.Trading.Notifications
         /// <summary>
         /// Named profile owned by the User
         /// </summary>
-        public string Profile { get; set; }
+
+        #region Profile
+
+        const string codePrefix = "code:";
+        public string Profile
+        {
+            get
+            {
+                if (profile != null) return profile;
+                if (ProfileCode != null) return codePrefix + ProfileCode;
+                return null;
+            }
+            set
+            {
+                if (value?.StartsWith(codePrefix) == true)
+                {
+                    ProfileCode = value.Substring(codePrefix.Length);
+                    profile = null;
+                }
+                else
+                {
+                    profile = value;
+                    profileCode = null;
+                }
+            }
+        }
+        private string profile;
+
+        #endregion
+
+        #region ProfileCode
+
+        public string ProfileCode
+        {
+            get => profileCode;
+            set { profileCode = value; profile = null; }
+        }
+        private string profileCode;
+
+        #endregion
+
+
+
+
+
 
         public string Exchange { get; set; }
 
@@ -169,16 +213,21 @@ namespace LionFire.Trading.Notifications
 
         public string EncodeValue()
         {
-                var sb = new StringBuilder();
-                sb.Append("u:");
-                sb.Append(UserId);
+            var sb = new StringBuilder();
+            sb.Append("u:");
+            sb.Append(UserId);
 
-                sb.Append(" p:");
-                sb.Append(Price);
+            sb.Append(" p:");
+            sb.Append(Price);
 
             //var sb = new StringBuilder($"e:{Exchange} s:{Symbol} o:{Operator} p:{Price} r:{Notifier?.Profile}");
-            
-            if (Profile != default)
+
+            if (ProfileCode != null)
+            {
+                sb.Append(" c:");
+                sb.Append(ProfileCode);
+            }
+            else if (Profile != default)
             {
                 sb.Append(" r:");
                 sb.Append(Profile);
@@ -280,6 +329,9 @@ namespace LionFire.Trading.Notifications
                     //case "p":
                     //    Price = decimal.Parse(kvp[1]);
                     //    break;
+                    case "c":
+                        ProfileCode = kvp[1];
+                        break;
                     case "r":
                         Profile = kvp[1];
                         break;
