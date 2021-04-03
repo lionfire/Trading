@@ -36,4 +36,9 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Backtesting\" />
+    <Folder Include="Portfolios\" />
+  </ItemGroup>
+
 </Project>

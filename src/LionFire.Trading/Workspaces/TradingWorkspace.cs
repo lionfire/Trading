@@ -21,6 +21,7 @@ using System.Diagnostics;
 using LionFire.DependencyInjection;
 using LionFire.UI;
 using LionFire.Validation;
+using LionFire.UI.Workspaces;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -33,17 +34,17 @@ namespace LionFire.Trading.Workspaces
     [Asset("Workspaces")]
     [HasDependencies]
     [State]
-    public class TradingWorkspace : Workspace<TTradingWorkspace, WorkspaceItem>, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
+    public class TradingWorkspace : Workspace, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
     {
         public Type Type => typeof(TradingWorkspace);
-        AssetID IAsset.ID => throw new NotImplementedException();
+        //AssetID IAsset.ID => throw new NotImplementedException();
 
         // REVIEW - why is this needed -- does it make sense?
-        public string Key => Template?.Name;
+        //public string Key => Template?.Name;
 
         // FUTURE: Inject this after loading asset if it is not set
         // TEMP - TODO: Move subpath to be stored here, and inject it on load
-        public string AssetSubPath { get { return Template?.Name; } set { Template.Name = value; } }
+        //public string AssetSubPath { get { return Template?.Name; } set { Template.Name = value; } }
 
         //public IEnumerable<IFeed> NotificationFeeds { get; } // Feed(s) used for Price notfications??
 
@@ -139,12 +140,12 @@ namespace LionFire.Trading.Workspaces
 
         public void LoadWorkspaceItems()
         {
-            foreach (var tItem in Template.Items)
-            {
-                var workspaceItem = tItem.Create();
-                if (tItem.Id == null) { tItem.Id = Guid.NewGuid().ToString(); }
-                Add(workspaceItem);
-            }
+            //foreach (var tItem in Template.Items)
+            //{
+            //    var workspaceItem = tItem.Create();
+            //    if (tItem.Id == null) { tItem.Id = Guid.NewGuid().ToString(); }
+            //    Add(workspaceItem);
+            //}
         }
 
         public WorkspaceInfo Info { get; set; }
