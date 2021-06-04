@@ -16,6 +16,9 @@ using LionFire.Persistence;
 
 namespace LionFire.Notifications.Wpf.App
 {
+     // Where did this class go?
+    public class PriceNotifier { }
+
     public class STradingNotificationsService : IStartable, ITemplateInstance<TradingNotificationsService>
     {
         public TradingNotificationsService Template { get; set; }
