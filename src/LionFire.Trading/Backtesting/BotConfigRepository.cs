@@ -1,4 +1,6 @@
-﻿using LionFire.Instantiating;
+﻿using LionFire.Applications;
+using LionFire.Dependencies;
+using LionFire.Instantiating;
 using LionFire.Trading.Bots;
 using Newtonsoft.Json;
 using System;
@@ -11,7 +13,7 @@ namespace LionFire.Trading.Bots
 {
     public class BotConfigRepository
     {
-        public static string ConfigDir { get { return Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, @"Algos"); } } 
+        public static string ConfigDir { get { return Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, @"Algos"); } } 
 
         public static async Task<string> SaveConfig(IBot bot)
         {

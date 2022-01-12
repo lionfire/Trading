@@ -23,5 +23,13 @@ namespace LionFire.Trading
         decimal? TakeProfit { get; }
         TradeKind TradeType { get; }
         long Volume { get; }
+
+
+
+        decimal? LastPrice { get; set; }
+        decimal? LiqPrice { get; set; }
+        decimal? MarkPrice { get; set; }
+        decimal? UsdEquivalentQuantity { get; set; }
+
     }
 }

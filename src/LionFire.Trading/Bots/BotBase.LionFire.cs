@@ -16,13 +16,13 @@ namespace LionFire.Trading.Bots
 
     public partial class BotBase<TBotType> : BotBase
     {
-        public override bool CanStart
-        {
-            get
-            {
-                return this.Template.TimeFrame == "h1"; // TEMP FIXME - h1 only!
-            }
-        }
+        //public override bool CanStart
+        //{
+        //    get
+        //    {
+        //        return this.Template.TimeFrame == "h1"; // TEMP FIXME - h1 only!
+        //    }
+        //}
     }
 
     public partial class BotBase : AccountParticipant, IBot, IStartable, IStoppable
@@ -70,7 +70,7 @@ namespace LionFire.Trading.Bots
 
         #region Positions
 
-        public IPositions Positions
+        public IPositionsDouble Positions
         {
             get
             {
@@ -80,12 +80,12 @@ namespace LionFire.Trading.Bots
 
         #region Position Methods
 
-        public TradeResult ClosePosition(Position position)
+        public TradeResult ClosePosition(PositionDouble position)
         {
             return Account?.ClosePosition(position);
         }
 
-        public TradeResult ModifyPosition(Position position, double? StopLoss, double? TakeProfit)
+        public TradeResult ModifyPosition(PositionDouble position, double? StopLoss, double? TakeProfit)
         {
             return Account?.ModifyPosition(position, StopLoss, TakeProfit);
         }

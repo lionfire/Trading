@@ -98,7 +98,7 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
-        public IEnumerable<Position> MyPositions
+        public IEnumerable<PositionDouble> MyPositions
         {
             get {
                 return base.Positions.Where(p => p.Label == this.Label);
@@ -216,7 +216,7 @@ namespace LionFire.Trading.Bots
                     _Open(TradeType.Sell, Indicator.ShortStopLoss);
                 }
 
-                List<Position> toClose = null;
+                List<PositionDouble> toClose = null;
                 if (Indicator.CloseLongPoints.LastValue >= 1.0)
                 {
                     foreach (var position in MyPositions.Where(p => p.TradeType == TradeType.Buy))
@@ -226,7 +226,7 @@ namespace LionFire.Trading.Bots
                         string plus = position.NetProfit > 0 ? "+" : "";
                         logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE LONG {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Ask}] {plus}{position.NetProfit}");
 #endif
-                        if (toClose == null) toClose = new List<Position>();
+                        if (toClose == null) toClose = new List<PositionDouble>();
                         toClose.Add(position);
                     }
                 }
@@ -239,7 +239,7 @@ namespace LionFire.Trading.Bots
                         string plus = position.NetProfit > 0 ? "+" : "";
                         logger.LogInformation($"{Server.Time.ToDefaultString()} [CLOSE SHORT {position.Quantity} x {Symbol.Code} @ {Indicator.Symbol.Bid}] {plus}{position.NetProfit}");
 #endif
-                        if (toClose == null) toClose = new List<Position>();
+                        if (toClose == null) toClose = new List<PositionDouble>();
                         toClose.Add(position);
                     }
                 }
@@ -276,7 +276,7 @@ namespace LionFire.Trading.Bots
 
         #endregion
 
-        public Dictionary<Position, BotPosition> BotPositionDict = new Dictionary<Position, BotPosition>();
+        public Dictionary<PositionDouble, BotPosition> BotPositionDict = new Dictionary<PositionDouble, BotPosition>();
 
         #region Position Management
 

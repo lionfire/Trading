@@ -426,14 +426,18 @@ namespace LionFire.Trading
             get { return true; }
         }
 
-        public async Task Start()
+        public async Task StartAsync(CancellationToken cancellationToken = default )
         {
             if (this.IsStarted()) return;
 
 
             desiredExecutionState = ExecutionStateEx.Started; // REVIEW - have a single input/output
 
-            if (!CanStart) return; // TODO: Error?
+            if (!CanStart)
+            {
+                throw new Exception("!CanStart");
+                //return; // TODO: Error?
+            }
 
             StartOnMarketAvailable = true;
 
@@ -506,7 +510,7 @@ namespace LionFire.Trading
 
                 foreach (var child in Children.OfType<IStartable>())
                 {
-                    await child.Start().ConfigureAwait(false);
+                    await child.StartAsync().ConfigureAwait(false);
                 }
             }
             catch (Exception ex)
@@ -535,7 +539,7 @@ namespace LionFire.Trading
                 {
                     //await child.Stop(StopMode.CriticalFailure, StopOptions.StopChildren).ConfigureAwait(false);
 
-                    await child.Stop().ConfigureAwait(false);
+                    await child.StopAsync().ConfigureAwait(false);
                 }
             }
             catch
@@ -588,7 +592,7 @@ namespace LionFire.Trading
             }
             foreach (var child in Children.OfType<IStoppable>())
             {
-                await child.Stop().ConfigureAwait(false);
+                await child.StopAsync().ConfigureAwait(false);
             }
 
             SetState(ExecutionStateEx.Stopped);
@@ -604,7 +608,7 @@ namespace LionFire.Trading
             logger.LogInformation($"------- STOP {this} -------");
         }
 
-        public virtual async Task Stop()
+        public virtual async Task StopAsync(CancellationToken cancellationToken = default)
         {
             await DoStop().ConfigureAwait(false);
         }
@@ -615,7 +619,7 @@ namespace LionFire.Trading
         {
             if (StartOnMarketAvailable)
             {
-                await Start().ConfigureAwait(false);
+                await StartAsync().ConfigureAwait(false);
             }
         }
 

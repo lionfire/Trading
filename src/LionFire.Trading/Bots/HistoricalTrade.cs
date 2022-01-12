@@ -34,7 +34,7 @@ namespace LionFire.Trading
         public _HistoricalTrade()
         {
         }
-        internal _HistoricalTrade(BacktestAccount account, Position position)
+        internal _HistoricalTrade(BacktestAccount account, PositionDouble position)
         {
             this.Balance = account.Balance;
             //ClosingDealId = 

@@ -9,6 +9,8 @@ using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.ComponentModel.DataAnnotations.Schema;
 using LionFire.Assets;
+using LionFire.Types;
+using LionFire.Dependencies;
 #if NewtonsoftJson
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
@@ -219,13 +221,14 @@ namespace LionFire.Trading.Backtesting
 
         public Type ResolveType(string typeName)
         {
-            var result = TypeResolver.Default.TryResolve(typeName);
+            var tr = DependencyContext.Current.GetService<TypeResolver>();
+            var result = tr.TryResolve(typeName);
             if (result != null) return result;
 
-            result = TypeResolver.Default.TryResolve(typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary"));
+            result = tr.TryResolve(typeName.Replace("LionFire.Trading.cTrader", "LionFire.Trading.Proprietary"));
             if (result != null) return result;
 
-            result = TypeResolver.Default.TryResolve(typeName.Replace("cAlgo.Robots.", "LionFire.Trading.Proprietary.Algos."));
+            result = tr.TryResolve(typeName.Replace("cAlgo.Robots.", "LionFire.Trading.Proprietary.Algos."));
 
             return result;
         }

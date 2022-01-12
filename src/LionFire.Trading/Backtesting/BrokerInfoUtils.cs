@@ -6,6 +6,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using LionFire.Assets;
+using LionFire.Dependencies;
+using LionFire.Applications;
 
 namespace LionFire.Trading
 {
@@ -24,7 +26,7 @@ namespace LionFire.Trading
 
     public class BrokerInfoUtils
     {
-        public static string BrokersDir { get { return Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir,  @"Brokers"); } } 
+        public static string BrokersDir { get { return Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir,  @"Brokers"); } } 
         public static string SymbolsDirName { get { return "Symbols"; } }
         public static string AccountInfoFileName { get { return "AccountInfo"; } }
         public static string FileSuffix { get { return ".json"; } }

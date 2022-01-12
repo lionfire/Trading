@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Trading.Workspaces;
 using LionFire.Trading.Statistics;
+using System.Threading;
 
 namespace LionFire.Trading
 {
@@ -39,7 +40,9 @@ namespace LionFire.Trading
         double Margin { get; }
         double MarginLevel { get; }
 
-        IPositions Positions { get; }
+        IPositionsDouble Positions { get; }
+        IPositions Positions2 { get; }
+        Task<IPositions> RefreshPositions(CancellationToken cancellationToken = default);
 
         IPendingOrders PendingOrders { get; }
 
@@ -47,6 +50,8 @@ namespace LionFire.Trading
 
         string StatusText { get; }
         event Action StatusTextChanged;
+
+        Task RefreshState();
 
         #endregion
 
@@ -77,8 +82,8 @@ namespace LionFire.Trading
 
         TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
 
-        TradeResult ClosePosition(Position position);
-        TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
+        TradeResult ClosePosition(PositionDouble position);
+        TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);
 
         #endregion
 

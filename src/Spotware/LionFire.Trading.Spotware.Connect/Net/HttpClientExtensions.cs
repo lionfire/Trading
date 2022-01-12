@@ -41,7 +41,7 @@ namespace LionFire.ExtensionMethods
 
         public static bool DebugHttpSuccess = true;
 
-        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> failureDetector = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount, Action<HttpResponseMessage> onFail = null, Func<bool> canContinue = null, CancellationToken? cancellationToken = null)
+        public static async Task<HttpResponseMessage> GetAsyncWithRetries(this HttpClient client, string uri, Predicate<HttpResponseMessage> failureDetector = null, int retryDelayMilliseconds = DefaultRetryDelayMilliseconds, int retryCount = DefaultRetryCount, Action<HttpResponseMessage> onFail = null, Func<bool> canContinue = null, CancellationToken cancellationToken = default)
         {
             HttpResponseMessage response = null;
             try

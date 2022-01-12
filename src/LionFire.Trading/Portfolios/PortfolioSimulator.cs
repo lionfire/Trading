@@ -1,5 +1,6 @@
-﻿using LionFire.ConsoleUtils;
+﻿//using LionFire.ConsoleUtils;
 using LionFire.ExtensionMethods;
+using LionFire.ExtensionMethods.Dumping;
 using LionFire.Extensions.Logging;
 using LionFire.Trading.Analysis;
 using LionFire.Trading.Instruments;

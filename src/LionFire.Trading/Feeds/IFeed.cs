@@ -21,36 +21,36 @@ namespace LionFire.Trading
 
         TFeed Template { get; }
 
-#region Server State
+        #region Server State
 
         DateTime ServerTime { get; }
         DateTime ExtrapolatedServerTime { get; }
         TimeZoneInfo TimeZone { get; }
 
-#endregion
+        #endregion
 
         bool TicksAvailable { get; }
 
 
-#region Events
+        #region Events
 
         event Action Ticked;
 
         IBehaviorObservable<bool> Started { get; }
 
-#endregion
+        #endregion
 
 
         //MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame);
         IEnumerable<string> SymbolsAvailable { get; }
         //IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol);
 
-#region Misc
+        #region Misc
 
         // TODO: Move to internal interface and use friend assemblies
         ILogger Logger { get; }
 
-#endregion
+        #endregion
 
     }
 
@@ -59,12 +59,14 @@ namespace LionFire.Trading
     public interface IFeed : IFeedCTrader
     //: ITemplateInstance<TFeed>
     {
+         bool IsStarted { get;  }
 
-#region Market Series
+
+        #region Market Series
 
         MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame);
 
-#endregion
+        #endregion
 
         Symbol GetSymbol(string symbolCode);
         //void TryAdd(Session session);

@@ -29,7 +29,7 @@ namespace LionFire.Trading
 
         public string SymbolCode { get; set; }
         public IAccount Account { get; set; }
-        public IPositions Positions { get { return Account.Positions; } }
+        public IPositionsDouble Positions { get { return Account.Positions; } }
         public IPendingOrders Orders { get { return Account.PendingOrders; } }
 
         public double LongPositions {

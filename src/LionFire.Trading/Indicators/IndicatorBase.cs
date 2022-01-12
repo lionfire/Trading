@@ -203,7 +203,7 @@ namespace LionFire.Trading.Indicators
                     // REvIEW - shouldn't be needed here?
                         child.Account = this.Account;
                     }
-                    child.Start();
+                    child.StartAsync();
 #endif
                 }
                 State = ExecutionStateEx.Ready;

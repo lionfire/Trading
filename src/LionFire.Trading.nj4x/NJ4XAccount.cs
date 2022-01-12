@@ -23,7 +23,7 @@ namespace LionFire.Trading.nj4x
             throw new NotImplementedException();
         }
 
-        public override TradeResult ClosePosition(Position position)
+        public override TradeResult ClosePosition(PositionDouble position)
         {
             throw new NotImplementedException();
         }
@@ -34,7 +34,7 @@ namespace LionFire.Trading.nj4x
             throw new NotImplementedException();
         }
 
-        public override TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit)
+        public override TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit)
         {
             throw new NotImplementedException();
         }

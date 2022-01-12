@@ -23,6 +23,8 @@ using LionFire.States;
 using LionFire.Threading.Tasks;
 using LionFire.Execution.Executables;
 using LionFire.DependencyInjection;
+using System.Threading;
+using LionFire.Dependencies;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -134,7 +136,7 @@ namespace LionFire.Trading.Workspaces
 
             Bots.CollectionChanged += (s, e) => RaiseChanged();
         }
-        
+
         #endregion
 
         #region Properties
@@ -293,7 +295,7 @@ namespace LionFire.Trading.Workspaces
                 symbolsAvailable = null;
                 if (wasStarted)
                 {
-                    Start().Wait();
+                    StartAsync().Wait(); // FIXME Async to sync
                 }
             }
         }
@@ -406,7 +408,7 @@ namespace LionFire.Trading.Workspaces
 
         #endregion
 
-        public Task Start()
+        public Task StartAsync(CancellationToken cancellationToken = default)
         {
             symbolsAvailable = null;
             //LiveAccount?.TryAdd(this);
@@ -636,7 +638,7 @@ namespace LionFire.Trading.Workspaces
         }
 
         #endregion
-        
+
 
         public override string ToString()
         {

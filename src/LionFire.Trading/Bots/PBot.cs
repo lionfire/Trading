@@ -47,7 +47,9 @@ namespace LionFire.Trading.Bots
         public object Affect(object obj, InstantiationContext context = null)
         {
             if (string.IsNullOrWhiteSpace(Id)) throw new ArgumentNullException(nameof(Id));
+            throw new NotImplementedException();
 
+#if TOPORT
             var tBot = (TBot)Id.Load(TypeName, context);
 
             if (tBot == null && !String.IsNullOrWhiteSpace(TypeName))
@@ -68,6 +70,7 @@ namespace LionFire.Trading.Bots
             }
 
             return null;
+#endif
         }
     }
 

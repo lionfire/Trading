@@ -73,8 +73,8 @@ namespace LionFire.Trading
             if (defaultOptions == null) { defaultOptions = DefaultTradingOptions; }
 
             // FUTURE: find another way to get this to app during ConfigureServices
-            TypeNamingContext tnc = ManualSingleton<TypeNamingContext>.GuaranteedInstance;
-            tnc.UseShortNamesForDataAssemblies = true;
+            //TypeNamingContext tnc = ManualSingleton<TypeNamingContext>.GuaranteedInstance;
+            //tnc.UseShortNamesForDataAssemblies = true;
 
             PrioritizeAndThrottleDataJobs();
 
@@ -84,7 +84,11 @@ namespace LionFire.Trading
                 //serviceCollection.Configure<TradingOptions>(opt => Configuration.GetSection("Trading").Bind(opt));
 
                 //app.ServiceCollection.AddSingleton<IAccountProvider, AccountProvider>(); FUTURE
+#if TOPORT
                 var tradingOptions = "Default".Load<TradingOptions>().Result;
+#else
+                TradingOptions tradingOptions = null;
+#endif
                 if (tradingOptions == null)
                 {
                     tradingOptions = defaultOptions;
@@ -104,18 +108,20 @@ namespace LionFire.Trading
 
                 //DependencyContext.SetSingletonDefault<TypeNamingContext>(tnc);  RECENTCHANGE - should no lonber be needed now that the app's IServiceProvider is used as the default for DependencyContext.
 
-                serviceCollection.AddSingleton(tnc);
+                //serviceCollection.AddSingleton(tnc);
             }));
 
 
+#if TOPORT
             AssetInstantiationStrategy.Enable();
+#endif
 
             return appHost;
         }
 
         public static void PrioritizeAndThrottleDataJobs(int maxJobs = 5)
         {
-            var jm = DependencyLocator.Get<JobManager>();
+            var jm = DependencyContext.Current.GetService<JobManager>();
 
             //jm.AddQueueWithPrioritizer<HistoricalDataJobPrioritizer>();
             jm.AddQueue(new JobQueue

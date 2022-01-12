@@ -13,6 +13,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Backtesting
@@ -23,7 +24,7 @@ namespace LionFire.Trading.Backtesting
 
         #region State
 
-        
+
 
         #region Equity
 
@@ -137,7 +138,7 @@ namespace LionFire.Trading.Backtesting
 
         #region Derived
 
-        
+
         public double MarginLevel { get { return Equity / MarginUsed; } }
         public double MarginLevelPercent { get { return 100.0 * Equity / MarginUsed; } }
 
@@ -159,10 +160,14 @@ namespace LionFire.Trading.Backtesting
         {
             if (isInitialized) return true;
 
+
             if (Template.SimulateAccount != null)
             {
+                throw new NotImplementedException();
+#if TOPORT
                 TAccount simulatedAccount = await Template.SimulateAccount.Load<TAccount>();
                 Template.AssignPropertiesFrom(simulatedAccount);
+#endif
             }
 
             this.TimeFrame = Template.TimeFrame;
@@ -191,7 +196,7 @@ namespace LionFire.Trading.Backtesting
 
             // TODO: Commission per trade on stocks!!
 
-            var p = new Position()
+            var p = new PositionDouble()
             {
                 Comment = comment,
                 Id = positionCounter++,
@@ -213,7 +218,7 @@ namespace LionFire.Trading.Backtesting
 
         }
 
-        public override TradeResult ClosePosition(Position position)
+        public override TradeResult ClosePosition(PositionDouble position)
         {
             if (!this.Positions.Contains(position))
             {
@@ -243,7 +248,7 @@ namespace LionFire.Trading.Backtesting
             };
         }
 
-        public override TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit)
+        public override TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit)
         {
             throw new NotImplementedException();
         }
@@ -365,12 +370,13 @@ namespace LionFire.Trading.Backtesting
         #region Market Series
 
         public override MarketSeries CreateMarketSeries(string code, TimeFrame timeFrame)
-        {            
+        {
             return new MarketSeries(this, code, timeFrame);
         }
 
         #endregion
 
+        public override Task<IPositions> RefreshPositions(CancellationToken cancellationToken = default) => Task.FromResult(Positions2);
 
         public override IEnumerable<string> SymbolsAvailable
         {

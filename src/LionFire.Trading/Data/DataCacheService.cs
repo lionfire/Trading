@@ -16,6 +16,7 @@ using LionFire.Extensions.Logging;
 using System.IO;
 using LionFire.Applications.Hosting;
 using LionFire.Applications;
+using System.Threading;
 
 namespace LionFire.Trading.Data
 {
@@ -74,13 +75,15 @@ namespace LionFire.Trading.Data
             Logger = this.GetLogger();
         }
 
-        public async Task Start()
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             State = ExecutionStateEx.Starting;
+#if TOPORT
             foreach (var workspace in App.GetComponents<TradingWorkspace>())
             {
                 await StartWorkspace(workspace);
             }
+#endif
 
             RunTask = runTask();
 
@@ -90,6 +93,7 @@ namespace LionFire.Trading.Data
             }
         }
 
+#if TOPORT
         private async Task StartWorkspace(TradingWorkspace workspace)
         {
             if (!workspace.Template.IsEnabled) return;
@@ -131,6 +135,7 @@ namespace LionFire.Trading.Data
             }
             startedWorkspaces.Add(workspace.Key, workspace);
         }
+#endif
 
         public Task RunTask { get; set; }
         private async Task runTask()
@@ -147,10 +152,10 @@ namespace LionFire.Trading.Data
         protected async Task OnCompleted()
         {
             CompletionCount++;
-            await Stop();
+            await StopAsync();
         }
 
-        public Task Stop()
+        public Task StopAsync(CancellationToken cancellationToken = default)
         {
             State = ExecutionStateEx.Stopping;
             foreach (var workspace in startedWorkspaces.Keys.ToArray())
@@ -169,11 +174,11 @@ namespace LionFire.Trading.Data
             }
         }
 
-        #endregion
+#endregion
 
-        #region State
+#region State
 
-        #region StartedWorkspaces
+#region StartedWorkspaces
 
         public ObservableDictionary<string, TradingWorkspace> StartedWorkspaces
         {
@@ -183,9 +188,9 @@ namespace LionFire.Trading.Data
 
         public IServiceProvider ServiceProvider { get; set; }
 
-        #endregion
+#endregion
 
-        #endregion
+#endregion
 
 
 

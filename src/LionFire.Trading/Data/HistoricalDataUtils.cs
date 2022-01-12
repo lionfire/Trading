@@ -1,4 +1,5 @@
 ﻿using LionFire.Applications;
+using LionFire.Dependencies;
 using LionFire.ExtensionMethods;
 using System;
 using System.Collections.Generic;
@@ -65,11 +66,11 @@ namespace LionFire.Trading.Data
 
         public static TimeSpan? GetDefaultMaxOutOfDate(MarketSeriesBase series)
         {
-            var bt = (series.HasAccount && series.Account.IsBacktesting) || !App.Get/*todo*/<TradingOptions>().Features.HasAnyFlag(TradingFeatures.Participants);
+            var bt = (series.HasAccount && series.Account.IsBacktesting) || !DependencyContext.Current.GetService<TradingOptions>().Features.HasAnyFlag(TradingFeatures.Participants);
 
             double totalSeconds = default(double);
 
-            var settings = App.GetComponent<DataMaxOutOfDateTimeSpans>();
+            var settings = DependencyContext.Current.GetService<DataMaxOutOfDateTimeSpans>();
             if (settings != null)
             {
                 totalSeconds = settings.TryGetValue(series.TimeFrame.TimeFrameUnit);

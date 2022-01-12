@@ -41,7 +41,7 @@ namespace LionFire.Trading.Bots
 
             this.Indicator.Account = Account; // 
 
-            await Indicator.Start().ConfigureAwait(false);
+            await Indicator.StartAsync().ConfigureAwait(false);
 
             //UpdateDesiredSubscriptions();
 

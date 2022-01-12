@@ -31,11 +31,11 @@ namespace LionFire.Trading
             get { return bot as ISingleChartBotEx; }
         }
 
-        public Position Position
+        public PositionDouble Position
         {
             get { return position; }
         }
-        Position position;
+        PositionDouble position;
 
         public Symbol Symbol
         {
@@ -92,7 +92,7 @@ namespace LionFire.Trading
         #endregion
 
 
-        public BotPosition(Position position, IBot bot, Symbol symbol, TradeType tradeType, double stopLossInPips, double takeProfitInPips, double volumeInUnits)
+        public BotPosition(PositionDouble position, IBot bot, Symbol symbol, TradeType tradeType, double stopLossInPips, double takeProfitInPips, double volumeInUnits)
         {
             this.bot = bot;
             this.position = position;
@@ -102,7 +102,7 @@ namespace LionFire.Trading
             {
                 double sl = symbol.GetStopLossFromPips(tradeType, stopLossInPips);
                 double tp = symbol.GetTakeProfitFromPips(tradeType, takeProfitInPips);
-                position = new Position()
+                position = new PositionDouble()
                 {
                     TradeType = tradeType,
                     StopLoss = sl,

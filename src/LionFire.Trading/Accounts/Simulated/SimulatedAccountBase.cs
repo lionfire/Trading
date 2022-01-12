@@ -429,7 +429,7 @@ namespace LionFire.Trading.Accounts
 
         public Task Start()
         {
-            RunTask = Task.Factory.StartNew(() => Run());
+            RunTask = Run();
             return Task.CompletedTask;
         }
 
@@ -437,11 +437,11 @@ namespace LionFire.Trading.Accounts
 
         int delayBetweenSteps = 0;
 
-        public void Run(int delayBetweenSteps = 0)
+        public async Task Run(int delayBetweenSteps = 0)
         {
             foreach (var p in Participants.OfType<IStartable>().ToArray()) // Indicators may be added during bot start
             {
-                p.Start().Wait();
+                await p.StartAsync();
             }
             simulationMilliseconds = (EndDate - StartDate).TotalMilliseconds;
             if (!(simulationMilliseconds > 0))

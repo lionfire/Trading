@@ -11,7 +11,7 @@ namespace LionFire.Trading
         public ErrorCode? Error { get; set; }
         public bool IsSuccessful { get; set; }
         public PendingOrder PendingOrder { get; set; }
-        public Position Position { get; set; }
+        public PositionDouble Position { get; set; }
 
         public string Message { get; set; }
         public override string ToString()

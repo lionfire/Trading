@@ -1,41 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public enum PositionCloseReason
+    public interface IPositions : IReadOnlyList<IPosition>
     {
-        Closed = 0,
-        StopLoss = 1,
-        TakeProfit = 2,
-        StopOut = 3,
+        IPosition Find(string label, Symbol symbol);
+
+        event Action<PositionClosedEventArgs2> Closed;
+
+        event Action<PositionOpenedEventArgs2> Opened;
     }
 
-    public class PositionClosedEventArgs
+    public class PositionClosedEventArgs2
     {
-        public PositionClosedEventArgs(Position position, PositionCloseReason reason)
+        public PositionClosedEventArgs2(IPosition position, PositionCloseReason reason)
         {
             this.Position = position;
             this.Reason = reason;
         }
 
-        public Position Position { get; set; }
+        public IPosition Position { get; set; }
         public PositionCloseReason Reason { get; set; }
     }
-
-    public class PositionOpenedEventArgs
+    public class PositionOpenedEventArgs2
     {
-        public Position Position { get; set; }
+        public IPosition Position { get; set; }
     }
 
-    public interface IPositions : IReadOnlyList<Position>
-    {
-        Position Find(string label, Symbol symbol);
-
-         event Action<PositionClosedEventArgs> Closed;
-
-         event Action<PositionOpenedEventArgs> Opened;
-    }
 }

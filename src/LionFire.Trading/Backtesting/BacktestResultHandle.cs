@@ -9,6 +9,8 @@ using LionFire.Persistence;
 using MorseCode.ITask;
 using LionFire.Resolves;
 using LionFire.Persistence.Filesystem;
+using LionFire.Dependencies;
+using LionFire.Applications;
 #if !cAlgo
 using LionFire.Parsing.String;
 #endif
@@ -17,7 +19,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Backtesting
 {
     // REFACTOR - Compare with BacktestResultItem
-    public class BacktestResultHandle : ReadHandleBase<FileReference, BacktestResult>
+    public class BacktestResultHandle : ReadHandleBase<FileReference<BacktestResult>, BacktestResult>
     {
         public static implicit operator BacktestResultHandle(BacktestResult r) => new BacktestResultHandle(r);
 
@@ -52,7 +54,7 @@ namespace LionFire.Trading.Backtesting
 #endif
 
         public BacktestResultHandle Self { get { return this; } } // REVIEW - another way to get context from datagrid: ancestor row?
-        public string Path { get => Key; set => Key = value; }
+        public string Path { get => Key.Path; set => Key = value; }
 
         [Unit("id=")]
         public string Id { get; set; }
@@ -67,7 +69,7 @@ namespace LionFire.Trading.Backtesting
         public string Symbol { get; set; }
 
         [Unit("tf=")]
-        public string TimeFrame { get { return timeFrame ?? Object?.TimeFrame; } set { timeFrame = value; } }
+        public string TimeFrame { get { return timeFrame ?? this.Value?.TimeFrame; } set { timeFrame = value; } }
         private string timeFrame;
 
         /// <summary>
@@ -97,7 +99,7 @@ namespace LionFire.Trading.Backtesting
             //bool gotAD = false;
             var filters = filterText?.Split(' ');
 
-            var dir = System.IO.Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, @"Results");
+            var dir = System.IO.Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, @"Results");
             foreach (var path in Directory.GetFiles(dir))
             {
                 var str = System.IO.Path.GetFileNameWithoutExtension(path);

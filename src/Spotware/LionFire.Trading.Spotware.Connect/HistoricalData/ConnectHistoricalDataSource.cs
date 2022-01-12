@@ -14,7 +14,7 @@ namespace LionFire.Trading.Connect
     public class ConnectHistoricalDataSource
     {
 
-        public string ConfigPath { get { return Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir,  @"Accounts\IC Markets.Demo.token.json"); } }
+        public string ConfigPath { get { return Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir,  @"Accounts\IC Markets.Demo.token.json"); } }
 
         private const string baseUrl = "https://api.spotware.com/connect";
         private const string TradingUrl = baseUrl + "/tradingaccounts";

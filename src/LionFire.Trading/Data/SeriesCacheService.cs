@@ -14,6 +14,8 @@ using LionFire.Validation;
 using LionFire.Execution.Executables;
 using System.Threading;
 using LionFire.DependencyInjection;
+using LionFire.Dependencies;
+using LionFire.Applications;
 
 namespace LionFire.Trading.Data
 {
@@ -225,7 +227,7 @@ namespace LionFire.Trading.Data
         //    this.TryResolveDependencies(ref validationContext));
         //}
 
-        public async Task Start()
+        public async Task StartAsync(CancellationToken cancellationToken = default)
         {
             (await Initialize()).EnsureValid();
 
@@ -244,7 +246,7 @@ namespace LionFire.Trading.Data
                 if (dirs.Count() >= 1)
                 {
                     var count = Convert.ToInt32(dirs.Last()) - Convert.ToInt32(dirs.First());
-                    string countIndicator = count > 0 ? Enumerable.Repeat("|", count).Aggregate((x,y)=>x+y) : "";
+                    string countIndicator = count > 0 ? Enumerable.Repeat("|", count).Aggregate((x, y) => x + y) : "";
                     logger.LogInformation($" - {Template.Symbol} {Template.TimeFrame.Name} cache: {dirs.First()}-{dirs.Last()} {countIndicator}");
                 }
             }
@@ -254,7 +256,7 @@ namespace LionFire.Trading.Data
                 if (files.Count() > 0)
                 {
                     var count = Convert.ToInt32(files.Last()) - Convert.ToInt32(files.First());
-                    string countIndicator = count > 0 ? Enumerable.Repeat("|", count).Aggregate((x,y)=>x+y) : "";
+                    string countIndicator = count > 0 ? Enumerable.Repeat("|", count).Aggregate((x, y) => x + y) : "";
                     logger.LogInformation($" - {Template.Symbol} {Template.TimeFrame.Name} cache: {files.First()}-{files.Last()} {countIndicator}");
                 }
             }
@@ -276,9 +278,9 @@ namespace LionFire.Trading.Data
             SetState(ExecutionStateEx.Starting, ExecutionStateEx.Started);
         }
 
-        protected void OnFinished()
+        protected Task OnFinished()
         {
-            Stop();
+            return StopAsync();
         }
 
         public void Cancel()
@@ -290,7 +292,7 @@ namespace LionFire.Trading.Data
 
         public Task RunTask { get; private set; }
 
-        public Task Stop()
+        public Task StopAsync(CancellationToken cancellationToken = default)
         {
             SetState(ExecutionStateEx.Started, ExecutionStateEx.Stopping);
             SetState(ExecutionStateEx.Stopping, ExecutionStateEx.Stopped);
@@ -333,7 +335,7 @@ namespace LionFire.Trading.Data
 
 
         //@"C:\ProgramData\LionFire\Trading\Data\IC Markets\AUDCAD\m1\2017\1"; 
-        public string RootDir { get; set; } = Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Data");
+        public string RootDir { get; set; } = Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Data");
 
         public IFeed Account => Template.Account;
 

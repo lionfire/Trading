@@ -13,11 +13,11 @@ using System.Collections.Specialized;
 using LionFire.Structures;
 using System.IO;
 using LionFire.Persistence;
+using System.Threading;
+using LionFire.Dependencies;
 
 namespace LionFire.Notifications.Wpf.App
 {
-     // Where did this class go?
-    public class PriceNotifier { }
 
     public class STradingNotificationsService : IStartable, ITemplateInstance<TradingNotificationsService>
     {
@@ -69,7 +69,7 @@ namespace LionFire.Notifications.Wpf.App
 
                     if (feed is IStartable startable)
                     {
-                        startable.Start();
+                        startable.StartAsync();
                     }
                 }
             }
@@ -108,10 +108,12 @@ namespace LionFire.Notifications.Wpf.App
 
         public Task Stop()
         {
+#if OLD
             foreach (var priceAlert in priceAlerts)
             {
                 priceAlert.Detach();
             }
+#endif
             return Task.CompletedTask;
         }
 

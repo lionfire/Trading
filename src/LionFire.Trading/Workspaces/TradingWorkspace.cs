@@ -22,10 +22,16 @@ using LionFire.DependencyInjection;
 using LionFire.UI;
 using LionFire.Validation;
 using LionFire.UI.Workspaces;
+using LionFire.Dependencies;
+using System.Threading;
 
 namespace LionFire.Trading.Workspaces
 {
 
+    public class TradingWorkspace2 : IWorkspace2
+    {
+        public int Key { get; set; }
+    }
 
     /// <summary>
     /// Each user will typically work with one workspace.  
@@ -34,7 +40,14 @@ namespace LionFire.Trading.Workspaces
     [Asset("Workspaces")]
     [HasDependencies]
     [State]
-    public class TradingWorkspace : Workspace, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged, IChanged, INotifyOnSaving, IAsset, INotifyOnInstantiated, IKeyed<string> 
+    public class TradingWorkspace :
+        //Workspace
+        WorkspaceOld<TTradingWorkspace, TWorkspaceItem>
+        //, IExecutableEx, IStartable, IInitializable2, INotifyPropertyChanged // TODO
+        , IChanged, INotifyOnSaving
+        //, IAsset
+        , INotifyOnInstantiated
+        //, IKeyed<string>
     {
         public Type Type => typeof(TradingWorkspace);
         //AssetID IAsset.ID => throw new NotImplementedException();
@@ -63,7 +76,8 @@ namespace LionFire.Trading.Workspaces
         #region Relationships
 
         #region Template
-      
+
+#if TOPORT
         protected override void OnTemplateChanged(TTradingWorkspace oldValue, TTradingWorkspace template)
         {
             if (oldValue != null)
@@ -82,6 +96,7 @@ namespace LionFire.Trading.Workspaces
                 template.PropertyChanged += Template_PropertyChanged;
             }
         }
+#endif
 
         private void Template_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
@@ -203,7 +218,7 @@ namespace LionFire.Trading.Workspaces
 
         public ObservableCollection<WorkspaceBot> Bots { get; private set; } = new ObservableCollection<WorkspaceBot>();
         public ObservableCollection<WorkspaceBot> Scanners { get; private set; } = new ObservableCollection<WorkspaceBot>();
-        public ObservableCollection<PriceAlert> Alerts { get; private set; } = new ObservableCollection<PriceAlert>();
+        //  public ObservableCollection<PriceAlert> Alerts { get; private set; } = new ObservableCollection<PriceAlert>();
 
 
         #region Derived
@@ -230,7 +245,7 @@ namespace LionFire.Trading.Workspaces
             Accounts.Clear();
             accountsByName.Clear();
             Bots.Clear();
-            Alerts.Clear();
+            //Alerts.Clear();
             Sessions.Clear();
             State = ExecutionStateEx.Uninitialized;
         }
@@ -274,10 +289,10 @@ namespace LionFire.Trading.Workspaces
             }
         }
 
-        protected override  void OnInitializing(ref ValidationContext validationContext)
+        protected /*override*/  void OnInitializing(ref ValidationContext validationContext)
         {
-            base.OnInitializing(ref validationContext); // Injects dependencies
-  
+            //base.OnInitializing(ref validationContext); // Injects dependencies
+
             if (Sessions.Count > 0) throw new Exception("Sessions already populated");
 
             ResetState();
@@ -354,7 +369,7 @@ namespace LionFire.Trading.Workspaces
                 var ce = workspaceItem as IControllableExecutable;
                 if (ce == null || ce.DesiredExecutionState == ExecutionStateEx.Started)
                 {
-                    await workspaceItem.Start().ConfigureAwait(false);
+                    await workspaceItem.StartAsync().ConfigureAwait(false);
                 }
             }
 
@@ -369,7 +384,7 @@ namespace LionFire.Trading.Workspaces
                 if (startable == null) continue;
                 if (forceStart || session.Template.DesiredExecutionState == ExecutionStateEx.Started)
                 {
-                    await session.Start().ConfigureAwait(false);
+                    await session.StartAsync().ConfigureAwait(false);
                 }
             }
         }
@@ -382,16 +397,16 @@ namespace LionFire.Trading.Workspaces
                 if (startable == null) continue;
                 if (forceStart || account.Template.DesiredExecutionState == ExecutionStateEx.Started)
                 {
-                    await startable.Start().ConfigureAwait(false);
+                    await startable.StartAsync().ConfigureAwait(false);
                 }
             }
         }
 
-        public async Task StartAllBots()
+        public async Task StartAllBots(CancellationToken cancellationToken = default)
         {
             foreach (var bot in Bots)
             {
-                await bot.Bot.Start().ConfigureAwait(false);
+                await bot.Bot.StartAsync(cancellationToken).ConfigureAwait(false);
             }
         }
 
@@ -425,15 +440,15 @@ namespace LionFire.Trading.Workspaces
 
         public List<Type> BotTypes { get; set; } = new List<Type>();
 
-        
+
 
         #region Misc
 
         public event Action<object> Changed;
 
-        protected override void OnPropertyChanged(string propertyName)
+        protected void OnPropertyChanged(string propertyName)
         {
-            base.OnPropertyChanged(propertyName);
+            //base.OnPropertyChanged(propertyName);
             Changed?.Invoke(this);
         }
 
@@ -481,7 +496,6 @@ namespace LionFire.Trading.Workspaces
             }
         }
 
-   
-    }
 
+    }
 }

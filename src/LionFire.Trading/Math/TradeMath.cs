@@ -27,7 +27,7 @@ namespace LionFire.Trading
             return Math.Abs(value1.Value - value2.Value) <= precalculatedContextualEpsilon;
         }
 
-        public static bool IsStopLossTriggered(double? stopLoss, Position position, Symbol symbol)
+        public static bool IsStopLossTriggered(double? stopLoss, PositionDouble position, Symbol symbol)
         {
             if (position.TradeType == TradeType.Buy)
             {
@@ -46,7 +46,7 @@ namespace LionFire.Trading
             }
             return false;
         }
-        public static bool IsTakeProfitTriggered(double? takeProfit, Position position, Symbol symbol)
+        public static bool IsTakeProfitTriggered(double? takeProfit, PositionDouble position, Symbol symbol)
         {
             if (position.TradeType == TradeType.Buy)
             {

@@ -220,7 +220,7 @@ namespace LionFire.Trading.Spotware.Connect
             return $"{BrokerName} {AccountId} {type}";
         }
 
-        public string DumpPositions(IPositions positions)
+        public string DumpPositions(IPositionsDouble positions)
         {
             var sb = new StringBuilder();
 
@@ -769,13 +769,13 @@ namespace LionFire.Trading.Spotware.Connect
             return TradeResult.NotImplemented;
         }
 
-        public override TradeResult ClosePosition(Position position)
+        public override TradeResult ClosePosition(PositionDouble position)
         {
             logger.LogError($"NOT IMPLEMENTED: ClosePosition {position.Id}");
             return TradeResult.NotImplemented;
         }
 
-        public override TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit)
+        public override TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit)
         {
             logger.LogError($"NOT IMPLEMENTED: ModifyPosition {position.Id} sl:{stopLoss} tp:{takeProfit}");
             return TradeResult.NotImplemented;

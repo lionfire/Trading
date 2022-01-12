@@ -30,7 +30,7 @@ namespace LionFire.Trading.Bots.Features
                 TrailStops(bot, position, low, trailAmount);
             }
         }
-        public static void TrailStops(this BotBase bot, Position position, double newExtreme, double trailAmount)
+        public static void TrailStops(this BotBase bot, PositionDouble position, double newExtreme, double trailAmount)
         {
             if (trailAmount <= 0) return;
             if (position.TradeType == TradeType.Buy)

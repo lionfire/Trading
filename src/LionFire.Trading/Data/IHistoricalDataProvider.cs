@@ -15,12 +15,12 @@ namespace LionFire.Trading
     public interface IHistoricalDataProvider
     {
         IAccount Account { get; }
-        Task<DataLoadResult> RetrieveDataForChunk(MarketSeriesBase marketSeries, DateTime date, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, CancellationToken? cancellationToken = null);
+        Task<DataLoadResult> RetrieveDataForChunk(MarketSeriesBase marketSeries, DateTime date, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, CancellationToken cancellationToken = default);
     }
 
     public static class IHistoricalDataProviderExtensions
     {
-        public static async Task<IEnumerable<DataLoadResult>> GetData(this IHistoricalDataProvider provider, MarketSeriesBase series, DateTime? startDate, DateTime endDate, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, int totalDesiredBars = 0, bool forceRetrieve = false, bool forceReretrieveEmptyData = false, CancellationToken? cancellationToken = null)
+        public static async Task<IEnumerable<DataLoadResult>> GetData(this IHistoricalDataProvider provider, MarketSeriesBase series, DateTime? startDate, DateTime endDate, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, int totalDesiredBars = 0, bool forceRetrieve = false, bool forceReretrieveEmptyData = false, CancellationToken cancellationToken = default)
         {
             
             logger.LogTrace($"[GetData] {series} {startDate} - {endDate}");
@@ -145,7 +145,7 @@ namespace LionFire.Trading
         /// <param name="forceRetrieve"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public static async Task<DataLoadResult> GetDataForChunk(this IHistoricalDataProvider provider, MarketSeriesBase series, DateTime chunkStart, DateTime chunkEnd, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, bool forceRetrieve = false, bool forceReretrieveEmptyData = false, CancellationToken? cancellationToken = null)
+        public static async Task<DataLoadResult> GetDataForChunk(this IHistoricalDataProvider provider, MarketSeriesBase series, DateTime chunkStart, DateTime chunkEnd, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, bool forceRetrieve = false, bool forceReretrieveEmptyData = false, CancellationToken cancellationToken = default)
         {
             logger.LogTrace($"[GetDataForChunk] {series} {chunkStart}");
             if (!maxOutOfDate.HasValue)

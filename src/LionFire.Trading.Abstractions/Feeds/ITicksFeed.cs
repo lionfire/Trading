@@ -27,6 +27,6 @@ namespace LionFire.Trading.Feeds
 
         event Action<IEnumerable<SymbolTick2>> MultiTick;
 
-        DateTime LastUpdate { get; }
+        DateTimeOffset LastUpdate { get; }
     }
 }

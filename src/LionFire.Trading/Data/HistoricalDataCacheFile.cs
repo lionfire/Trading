@@ -8,6 +8,8 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using LionFire.Execution;
+using LionFire.Dependencies;
+using LionFire.Applications;
 
 namespace LionFire.Trading.Data
 {
@@ -192,7 +194,7 @@ string text = new string(
 
         public string GetFilePath()
         {
-            var path = Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Data", Feed.Template.BrokerName, SymbolCode, TimeFrame.Name);
+            var path = Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Data", Feed.Template.BrokerName, SymbolCode, TimeFrame.Name);
 
             switch (TimeFrame.Name)
             {

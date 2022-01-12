@@ -12,6 +12,7 @@ using LionFire.Trading.Workspaces;
 using LionFire.Trading.Statistics;
 using LionFire.DependencyInjection;
 using LionFire.Dependencies;
+using System.Threading;
 
 namespace LionFire.Trading.Accounts
 {
@@ -25,7 +26,8 @@ namespace LionFire.Trading.Accounts
         #region Template
 
 
-        TFeed IFeed.Template => Template;
+        //TFeed IFeed.Template => Template;
+        TFeed IFeedCTrader.Template => Template;
         string IAccount.BrokerName => Template?.BrokerName;
         string IAccount.AccountType => Template?.AccountType;
 
@@ -47,6 +49,7 @@ namespace LionFire.Trading.Accounts
 
         #region Workspace
 
+#if TOPORT
         public TradingWorkspace Workspace
         {
             get { return workspace; }
@@ -66,7 +69,7 @@ namespace LionFire.Trading.Accounts
         }
 
         private TradingWorkspace workspace;
-
+#endif
         #endregion
 
 
@@ -97,17 +100,17 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
-        private void TWorkspace_PropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            switch (e.PropertyName)
-            {
-                case nameof(Workspace.Template.AllowSubscribeToTicks):
-                    OnAllowSubscribeToTicksChanged();
-                    break;
-                default:
-                    break;
-            }
-        }
+        //private void TWorkspace_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        //{
+        //    switch (e.PropertyName)
+        //    {
+        //        case nameof(Workspace.Template.AllowSubscribeToTicks):
+        //            OnAllowSubscribeToTicksChanged();
+        //            break;
+        //        default:
+        //            break;
+        //    }
+        //}
 
         #region Lifecycle State
 
@@ -142,8 +145,11 @@ namespace LionFire.Trading.Accounts
 
         #region State
 
+        public virtual Task RefreshState() { return Task.CompletedTask; }
+
         #region AllowSubscribeToTicks
 
+#if TOPORT
         public override bool AllowSubscribeToTicks
         {
             get
@@ -160,6 +166,7 @@ namespace LionFire.Trading.Accounts
         }
         private bool allowSubscribeToTicks;
         protected virtual void OnAllowSubscribeToTicksChanged() { }
+#endif
 
         #endregion
 
@@ -198,11 +205,12 @@ namespace LionFire.Trading.Accounts
         }
         private IPendingOrders pendingOrders;
 
-        public IPositions Positions
-        {
-            get { return positions; }
-        }
+        public IPositionsDouble Positions => positions;
         protected Positions positions = new Positions();
+        public IPositions Positions2 => positions2;
+        protected Positions2 positions2 = new();
+
+        public abstract Task<IPositions> RefreshPositions(CancellationToken cancellationToken = default);
 
 
         public abstract double Equity { get; protected set; }
@@ -236,7 +244,7 @@ namespace LionFire.Trading.Accounts
 
         public virtual bool IsLive => this.Template.IsLive;
 
-        public virtual string AccountId => Template.AccountId; // 
+        public virtual string AccountId => Template.AccountId;
 
         public virtual string Currency { get { return Template.Currency; } }
 
@@ -290,8 +298,8 @@ namespace LionFire.Trading.Accounts
         #region Events
 
         public abstract TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null);
-        public abstract TradeResult ClosePosition(Position position);
-        public abstract TradeResult ModifyPosition(Position position, double? stopLoss, double? takeProfit);
+        public abstract TradeResult ClosePosition(PositionDouble position);
+        public abstract TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);
 
         #endregion
 
@@ -300,12 +308,12 @@ namespace LionFire.Trading.Accounts
 
         public double UnrealizedGrossProfit(string symbol)
         {
-                double sum = 0.0;
-                foreach (var position in Positions.Where(p => p.Symbol.Code == symbol))
-                {
-                    sum += position.GrossProfit;
-                }
-                return sum;
+            double sum = 0.0;
+            foreach (var position in Positions.Where(p => p.Symbol.Code == symbol))
+            {
+                sum += position.GrossProfit;
+            }
+            return sum;
         }
 
         public double UnrealizedNetProfit(string symbol)

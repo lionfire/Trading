@@ -16,13 +16,16 @@ namespace LionFire.Trading.Accounts
         where TTemplate : TFeed
     {
 
+        public bool IsStarted { get; protected set; }
+
         public virtual bool AllowSubscribeToTicks { get { return true; } set { } }
 
         public string BrokerName { get { return Template.BrokerName; } }
 
         #region Template
 
-        TFeed IFeed.Template => Template;
+        //TFeed IFeed.Template => Template;
+        TFeed IFeedCTrader.Template => Template;
 
         public TTemplate Template { get; set; }
 

@@ -153,7 +153,7 @@ where TBotType : TBot, ITBot, new()
 #if !cAlgo
                     if (ExecutionStateFlags.HasFlag(ExecutionStateFlags.Autostart) && mode != BotMode.None)
                     {
-                        TaskManager.OnNewTask(Start(), TaskFlags.Unowned);
+                        TaskManager.OnNewTask(StartAsync(), TaskFlags.Unowned);
                     }
 #endif
                 }
@@ -162,7 +162,7 @@ where TBotType : TBot, ITBot, new()
 #if !cAlgo
                     if (this.IsStarted())
                     {
-                        TaskManager.OnNewTask(this.Stop(), TaskFlags.Unowned);
+                        TaskManager.OnNewTask(this.StopAsync(), TaskFlags.Unowned);
                     }
 #endif
                 }
@@ -423,13 +423,13 @@ where TBotType : TBot, ITBot, new()
 
         #region Initialization
 
-        private void Link_OnPositionClosed(PositionClosedEventArgs args)
+        private void Link_OnPositionClosed(PositionDoubleClosedEventArgs args)
         {
             //var position = args.Position;
             //Print("Position closed with {0} profit", position.GrossProfit);
             LinkSendStatus().FireAndForget();
         }
-        private void Link_OnPositionOpened(PositionOpenedEventArgs args)
+        private void Link_OnPositionOpened(PositionDoubleOpenedEventArgs args)
         {
             //var position = args.Position;
             //Print("Position closed with {0} profit", position.GrossProfit);
@@ -759,13 +759,13 @@ where TBotType : TBot, ITBot, new()
 
         public int BotPositionCount => BotPositions.Length;
 
-        public IEnumerable<Position> BotLongPositions => BotPositions.Where(p => p.TradeType == TradeType.Buy);
+        public IEnumerable<PositionDouble> BotLongPositions => BotPositions.Where(p => p.TradeType == TradeType.Buy);
         public int BotLongPositionCount => BotLongPositions.Count();
-        public IEnumerable<Position> BotShortPositions => BotPositions.Where(p => p.TradeType == TradeType.Sell);
+        public IEnumerable<PositionDouble> BotShortPositions => BotPositions.Where(p => p.TradeType == TradeType.Sell);
         public int BotShortPositionCount => BotShortPositions.Count();
 
 #if !cAlgo
-        public Position[] BotPositions
+        public PositionDouble[] BotPositions
         {
             get
             {
@@ -1516,7 +1516,7 @@ where TBotType : TBot, ITBot, new()
         public static string MachineName => Environment.MachineName; // FUTURE: Get custom value from config
         public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
         public string RobustnessBacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, "Robustness", $"{StandardizedSymbolCode(Symbol.Code)} {BotName} {TimeFrame.ToShortString()}");
-        public static string BacktestResultSaveDirBase = Path.Combine(LionFireEnvironment.Directories.AppProgramDataDir, "Results", MachineName);
+        public static string BacktestResultSaveDirBase => throw new NotImplementedException();//Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Results", MachineName);
 
         public static bool CreateResultsDirIfMissing = true;
 

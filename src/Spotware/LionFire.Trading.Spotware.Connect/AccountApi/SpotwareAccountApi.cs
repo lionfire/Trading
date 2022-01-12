@@ -85,10 +85,10 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
         #region Positions
 
         public static readonly int PositionsPageSize = 500;  // HARDCONST  REVIEW
-        public async static Task<List<Position>> GetPositions(CTraderAccount account)
+        public async static Task<List<PositionDouble>> GetPositions(CTraderAccount account)
         {
             again:
-            List<Position> Result = new List<Position>();
+            List<PositionDouble> Result = new List<PositionDouble>();
 
             var apiInfo = Defaults.TryGet<ISpotwareConnectAppInfo>();
             var client = NewHttpClient();
@@ -123,7 +123,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             {
                 foreach (var pos in data.data)
                 {
-                    var position = new Position()
+                    var position = new PositionDouble()
                     {
                         Id = pos.positionId,
                         EntryPrice = pos.entryPrice,
@@ -246,9 +246,9 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             return tradeType;
         }
 
-        public async static Task<List<Position>> GetHistoricalPositions(long accountId, string accessToken, IAccount market)
+        public async static Task<List<PositionDouble>> GetHistoricalPositions(long accountId, string accessToken, IAccount market)
         {
-            List<Position> Result = new List<Position>();
+            List<PositionDouble> Result = new List<PositionDouble>();
 
             var apiInfo = Defaults.TryGet<ISpotwareConnectAppInfo>();
             var client = NewHttpClient();
@@ -299,7 +299,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
                         throw new Exception("Invalid tradeSide from server: " + pos.tradeSide);
                     }
 
-                    var position = new Position()
+                    var position = new PositionDouble()
                     {
                         Id = pos.positionId,
                         OrderId = pos.orderId,

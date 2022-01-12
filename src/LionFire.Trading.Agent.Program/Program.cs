@@ -32,7 +32,7 @@ namespace LionFire.Trading.Agent.Program
 
             try
             {
-                var basePath = LionFireEnvironment.Directories.AppProgramDataDir;
+                var basePath = DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir;
 
                 LionFire.Extensions.Logging.NLog.NLogConfig.LoadDefaultConfig();
 

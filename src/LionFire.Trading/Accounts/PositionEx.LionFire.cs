@@ -6,7 +6,7 @@ namespace LionFire.Trading
 {
     public partial class PositionEx
     {
-        public Position Position{get;set;}
+        public PositionDouble Position{get;set;}
 
         public double EntryPrice => Position.EntryPrice;
 

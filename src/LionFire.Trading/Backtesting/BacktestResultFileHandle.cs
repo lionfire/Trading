@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using System.IO;
 using System.Threading.Tasks;
 using LionFire.Parsing.String;
+using Newtonsoft.Json;
 
 namespace LionFire.Trading.Backtesting
 {

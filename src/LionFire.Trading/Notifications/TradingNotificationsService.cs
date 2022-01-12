@@ -15,7 +15,7 @@ namespace LionFire.Notifications.Wpf.App
             AlertRequests.Add(new PriceNotifier
             {
                 Symbol = "EURUSD",
-                Price = 1.12,
+                Price = 1.12M,
                 Operator = ">",
             });
             AlertRequests.Add(new PriceNotifier("XAUUSD", ">", 1260));

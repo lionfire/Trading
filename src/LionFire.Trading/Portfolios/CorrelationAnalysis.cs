@@ -1,4 +1,5 @@
-﻿using LionFire.ConsoleUtils;
+﻿//using LionFire.ConsoleUtils;
+using LionFire.ExtensionMethods.Dumping;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

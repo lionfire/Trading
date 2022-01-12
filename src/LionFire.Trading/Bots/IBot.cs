@@ -19,7 +19,7 @@ namespace LionFire.Trading.Bots
 
     public class PositionEvent // MOVE
     {
-        public Position Position { get; set; }
+        public PositionDouble Position { get; set; }
         public PositionEventKind Kind { get; set; }
     }
     public enum PositionEventKind 
@@ -51,8 +51,8 @@ namespace LionFire.Trading.Bots
 
         string Version { get; set; }
 
-        TradeResult ClosePosition(Position position);
-        TradeResult ModifyPosition(Position position, double? StopLoss, double? TakeProfit);
+        TradeResult ClosePosition(PositionDouble position);
+        TradeResult ModifyPosition(PositionDouble position, double? StopLoss, double? TakeProfit);
 
         Microsoft.Extensions.Logging.ILogger Logger { get; }
 
@@ -62,7 +62,7 @@ namespace LionFire.Trading.Bots
         /// </summary>
         BotMode Modes { get; set; }
 
-        Position[] BotPositions { get; }
+        PositionDouble[] BotPositions { get; }
         event Action<PositionEvent> BotPositionChanged;
 #endif
     }
