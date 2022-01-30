@@ -48,19 +48,18 @@ namespace LionFire.Trading.Backtesting
             }
         }
         private double equity;
+        public override decimal EquityDecimal
+        {
+            get => (decimal)Equity;
+            protected set => Equity = (double) value;
+        }
 
         #endregion
 
         #region Balance
 
         public double StartingBalance { get; set; }
-        public double NetProfitPercent
-        {
-            get
-            {
-                return (Equity - StartingBalance) / StartingBalance;
-            }
-        }
+        public double NetProfitPercent => (Equity - StartingBalance) / StartingBalance;
 
         public override double Balance
         {
@@ -90,6 +89,12 @@ namespace LionFire.Trading.Backtesting
             }
         }
         private double balance = double.NaN;
+
+        public override decimal BalanceDecimal
+        {
+            get => (decimal)Balance;
+            protected set => Balance = (double)value;
+        }
 
         #endregion
 

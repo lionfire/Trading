@@ -1,4 +1,5 @@
-﻿using LionFire.Assets;
+﻿#nullable enable
+using LionFire.Assets;
 using LionFire.Execution.Jobs;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
@@ -21,6 +22,17 @@ namespace LionFire.Trading.Accounts
         where TTemplate : TAccount
     {
 
+        #region Identity
+
+        public string Key => $"{BrokerName}:{AccountName}";
+
+        /// <summary>
+        /// Name of account, set and viewed by the user.  (For the Account Id used by the exchange, see AccountId.)
+        /// </summary>
+        public string? AccountName => Template?.AccountName;
+
+        #endregion
+
         #region Relationships
 
         #region Template
@@ -35,17 +47,15 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
-        public TradingContext Context
+        public TradingContext? Context
         {
             get
             {
-                return DependencyContext.Current.GetService<TradingContext>();
-                //return tradingContext ?? Defaults.Get<TradingContext>();
+                return tradingContext ?? DependencyContext.Current.GetService<TradingContext>();
             }
             set { tradingContext = value; }
         }
-        TradingContext tradingContext;
-
+        TradingContext? tradingContext;
 
         #region Workspace
 
@@ -215,6 +225,8 @@ namespace LionFire.Trading.Accounts
 
         public abstract double Equity { get; protected set; }
         public abstract double Balance { get; protected set; }
+        public abstract decimal EquityDecimal { get; protected set; }
+        public abstract decimal BalanceDecimal { get; protected set; }
 
         public string StatusText { get { return statusText; } protected set { statusText = value; StatusTextChanged?.Invoke(); } }
         private string statusText;
@@ -297,7 +309,10 @@ namespace LionFire.Trading.Accounts
 
         #region Events
 
-        public abstract TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null);
+        public virtual TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null) => throw new NotSupportedException();
+
+        public virtual TradeResult ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal volume, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null) => throw new NotSupportedException();
+
         public abstract TradeResult ClosePosition(PositionDouble position);
         public abstract TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);
 
@@ -325,6 +340,8 @@ namespace LionFire.Trading.Accounts
             }
             return sum;
         }
+
+        
 
         #endregion
 

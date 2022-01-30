@@ -16,6 +16,12 @@ namespace LionFire.Trading
     public interface IAccount : IFeed
     //: ITemplateInstance<TAccount>
     {
+        #region Identity
+
+        public string Key { get; } // => $"{BrokerName}:{AccountId}";
+
+        #endregion
+
         AccountStats AccountStats { get; }
 
         #region Relationships
@@ -36,6 +42,8 @@ namespace LionFire.Trading
 
         double Equity { get; }
         double Balance { get; }
+        decimal EquityDecimal { get; }
+        decimal BalanceDecimal { get; }
         string Currency { get; }
         double Margin { get; }
         double MarginLevel { get; }
@@ -68,7 +76,7 @@ namespace LionFire.Trading
         bool IsSimulation { get; }
         bool IsRealMoney { get; }
 
-        string BrokerName { get; }
+        string BrokerName { get; } // RENAME ExchangeName
         //string Platform { get; }
         //string AccountMode { get; }
         /// <summary>
@@ -81,6 +89,7 @@ namespace LionFire.Trading
         #region Methods
 
         TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
+        TradeResult ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal volume, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null);
 
         TradeResult ClosePosition(PositionDouble position);
         TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);

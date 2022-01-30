@@ -59,7 +59,9 @@ namespace LionFire.Trading
     public interface IFeed : IFeedCTrader
     //: ITemplateInstance<TFeed>
     {
-         bool IsStarted { get;  }
+        
+
+        bool IsStarted { get;  }
 
 
         #region Market Series

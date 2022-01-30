@@ -23,15 +23,15 @@ namespace LionFire.Trading
             ServiceProvider = serviceProvider;
         }
 
-        public virtual IAccount GetAccount(string accountId = "default")
+        public virtual IAccount GetAccount(string accountName = "default")
         {
             lock (_accountsLock)
             {
-                if (Accounts.ContainsKey(accountId)) { return Accounts[accountId]; }
+                if (Accounts.ContainsKey(accountName)) { return Accounts[accountName]; }
                 else
                 {
-                    var account = ActivatorUtilities.CreateInstance<AccountType>(ServiceProvider, accountId, GetAccountSection(accountId));
-                    accounts.Add(accountId, account);
+                    var account = ActivatorUtilities.CreateInstance<AccountType>(ServiceProvider, accountName, GetAccountSection(accountName));
+                    accounts.Add(accountName, account);
                     return account;
                 }
             }
