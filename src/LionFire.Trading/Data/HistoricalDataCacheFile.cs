@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using LionFire.Execution;
 using LionFire.Dependencies;
 using LionFire.Applications;
+using LionFire.Trading.HistoricalData.Persistence;
 
 namespace LionFire.Trading.Data
 {
@@ -292,7 +293,8 @@ string text = new string(
         #region Properties
 
         public string FilePath { get; private set; }
-        public string PartFilePath { get { return FilePath.Replace(ExtensionWithDot, ".part" + ExtensionWithDot); } }
+        public string DownloadingFilePath { get { return FilePath.Replace(ExtensionWithDot, KlineArrayFileConstants.DownloadingFileExtension + ExtensionWithDot); } }
+        public string PartialFilePath { get { return FilePath.Replace(ExtensionWithDot, KlineArrayFileConstants.PartialFileExtension + ExtensionWithDot); } }
         public string NoDataFilePath { get { return FilePath.Replace(ExtensionWithDot, ".unavailable" + ExtensionWithDot); } }
         public string ExtensionWithDot { get { return ".dat"; } }
 
@@ -376,7 +378,7 @@ string text = new string(
                 // h1: Last expected + 2h
 
                 string path;
-                if (IsPartial) path = PartFilePath;
+                if (IsPartial) path = DownloadingFilePath;
                 else if ((Bars != null && Bars.Count > 0) || (Ticks != null && Ticks.Count > 0)) path = FilePath;
                 else path = NoDataFilePath;
 
@@ -492,7 +494,7 @@ string text = new string(
                 {
                     try
                     {
-                        var partialPath = PartFilePath;
+                        var partialPath = DownloadingFilePath;
                         if (File.Exists(partialPath))
                         {
                             File.Delete(partialPath);
@@ -545,13 +547,13 @@ string text = new string(
                     EmptyData = false;
                     path = FilePath;
                 }
-                else if (File.Exists(PartFilePath))
+                else if (File.Exists(DownloadingFilePath))
                 {
-                    if (EnforceFileMinimumSizes && new FileInfo(PartFilePath).Length < MinPartialFileSize) { File.Delete(PartFilePath); goto again; }
+                    if (EnforceFileMinimumSizes && new FileInfo(DownloadingFilePath).Length < MinPartialFileSize) { File.Delete(DownloadingFilePath); goto again; }
                     IsPartial = true;
                     IsAvailable = true;
                     EmptyData = false;
-                    path = PartFilePath;
+                    path = DownloadingFilePath;
                 }
                 else if (File.Exists(NoDataFilePath))
                 {

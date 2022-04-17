@@ -5,6 +5,7 @@ using LionFire.Extensions.Logging;
 using LionFire.Trading.Analysis;
 using LionFire.Trading.Instruments;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -359,7 +360,7 @@ namespace LionFire.Trading.Portfolios
                 balanceBar = new PortfolioBacktestBar(openTime, firstBar ? Sim.Options.InitialBalance : lastBalanceBar.Close);
             }
 
-            barEndTime = openTime + Options.TimeFrame.TimeSpan;
+            barEndTime = Options.TimeFrame.GetNextOpenTimeForOpen(openTime);
 
             if (Options.ComponentExposureBars)
             {
@@ -537,7 +538,7 @@ namespace LionFire.Trading.Portfolios
                 var tradesByEntryTime = TradesByEntryTime;
 
                 int indexTradesByEntryTime = 0;
-                for (; openTime < end; openTime += Options.TimeFrame.TimeSpan)
+                for (; openTime < end; openTime += Options.TimeFrame.TimeSpanApproximation)
                 {
                     if (token.HasValue && token.Value.IsCancellationRequested) return;
                     OpenBar();
@@ -632,7 +633,7 @@ namespace LionFire.Trading.Portfolios
                 var tradesByClosingTime = TradesByClosingTime;
 
                 int tradesByClosingTimeIndex = 0;
-                for (; openTime < end; openTime += Options.TimeFrame.TimeSpan)
+                for (; openTime < end; openTime += Options.TimeFrame.TimeSpanApproximation)
                 {
                     if (token.HasValue && token.Value.IsCancellationRequested) return;
                     OpenBar();

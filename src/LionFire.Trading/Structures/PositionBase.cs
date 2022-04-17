@@ -41,6 +41,7 @@ namespace LionFire.Trading
         public decimal Quantity { get; set; }
 
         public decimal? StopLoss { get; set; }
+        public string? StopLossWorkingType { get; set; }
 
         public decimal Swap { get; set; }
 

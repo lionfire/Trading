@@ -42,7 +42,8 @@ namespace LionFire.Applications.Trading
             get { return BacktestAccount?.Template; }
             set
             {
-                BacktestAccount = value.Create();
+                throw new NotImplementedException("Instantiate with ctor that has parameters");
+                //BacktestAccount =  value.Create<BacktestAccount>();
             }
         }
 

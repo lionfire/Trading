@@ -73,8 +73,9 @@ namespace LionFire.Trading
 
         #region State
 
-        internal Dictionary<string, MarketSeries> Dict { get { return dict; } }
-        Dictionary<string, MarketSeries> dict = new Dictionary<string, MarketSeries>();
+        internal Dictionary<string, MarketSeries> Dict => dict;
+
+        readonly Dictionary<string, MarketSeries> dict = new();
 
         #endregion
 

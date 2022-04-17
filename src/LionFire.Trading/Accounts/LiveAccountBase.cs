@@ -40,7 +40,13 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
+        #region Construction
 
+        public LiveAccountBase(ILogger logger, ILoggerFactory loggerFactory) : base(logger, loggerFactory)
+        {
+        }
+
+        #endregion
 
 
         #region Server State
@@ -130,7 +136,7 @@ namespace LionFire.Trading.Accounts
 
         public IEnumerable<string> GetSymbolTimeFramesAvailable(string symbol)
         {
-            logger.LogWarning("NOTIMPLEMENTED GetSymbolTimeFramesAvailable");
+            Logger.LogWarning("NOTIMPLEMENTED GetSymbolTimeFramesAvailable");
             return Enumerable.Empty<string>();
         }
 

@@ -1,22 +1,42 @@
-﻿using LionFire.Execution.Jobs;
+﻿#nullable enable
+using LionFire.Collections.Concurrent;
+using LionFire.Execution.Jobs;
 using LionFire.Instantiating;
 using LionFire.Reactive;
 using LionFire.Reactive.Subjects;
+using LionFire.Structures;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Accounts
 {
     public abstract class FeedBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, INotifyPropertyChanged, IFeed
+        , IAsyncSubscribable
         where TTemplate : TFeed
     {
 
-        public bool IsStarted { get; protected set; }
+        #region Construction
+
+        public FeedBase(ILogger logger)
+        {
+            this.Logger = logger;
+        }
+
+        #endregion
+
+
+        #region State
+
+        public bool IsStarted { get; private set; }
+
+        #endregion
 
         public virtual bool AllowSubscribeToTicks { get { return true; } set { } }
 
@@ -28,7 +48,7 @@ namespace LionFire.Trading.Accounts
         TFeed IFeedCTrader.Template => Template;
 
         public TTemplate Template { get; set; }
-
+        
         #endregion
 
         #region Children
@@ -48,18 +68,19 @@ namespace LionFire.Trading.Accounts
             return false;
         }
 
-        public async Task Add(IFeedParticipant actor)
+        public Task Add(IFeedParticipant actor)
         {
             actor.Account = this;
             if (!feedParticipants.Contains(actor))
             {
                 feedParticipants.Add(actor);
-                var interested = actor as IInterestedInMarketData;
-                if (interested != null)
-                {
-                    await interested.EnsureDataAvailable(ExtrapolatedServerTime).ConfigureAwait(false);
-                }
+                //var interested = actor as IInterestedInMarketData; // OLD
+                //if (interested != null)
+                //{
+                //    await interested.EnsureDataAvailable(ExtrapolatedServerTime).ConfigureAwait(false);
+                //}
             }
+            return Task.CompletedTask;
         }
         public IReadOnlyList<IFeedParticipant> FeedParticipants { get { return feedParticipants; } }
         List<IFeedParticipant> feedParticipants = new List<IFeedParticipant>();
@@ -75,24 +96,25 @@ namespace LionFire.Trading.Accounts
 
         #region Lifecycle
 
-        protected virtual async Task OnStarting()
+        protected virtual Task OnStarting()
         {
-            await EnsureParticipantsHaveDesiredData().ConfigureAwait(false);
+            //await EnsureParticipantsHaveDesiredData().ConfigureAwait(false); // OLD
+            return Task.CompletedTask;
         }
 
-        protected async virtual Task EnsureParticipantsHaveDesiredData()
-        {
-            var time = ExtrapolatedServerTime;
-            if (time == default(DateTime))
-            {
-                time = DateTime.UtcNow;
-            }
+        //protected async virtual Task EnsureParticipantsHaveDesiredData() // OLD
+        //{
+        //    var time = ExtrapolatedServerTime;
+        //    if (time == default(DateTime))
+        //    {
+        //        time = DateTime.UtcNow;
+        //    }
 
-            foreach (var p in feedParticipants.OfType<IInterestedInMarketData>())
-            {
-                await p.EnsureDataAvailable(time).ConfigureAwait(false);
-            }
-        }
+        //    //foreach (var p in feedParticipants.OfType<IInterestedInMarketData>()) // OLD
+        //    //{
+        //    //    await p.EnsureDataAvailable(time).ConfigureAwait(false);
+        //    //}
+        //}
 
         #endregion
 
@@ -118,7 +140,7 @@ namespace LionFire.Trading.Accounts
         private MarketData marketData;
 
         #endregion
-        
+
         #region Series
 
         protected ConcurrentDictionary<KeyValuePair<string, string>, MarketSeries> marketSeries = new ConcurrentDictionary<KeyValuePair<string, string>, MarketSeries>();
@@ -240,9 +262,9 @@ namespace LionFire.Trading.Accounts
         #endregion
 
         #endregion
-        
+
         #endregion
-        
+
         #region Time
 
         public abstract DateTime ExtrapolatedServerTime { get; }
@@ -264,17 +286,113 @@ namespace LionFire.Trading.Accounts
         public IBehaviorObservable<bool> Started { get { return started; } }
         protected BehaviorObservable<bool> started = new BehaviorObservable<bool>(false);
 
-        public event Action Ticked;
+        public event Action Ticked
+        {
+            add
+            {
+                if (ticked == null)
+                {
+                    tickedSubscriber = this.SubscribeAsync();
+                }
+                ticked += value;
+            }
+            remove
+            {
+                ticked -= value;
+                if (ticked == null)
+                {
+                    tickedSubscriber.Dispose();
+                }
+            }
+        }
+        private event Action ticked;
+        IDisposable tickedSubscriber;
 
         /// <summary>
         /// Backtesting: called once for each time step, if there was at least one tick or bar
         /// </summary>
-        protected virtual void RaiseTicked() { Ticked?.Invoke(); }
+        protected virtual void RaiseTicked() { ticked?.Invoke(); }
+
+        #endregion
+
+        #region Start / Stop / Subscribe
+
+        #region Subscribe
+
+        /// <summary>
+        /// As long as someone is subscribed, this will be Started
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<IDisposable> SubscribeAsync(CancellationToken cancellationToken = default)
+        {
+            if (!IsStarted)
+            {
+                Logger.LogInformation("First subscriber subscribed -- starting.");
+                await OnStartAsync(cancellationToken);
+            }
+            Disposable disposable = new Disposable();
+            concurrentHashSet.Add(disposable.Guid);
+            disposable.Disposed += Disposable_Disposed;
+            return disposable;
+        }
+        
+
+        private void Disposable_Disposed(Disposable obj)
+        {
+            concurrentHashSet.Remove(obj.Guid);
+            if (concurrentHashSet.Count == 0)
+            {
+                Logger.LogInformation("Last subscriber unsubscribed -- stopping.");
+                OnStopAsync();
+            }
+        }
+
+        private ConcurrentHashSet<Guid> concurrentHashSet = new();
+
+        #endregion
+
+        #region Start/Stop wrapper for subscribe
+
+        protected IDisposable? StartAsyncSubscription { get; private set; }
+
+        public Task StartAsync(CancellationToken cancellationToken = default)
+        {
+            if (StartAsyncSubscription == null)
+            {
+                StartAsyncSubscription = SubscribeAsync();
+            }
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken = default)
+        {
+            StartAsyncSubscription?.Dispose();
+            StartAsyncSubscription = null;
+            return Task.CompletedTask;
+        }
+
+        #endregion
+
+        #region Start / Stop implementation
+
+        protected virtual Task OnStartAsync(CancellationToken cancellationToken = default)
+        {
+            IsStarted = true;
+            return Task.CompletedTask;
+        }
+
+        protected virtual Task OnStopAsync(CancellationToken cancellationToken = default)
+        {
+            IsStarted = false;
+            return Task.CompletedTask;
+        }
+
+        #endregion
 
         #endregion
 
         #region Misc
-
 
         #region INotifyPropertyChanged Implementation
 
@@ -287,19 +405,19 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
-
         #region Logger
 
-        public ILogger Logger
-        {
-            get { return logger; }
-        }
-
-
-        protected ILogger logger;
-
+        public ILogger Logger { get; }
+        
         #endregion
 
         #endregion
+    }
+
+    public class Disposable : IDisposable
+    {
+        public Guid Guid { get; } = Guid.NewGuid();
+        public void Dispose() => Disposed?.Invoke(this);
+        public event Action<Disposable>? Disposed;
     }
 }

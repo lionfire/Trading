@@ -16,9 +16,10 @@ namespace LionFire.Trading
         }
 
         public IAccount GetAccount(string exchangeId, string accountName) 
-            => ExchangeAccountProviders.TryGetValue(exchangeId, out var exchangeAccountProvider)
+            => (exchangeId == null || accountName == null) ? null 
+            : (ExchangeAccountProviders.TryGetValue(exchangeId, out var exchangeAccountProvider)
                 ? GetAccount(exchangeAccountProvider, accountName)
-                : throw new ArgumentException($"No IExchangeAccountProvider registered for {exchangeId}");
+                : throw new ArgumentException($"No IExchangeAccountProvider registered for {exchangeId}"));
 
         private IAccount GetAccount(IExchangeAccountProvider exchangeAccountProvider, string accountName) 
             => exchangeAccountProvider.GetAccount(accountName);

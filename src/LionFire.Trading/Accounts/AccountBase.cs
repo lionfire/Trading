@@ -14,6 +14,7 @@ using LionFire.Trading.Statistics;
 using LionFire.DependencyInjection;
 using LionFire.Dependencies;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading.Accounts
 {
@@ -33,6 +34,11 @@ namespace LionFire.Trading.Accounts
 
         #endregion
 
+        #region Dependencies
+
+        protected ILogger AccountStatusLogger { get; set; }
+
+        #endregion
         #region Relationships
 
         #region Template
@@ -99,8 +105,10 @@ namespace LionFire.Trading.Accounts
 
         #region Lifecycle
 
-        public AccountBase()
+        public AccountBase(ILogger logger, ILoggerFactory loggerFactory) : base(logger)
         {
+            AccountStatusLogger = loggerFactory.CreateLogger("LionFire.Trading.Accounts.Status");
+
             //if (Context == null)
             //{
             //    throw new Exception("Cannot create AccountBase before TradingContext is available.");
@@ -214,6 +222,8 @@ namespace LionFire.Trading.Accounts
             }
         }
         private IPendingOrders pendingOrders;
+        public virtual IPendingOrders2 PendingOrders2 => pendingOrders2;
+        protected PendingOrders2 pendingOrders2 = new PendingOrders2();
 
         public IPositionsDouble Positions => positions;
         protected Positions positions = new Positions();
@@ -289,18 +299,19 @@ namespace LionFire.Trading.Accounts
             return false;
         }
 
-        public async Task AddAccountParticipant(IAccountParticipant actor)
+        public Task AddAccountParticipant(IAccountParticipant actor)
         {
             actor.Account = (IAccount)this;
             if (!participants.Contains(actor))
             {
                 participants.Add(actor);
-                var interested = actor as IInterestedInMarketData;
-                if (interested != null)
-                {
-                    await interested.EnsureDataAvailable(ExtrapolatedServerTime).ConfigureAwait(false);
-                }
+                //var interested = actor as IInterestedInMarketData; // OLD
+                //if (interested != null)
+                //{
+                //    await interested.EnsureDataAvailable(ExtrapolatedServerTime).ConfigureAwait(false);
+                //}
             }
+            return Task.CompletedTask;
         }
         public IReadOnlyList<IAccountParticipant> Participants { get { return participants; } }
         List<IAccountParticipant> participants = new List<IAccountParticipant>();
@@ -311,7 +322,7 @@ namespace LionFire.Trading.Accounts
 
         public virtual TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = default(double?), double? takeProfitPips = default(double?), double? marketRangePips = default(double?), string comment = null) => throw new NotSupportedException();
 
-        public virtual TradeResult ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal volume, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null) => throw new NotSupportedException();
+        public virtual Task<TradeResult> ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal quantity, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null) => throw new NotSupportedException();
 
         public abstract TradeResult ClosePosition(PositionDouble position);
         public abstract TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);

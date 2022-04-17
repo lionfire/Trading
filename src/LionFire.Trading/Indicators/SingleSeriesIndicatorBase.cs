@@ -21,15 +21,15 @@ namespace LionFire.Trading.Indicators
             where TConfig : ITSingleSeriesIndicator, new()
     {
 
-#if !cAlgo
-        public override IEnumerable<MarketSeries> MarketSeriesOfInterest
-        {
-            get
-            {
-                yield return MarketSeries;
-            }
-        }
-#endif
+//#if !cAlgo
+//        public override IEnumerable<MarketSeries> MarketSeriesOfInterest
+//        {
+//            get
+//            {
+//                yield return MarketSeries;
+//            }
+//        }
+//#endif
 
         #region Relationships
 

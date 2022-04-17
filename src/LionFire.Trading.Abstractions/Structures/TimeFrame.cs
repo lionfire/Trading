@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -20,6 +21,12 @@ namespace LionFire.Trading
     public class TimeFrame
 #endif
     {
+        public override bool Equals(object o)
+        {
+            var other = o as TimeFrame;
+            return other?.Name == Name;
+        }
+        public override int GetHashCode() => Name.GetHashCode();
 
         #region Static
 
@@ -61,12 +68,18 @@ namespace LionFire.Trading
             mn1 = new TimeFrame("mn1");
         }
 
+        public long? GetExpectedBarCount(DateTime start, DateTime endExclusive) 
+            => !TimeSpan.HasValue ? null : (long?)((endExclusive - start) / TimeSpan.Value);
+
         public static TimeFrame t1 { get; private set; }
         public static TimeFrame m1 { get; private set; }
+        public static TimeFrame OneMinute => m1;
+
         public static TimeFrame m2 { get; private set; }
         public static TimeFrame m3 { get; private set; }
         public static TimeFrame m4 { get; private set; }
         public static TimeFrame m5 { get; private set; }
+        public static TimeFrame FiveMinutes => m5;
         public static TimeFrame m6 { get; private set; }
         public static TimeFrame m7 { get; private set; }
         public static TimeFrame m8 { get; private set; }
@@ -77,6 +90,7 @@ namespace LionFire.Trading
         public static TimeFrame m30 { get; private set; }
         public static TimeFrame m45 { get; private set; }
         public static TimeFrame h1 { get; private set; }
+        public static TimeFrame OneHour => h1;
         public static TimeFrame h2 { get; private set; }
         public static TimeFrame h3 { get; private set; }
         public static TimeFrame h4 { get; private set; }
@@ -136,7 +150,8 @@ namespace LionFire.Trading
             TimeFrameValue = Int32.Parse(name.Substring(type.Length));
         }
 
-
+        public static TimeFrame Parse(string timeFrameCode) 
+            => TryParse(timeFrameCode) ?? throw new ArgumentException($"Failed to parse TimeFrame from '{timeFrameCode}'");
 
         public static TimeFrame TryParse(string timeFrameCode)
         {
@@ -151,6 +166,48 @@ namespace LionFire.Trading
             return TryParse(timeFrameCode);
         }
 
+        public DateTime GetOpenTimeBefore(DateTime date)
+        {
+            switch (TimeFrameUnit)
+            {
+                case TimeFrameUnit.Tick:
+                    throw new NotSupportedException();
+                case TimeFrameUnit.Second:
+                    if (60 % TimeFrameValue != 0) { throw new NotImplementedException(); }
+                    if (date.Millisecond != 0) { return new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second); }
+                    else
+                    {
+                        return date - System.TimeSpan.FromSeconds(1);
+                    }
+                case TimeFrameUnit.Minute:
+                    if (60 % TimeFrameValue != 0) { throw new NotImplementedException(); }
+                    if (date.Second != 0 || date.Millisecond != 0) { return new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, 0); }
+                    else
+                    {
+                        return date - System.TimeSpan.FromMinutes(1);
+                    }
+                case TimeFrameUnit.Hour:
+                    if (24 % TimeFrameValue != 0) { throw new NotImplementedException(); }
+                    if (date.Minute != 0 || date.Second != 0 || date.Millisecond != 0) { return new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0); }
+                    else
+                    {
+                        return date - System.TimeSpan.FromHours(1);
+                    }
+
+                //case TimeFrameUnit.Day:
+                //    break;
+                //case TimeFrameUnit.Week:
+                //    break;
+                //case TimeFrameUnit.Month:
+                //    break;
+                //case TimeFrameUnit.Year:
+                //    break;
+                case TimeFrameUnit.Unspecified:
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+
         #endregion
 
 
@@ -159,7 +216,7 @@ namespace LionFire.Trading
 
         public static implicit operator string(TimeFrame tf)
         {
-            return tf.Name;
+            return tf?.Name;
         }
 
         #endregion
@@ -176,31 +233,31 @@ namespace LionFire.Trading
 
         #region Derived
 
-        public TimeSpan TimeSpan
+        public TimeSpan? TimeSpan
         { // TODO - Init this readonly during construction
             get
             {
-                if (timeSpan == default(TimeSpan))
+                if (!timeSpan.HasValue)
                 {
                     switch (TimeFrameUnit)
                     {
                         case TimeFrameUnit.Tick:
-                            timeSpan = TimeSpan.FromMilliseconds(1);
+                            timeSpan = null;
                             break;
                         case TimeFrameUnit.Minute:
-                            timeSpan = TimeSpan.FromMinutes(TimeFrameValue);
+                            timeSpan = System.TimeSpan.FromMinutes(TimeFrameValue);
                             break;
                         case TimeFrameUnit.Hour:
-                            timeSpan = TimeSpan.FromHours(TimeFrameValue);
+                            timeSpan = System.TimeSpan.FromHours(TimeFrameValue);
                             break;
                         case TimeFrameUnit.Day:
-                            timeSpan = TimeSpan.FromDays(TimeFrameValue);
+                            timeSpan = System.TimeSpan.FromDays(TimeFrameValue);
                             break;
                         case TimeFrameUnit.Week:
-                            timeSpan = TimeSpan.FromDays(TimeFrameValue * 7);
+                            timeSpan = System.TimeSpan.FromDays(TimeFrameValue * 7);
                             break;
                         case TimeFrameUnit.Month:
-                            timeSpan = TimeSpan.Zero;
+                            timeSpan = null;
                             break;
                         default:
                             throw new ArgumentNullException("TimeFrameUnit");
@@ -209,9 +266,40 @@ namespace LionFire.Trading
                 return timeSpan;
             }
         }
-        private TimeSpan timeSpan;
+        private TimeSpan? timeSpan;
 
-
+        public static TimeSpan TickApproximationTime = System.TimeSpan.FromMilliseconds(200);
+        public TimeSpan TimeSpanApproximation
+        {
+            get
+            {
+                TimeSpan result;
+                switch (TimeFrameUnit)
+                {
+                    case TimeFrameUnit.Tick:
+                        result = TickApproximationTime;
+                        break;
+                    case TimeFrameUnit.Minute:
+                        result = System.TimeSpan.FromMinutes(TimeFrameValue);
+                        break;
+                    case TimeFrameUnit.Hour:
+                        result = System.TimeSpan.FromHours(TimeFrameValue);
+                        break;
+                    case TimeFrameUnit.Day:
+                        result = System.TimeSpan.FromDays(TimeFrameValue);
+                        break;
+                    case TimeFrameUnit.Week:
+                        result = System.TimeSpan.FromDays(TimeFrameValue * 7);
+                        break;
+                    case TimeFrameUnit.Month:
+                        result = System.TimeSpan.FromDays(30.436875);
+                        break;
+                    default:
+                        throw new ArgumentNullException("TimeFrameUnit");
+                }
+                return result;
+            }
+        }
 
         #endregion
 
@@ -280,7 +368,7 @@ namespace LionFire.Trading
         }
 
 
-        internal DateTime Round(DateTime value)
+        public DateTime Round(DateTime value)
         {
             if (this.TimeFrameValue != 1 && TimeFrameUnit != TimeFrameUnit.Tick)
             {
@@ -333,6 +421,22 @@ namespace LionFire.Trading
                 val = Math.Max(1, val);
             }
             return null;
+        }
+
+        public DateTime GetCloseTimeForOpen(DateTime openTime, TimeSpan? epsilon = null)
+        {
+            epsilon ??= System.TimeSpan.FromMilliseconds(1);
+            return GetNextOpenTimeForOpen(openTime) - epsilon.Value;
+        }
+
+        public DateTime GetNextOpenTimeForOpen(DateTime openTime)
+        {
+            if (TimeFrameUnit == TimeFrameUnit.Month)
+            {
+                throw new NotImplementedException("month");
+            }
+            if (!this.TimeSpan.HasValue) throw new NotImplementedException();
+            return openTime + TimeSpan.Value;
         }
 
         public static TimeFrame TryGet(TimeFrameUnit unit, int val)

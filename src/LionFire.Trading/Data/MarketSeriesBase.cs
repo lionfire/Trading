@@ -185,7 +185,8 @@ namespace LionFire.Trading
                     if (DataStartDate != default(DateTime) && endDate.Value + TimeFrame.TimeSpan < DataStartDate)
                     {
                         Debug.WriteLine($"[DATA GAP] endDate: {endDate.Value}, DataStartDate: {DataStartDate}");
-                        AddGap(endDate.Value + TimeFrame.TimeSpan, DataStartDate - TimeFrame.TimeSpan);
+                        throw new NotImplementedException("TODO REVIEW this gap length");
+                        //AddGap(endDate.Value + TimeFrame.TimeSpan, DataStartDate - TimeSpanApproximation.TimeSpan);
                     }
 
                 }
@@ -213,7 +214,8 @@ namespace LionFire.Trading
                     if (DataEndDate != default(DateTime) && startDate.Value - TimeFrame.TimeSpan > DataEndDate)
                     {
                         Debug.WriteLine($"[DATA GAP] startDate: {startDate.Value}, DataEndDate: {DataEndDate}");
-                        AddGap(DataEndDate + TimeFrame.TimeSpan, startDate.Value - TimeFrame.TimeSpan);
+                        throw new NotImplementedException("TODO REVIEW this gap length");
+                        //AddGap(DataEndDate + TimeFrame.TimeSpan, startDate.Value - TimeSpanApproximation.TimeSpan);
                     }
                 }
             }
@@ -328,7 +330,7 @@ namespace LionFire.Trading
 
         public async Task LoadMoreData()
         {
-            await EnsureDataAvailable(null, DataEndDate - TimeFrame.TimeSpan).ConfigureAwait(false);
+            await EnsureDataAvailable(null, DataEndDate - TimeFrame.TimeSpanApproximation).ConfigureAwait(false);
         }
 
 
@@ -357,7 +359,7 @@ namespace LionFire.Trading
         {
             get
             {
-                return TimeFrame.TimeSpan;
+                return TimeFrame.TimeSpanApproximation;
                 // OLD
                 //if (TimeFrame != TimeFrame.t1) return TimeFrame.TimeSpan;
 

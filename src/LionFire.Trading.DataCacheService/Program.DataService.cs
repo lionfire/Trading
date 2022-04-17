@@ -83,7 +83,7 @@ namespace LionFire.Trading
                     HistoricalDataEnd = new DateTime(2017, 6, 3),
                     HistoricalDataTimeFrames = new List<TimeFrame> {
                         TimeFrame.m1,
-                        //TimeFrame.h1,
+                        TimeFrame.h1,
                     },
                     SymbolsWhiteList = new List<string>
                     {

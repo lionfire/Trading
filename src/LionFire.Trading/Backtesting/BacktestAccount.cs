@@ -21,6 +21,14 @@ namespace LionFire.Trading.Backtesting
 
     public class BacktestAccount : SimulatedAccountBase<TBacktestAccount, BacktestAccount>
     {
+        #region Construction
+
+        public BacktestAccount(ILogger logger, ILoggerFactory loggerFactory) : base(logger, loggerFactory)
+        {
+        }
+
+        #endregion
+
 
         #region State
 
@@ -354,7 +362,7 @@ namespace LionFire.Trading.Backtesting
 
             if (this.MarginLevel < this.StopOutLevel)
             {
-                logger.LogWarning($"TODO - STOP OUT at {StopOutLevel * 100.0}% (current margin level: {MarginLevelPercent}%)");
+                Logger.LogWarning($"TODO - STOP OUT at {StopOutLevel * 100.0}% (current margin level: {MarginLevelPercent}%)");
             }
             //logger.LogInformation($"{Market.Server.Time.ToDefaultString()} Eq: {Equity}  Bal: {Balance}");
         }

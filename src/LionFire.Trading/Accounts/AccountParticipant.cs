@@ -17,36 +17,18 @@ using System.Diagnostics;
 using LionFire.States;
 using LionFire.Messaging;
 using LionFire.Dependencies;
+using LionFire.Structures;
+using System.Collections;
 
 namespace LionFire.Trading
-{
-    //public abstract class StateDependency
-    //{
-    //    public abstract ExecutionStateEx State { get; }
-    //}
-
-    //public class MarketDependency : StateDependency
-    //{
-    //    public override ExecutionStateEx State { get { return ExecutionStateEx.Started; } }
-    //}
-
-    public interface IInterestedInMarketData
-    {
-        IEnumerable<MarketSeries> MarketSeriesOfInterest { get; }
-        Task EnsureDataAvailable(DateTime upToDate);
-    }
+{    
     /// <summary>
     /// Represents an entity that participates in the market, either passively (readonly, which will receive events for DesiredSubscriptions via OnBar) and/or actively (by creating orders)
     /// </summary>
-    public abstract class AccountParticipant : ExecutableExBase, IAccountParticipant, IExecutableEx, INotifyPropertyChanged, IInterestedInMarketData
+    public abstract class AccountParticipant : ExecutableExBase, IAccountParticipant, IExecutableEx, INotifyPropertyChanged
     {
 
         #region Desired Bars
-
-        public virtual IEnumerable<MarketSeries> MarketSeriesOfInterest
-        {
-            get { yield break; }
-        }
 
         public static int DefaultDesiredBars = 100;
         public virtual int GetDesiredBars(string symbolCode, TimeFrame timeFrame)
@@ -56,14 +38,14 @@ namespace LionFire.Trading
         public virtual TimeSpan GetDesiredTimeSpan(string symbolCode, TimeFrame timeFrame)
         {
             var bars = GetDesiredBars(symbolCode, timeFrame);
-            var time = TimeSpan.FromMilliseconds(timeFrame.TimeSpan.TotalMilliseconds * bars);
+            var time = TimeSpan.FromMilliseconds(timeFrame.TimeSpanApproximation.TotalMilliseconds * bars);
             return time;
         }
 
-        public Task EnsureDataAvailable(DateTime startDate)
+        public Task EnsureDataAvailable(DateTime startDate, IEnumerable<MarketSeries> marketSeriesOfInterest)
         {
             var tasks = new List<Task>();
-            foreach (var s in MarketSeriesOfInterest)
+            foreach (var s in marketSeriesOfInterest)
             {
                 var desiredBars = GetDesiredBars(s.SymbolCode, s.TimeFrame);
                 var index = s.FindIndex(Account.ExtrapolatedServerTime);
@@ -187,28 +169,39 @@ namespace LionFire.Trading
         [Dependency]
         public IAccount Account
         {
-            get
-            {
-                return account;
-            }
+            get => account;
             set
             {
                 if (account == value) return;
                 if (account != null)
                 {
                     OnDetaching();
+
+                    foreach (var x in marketSubscriptions) x.Dispose();
+                    marketSubscriptions.Clear();
+
                     foreach (var sub in DesiredSubscriptions)
                     {
                         sub.IsActive = false;
                         //sub.Series.BarReceived -= OnBar;
                         sub.Series = null;
                     }
+
+                    var ad = accountDisposer;
+                    accountDisposer = null;
+                    ad?.Dispose();
+
                     OnDetached();
                 }
                 account = value;
 
                 if (account != null)
                 {
+                    if (account is IAsyncSubscribable s)
+                    {
+                        accountDisposer = s.SubscribeAsync();
+                    }
+
                     account.AddAccountParticipant(this); // REVIEW
 
                     if (DesiredSubscriptions != null)
@@ -221,12 +214,11 @@ namespace LionFire.Trading
             }
         }
         private IAccount account;
+        private IDisposable accountDisposer;
 
         List<IDisposable> marketSubscriptions = new List<IDisposable>();
 
-        protected virtual void OnAttaching()
-        {
-        }
+        protected virtual void OnAttaching() { }
         protected virtual void OnAttached()
         {
             foreach (var child in Children)
@@ -234,24 +226,18 @@ namespace LionFire.Trading
                 child.Account = this.Account;
             }
 
-
-
             Account.Started.Subscribe(started => { if (started) { LionFire.Threading.Tasks.TaskManager.OnNewTask(OnMarketStarted(), Threading.Tasks.TaskFlags.Unowned); } });
             //Market.Started.Subscribe(async started => { if (started) { await OnMarketStarted(); } });
         }
-
-        /// <summary>
-        /// Throws NotImplementedException by default.  Override to support detaching.
-        /// </summary>
+        
         protected virtual void OnDetaching()
         {
-            foreach (var x in marketSubscriptions) x.Dispose();
-            marketSubscriptions.Clear();
         }
 
         protected virtual void OnDetached()
         {
         }
+
         #endregion
 
         #region State
@@ -444,12 +430,20 @@ namespace LionFire.Trading
             // TODO: 
             //DesiredExecutionState = ExecutionStateEx.Started;
 
-            if (Account != null && Account.Started.Value)
+            bool started = false;
+            if (Account != null)
             {
-                //await Task.Run(async () => await _Start());
-                await _Start().ConfigureAwait(false);
+                await Account.AddAccountParticipant(this);
+
+                if (Account.Started.Value)
+                {
+                    //await Task.Run(async () => await _Start());
+                    await _Start().ConfigureAwait(false);
+                    started = true;
+                }
             }
-            else
+
+            if(!started)
             {
                 ExecutionStateFlags |= ExecutionStateFlags.WaitingToStart;
             }
@@ -504,7 +498,6 @@ namespace LionFire.Trading
 
                 SetState(ExecutionStateEx.Starting);
                 this.OnEnteringState(LionFire.Execution.ExecutionStateEx.Starting);
-
 
                 await OnStarting().ConfigureAwait(false);
 
@@ -623,16 +616,10 @@ namespace LionFire.Trading
             }
         }
 
-        protected virtual async Task OnStarting()
+        protected virtual Task OnStarting()
         {
             this.ValidateDependencies();
-
-            // MarketSeriesOfInterest Not used at the moment
-            var interested = this as IInterestedInMarketData;
-            if (interested != null)
-            {
-                await EnsureDataAvailable(Account.ExtrapolatedServerTime).ConfigureAwait(false);
-            }
+            return Task.CompletedTask;
         }
         protected virtual Task OnStarted()
         {

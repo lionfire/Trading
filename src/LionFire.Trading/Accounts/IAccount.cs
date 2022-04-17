@@ -53,6 +53,7 @@ namespace LionFire.Trading
         Task<IPositions> RefreshPositions(CancellationToken cancellationToken = default);
 
         IPendingOrders PendingOrders { get; }
+        IPendingOrders2 PendingOrders2 { get; }
 
         PositionStats PositionStats { get; }
 
@@ -89,7 +90,7 @@ namespace LionFire.Trading
         #region Methods
 
         TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
-        TradeResult ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal volume, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null);
+        Task<TradeResult> ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal quantity, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null);
 
         TradeResult ClosePosition(PositionDouble position);
         TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);
@@ -98,7 +99,7 @@ namespace LionFire.Trading
 
 #if !cAlgo
         Server Server { get; }
-        Task AddAccountParticipant(IAccountParticipant indicator);
+        Task AddAccountParticipant(IAccountParticipant participant);
         bool IsTradeApiEnabled { get; set; }
 #endif
 

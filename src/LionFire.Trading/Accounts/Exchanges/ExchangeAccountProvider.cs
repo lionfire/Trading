@@ -25,6 +25,7 @@ namespace LionFire.Trading
 
         public virtual IAccount GetAccount(string accountName = "default")
         {
+            if (accountName == null) return null;
             lock (_accountsLock)
             {
                 if (Accounts.ContainsKey(accountName)) { return Accounts[accountName]; }

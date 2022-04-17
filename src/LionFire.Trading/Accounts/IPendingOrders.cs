@@ -10,4 +10,13 @@ namespace LionFire.Trading
         int Count { get; }
         PendingOrder this[int index] { get; }
     }
+
+    public interface IPendingOrders2 : IReadOnlyList<PendingOrder>
+    {
+
+    }
+    public class PendingOrders2 : List<PendingOrder>, IPendingOrders2
+    {
+
+    }
 }

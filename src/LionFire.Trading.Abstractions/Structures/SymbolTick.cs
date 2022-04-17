@@ -33,4 +33,25 @@ namespace LionFire.Trading
             return $"{Time} {Symbol} b:{bid} a:{ask}";
         }
     }
+
+    public struct SymbolBidAskTick 
+    {
+        public string Symbol;
+
+        public DateTime Time;
+
+        public decimal? Bid;
+        public bool HasBid => Bid.HasValue;
+
+        public decimal? Ask;
+        public bool HasAsk => Ask.HasValue;
+
+
+        public override string ToString()
+        {
+            var bid = Bid.HasValue ? Bid.Value.ToString() : "";
+            var ask = Ask.HasValue ? Ask.Value.ToString() : "";
+            return $"{Time} {Symbol} b:{bid} a:{ask}";
+        }
+    }
 }

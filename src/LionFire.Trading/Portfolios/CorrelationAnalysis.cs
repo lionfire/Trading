@@ -105,7 +105,7 @@ namespace LionFire.Trading.Portfolios
             double delta = normalizedNetVolume2 - normalizedNetVolume1;
 
             DateTime simTime = sim.Portfolio.Start.Value;
-            TimeSpan totalTime;
+            TimeSpan totalTime = TimeSpan.Zero;
 
             foreach (var e in tradeEvents)
             {

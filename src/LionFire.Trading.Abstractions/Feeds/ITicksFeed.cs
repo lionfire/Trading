@@ -29,4 +29,87 @@ namespace LionFire.Trading.Feeds
 
         DateTimeOffset LastUpdate { get; }
     }
+
+    
+
+    public interface ISubExchangeId
+    {
+        /// <summary>
+        /// Examples:
+        ///  - Binance
+        ///  - OANDA
+        ///  - IC Markets
+        /// </summary>
+        string Exchange { get; }
+
+        /// <summary>
+        /// Examples:
+        ///  - Futures
+        ///  - Spot
+        ///  - Margin
+        ///  - Options
+        /// </summary>
+        string AccountTypeName { get; } // RENAME
+
+        /// <summary>
+        /// Examples:
+        ///  - USD(S)-M
+        ///  - COIN-M
+        /// </summary>
+        string AccountSubType { get; }
+
+    }
+
+    public interface IAccountId : ISubExchangeId
+    {
+        string AccountId { get; }
+        string ApiKey { get; }
+
+    }
+
+    public interface IMarketId : ISubExchangeId
+    {
+        /// <summary>
+        /// Examples:
+        ///  - BTCUSDT
+        ///  - XAUUSD
+        /// </summary>
+        string Symbol { get; }
+    }
+
+    public interface IAccountMarketId : IMarketId, IAccountId { }
+
+    
+    public interface ISubExchangeAccount
+    {
+
+    }
+
+    public interface IAccountMarket
+    {
+        // Reference to  ISubExchangeAccount
+
+    }
+
+
+    public interface IMarketFeed
+    {
+
+    }
+
+    public interface IBidAskFeed
+    {
+
+    }
+
+    public interface IMarkPriceFeed
+    {
+
+    }
+
+    public class FeedProvider
+    {
+
+    }
+
 }

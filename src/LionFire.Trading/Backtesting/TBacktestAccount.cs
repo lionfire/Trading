@@ -35,7 +35,7 @@ namespace LionFire.Trading.Backtesting
             get { return EndDate - StartDate; }
         }
 
-        public double TotalBars { get { return TimeSpan.TotalDays / TimeFrame.TimeSpan.TotalDays; } }
+        public double TotalBars { get { return TimeSpan.TotalDays / TimeFrame.TimeSpanApproximation.TotalDays; } }
 
         public string SimulateAccount { get; set; }
 

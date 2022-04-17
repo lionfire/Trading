@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <VersionPrefix>1.0.1</VersionPrefix>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFramework>net6.0</TargetFramework>
     <AssemblyName>LionFire.Trading</AssemblyName>
     <PackageId>LionFire.Trading</PackageId>
     <PackageTargetFallback Condition=" '$(TargetFramework)' == 'netstandard1.5' ">$(PackageTargetFallback);dnxcore50</PackageTargetFallback>
@@ -71,6 +71,10 @@
   <ItemGroup Condition=" '$(TargetFramework)' == 'net462' ">
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Data\TimeSeries\" />
   </ItemGroup>
 
   <Import Project="..\LionFire.Trading.Shared\LionFire.Trading.Shared.projitems" Label="Shared" />

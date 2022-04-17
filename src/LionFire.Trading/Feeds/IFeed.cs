@@ -1,5 +1,6 @@
 ﻿using LionFire.Reactive;
 using LionFire.Trading.Accounts;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -56,7 +57,7 @@ namespace LionFire.Trading
 
 
 #if !cTrader
-    public interface IFeed : IFeedCTrader
+    public interface IFeed : IFeedCTrader, IHostedService
     //: ITemplateInstance<TFeed>
     {
         

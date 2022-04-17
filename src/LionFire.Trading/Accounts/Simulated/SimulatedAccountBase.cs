@@ -71,12 +71,12 @@ namespace LionFire.Trading.Accounts
 
         #region Construction
 
-        public SimulatedAccountBase()
+        public SimulatedAccountBase(ILogger logger, ILoggerFactory loggerFactory) : base(logger, loggerFactory)
         {
             SimulationTimeStep = TimeFrame.m1;
 
         }
-
+        
         #endregion
 
         #region Initialization
@@ -276,7 +276,7 @@ namespace LionFire.Trading.Accounts
                 // TEMP
                 if (!series.LatestBarHasObservers && !series.BarHasObservers)
                 {
-                    logger.LogTrace("Removing unused MarketSeries: " + series.Key);
+                    Logger.LogTrace("Removing unused MarketSeries: " + series.Key);
                     AddRemoval(ref removals, series);
                     continue;
                 }
@@ -292,7 +292,7 @@ namespace LionFire.Trading.Accounts
 
                     if (state.HistoricalSeries == null)
                     {
-                        logger.LogWarning($"Could not find historical data source for {series}");
+                        Logger.LogWarning($"Could not find historical data source for {series}");
                         continue;
                     }
                 }
@@ -316,7 +316,7 @@ namespace LionFire.Trading.Accounts
                 if (state.HistoricalSeries.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan)
                 {
                     // FUTURE: Somehow support this?
-                    logger.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
+                    Logger.LogWarning("Not supported: state.HistoricalSource.TimeFrame.TimeSpan > series.TimeFrame.TimeSpan");
                     continue;
                 }
 
@@ -459,13 +459,14 @@ namespace LionFire.Trading.Accounts
                     Thread.Sleep(delayBetweenSteps);
                 }
             } while (ExecuteNextStep());
-            logger.LogInformation($"Simulation finished in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
+            Logger.LogInformation($"Simulation finished in {TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds)}");
         }
 
         public const int progressReportInterval = 100;
         int i = progressReportInterval;
         double simulationMilliseconds;
 
+        public TimeSpan MinimumStepTime = TimeSpan.FromMilliseconds(300);
 
         /// <returns>True if there are still more steps</returns>
         public bool ExecuteNextStep(bool isBackfill = false)
@@ -477,7 +478,7 @@ namespace LionFire.Trading.Accounts
             }
 #endif
 
-            var timeSpan = this.TimeFrame.TimeSpan;
+            var timeSpan = this.TimeFrame.TimeSpanApproximation;
             if (timeSpan == TimeSpan.Zero)
             {
                 switch (TimeFrame.TimeFrameUnit)
@@ -489,6 +490,10 @@ namespace LionFire.Trading.Accounts
                     default:
                         throw new NotImplementedException();
                 }
+            }
+            if(timeSpan < MinimumStepTime)
+            {
+                timeSpan = MinimumStepTime;
             }
             ServerTime += timeSpan;
 

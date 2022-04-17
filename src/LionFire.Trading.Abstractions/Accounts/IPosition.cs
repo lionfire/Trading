@@ -18,6 +18,7 @@ namespace LionFire.Trading
         decimal Pips { get; }
         decimal Quantity { get; }
         decimal? StopLoss { get; }
+        string? StopLossWorkingType { get; set; }
         decimal Swap { get; }
         string SymbolCode { get; }
         decimal? TakeProfit { get; }
