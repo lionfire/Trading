@@ -21,7 +21,7 @@ public class OrleansHistoricalDataSource2 : HistoricalDataProvider2Base, ILocalN
 
     protected override Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions) 
         => ClusterClient.GetGrain<HistoricalDataChunkGrain>(
-                HistoricalDataChunkGrainKey.GetKey(timeFrame, symbol, start, endExclusive, retrieveOptions.Exchange, retrieveOptions.ExchangeArea)
+                HistoricalDataChunkGrainKey.GetKey(timeFrame, symbol, start, endExclusive, retrieveOptions.Exchange, retrieveOptions.ExchangeArea, typeof(Binance.BinanceFuturesKlineItem))
             )
             .Get<T>(retrieveOptions.Options);
 

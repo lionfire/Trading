@@ -343,7 +343,7 @@ namespace LionFire.Trading.Data
         {
             get
             {
-                return Path.Combine(RootDir, Account.Template.BrokerName, Account.Template.AccountType ?? "", Template.Symbol, Template.TimeFrame.Name);
+                return Path.Combine(RootDir, Account.Template.Exchange, Account.Template.AccountType ?? "", Template.Symbol, Template.TimeFrame.Name);
             }
         }
 

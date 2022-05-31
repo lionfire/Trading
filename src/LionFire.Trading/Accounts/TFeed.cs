@@ -25,18 +25,18 @@ namespace LionFire.Trading.Accounts
         // TODO: Set this from filename during load
         public string? AccountName { get; set; }
 
-        public string? AssetSubPath => BrokerName + "." + AccountName;
+        public string? AssetSubPath => Exchange + "." + AccountName;
 
-        public string? BrokerName { get; set; }
+        public string? Exchange { get; set; }
         public string? ExchangeMarketName
         {
             get
             {
                 if (exchangeMarketName == null)
                 {
-                    exchangeMarketName = BrokerName;
-                    if (!String.IsNullOrWhiteSpace(AccountTypeName)) { exchangeMarketName += "." + AccountTypeName; }
-                    if (!String.IsNullOrWhiteSpace(AccountSubType)) { exchangeMarketName += "." + AccountSubType; }
+                    exchangeMarketName = Exchange;
+                    if (!String.IsNullOrWhiteSpace(ExchangeAreaKind)) { exchangeMarketName += "." + ExchangeAreaKind; }
+                    if (!String.IsNullOrWhiteSpace(ExchangeArea)) { exchangeMarketName += "." + ExchangeArea; }
                 }
                 return exchangeMarketName;
             }
@@ -45,13 +45,27 @@ namespace LionFire.Trading.Accounts
         public string? exchangeMarketName;
         public string? ExchangeMarketDisplayName => ExchangeMarketName?.Replace(".", " ");
 
-        public virtual string AccountTypeName => "";
-        public virtual string AccountSubType => "";
+        public virtual string ExchangeAreaKind => "";
 
-        public string? BrokerDisplayName { get => brokerDisplayName ?? BrokerName?.Replace(".", " "); set { brokerDisplayName = value; } }
+        public string ExchangeArea
+        {
+            get => exchangeArea;
+            set
+            {
+                if (OnlyValidExchangeArea != null && value != OnlyValidExchangeArea)
+                {
+                    throw new ArgumentException($"ExchangeArea must be {OnlyValidExchangeArea}");
+                }
+                exchangeArea = value;
+            }
+        }
+        private string exchangeArea = "";
+        protected virtual string? OnlyValidExchangeArea => null;
+
+        public string? BrokerDisplayName { get => brokerDisplayName ?? Exchange?.Replace(".", " "); set { brokerDisplayName = value; } }
         public string? brokerDisplayName;
 
-        public virtual string Key => BrokerName + "^" + AccountId;
+        public virtual string Key => Exchange + "^" + (string.IsNullOrWhiteSpace(ExchangeArea) ? "" : $"^{ExchangeArea}") + AccountId;
 
         public InstantiationCollection? Children { get; set; }
         IInstantiationCollection? IHierarchicalTemplate.Children => Children;

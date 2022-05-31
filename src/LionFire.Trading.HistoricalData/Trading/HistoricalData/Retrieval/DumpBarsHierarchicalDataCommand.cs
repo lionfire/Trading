@@ -4,6 +4,7 @@ using Oakton;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LionFire.ExtensionMethods.Dumping;
+using LionFire.Trading.HistoricalData.Sources;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
@@ -12,7 +13,7 @@ public class DumpBarsHierarchicalDataInput : HistoricalDataJobInput
 }
 
 
-[Description("Dump bars", Name = "dump")]
+[Description("Dump bars", Name = "bars")]
 public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierarchicalDataInput>
 {
     public DumpBarsHierarchicalDataCommand()
@@ -24,25 +25,52 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
     {
         var host = input.BuildHost();
 
-        var hdp = host.Services.GetService<IOptionsMonitor<HistoricalDataPaths>>()?.CurrentValue ;
+        var source = host.Services.GetService<BarsFileSource>();
+
+        var hdp = host.Services.GetService<IOptionsMonitor<HistoricalDataPaths>>()?.CurrentValue;
         //var logger = host.Services.GetService<ILogger<ListAvailableHierarchicalDataCommand>>();
 
         var dir = hdp.GetDataDir(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame);
 
         if (Directory.Exists(dir))
         {
+            DateTime openTime;
+
             foreach (var path in Directory.GetFiles(dir))
             {
                 var filename = Path.GetFileName(path);
-                Console.WriteLine($" - {filename}");
 
+                bool isFirstBarForFile = true;
                 var (info, bars) = KlineFileDeserializer.Deserialize(path);
-                Console.WriteLine("info:");
-                Console.WriteLine(info.Dump().ToString());
 
+                openTime = info.Start;
                 foreach (var bar in bars)
                 {
-                    Console.WriteLine(bar.ToString());
+                    try
+                    {
+                        if (input.TimeFrame.TimeSpan.HasValue)
+                        {
+                            if (openTime < input.FromFlag) continue;
+                            Console.Write($"{openTime.ToString("yyyy-MM-dd HH:mm")} ");
+                        }
+
+                        if (isFirstBarForFile && input.VerboseFlag)
+                        {
+                            isFirstBarForFile = false;
+                            Console.WriteLine($" - {filename}");
+                            Console.WriteLine(info.Dump().ToString());
+                        }
+
+                        Console.WriteLine(bar.ToString());
+                    }
+                    finally
+                    {
+                        if (input.TimeFrame.TimeSpan.HasValue)
+                        {
+                            openTime += input.TimeFrame.TimeSpan.Value;
+                        }
+                    }
+                    if (openTime >= input.ToFlag) break;
                 }
             }
         }

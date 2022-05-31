@@ -75,7 +75,7 @@ namespace LionFire.Trading.Agent.Program
                    {
 
                        SimulateAccount = @"cTrader\IC Markets.Live.Manual.USD-Backtest",
-                       BrokerName = "IC Markets",
+                       Exchange = "IC Markets",
                        StartDate = new DateTime(2016, 1, 1),
                        EndDate = new DateTime(2016, 11, 23),
                        TimeFrame = TimeFrame.h1,

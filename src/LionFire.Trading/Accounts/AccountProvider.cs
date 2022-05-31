@@ -15,13 +15,21 @@ namespace LionFire.Trading
             ExchangeAccountProviders = exchangeAccountProviders.ToDictionary(p => p.Key);
         }
 
-        public IAccount GetAccount(string exchangeId, string accountName) 
-            => (exchangeId == null || accountName == null) ? null 
-            : (ExchangeAccountProviders.TryGetValue(exchangeId, out var exchangeAccountProvider)
-                ? GetAccount(exchangeAccountProvider, accountName)
-                : throw new ArgumentException($"No IExchangeAccountProvider registered for {exchangeId}"));
+        public IAccount GetAccount(ExchangeId exchangeId, string accountName)
+        {
+            if (exchangeId == null || accountName == null) { return null; }
 
-        private IAccount GetAccount(IExchangeAccountProvider exchangeAccountProvider, string accountName) 
+            if (ExchangeAccountProviders.TryGetValue(exchangeId.Id, out var exchangeAccountProvider))
+            {
+                return GetAccount(exchangeAccountProvider, accountName);
+            }
+            else
+            {
+                throw new ArgumentException($"No IExchangeAccountProvider registered for {exchangeId}");
+            }
+        }
+
+        private IAccount GetAccount(IExchangeAccountProvider exchangeAccountProvider, string accountName)
             => exchangeAccountProvider.GetAccount(accountName);
 
         public IEnumerable<IAccount> Accounts => ExchangeAccountProviders.Values.SelectMany(eap => eap.Accounts.Values);

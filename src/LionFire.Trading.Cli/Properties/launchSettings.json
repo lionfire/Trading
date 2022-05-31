@@ -1,0 +1,16 @@
+{
+  "profiles": {
+    "backtest": {
+      "commandName": "Project",
+      "commandLineArgs": "backtest BTCUSDT"
+    },
+    "list": {
+      "commandName": "Project",
+      "commandLineArgs": "list BTCUSDT"
+    },
+    "indicator list": {
+      "commandName": "Project",
+      "commandLineArgs": "indicator list"
+    }
+  }
+}

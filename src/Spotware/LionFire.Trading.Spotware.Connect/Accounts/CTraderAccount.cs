@@ -217,7 +217,7 @@ namespace LionFire.Trading.Spotware.Connect
         public override string ToString()
         {
             var type = IsDemo ? "[demo]" : "[LIVE]";
-            return $"{BrokerName} {AccountId} {type}";
+            return $"{ExchangeName} {AccountId} {type}";
         }
 
         public string DumpPositions(IPositionsDouble positions)

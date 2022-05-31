@@ -26,7 +26,7 @@ namespace LionFire.Trading.cTrader.Redis
         /// <summary>
         /// Set to "*" to work with any broker.
         /// </summary>
-        public string BrokerName { get; set; }
+        public string Exchange { get; set; }
     }
 
     public class TCAlgoRedisBot : BrokerAccountConfig

@@ -5,17 +5,8 @@ using Oakton;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-public class HistoricalDataJobInput : NetCoreInput
+public class HistoricalDataJobInput : CommonTradingInput
 {
-    [FlagAlias("exchange", 'e')]
-    public string ExchangeFlag { get; set; } = "Binance";
-
-
-    [FlagAlias("area", 'a')]
-    public string ExchangeAreaFlag { get; set; } = "futures";
-
-    [FlagAlias("symbol", 's')]
-    public string Symbol { get; set; } = "BTCUSDT";
 
     [FlagAlias("fields", true)]
     public string FieldsFlag { get; set; } = "native"; // TODO enum
@@ -29,15 +20,8 @@ public class HistoricalDataJobInput : NetCoreInput
     [FlagAlias("clean-up", true)]
     public bool CleanUpRawDataFlag { get; set; } = false;
 
-    [FlagAlias("time-frame", 'i')]
-    public string IntervalFlag { get; set; } = "h1";
-
-    [FlagAlias("from", 'f')]
-    public DateTime FromFlag { get => fromFlag > ToFlag ? ToFlag : fromFlag; set => fromFlag = value; }
-    private DateTime fromFlag = DateTime.UtcNow - TimeSpan.FromHours(24);
-
-    [FlagAlias("to", 't')]
-    public DateTime ToFlag { get; set; } = DateTime.UtcNow + TimeSpan.FromHours(25);
+    
+    
 
     [FlagAlias("limit", true)]
     public int LimitFlag { get; set; } = 1000; // Default 500; max 1000. TODO: learn how this impacts WEIGHT

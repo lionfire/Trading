@@ -130,7 +130,7 @@ namespace LionFire.Trading.Accounts
         {
             get
             {
-                return BrokerInfoUtils.GetSymbolsAvailable(Template?.BrokerName);
+                return BrokerInfoUtils.GetSymbolsAvailable(Template?.Exchange);
             }
         }
 

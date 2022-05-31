@@ -1,4 +1,4 @@
-﻿#if false
+﻿//#if false
 #define Proprietary
 #if Proprietary
 using LionFire.Trading.Proprietary.Bots;
@@ -30,10 +30,10 @@ namespace LionFire.Trading.Agent
         Live = 4,
     }
 
-    //public class TTradingAgentApp
-    //{
-    //    public TradingAgentMode Mode { get; set; }
-    //}
+    public class TTradingAgentApp
+    {
+        public TradingAgentMode Mode { get; set; }
+    }
 
     public class TradingAgentApp
     {
@@ -205,4 +205,4 @@ namespace LionFire.Trading.Agent
         #endregion
     }
 }
-#endif
+//#endif

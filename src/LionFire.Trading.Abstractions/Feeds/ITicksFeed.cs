@@ -49,14 +49,14 @@ namespace LionFire.Trading.Feeds
         ///  - Margin
         ///  - Options
         /// </summary>
-        string AccountTypeName { get; } // RENAME
+        string ExchangeAreaKind { get; }
 
         /// <summary>
         /// Examples:
         ///  - USD(S)-M
         ///  - COIN-M
         /// </summary>
-        string AccountSubType { get; }
+        string ExchangeArea { get; }
 
     }
 

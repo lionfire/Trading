@@ -17,7 +17,7 @@ namespace LionFire.Applications.Hosting
             {
                 AccountMode = AccountMode.Demo,
                 AccountId = "3235730",
-                BrokerName = "IC Markets",
+                Exchange = "IC Markets",
             };
             app.Add(brokerAccount);
             return app;

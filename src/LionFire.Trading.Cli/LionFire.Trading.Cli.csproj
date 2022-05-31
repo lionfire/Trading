@@ -1,22 +1,23 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>lft-injest</AssemblyName>
+    <AssemblyName>lft</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.Hosting.CommandLine" Version="4.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-    <PackageReference Include="Oakton" Version="4.1.0" />
+    <PackageReference Include="Oakton" Version="4.5.0" />
     <PackageReference Include="Winton.Extensions.Configuration.Consul" Version="3.2.0" />
       </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Oakton\LionFire.Oakton.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />
     <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.HistoricalData.csproj" />
   </ItemGroup>

@@ -9,6 +9,10 @@ namespace LionFire.Trading.Notifications
     {
         #region Identity
 
+        public SymbolId SymbolId { get; set; }
+
+        public string ExchangeCode => SymbolId.ExchangeAndAreaCode;
+
         public string Symbol { get; set; }
 
         public string Key
@@ -33,7 +37,7 @@ namespace LionFire.Trading.Notifications
 
         public override string ToString() => Key;
 
-        public string DisplayString => $"{Exchange} {Symbol} {Operator} {Price} {PriceCode}{(Name != null ? $" #{Name}" : "")}".Trim();
+        public string DisplayString => $"{ExchangeCode} {Symbol} {Operator} {Price} {PriceCode}{(Name != null ? $" #{Name}" : "")}".Trim();
         public string PriceCode
         {
             get
@@ -113,13 +117,7 @@ namespace LionFire.Trading.Notifications
 
         #endregion
 
-
-
-
-
-
-        public string Exchange { get; set; }
-
+        
         public PriceKind PriceKind { get; set; }
 
         public string Operator { get; set; } // TODO: Use an enum
@@ -260,8 +258,8 @@ namespace LionFire.Trading.Notifications
 
             if (chunks.Length != 5) throw new ArgumentException("Format: watch:{ExchangeCode}:{Symbol}:{PriceKind}:{up | down}");
 
-            Exchange = chunks[1];
-            Symbol = chunks[2];
+            SymbolId = SymbolId.FromExchangeAndAreaCode(chunks[1], chunks[2]);
+            
             PriceKind = (PriceKind)Enum.Parse(typeof(PriceKind), chunks[3]);
             Operator = chunks[4] == "Up" ? ">" : (chunks[4] == "Down" ? "<" : throw new ArgumentException("up/down missing"));
 

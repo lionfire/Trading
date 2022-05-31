@@ -253,21 +253,6 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
 
 }
 
-public class BarArrayFileSource2 : HistoricalDataProvider2Base, IHistoricalDataSource2, ILocalDiskHistoricalDataSource2
-{
-    public HistoricalDataSourceKind Kind => HistoricalDataSourceKind.LocalDisk;
-
-    protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTime Start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
-    {
-        throw new NotImplementedException();
-    }
-
-    protected override Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
-    {
-        throw new NotImplementedException();
-    }
-}
-
 public class BarArrayFileWriter : ILocalDiskHistoricalDataWriter
 {
     public Task Save<T>(string sourceId, T[] data, TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveParameters)

@@ -1,6 +1,8 @@
 ﻿using K4os.Compression.LZ4.Streams;
 using LionFire.Trading.HistoricalData.Binance;
+using Microsoft.Extensions.Logging;
 using System.Collections;
+using System.Diagnostics;
 using System.Text;
 using ZeroFormatter;
 
@@ -8,6 +10,13 @@ namespace LionFire.Trading.HistoricalData.Serialization;
 
 public class KlineFileDeserializer
 {
+    //public ILogger<KlineFileDeserializer> Logger { get; }
+
+    //public KlineFileDeserializer(ILogger<KlineFileDeserializer> logger)
+    //{
+    //    Logger = logger;
+    //}
+
     public static KlineArrayInfo DeserializeInfo(string path)
     {
         // TODO: Detect magic at start of file
@@ -27,7 +36,7 @@ public class KlineFileDeserializer
             decompressionStream = stream = LZ4Stream.Decode(stream);
         }
 
-        Console.WriteLine($"stream position: {stream.Position}");
+        //Console.WriteLine($"stream position: {stream.Position}");
         IList list;
         try
         {
@@ -51,7 +60,7 @@ public class KlineFileDeserializer
             decompressionStream?.Dispose();
             stream.Dispose();
         }
-        Console.WriteLine($"Deserialized {list.Count} bars");
+        Trace.WriteLine($"Deserialized {list.Count} bars");
         return (info, list);
     }
 

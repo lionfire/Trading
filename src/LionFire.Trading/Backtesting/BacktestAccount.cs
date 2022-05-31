@@ -26,6 +26,7 @@ namespace LionFire.Trading.Backtesting
         public BacktestAccount(ILogger logger, ILoggerFactory loggerFactory) : base(logger, loggerFactory)
         {
         }
+        public BacktestAccount() : base(null, null) { }
 
         #endregion
 
@@ -135,7 +136,7 @@ namespace LionFire.Trading.Backtesting
         //            defaultAccountInfo = new TBacktestAccount()
         //            {
         //                CommissionPerMillion = 0.0,
-        //                BrokerName = "(default)",
+        //                Exchange = "(default)",
         //                AccountId = "(default)",
         //                IsLive = false,
         //                Currency = "USD",
@@ -395,7 +396,7 @@ namespace LionFire.Trading.Backtesting
         {
             get
             {
-                return BrokerInfoUtils.GetSymbolsAvailable(Template?.BrokerName);
+                return BrokerInfoUtils.GetSymbolsAvailable(Template?.Exchange);
             }
         }
 

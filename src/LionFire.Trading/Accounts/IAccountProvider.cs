@@ -9,12 +9,10 @@ namespace LionFire.Trading
     {
         /// <param name="accountId">Format: {ExchangeCode}:{AccountName}</param>
         /// <returns>The IAccount, or null if none registered by that Id</returns>
-        IAccount GetAccount(string exchangeId, string accountId = "default");
+        IAccount GetAccount(ExchangeId exchangeId, string accountId = "default");
 
         Dictionary<string, IExchangeAccountProvider> ExchangeAccountProviders { get; }
 
         IEnumerable<IAccount> Accounts { get; }
     }
-
-    
 }

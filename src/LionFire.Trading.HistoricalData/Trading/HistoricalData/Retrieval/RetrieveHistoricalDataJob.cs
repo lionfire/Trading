@@ -24,6 +24,8 @@ using LionFire.ExtensionMethods.Dumping;
 using Baseline.ImTools;
 using System.Collections.Generic;
 using LionFire.Resolves;
+using LionFire.Trading.HistoricalData.Sources;
+using Baseline;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
@@ -191,7 +193,8 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         Input = input;
 
         var host = input.BuildHost();
-
+        var barsFileSource = host.Services.GetRequiredService<BarsFileSource>();
+        var RangeProvider = host.Services.GetRequiredService<HistoricalDataChunkRangeProvider>();
         BinanceClientProvider = host.Services.GetService<BinanceClientProvider>() ?? throw new ArgumentNullException();
         KlineArrayFileProvider = host.Services.GetService<KlineArrayFileProvider>() ?? throw new ArgumentNullException();
         Logger = host.Services.GetService<ILogger<RetrieveHistoricalDataJob>>() ?? throw new ArgumentNullException();
@@ -202,15 +205,25 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         if (input.ToFlag == default) throw new ArgumentNullException(nameof(input.ToFlag));
         if (!input.KlineInterval.HasValue) throw new ArgumentNullException(nameof(input.KlineInterval));
 
-        DateTime retrievedStart, retrievedEnd;
+        DateTime start, endExclusive;
         var NextDate = input.FromFlag;
 
+        var local = await barsFileSource.List(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame);
         do
         {
-            (retrievedStart, retrievedEnd) = await RetrieveForDate(NextDate);
-            Console.WriteLine($"Retrieved chunk for date {NextDate.ToString(TimeFormat)}: {retrievedStart.ToString(TimeFormat)} to {retrievedEnd.ToString(TimeFormat)}");
-            NextDate = retrievedEnd + Input.TimeFrame.TimeSpanApproximation;
-        } while (retrievedEnd < Input.ToFlag && (NextDate + Input.TimeFrame.TimeSpanApproximation < DateTime.UtcNow));
+            (start, endExclusive) = RangeProvider.RangeForDate(NextDate, input.TimeFrame);
+
+            if (!input.ForceFlag && local.Chunks.Where(c => c.Start == start && c.EndExclusive == endExclusive).Any())
+            {
+                Console.WriteLine($"Already have chunk {NextDate.ToString(TimeFormat)}: {start.ToString(TimeFormat)} to {endExclusive.ToString(TimeFormat)}");
+            }
+            else
+            {
+                (start, endExclusive) = await RetrieveForDate(NextDate);
+                Console.WriteLine($"Retrieved chunk {NextDate.ToString(TimeFormat)}: {start.ToString(TimeFormat)} to {endExclusive.ToString(TimeFormat)}");
+            }
+            NextDate = endExclusive + Input.TimeFrame.TimeSpanApproximation;
+        } while (endExclusive < Input.ToFlag && (NextDate + Input.TimeFrame.TimeSpanApproximation < DateTime.UtcNow));
 
         return true;
     }
@@ -342,7 +355,8 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                     lastKline = kline;
                 }
 
-                if (lastKline == null) { 
+                if (lastKline == null)
+                {
                     //throw new Exception("Failed to retreive any bars");
                     break;
                 }
@@ -381,7 +395,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             //    WriteIndented = true,
             //    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault,
             //}) + Environment.NewLine;
-            
+
 
             Stream stream = file.FileStream;
             using (var streamWriter = new StreamWriter(stream, System.Text.Encoding.UTF8, -1, true))
@@ -429,10 +443,20 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 Console.Write(serializer.Serialize(file.Info));
             }
         }
+
+        if (!Input.NoVerifyFlag)
+        {
+            Verify();
+        }
         return (info.Start, info.EndExclusive);
     }
 
     #endregion
+
+    public void Verify()
+    {
+
+    }
 
     #region Binance
 

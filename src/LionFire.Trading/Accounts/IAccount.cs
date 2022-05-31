@@ -18,7 +18,7 @@ namespace LionFire.Trading
     {
         #region Identity
 
-        public string Key { get; } // => $"{BrokerName}:{AccountId}";
+        public string Key { get; } // => $"{Exchange}:{AccountId}";
 
         #endregion
 
@@ -77,7 +77,7 @@ namespace LionFire.Trading
         bool IsSimulation { get; }
         bool IsRealMoney { get; }
 
-        string BrokerName { get; } // RENAME ExchangeName
+        string ExchangeName { get; } // RENAME ExchangeName
         //string Platform { get; }
         //string AccountMode { get; }
         /// <summary>

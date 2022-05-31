@@ -25,7 +25,7 @@ namespace LionFire.Trading.Accounts
 
         #region Identity
 
-        public string Key => $"{BrokerName}:{AccountName}";
+        public string Key => $"{ExchangeName}:{AccountName}";
 
         /// <summary>
         /// Name of account, set and viewed by the user.  (For the Account Id used by the exchange, see AccountId.)
@@ -46,7 +46,7 @@ namespace LionFire.Trading.Accounts
 
         //TFeed IFeed.Template => Template;
         TFeed IFeedCTrader.Template => Template;
-        string IAccount.BrokerName => Template?.BrokerName;
+        string IAccount.ExchangeName => Template?.Exchange;
         string IAccount.AccountType => Template?.AccountType;
 
         TAccount IAccount.Template { get { return Template; } }

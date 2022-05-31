@@ -72,7 +72,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         public CTraderSymbol(string symbolCode, CTraderAccount account) : base(symbolCode, account)
         {
-            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(account.Template.BrokerName, symbolCode);
+            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(account.Template.Exchange, symbolCode);
             this.LoadSymbolInfo(symbolInfo);
         }
 

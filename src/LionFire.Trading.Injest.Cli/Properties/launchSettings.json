@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "LionFire.Trading.Injest.Cli": {
-      "commandName": "Project",
-      "commandLineArgs": "retrieve BTCUSDT -t 2018-1-1"
-    }
-  }
-}

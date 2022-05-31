@@ -387,6 +387,5 @@ namespace LionFire.Trading.Indicators
 
 #endregion
 
-
     }
 }

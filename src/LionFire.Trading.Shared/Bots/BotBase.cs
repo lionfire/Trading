@@ -202,7 +202,7 @@ where TBotType : TBot, ITBot, new()
                 Guid = guid,
                 Id = Template?.Id,
                 Time = DateTime.UtcNow,
-                Broker = Account.BrokerName,
+                Broker = Account.ExchangeName,
                 IsLive = Account.IsLive,
                 AccountType = Account.AccountType.ToString(),
 
@@ -1310,7 +1310,7 @@ where TBotType : TBot, ITBot, new()
                 {
                     var fakeBacktestResult = new BacktestResult()
                     {
-                        Broker = Account.BrokerName,
+                        Broker = Account.ExchangeName,
                         BacktestDate = DateTime.UtcNow,
                         BotType = botType,
                         BotConfigType = TBot.GetType().AssemblyQualifiedName,
@@ -1390,7 +1390,7 @@ where TBotType : TBot, ITBot, new()
                 if (!GotTick && !TBot.Id.EndsWith(NoTicksIdSuffix)) { TBot.Id = TBot.Id + NoTicksIdSuffix; }
                 var backtestResult = new BacktestResult()
                 {
-                    Broker = Account.BrokerName,
+                    Broker = Account.ExchangeName,
                     BacktestDate = DateTime.UtcNow,
                     BotType = botType,
                     BotConfigType = TBot.GetType().AssemblyQualifiedName,

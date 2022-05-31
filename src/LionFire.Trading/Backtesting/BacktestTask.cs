@@ -55,7 +55,8 @@ namespace LionFire.Applications.Trading
         {
             if (config != null)
             {
-                this.Config = config;
+                BacktestAccount = config.Create<BacktestAccount>();
+                //this.Config = config;
             }
         }
 

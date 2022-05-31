@@ -159,7 +159,7 @@ string text = new string(
         {
             get
             {
-                return GetKey(Feed?.Template?.BrokerName, SymbolCode, TimeFrame, StartDate, BrokerSubType);
+                return GetKey(Feed?.Template?.Exchange, SymbolCode, TimeFrame, StartDate, BrokerSubType);
             }
         }
 
@@ -195,7 +195,7 @@ string text = new string(
 
         public string GetFilePath()
         {
-            var path = Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Data", Feed.Template.BrokerName, SymbolCode, TimeFrame.Name);
+            var path = Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Data", Feed.Template.Exchange, SymbolCode, TimeFrame.Name);
 
             switch (TimeFrame.Name)
             {
@@ -231,7 +231,7 @@ string text = new string(
         public static async Task<HistoricalDataCacheFile> GetCacheFile(MarketSeriesBase marketSeries, DateTime chunkDate)
         {
             HistoricalDataCacheFile cacheFile = cache.GetOrAdd(
-                GetKey(marketSeries.Feed.Template.BrokerName, marketSeries.SymbolCode, marketSeries.TimeFrame, chunkDate),
+                GetKey(marketSeries.Feed.Template.Exchange, marketSeries.SymbolCode, marketSeries.TimeFrame, chunkDate),
                  _ => new HistoricalDataCacheFile(marketSeries, chunkDate)
              );
 
@@ -346,7 +346,7 @@ string text = new string(
         {
             get
             {
-                return Path.Combine(CacheRoot, Feed.Template.BrokerName);
+                return Path.Combine(CacheRoot, Feed.Template.Exchange);
             }
         }
 

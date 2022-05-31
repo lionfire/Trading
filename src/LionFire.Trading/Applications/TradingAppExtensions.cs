@@ -18,6 +18,7 @@ using LionFire.Execution.Jobs;
 using LionFire.Trading.Data;
 using LionFire.Composables;
 using LionFire.Dependencies;
+using LionFire.Trading.Indicators;
 
 namespace LionFire.Trading
 {
@@ -105,6 +106,8 @@ namespace LionFire.Trading
                 //DependencyContext.Current.AddSingleton(tradingContext);
                 serviceCollection.AddSingleton((TradingContext)tradingContext);
                 serviceCollection.AddSingleton((TradingOptions)tradingContext.Options);
+
+                serviceCollection.AddSingleton<IndicatorProvider>();
 
                 //DependencyContext.SetSingletonDefault<TypeNamingContext>(tnc);  RECENTCHANGE - should no lonber be needed now that the app's IServiceProvider is used as the default for DependencyContext.
 

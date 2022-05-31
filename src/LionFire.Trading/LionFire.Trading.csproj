@@ -49,6 +49,8 @@
     <PackageReference Include="DeferredEvents" Version="1.0.5" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="6.0.0" />
+    <PackageReference Include="Oakton" Version="4.5.0" />
+    <PackageReference Include="QuantConnect.Indicators" Version="2.5.13897" />
     <PackageReference Include="System.Collections.Immutable" Version="6.0.0" />
     <PackageReference Include="System.Reactive" Version="5.0.0" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
@@ -74,6 +76,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Backtesting2\Algos2\" />
     <Folder Include="Data\TimeSeries\" />
   </ItemGroup>
 

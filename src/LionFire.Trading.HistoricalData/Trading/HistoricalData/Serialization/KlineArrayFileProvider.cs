@@ -10,18 +10,18 @@ public class KlineArrayFileProvider
 
     HistoricalDataPaths HistoricalDataPaths { get; }
 
-    public HistoricalDataChunkRangeProvider RangeProvider = new HistoricalDataChunkRangeProvider();
+    public HistoricalDataChunkRangeProvider RangeProvider { get; }
 
     
     #endregion
 
     #region Construction
 
-    public KlineArrayFileProvider(IOptionsMonitor<HistoricalDataPaths> hdp, IConfiguration configuration)
+    public KlineArrayFileProvider(IOptionsMonitor<HistoricalDataPaths> hdp, IConfiguration configuration, HistoricalDataChunkRangeProvider rangeProvider)
     {
         HistoricalDataPaths = hdp.CurrentValue;
         HistoricalDataPaths.CreateIfMissing();
-
+        RangeProvider = rangeProvider;
         Console.WriteLine($"HistoricalDataPaths.BaseDir: {HistoricalDataPaths.BaseDir}");
     }
 

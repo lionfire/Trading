@@ -40,7 +40,7 @@ namespace LionFire.Trading.Accounts
 
         public virtual bool AllowSubscribeToTicks { get { return true; } set { } }
 
-        public string BrokerName { get { return Template.BrokerName; } }
+        public string? ExchangeName => Template.Exchange;
 
         #region Template
 

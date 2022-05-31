@@ -14,10 +14,10 @@ namespace LionFire.Trading
             var result = list.FindLastIndex(d => d <= time);
             if (result == -1)
             {
-
-                result = reverseList.FindLastIndex(d => d <= time);
-                if (result == -1) return int.MinValue;
-                result = -1 - result;
+                throw new NotImplementedException("needs reverseList");
+                //result = reverseList.FindLastIndex(d => d <= time);
+                //if (result == -1) return int.MinValue;
+                //result = -1 - result;
 
             }
             return result;

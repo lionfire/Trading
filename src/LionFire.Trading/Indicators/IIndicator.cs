@@ -45,5 +45,4 @@ namespace LionFire.Trading.Indicators
         DataSeries Result { get; }
 #endif
     }
-
 }

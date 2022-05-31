@@ -22,14 +22,14 @@ namespace LionFire.Trading.Agent.Program
                 {
                     
                     SimulateAccount = @"cTrader\IC Markets.Live.Manual",
-                    BrokerName = "IC Markets",
+                    Exchange = "IC Markets",
                     StartDate = new DateTime(2003, 5, 5),
                     EndDate = new DateTime(2016, 9, 15),
                     TimeFrame = TimeFrame.h1,
 
                     //Symbols = new List<string> { "XAUUSD", "EURUSD" }, // UNUSED
 
-                    Children = new List<ITemplate>
+                    Children = new InstantiationCollection
                 {
 #if Proprietary         
                     new TLionTrender("XAUUSD", "h1")

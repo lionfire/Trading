@@ -110,7 +110,7 @@ namespace LionFire.Trading.Data
                 {
                     symbols = symbols.Intersect(TradingOptions.SymbolsWhiteList);
                 }
-                Logger.LogInformation($" - Account: {account.Template.AccountId} {account.Template.BrokerName} {account.Template.AccountType}");
+                Logger.LogInformation($" - Account: {account.Template.AccountId} {account.Template.Exchange} {account.Template.AccountType}");
                 var sb = new StringBuilder();
                 foreach (var symbol in symbols)
                 {

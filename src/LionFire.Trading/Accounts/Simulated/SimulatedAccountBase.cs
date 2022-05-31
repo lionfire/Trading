@@ -544,7 +544,7 @@ namespace LionFire.Trading.Accounts
 
 
             var result = new SymbolImpl<TAccount>(symbolCode, (TAccount)(object)this);
-            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(BrokerName, symbolCode);
+            var symbolInfo = BrokerInfoUtils.GetSymbolInfo(ExchangeName, symbolCode);
             result.LoadSymbolInfo(symbolInfo);
 
             return result;

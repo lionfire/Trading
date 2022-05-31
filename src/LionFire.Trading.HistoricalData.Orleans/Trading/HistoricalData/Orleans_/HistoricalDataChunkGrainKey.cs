@@ -18,7 +18,7 @@ public class HistoricalDataChunkGrainKey
     {
         var chunks = key.Split(':');
 
-        if (chunks.Length != ) { throw new ArgumentException($"{nameof(key)} is in invalid format"); }
+        if (chunks.Length != 7) { throw new ArgumentException($"{nameof(key)} is in invalid format"); }
 
         return new HistoricalDataChunkGrainKey
         {

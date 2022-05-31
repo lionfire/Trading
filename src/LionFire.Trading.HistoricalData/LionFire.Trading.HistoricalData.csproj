@@ -14,7 +14,7 @@
 		<PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.2.16" />
 		<PackageReference Include="McMaster.Extensions.Hosting.CommandLine" Version="4.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
-		<PackageReference Include="Oakton" Version="4.1.0" />
+		<PackageReference Include="Oakton" Version="4.5.0" />
 		<PackageReference Include="YamlDotNet" Version="11.2.1" />
 		<PackageReference Include="ZeroFormatter.Analyzer" Version="1.1.1" />
 	</ItemGroup>
@@ -23,6 +23,10 @@
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Base\LionFire.Base.csproj" />
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
 		<ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Trading\HistoricalData\Sources\BarsFile\" />
 	</ItemGroup>
 	
 </Project>

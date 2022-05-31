@@ -72,7 +72,7 @@
 
 //        public IEnumerable<string> SymbolsAvailable {
 //            get {
-//                return BrokerInfoUtils.GetSymbolsAvailable(Account?.Template?.BrokerName);
+//                return BrokerInfoUtils.GetSymbolsAvailable(Account?.Template?.Exchange);
 //            }
 //        }
 

@@ -20,19 +20,13 @@ namespace LionFire.Trading.Indicators
     // Reference: http://www.iexplain.org/ema-how-to-calculate/
     public sealed class ExponentialMovingAverage : SingleSeriesIndicatorBase<TExponentialMovingAverage>, IMovingAverageIndicator
     {
-public MovingAverageType Kind { get{return MovingAverageType.Exponential; }}
+        public MovingAverageType Kind { get { return MovingAverageType.Exponential; } }
 
         #region Outputs
 
         public DataSeries Result { get; private set; } = new DataSeries();
 
-        public override IEnumerable<IndicatorDataSeries> Outputs
-        {
-            get
-            {
-                yield return Result;
-            }
-        }
+        public override IEnumerable<IndicatorDataSeries> Outputs { get { yield return Result; } }
 
         #endregion
 
