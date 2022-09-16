@@ -13,7 +13,7 @@ namespace LionFire.Trading.Notifications
 
         public string ExchangeCode => SymbolId.ExchangeAndAreaCode;
 
-        public string Symbol { get; set; }
+        public string Symbol => SymbolId.Symbol;
 
         public string Key
         {

@@ -10,7 +10,7 @@ namespace LionFire.Trading.Analysis
     {
 
         int BacktestResultsCountInDatabase();
-        Task<int> InjestBacktests(InjestOptions options = null, CancellationToken? token = null);
+        Task<int> InjestBacktests(InjestParameters options = null, CancellationToken? token = null);
 
         /// <summary>
         /// Load backtest results

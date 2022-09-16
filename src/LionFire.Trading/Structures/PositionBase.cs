@@ -17,6 +17,8 @@ namespace LionFire.Trading
 
     public class PositionBase : IPosition
     {
+        
+
         public string Comment { get; set; }
 
         public decimal Commissions { get; set; }
@@ -45,7 +47,16 @@ namespace LionFire.Trading
 
         public decimal Swap { get; set; }
 
-        public string SymbolCode { get; set; }
+        public string SymbolCode
+        {
+            get => SymbolId?.Symbol; 
+            set
+            {
+                if(SymbolId== null) { SymbolId = new SymbolId(); }
+                SymbolId.Symbol = value;   
+            }
+        }
+        public SymbolId SymbolId { get; set; }
 
         public decimal? TakeProfit { get; set; }
 

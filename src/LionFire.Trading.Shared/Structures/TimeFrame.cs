@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 #if cAlgo
-//using Timerame = LionFire.Trading.LionFireTimeFrame;
+//using LFTimeFrame = LionFire.Trading.LionFireTimeFrame;
 using cAlgo.API;
 #endif
 using System.Threading.Tasks;

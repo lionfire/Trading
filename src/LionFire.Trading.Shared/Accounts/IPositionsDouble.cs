@@ -1,5 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+#if cAlgo
+using PositionDouble = cAlgo.API.Position;
+using Symbol = cAlgo.API.Internals.Symbol;
+#endif
 using System.Linq;
 using System.Threading.Tasks;
 

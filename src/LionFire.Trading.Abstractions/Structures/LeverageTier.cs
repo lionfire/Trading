@@ -1,4 +1,4 @@
-﻿#if !cTrader
+﻿#if !cAlgo
 
 namespace LionFire.Trading
 {

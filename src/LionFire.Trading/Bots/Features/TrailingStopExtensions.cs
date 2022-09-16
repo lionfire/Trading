@@ -1,4 +1,4 @@
-﻿#if cTrader 
+﻿#if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
 #endif

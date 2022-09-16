@@ -8,9 +8,10 @@ namespace LionFire.Trading
     public interface GetFitnessArgs
     {
         double AverageTrade { get; }
+        double AverageTradePerVolume { get; }
         double Equity { get; }
         History History { get; }
-        double LosingTrades { get; }
+        int LosingTrades { get; }
         double MaxBalanceDrawdown { get; }
         double MaxBalanceDrawdownPercentages { get; }
         double MaxEquityDrawdown { get; }
@@ -21,8 +22,8 @@ namespace LionFire.Trading
         double ProfitFactor { get; }
         double SharpeRatio { get; }
         double SortinoRatio { get; }
-        double TotalTrades { get; }
-        double WinningTrades { get; }
+        int TotalTrades { get; }
+        int WinningTrades { get; }
     }
 
     public class _GetFitnessArgs : GetFitnessArgs
@@ -30,6 +31,7 @@ namespace LionFire.Trading
         public double AverageTrade {
             get;set;
         }
+        public double AverageTradePerVolume { get; set; }
 
         public double Equity {
             get; set;
@@ -39,7 +41,7 @@ namespace LionFire.Trading
             get; set;
         }
 
-        public double LosingTrades {
+        public int LosingTrades {
             get; set;
         }
 
@@ -75,13 +77,14 @@ namespace LionFire.Trading
             get; set;
         }
 
-        public double TotalTrades {
+        public int TotalTrades {
             get; set;
         }
 
-        public double WinningTrades {
+        public int WinningTrades {
             get; set;
         }
+        
     }
 
 }

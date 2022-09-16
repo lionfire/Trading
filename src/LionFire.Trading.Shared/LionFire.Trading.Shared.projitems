@@ -9,7 +9,41 @@
     <Import_RootNamespace>LionFire.Trading.Shared</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)Accounts\IAccountParticipant.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Accounts\IPositionsDouble.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Accounts\PositionCloseReason.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Backtesting\BacktestResult.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Backtesting\BacktestStats.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Bots\BotBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\BotPosition.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\BotSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\BotSettingsCache.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\Features\StopLossTrailer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\IBot.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\IOnBar.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\ISingleChartBot.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\ISingleChartBotEx.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\PBot.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\SignalBot\ISignalBot.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\SignalBot\SignalBotBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Bots\SignalBot\SingleSeriesSignalBotBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Data\MarketSeriesExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Exchanges\BrokerInfoUtils.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\CustomIndicatorDataSeries.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\IHasSingleSeries.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\IIndicator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\IndicatorBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\ISingleSeriesIndicator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\ITSingleSeriesIndicator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\SignalIndicator\ISignalIndicator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\SignalIndicator\SignalIndicatorBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\SingleSeriesIndicatorBase.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\TSignalIndicator.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Indicators\TSingleSeriesIndicator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Link\BotLinkExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Markets\SymbolExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Math\TradeMath.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Structures\ISingleSeriesConfig.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Structures\TimeFrame.cs" />
   </ItemGroup>
 </Project>

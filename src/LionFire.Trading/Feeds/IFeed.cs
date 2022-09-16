@@ -12,7 +12,7 @@ namespace LionFire.Trading
     //}
     //public class PaperAccount : BacktestAccount
 
-#if cTrader
+#if cAlgo
     public interface IFeed
 #else
     public interface IFeedCTrader
@@ -56,7 +56,7 @@ namespace LionFire.Trading
     }
 
 
-#if !cTrader
+#if !cAlgo
     public interface IFeed : IFeedCTrader, IHostedService
     //: ITemplateInstance<TFeed>
     {

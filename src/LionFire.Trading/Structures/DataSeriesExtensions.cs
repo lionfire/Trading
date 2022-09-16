@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-#if cTrader
+#if cAlgo
 using cAlgo.API.Internals;
 #endif
 using System.Text;

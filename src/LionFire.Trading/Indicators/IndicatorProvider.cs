@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using LionFire.ExtensionMethods;
+using LionFire.Structures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LionFire.Trading.Indicators;

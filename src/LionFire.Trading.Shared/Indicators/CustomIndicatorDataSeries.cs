@@ -1,4 +1,5 @@
-﻿#if cAlgo
+﻿#if !cAlgo
+#if cAlgo
 using cAlgo.API;
 #endif
 using System;
@@ -81,3 +82,5 @@ namespace LionFire.Trading.Indicators
         }
     }
 }
+
+#endif

@@ -68,9 +68,7 @@ namespace LionFire.Trading.Indicators
         {
             base.OnInitializing();
             OnInitializing_();
-
             DataSeries = Template.IndicatorBarSource ?? MarketSeries.GetDataSeries(Template.IndicatorBarComponent);
-
         }
         partial void OnInitializing_();
         

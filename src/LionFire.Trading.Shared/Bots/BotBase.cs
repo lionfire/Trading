@@ -20,10 +20,16 @@ using LionFire.Trading.Link;
 using LionFire.ExtensionMethods.Copying;
 using LionFire.Threading;
 using System.Text.Json;
+using LionFire.Dependencies;
+using LionFire.Applications;
 #if cAlgo
 using cAlgo.API.Indicators;
 using cAlgo.API.Internals;
 using cAlgo.API;
+using PositionDouble = cAlgo.API.Position;
+#else 
+using PositionClosedEventArgs = LionFire.Trading.PositionDoubleClosedEventArgs;
+using PositionOpenedEventArgs = LionFire.Trading.PositionDoubleOpenedEventArgs;
 #endif
 using LionFire.Instantiating;
 
@@ -202,11 +208,15 @@ where TBotType : TBot, ITBot, new()
                 Guid = guid,
                 Id = Template?.Id,
                 Time = DateTime.UtcNow,
+#if cAlgo
+                Broker = Account.BrokerName,
+#else
                 Broker = Account.ExchangeName,
+#endif
                 IsLive = Account.IsLive,
                 AccountType = Account.AccountType.ToString(),
 
-#if cTrader
+#if cAlgo
                 AccountId = Account.Number.ToString(),
 #else
                 AccountId = this.Account.AccountId,
@@ -353,7 +363,7 @@ where TBotType : TBot, ITBot, new()
             if (BotSettingsCache.IsExpired || BotSettingsCache.Settings == null)
             {
                 BotSettingsCache.Settings = LoadSettings();
-#if cTrader
+#if cAlgo
                 if (Diag)
                 {
                     Print("SettingsCache.IsExpired, Loaded settings");
@@ -362,7 +372,7 @@ where TBotType : TBot, ITBot, new()
             }
             else
             {
-#if cTrader
+#if cAlgo
                 if (Diag)
                 {
                     Print("Using cached settings");
@@ -405,15 +415,15 @@ where TBotType : TBot, ITBot, new()
 
         public BotBase()
         {
-#if cTrader
-            if (!LionFireEnvironment.IsMainAppInfoSet)
-            {
-                LionFireEnvironment.MainAppInfo = new AppInfo()
-                {
-                    CompanyName = "LionFire",
-                    ProgramName = "Trading",
-                };
-            }
+#if cAlgo
+            //if (!LionFireEnvironment.IsMainAppInfoSet)
+            //{
+            //    LionFireEnvironment.MainAppInfo = new AppInfo()
+            //    {
+            //        CompanyName = "LionFire",
+            //        ProgramName = "Trading",
+            //    };
+            //}
 #endif
 
             InitExchangeRates();
@@ -423,13 +433,13 @@ where TBotType : TBot, ITBot, new()
 
         #region Initialization
 
-        private void Link_OnPositionClosed(PositionDoubleClosedEventArgs args)
+        private void Link_OnPositionClosed(PositionClosedEventArgs args)
         {
             //var position = args.Position;
             //Print("Position closed with {0} profit", position.GrossProfit);
             LinkSendStatus().FireAndForget();
         }
-        private void Link_OnPositionOpened(PositionDoubleOpenedEventArgs args)
+        private void Link_OnPositionOpened(PositionOpenedEventArgs args)
         {
             //var position = args.Position;
             //Print("Position closed with {0} profit", position.GrossProfit);
@@ -885,7 +895,7 @@ where TBotType : TBot, ITBot, new()
 
             //volume = VolumeToStep(volume); // Unnecessary here
 
-            //#if cTrader
+            //#if cAlgo
             //            volume = this.Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
             //#endif
             //return volume;
@@ -969,7 +979,7 @@ where TBotType : TBot, ITBot, new()
                 logger.LogWarning("volume == 0");
             }
             volume = VolumeToStep(volume);
-#if cTrader
+#if cAlgo
             volume = Symbol.NormalizeVolumeInUnits(volume, RoundingMode.Down);
 #endif
             return volume;
@@ -1248,14 +1258,9 @@ where TBotType : TBot, ITBot, new()
 
         #endregion
 
-#if !cTrader // MOVE
-        public MarketSeries MarketSeries // REVIEW RECENTCHANGE
-        {
-            get
-            {
-                return MarketData.GetSeries(this.TimeFrame);
-            }
-        }
+#if !cAlgo // MOVE
+        // REVIEW RECENTCHANGE
+        public MarketSeries MarketSeries => MarketData.GetSeries(this.TimeFrame);
 #endif
 
         #region On-demand extra inputs: DailySeries
@@ -1310,7 +1315,11 @@ where TBotType : TBot, ITBot, new()
                 {
                     var fakeBacktestResult = new BacktestResult()
                     {
+#if cAlgo
+                        Broker = Account.BrokerName,
+#else
                         Broker = Account.ExchangeName,
+#endif
                         BacktestDate = DateTime.UtcNow,
                         BotType = botType,
                         BotConfigType = TBot.GetType().AssemblyQualifiedName,
@@ -1390,7 +1399,11 @@ where TBotType : TBot, ITBot, new()
                 if (!GotTick && !TBot.Id.EndsWith(NoTicksIdSuffix)) { TBot.Id = TBot.Id + NoTicksIdSuffix; }
                 var backtestResult = new BacktestResult()
                 {
+#if cAlgo
+                    Broker = Account.BrokerName,
+#else
                     Broker = Account.ExchangeName,
+#endif
                     BacktestDate = DateTime.UtcNow,
                     BotType = botType,
                     BotConfigType = TBot.GetType().AssemblyQualifiedName,
@@ -1402,6 +1415,7 @@ where TBotType : TBot, ITBot, new()
                     End = EndDate.Value,
 
                     AverageTrade = args.AverageTrade,
+                    AverageTradePerVolume = args.AverageTradePerVolume,
                     Equity = args.Equity,
                     //History
                     LosingTrades = args.LosingTrades,
@@ -1486,11 +1500,11 @@ where TBotType : TBot, ITBot, new()
         protected virtual void DoLogBacktest(GetFitnessArgs args, BacktestResult backtestResult)
         {
             double fitness = backtestResult.Fitness;
-
             if (RuntimeSettings.RobustnessMode == true || RuntimeSettings.LogBacktestThreshold != null && !double.IsNaN(RuntimeSettings.LogBacktestThreshold.Value) && fitness > RuntimeSettings.LogBacktestThreshold)
             {
                 try
                 {
+                    //System.Diagnostics.Debugger.Launch();
                     SaveResult(args, backtestResult, fitness, TBot.Id, GotTick ? "ticks" : "no-ticks");
                 }
                 catch (Exception ex)
@@ -1500,7 +1514,7 @@ where TBotType : TBot, ITBot, new()
                 }
             }
         }
-
+        
 #if !cAlgo
         public TimeFrame TimeFrame => (this as IHasSingleSeries)?.MarketSeries?.TimeFrame;
 #endif
@@ -1514,9 +1528,9 @@ where TBotType : TBot, ITBot, new()
             return result;
         }
         public static string MachineName => Environment.MachineName; // FUTURE: Get custom value from config
-        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString());
+        public string BacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, StandardizedSymbolCode(Symbol.Code), BotName, TimeFrame.ToShortString(), $"{StartDate.Value.ToString("yyyy.MM.dd")}-{EndDate.Value.ToString("yyyy.MM.dd")}");
         public string RobustnessBacktestResultSaveDir(TimeFrame timeFrame) => Path.Combine(BacktestResultSaveDirBase, "Robustness", $"{StandardizedSymbolCode(Symbol.Code)} {BotName} {TimeFrame.ToShortString()}");
-        public static string BacktestResultSaveDirBase => throw new NotImplementedException();//Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Results", MachineName);
+        public static string BacktestResultSaveDirBase => Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Results", MachineName);
 
         public static bool CreateResultsDirIfMissing = true;
 
@@ -1578,13 +1592,26 @@ where TBotType : TBot, ITBot, new()
         {
            //PropertyNamingPolicy  
         };
+
+        private void Backtest_SetVersion(BacktestResult backtestResult)
+        {
+            //Print("Assembly location: " + Assembly.GetExecutingAssembly().Location); // Usually null inside cTrader, otherwise we could get file modification time
+            
+            var version = this.GetType().Assembly.GetName().Version;
+            DateTime buildDate = new DateTime(2000, 1, 1)
+                .AddDays(version.Build)
+                .AddSeconds(version.Revision * 2);
+            backtestResult.CompileDate = buildDate;
+            backtestResult.AssemblyVersion = version;
+        }
         private void SaveResult(GetFitnessArgs args, BacktestResult backtestResult, double fitness, string id, string backtestFlags = null)
         {
             var duration = backtestResult.End.Value - backtestResult.Start.Value;
 
+            backtestResult.GetAverageDaysPerTrade(args);
+            Backtest_SetVersion(backtestResult);
 #if LogBacktestResults
             var profit = args.Equity / initialBalance;
-            backtestResult.GetAverageDaysPerTrade(args);
             try
             {
                 BacktestLogger = this.GetLogger(ToString().Replace(' ', '.') + ".Backtest");
@@ -1654,9 +1681,9 @@ where TBotType : TBot, ITBot, new()
 
         public Microsoft.Extensions.Logging.ILogger BacktestLogger { get; protected set; }
 
-        #endregion
+#endregion
 
-        #region Misc
+#region Misc
 
         public virtual string Label
         {
@@ -1679,17 +1706,17 @@ where TBotType : TBot, ITBot, new()
         public Microsoft.Extensions.Logging.ILogger Logger => logger;
         protected Microsoft.Extensions.Logging.ILogger logger { get; set; }
 
-        #region INotifyPropertyChanged Implementation
+#region INotifyPropertyChanged Implementation
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged(string propertyName) => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 
-        #endregion
+#endregion
 
 #endif
 
-        #endregion
+#endregion
 
 
     }

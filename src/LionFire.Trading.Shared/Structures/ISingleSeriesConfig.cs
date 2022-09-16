@@ -1,6 +1,8 @@
 ﻿#if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
+using TimeFrame = cAlgo.API.TimeFrame;
+using Symbol = cAlgo.API.Internals.Symbol;
 #endif
 using System;
 using System.Collections.Generic;

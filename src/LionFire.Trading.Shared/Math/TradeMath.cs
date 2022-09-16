@@ -1,6 +1,7 @@
 ﻿#if cAlgo
 using cAlgo.API;
 using cAlgo.API.Internals;
+using PositionDouble = cAlgo.API.Position;
 #endif
 using System;
 using System.Collections.Generic;

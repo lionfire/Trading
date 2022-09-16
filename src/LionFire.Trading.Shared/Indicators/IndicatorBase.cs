@@ -125,16 +125,17 @@ namespace LionFire.Trading.Indicators
 
         public IndicatorBase()
         {
-#if cAlgo
-            if (LionFireEnvironment.MainAppInfo != null)
-            {
-                LionFireEnvironment.MainAppInfo = new AppInfo()
-                {
-                    CompanyName = "LionFire",
-                    ProgramName = "Trading",
-                };
-            }
-#endif
+//#if cAlgo
+            
+//            if (LionFireEnvironment.MainAppInfo != null)
+//            {
+//                LionFireEnvironment.MainAppInfo = new AppInfo()
+//                {
+//                    CompanyName = "LionFire",
+//                    ProgramName = "Trading",
+//                };
+//            }
+//#endif
         }
 
         public IndicatorBase(TIndicator config) : this()
@@ -150,7 +151,7 @@ namespace LionFire.Trading.Indicators
         }
 
 
-        
+
 
         protected virtual void OnInitializing()
         {
@@ -177,14 +178,14 @@ namespace LionFire.Trading.Indicators
                 ValidateConfiguration();
 
 #if cAlgo
-            //if (Bot == null)
-            //{
-            //    throw new Exception("TEMP - Bot == null in OnInitializing()");
-            //}
-            if (Bot != null && Bot.Indicators == null)
-            {
-                throw new Exception("Bot != null && Bot.Indicators == null in OnInitializing()");
-            }
+                //if (Bot == null)
+                //{
+                //    throw new Exception("TEMP - Bot == null in OnInitializing()");
+                //}
+                if (Bot != null && Bot.Indicators == null)
+                {
+                    throw new Exception("Bot != null && Bot.Indicators == null in OnInitializing()");
+                }
 #endif
                 if (EffectiveIndicators == null)
                 {
@@ -215,7 +216,7 @@ namespace LionFire.Trading.Indicators
             }
         }
 
-        
+
         protected virtual void ValidateConfiguration()
         {
         }
@@ -245,7 +246,9 @@ namespace LionFire.Trading.Indicators
                 {
                     if (mi.GetValue(this) == null)
                     {
+#if !cAlgo
                         mi.SetValue(this, new CustomIndicatorDataSeries());
+#endif
                     }
                 }
                 catch (Exception ex)
@@ -320,10 +323,10 @@ namespace LionFire.Trading.Indicators
 #endif
 
         public abstract Task CalculateIndex(int index);
-        
 
 
-        public  async Task CalculateToTime(DateTime date)
+
+        public async Task CalculateToTime(DateTime date)
         {
 
 #if cAlgo

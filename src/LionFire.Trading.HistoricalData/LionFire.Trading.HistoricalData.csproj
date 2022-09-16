@@ -13,7 +13,7 @@
 		<PackageReference Include="FTX.Net" Version="1.0.6" />
 		<PackageReference Include="K4os.Compression.LZ4.Streams" Version="1.2.16" />
 		<PackageReference Include="McMaster.Extensions.Hosting.CommandLine" Version="4.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
 		<PackageReference Include="Oakton" Version="4.5.0" />
 		<PackageReference Include="YamlDotNet" Version="11.2.1" />
 		<PackageReference Include="ZeroFormatter.Analyzer" Version="1.1.1" />

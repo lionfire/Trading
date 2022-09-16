@@ -16,6 +16,9 @@ namespace LionFire.Trading.Bots
         , ITemplate
         //ITemplateAsset
     {
+
+        public bool Debugger { get; set; }
+        
         public virtual Type Type => this.GetType();
         public string AssetSubPath { get { return Id; } set { Id = value; } }
         public string Id { get; set; } = IdUtils.GenerateId();

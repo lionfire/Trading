@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,9 +11,10 @@ namespace LionFire.Trading
     {
         public Dictionary<string, IExchangeAccountProvider> ExchangeAccountProviders { get; }
 
-        public AccountProvider(IEnumerable<IExchangeAccountProvider> exchangeAccountProviders)
+        public AccountProvider(IEnumerable<IExchangeAccountProvider> exchangeAccountProviders, ILogger<AccountProvider> logger)
         {
             ExchangeAccountProviders = exchangeAccountProviders.ToDictionary(p => p.Key);
+            Logger = logger;
         }
 
         public IAccount GetAccount(ExchangeId exchangeId, string accountName)
@@ -23,16 +25,17 @@ namespace LionFire.Trading
             {
                 return GetAccount(exchangeAccountProvider, accountName);
             }
-            else
-            {
-                throw new ArgumentException($"No IExchangeAccountProvider registered for {exchangeId}");
-            }
+          
+            Logger.LogWarning($"No IExchangeAccountProvider registered for {exchangeId}");
+            return null;
         }
 
         private IAccount GetAccount(IExchangeAccountProvider exchangeAccountProvider, string accountName)
             => exchangeAccountProvider.GetAccount(accountName);
 
         public IEnumerable<IAccount> Accounts => ExchangeAccountProviders.Values.SelectMany(eap => eap.Accounts.Values);
+
+        public ILogger<AccountProvider> Logger { get; }
 
         //public IAccount GetAccount(string configName)
         //{

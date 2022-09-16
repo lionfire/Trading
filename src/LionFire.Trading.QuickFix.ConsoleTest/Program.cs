@@ -1,5 +1,4 @@
 ﻿using QuickFix;
-using QuickFix.FIX44;
 using QuickFix.Transport;
 using System;
 using System.Collections.Generic;

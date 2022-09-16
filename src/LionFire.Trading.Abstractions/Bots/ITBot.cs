@@ -59,6 +59,7 @@ namespace LionFire.Trading.Bots
 
         //BotTags Tags { get; set; }
 
+        bool Debugger { get; set; }
     }
 
     public class BotTags

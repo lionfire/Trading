@@ -1,17 +1,22 @@
-﻿//#define ConcurrentInjest
-//using BlazorComponents.ChartJS;
-namespace LionFire.Trading.Backtesting
+﻿public class InjestOptions
 {
-    public class InjestOptions
-    {
-        public int MaxCount { get; set; }
-        public bool WithTradesOnly { get; set; }
+    /// <summary>
+    /// Set this to true on the injestion host.
+    /// Affects: 
+    ///  - BacktestFileMover
+    /// </summary>
+    public bool Enabled { get; set; }
 
-        public bool ContinueOnFail { get; set; }
-        public string TimeFrame { get; set; }
-        public string Algo { get; set; }
-        public string Symbol { get; set; }
-        public int Verbosity { get; set; }
-        public bool Pretend { get; set; }
-    }
+
+    // OLD: symbol/bot/tf
+    public string BacktestsRoot_Old { get; set; } = @"F:\st\Investing-Output\.local\Results"; // HARDCODE HARDPATH
+
+    public List<string> MultiMachineResultDirs { get; set; } = new List<string>()
+    {
+        @"F:\st\Investing-Output\Results", // HARDCODE HARDPATH
+        @"F:\st\Investing-Output\.local\Machines", // HARDCODE HARDPATH
+    };
+    //public List<string> MarketsResultDirs { get; set; } = new List<string>()
+    //{
+    //};
 }

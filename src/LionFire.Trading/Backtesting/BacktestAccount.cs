@@ -313,6 +313,7 @@ namespace LionFire.Trading.Backtesting
             var result = new _GetFitnessArgs()
             {
                 AverageTrade = history.Any() ? history.Select(p => p.NetProfit).Average() : double.NaN,
+                AverageTradePerVolume = history.Any() ? history.Select(p => p.NetProfit / p.Volume).Average() : double.NaN,
                 Equity = Equity,
                 History = this.history,
                 LosingTrades = history.Where(p => p.NetProfit < 0).Count(),
