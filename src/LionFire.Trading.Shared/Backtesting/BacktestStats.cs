@@ -1,4 +1,6 @@
 ﻿
+using System;
+
 namespace LionFire.Trading.Backtesting;
 
 public static class BacktestStats

@@ -28,18 +28,18 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.7" />
-    <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
-    <PackageReference Include="System.Reactive" Version="3.1.1" />
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.3.0" />
-    <PackageReference Include="System.Text.Encoding.Extensions" Version="4.3.0" />
-    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="3.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="3.1.7" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.1.7" />
-    <PackageReference Include="System.ObjectModel" Version="4.3.0" />
-    <PackageReference Include="System.Collections.Concurrent" Version="4.3.0" />
-    <PackageReference Include="System.Reflection" Version="4.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.Reactive" />
+    <PackageReference Include="System.Reflection.TypeExtensions" />
+    <PackageReference Include="System.Text.Encoding.Extensions" />
+    <PackageReference Include="System.Threading.Thread" />
+    <PackageReference Include="Microsoft.Extensions.Options" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+    <PackageReference Include="System.ObjectModel" />
+    <PackageReference Include="System.Collections.Concurrent" />
+    <PackageReference Include="System.Reflection" />
   </ItemGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -47,8 +47,8 @@
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net462' ">
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.1.0" />
-    <PackageReference Include="System.Text.Encoding.Extensions" Version="4.0.11" />
+    <PackageReference Include="System.Reflection.TypeExtensions" />
+    <PackageReference Include="System.Text.Encoding.Extensions" />
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>

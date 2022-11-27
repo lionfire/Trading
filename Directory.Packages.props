@@ -1,0 +1,54 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageVersion Include="Alexinea.ZeroFormatter" Version="1.6.4" />
+    <PackageVersion Include="Alexinea.ZeroFormatter.Interfaces" Version="1.6.4" />
+    <PackageVersion Include="Binance.Net" Version="8.0.9" />
+    <PackageVersion Include="DeferredEvents" Version="1.0.5" />
+    <PackageVersion Include="Flurl" Version="2.7.1" />
+    <PackageVersion Include="Flurl.Http" Version="2.3.1" />
+    <PackageVersion Include="FTX.Net" Version="1.0.6" />
+    <PackageVersion Include="K4os.Compression.LZ4.Streams" Version="1.2.16" />
+    <PackageVersion Include="McMaster.Extensions.Hosting.CommandLine" Version="4.0.1" />
+    <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="7.0.0" />
+    <PackageVersion Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageVersion Include="NLog" Version="5.0.0-beta11" />
+    <PackageVersion Include="Oakton" Version="4.5.0" />
+    <PackageVersion Include="QuantConnect.Indicators" Version="2.5.13897" />
+    <PackageVersion Include="StackExchange.Redis" Version="2.2.4" />
+    <PackageVersion Include="System.Collections.Concurrent" Version="4.3.0" />
+    <PackageVersion Include="System.Collections.Immutable" Version="7.0.0" />
+    <PackageVersion Include="System.IO" Version="4.3.0" />
+    <PackageVersion Include="System.ObjectModel" Version="4.3.0" />
+    <PackageVersion Include="System.Reactive" Version="5.0.0" />
+    <PackageVersion Include="System.Reactive.Linq" Version="5.0.0" />
+    <PackageVersion Include="System.Reflection" Version="4.3.0" />
+    <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.7.0" />
+    <PackageVersion Include="System.Runtime.Extensions" Version="4.3.1" />
+    <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.3.0" />
+    <PackageVersion Include="System.Threading.Thread" Version="4.3.0" />
+    <PackageVersion Include="System.ValueTuple" Version="4.5.0" />
+    <PackageVersion Include="Utf8Json" Version="1.3.7" />
+    <PackageVersion Include="Winton.Extensions.Configuration.Consul" Version="3.2.0" />
+    <PackageVersion Include="YamlDotNet" Version="11.2.1" />
+    <PackageVersion Include="ZeroFormatter.Analyzer" Version="1.1.1" />
+  </ItemGroup>
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net462' ">
+    <PackageVersion Include="Google.ProtocolBuffers" Version="2.4.1.555" />
+    <PackageVersion Include="System.Reflection.TypeExtensions" Version="4.1.0" />
+    <PackageVersion Include="System.Text.Encoding.Extensions" Version="4.0.11" />
+  </ItemGroup>
+</Project>

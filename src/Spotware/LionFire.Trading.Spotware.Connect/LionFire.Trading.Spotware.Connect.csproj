@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
@@ -18,18 +18,18 @@
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net462' ">
     <ProjectReference Include="..\..\..\..\Core\src\LionFire.Environment\LionFire.Environment.csproj" />
-    <PackageReference Include="Google.ProtocolBuffers" Version="2.4.1.555" />
+    <PackageReference Include="Google.ProtocolBuffers" />
     <Reference Include="System" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Flurl" Version="2.7.1" />
-    <PackageReference Include="Flurl.Http" Version="2.3.1" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="6.0.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="System.Reactive.Linq" Version="5.0.0" />
-    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+    <PackageReference Include="Flurl" />
+    <PackageReference Include="Flurl.Http" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.Reactive.Linq" />
+    <PackageReference Include="System.Threading.Thread" />
   </ItemGroup>
 
 </Project>

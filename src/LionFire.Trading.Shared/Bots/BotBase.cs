@@ -1415,10 +1415,10 @@ where TBotType : TBot, ITBot, new()
                     End = EndDate.Value,
 
                     AverageTrade = args.AverageTrade,
-                    AverageTradePerVolume = args.AverageTradePerVolume,
+                    //AverageTradePerVolume = args.AverageTradePerVolume, // Where did this come from?
                     Equity = args.Equity,
                     //History
-                    LosingTrades = args.LosingTrades,
+                    LosingTrades =(int) args.LosingTrades,
                     MaxBalanceDrawdown = args.MaxBalanceDrawdown,
                     MaxBalanceDrawdownPercentages = args.MaxBalanceDrawdownPercentages,
                     MaxEquityDrawdown = args.MaxEquityDrawdown,
@@ -1429,8 +1429,8 @@ where TBotType : TBot, ITBot, new()
                     ProfitFactor = args.ProfitFactor,
                     SharpeRatio = args.SharpeRatio,
                     SortinoRatio = args.SortinoRatio,
-                    TotalTrades = args.TotalTrades,
-                    WinningTrades = args.WinningTrades,
+                    TotalTrades = (int)args.TotalTrades,
+                    WinningTrades = (int)args.WinningTrades,
                 };
 
                 var duration = EndDate.Value - StartDate.Value; // Slight optimization of backtestResult.Duration
