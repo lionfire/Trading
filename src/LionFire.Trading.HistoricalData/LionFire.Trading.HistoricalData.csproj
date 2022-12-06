@@ -10,7 +10,6 @@
 	<ItemGroup>
 		<PackageReference Include="Alexinea.ZeroFormatter" />
 		<PackageReference Include="Binance.Net" />
-		<PackageReference Include="FTX.Net" />
 		<PackageReference Include="K4os.Compression.LZ4.Streams" />
 		<PackageReference Include="McMaster.Extensions.Hosting.CommandLine" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" />
