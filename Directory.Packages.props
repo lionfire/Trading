@@ -16,6 +16,7 @@
     <PackageVersion Include="AspNetCore.HealthChecks.UI.Client" Version="6.0.5" />
     <PackageVersion Include="AspNetCore.HealthChecks.UI.InMemory.Storage" Version="6.0.5" />
     <PackageVersion Include="AspNetCore.HealthChecks.UI.SQLite.Storage" Version="6.0.5" />
+    <PackageVersion Include="BernhardHaus.Collections.WeakDictionary" Version="1.0.3" />
     <PackageVersion Include="Binance.Net" Version="8.0.9" />
     <PackageVersion Include="BinanceDotNet" Version="4.12.0" />
     <PackageVersion Include="Blazorise.Bootstrap" Version="0.9.5.4" />
@@ -37,7 +38,6 @@
     <PackageVersion Include="DotNetProjects.Extended.Wpf.Toolkit" Version="4.6.97" />
     <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="7.0.0" />
     <PackageVersion Include="FluentEmail.Mailgun" Version="2.7.0" />
-    <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="7.0.0-beta-2" />
     <PackageVersion Include="GitVersion.MsBuild" Version="5.11.1" />
     <PackageVersion Include="Hjson" Version="3.0.0" />
     <PackageVersion Include="IdentityModel" Version="6.0.0" />
@@ -52,7 +52,6 @@
     <PackageVersion Include="MediatR" Version="9.0.0" />
     <PackageVersion Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="9.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.All" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Connections.Abstractions" Version="7.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Blazor" Version="7.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Blazor.Build" Version="7.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Blazor.DevServer" Version="7.0.0" />
