@@ -29,7 +29,7 @@ namespace LionFire.Trading.Backtesting
             base.ProtectedValue = backtestResult;
         }
 
-        protected override ITask<IResolveResult<BacktestResult>> ResolveImpl() => throw new NotImplementedException();
+        protected override ITask<IGetResult<BacktestResult>> ResolveImpl() => throw new NotImplementedException();
 #if TODO
         public override Task<IRetrieveResult<BacktestResult>> RetrieveImpl()
         {
