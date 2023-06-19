@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public class TradingContext : MultiType
+    public class TradingContext : MultiTyped
     {
         #region Configuration
 
