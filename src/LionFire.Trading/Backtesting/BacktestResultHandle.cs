@@ -22,7 +22,7 @@ public class BacktestResultHandle : ReadHandleBase<FileReference<BacktestResult>
     public BacktestResultHandle() { }
     public BacktestResultHandle(BacktestResult backtestResult)
     {
-        base.ProtectedValue = backtestResult;
+        base.ReadCacheValue = backtestResult;
     }
 
     protected override ITask<IGetResult<BacktestResult>> GetImpl(CancellationToken cancellationToken = default) => throw new NotImplementedException();
