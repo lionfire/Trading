@@ -10,7 +10,7 @@ namespace LionFire.Hosting;
 
 public static class TradingHostingExtensions
 {
-    public static ILionFireHostBuilder Trading(this LionFireHostBuilder builder)
+    public static ILionFireHostBuilder Trading(this ILionFireHostBuilder builder)
         => builder.ForHostBuilder(b => b.ConfigureServices(services => services
             .AddSingleton<IAccountProvider, AccountProvider>()
             .AddSingleton<SymbolNameNormalizer>()
