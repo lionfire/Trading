@@ -1,0 +1,18 @@
+<Project>
+
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <BaseIntermediateOutputPath>$(BuildRoot)\obj\$(Configuration)\$(Platform)\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+	  <BaseOutputPath>$(BuildRoot)\bin\$(Configuration)\$(Platform)\$(MSBuildProjectName)\</BaseOutputPath>
+
+    <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
+    <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
+
+  </PropertyGroup>
+  
+  <PropertyGroup>
+    <Authors>Jared Thirsk</Authors>
+    <Company>Jared Thirsk</Company>
+  </PropertyGroup>
+ 
+</Project>
