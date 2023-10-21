@@ -107,17 +107,17 @@
     <PackageVersion Include="Microsoft.NETCore.Platforms" Version="7.0.0" />
     <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.0.1" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.Consul" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="7.1.2" />
-    <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Runtime.Abstractions" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="7.1.2" />
-    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.Consul" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Runtime.Abstractions" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="7.2.2" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.9.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="3.1.4" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.705.50" />
@@ -160,7 +160,7 @@
     <PackageVersion Include="OrchardCore.Application.Cms.Targets" Version="1.3.0" />
     <PackageVersion Include="Orleans.Clustering.Redis" Version="7.0.0" />
     <PackageVersion Include="Orleans.Persistence.Redis" Version="7.0.0" />
-    <PackageVersion Include="OrleansDashboard" Version="7.0.2" />
+    <PackageVersion Include="OrleansDashboard" Version="7.2.2" />
     <PackageVersion Include="Overby.Extensions.Attachments" Version="1.2.0" />
     <PackageVersion Include="PixelLab.Core" Version="6.0.2" />
     <PackageVersion Include="Polly" Version="7.2.3" />
