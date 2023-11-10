@@ -58,7 +58,7 @@ namespace LionFire.Trading
                           CustomAppDataDirName = "Trading",
                           ProgramName = "Data Cache Service",
                       })
-                      .AddLogging(factory => factory.AddNLog())
+                      //.AddLogging(factory => factory.AddNLog())
                 //   .ConfigureServices(sc => sc.AddLogging())
                 //   .AddInit(a => a
                 //    .ServiceProvider.GetService<ILoggerFactory>()

@@ -68,7 +68,7 @@
     <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Build" Version="17.0.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.4.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.7.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.0.1" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
@@ -106,7 +106,7 @@
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="6.25.1" />
     <PackageVersion Include="Microsoft.NETCore.Platforms" Version="7.0.0" />
     <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="7.2.2" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.Consul" Version="7.2.2" />
     <PackageVersion Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="7.2.2" />
@@ -123,8 +123,8 @@
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.705.50" />
     <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.31" />
     <PackageVersion Include="MorseCode.ITask" Version="2.0.3" />
-    <PackageVersion Include="MSTest.TestAdapter" Version="3.0.2" />
-    <PackageVersion Include="MSTest.TestFramework" Version="3.0.2" />
+    <PackageVersion Include="MSTest.TestAdapter" Version="3.1.1" />
+    <PackageVersion Include="MSTest.TestFramework" Version="3.1.1" />
     <PackageVersion Include="MudBlazor" Version="6.4.0" />
     <PackageVersion Include="MyCouch" Version="7.5.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
