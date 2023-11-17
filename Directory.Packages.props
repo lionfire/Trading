@@ -63,15 +63,15 @@
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Core" Version="2.2.5" />
     <PackageVersion Include="Microsoft.AspNetCore.Mvc.Razor.RuntimeCompilation" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.ViewFeatures" Version="2.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.ViewFeatures" Version="2.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Razor.Design" Version="2.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.SignalR" Version="1.1.0" />
     <PackageVersion Include="Microsoft.AspNetCore.WebUtilities" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Build" Version="17.0.0" />
+    <PackageVersion Include="Microsoft.Build" Version="17.8.3" />
     <PackageVersion Include="Microsoft.CodeAnalysis" Version="4.7.0" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.0.1" />
-    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.0.1" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.7.0" />
+    <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Scripting" Version="4.7.0" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0" />
@@ -102,27 +102,27 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
-    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="6.25.1" />
-    <PackageVersion Include="Microsoft.IdentityModel.Protocols" Version="6.25.1" />
-    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="6.25.1" />
-    <PackageVersion Include="Microsoft.NETCore.Platforms" Version="7.0.0" />
-    <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.7.2" />
-    <PackageVersion Include="Microsoft.Orleans.Client" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Clustering.Consul" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="7.0.3" />
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols" Version="7.0.3" />
+    <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="7.0.3" />
+    <PackageVersion Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
+    <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.2.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageVersion Include="Microsoft.Orleans.Client" Version="7.2.3" />
+    <PackageVersion Include="Microsoft.Orleans.Clustering.Consul" Version="7.2.3" />
     <PackageVersion Include="Microsoft.Orleans.CodeGenerator.MSBuild" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Core" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="7.2.2" />
+    <PackageVersion Include="Microsoft.Orleans.Core" Version="7.2.3" />
+    <PackageVersion Include="Microsoft.Orleans.Runtime" Version="7.2.3" />
+    <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="7.2.3" />
+    <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="7.2.3" />
     <PackageVersion Include="Microsoft.Orleans.Runtime.Abstractions" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Server" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="7.2.2" />
-    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.9.5" />
+    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="7.2.3" />
+    <PackageVersion Include="Microsoft.Orleans.Server" Version="7.2.3" />
+    <PackageVersion Include="Microsoft.Orleans.Streaming" Version="7.2.3" />
+    <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.5" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.705.50" />
-    <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.31" />
+    <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.2151.40" />
+    <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.77" />
     <PackageVersion Include="MorseCode.ITask" Version="2.0.3" />
     <PackageVersion Include="MSTest.TestAdapter" Version="3.1.1" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.1.1" />
@@ -246,7 +246,7 @@
     <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework.Contains('-windows'))">
-    <PackageVersion Include="Microsoft.Graphics.Win2D" Version="1.0.0.30" />
-    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.0.0" />
+    <PackageVersion Include="Microsoft.Graphics.Win2D" Version="1.1.0" />
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="1.4.231115000" />
   </ItemGroup>
 </Project>
