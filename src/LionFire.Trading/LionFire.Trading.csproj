@@ -50,7 +50,7 @@
     <PackageReference Include="DeferredEvents" />
     <PackageReference Include="Microsoft.CSharp" />
     <PackageReference Include="Oakton" />
-    <PackageReference Include="QuantConnect.Indicators" />
+    <!--<PackageReference Include="QuantConnect.Indicators" />-->
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Reactive" />
     <PackageReference Include="System.Reflection.TypeExtensions" />
