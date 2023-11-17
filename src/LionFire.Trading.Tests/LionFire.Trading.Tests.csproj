@@ -6,7 +6,7 @@
     <IntermediateOutputPath>C:\Users\ja\AppData\Local\Temp\vs2C19.tmp\Release\</IntermediateOutputPath>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
