@@ -21,9 +21,8 @@ using static AnyDiff.DifferenceLines;
 using K4os.Compression.LZ4;
 using Microsoft.Extensions.DependencyInjection;
 using LionFire.ExtensionMethods.Dumping;
-using Baseline.ImTools;
+//using Baseline.ImTools;
 using System.Collections.Generic;
-using LionFire.Resolves;
 using LionFire.Trading.HistoricalData.Sources;
 using Baseline;
 
@@ -70,7 +69,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
     public BinanceClientProvider? BinanceClientProvider { get; set; }
     public KlineArrayFileProvider? KlineArrayFileProvider { get; set; }
     public ILogger<RetrieveHistoricalDataJob>? Logger { get; set; }
-    BinanceClient? BinanceClient { get; set; }
+    BinanceRestClient? BinanceClient { get; set; }
 
     #endregion
 

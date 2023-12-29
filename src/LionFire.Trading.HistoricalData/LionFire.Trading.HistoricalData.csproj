@@ -9,6 +9,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="Alexinea.ZeroFormatter" />
+		<PackageReference Include="Baseline" />
 		<PackageReference Include="Binance.Net" />
 		<PackageReference Include="K4os.Compression.LZ4.Streams" />
 		<PackageReference Include="McMaster.Extensions.Hosting.CommandLine" />

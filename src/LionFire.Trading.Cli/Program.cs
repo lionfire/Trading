@@ -13,8 +13,13 @@ using LionFire.Trading.HistoricalData;
 using LionFire.Trading.HistoricalData.Retrieval;
 using System.Xml.Linq;
 using LionFire.Trading.Indicators;
+using Oakton.Descriptions;
 
-return await Host.CreateDefaultBuilder()
+#if TODO
+return await new HostApplicationBuilder()
+#else
+return await Host.CreateDefaultBuilder() 
+#endif
     .LionFire()
     .ConfigureHostConfiguration(c =>
         c.AddConsul("LionFire.Trading", options => { options.Optional = true; options.Parser = new SimpleConfigurationParser(); })
@@ -30,7 +35,7 @@ return await Host.CreateDefaultBuilder()
     .ConfigureServices((context, services) =>
     {
         services
-            .Configure<HistoricalDataPaths>(context.Configuration.GetSection("HistoricalData")
+            .Configure<HistoricalDataPaths>(context.Configuration.GetSection("LionFire.Trading:HistoricalData")
                 .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"))
             .AddSingleton<BinanceClientProvider>()
             .AddSingleton<KlineArrayFileProvider>()
@@ -45,12 +50,28 @@ return await Host.CreateDefaultBuilder()
         )
         .Command("data",
             typeof(ListAvailableHistoricalDataCommand),
-            typeof(DumpBarsHierarchicalDataCommand)
+            typeof(DumpBarsHierarchicalDataCommand),
+            typeof(RetrieveHistoricalDataJob)
         )
         .Command("indicator",
             typeof(ListIndicatorsCommand),
             typeof(CalculateIndicatorCommand)
         )
-.Run(args)
-//.RunOaktonCommands(args);
-    ;
+//.Run(args)
+.RunOaktonCommands(args);
+;
+
+public static class HABX
+{
+    public static HostApplicationBuilder For(this HostApplicationBuilder hab, Action<HostApplicationBuilder> a)
+    {
+        a(hab);
+        return hab;
+    }
+
+    public static HostApplicationBuilder Configure(this HostApplicationBuilder hab, Action<IConfigurationBuilder> c)
+    {
+        c(hab.Configuration);
+        return hab;
+    }
+}

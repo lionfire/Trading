@@ -1,5 +1,13 @@
 {
   "profiles": {
+    "bars": {
+      "commandName": "Project",
+      "commandLineArgs": "data bars BTCUSDT -a futures -e binance -i h1 -f 2019-12-1 -t 2019-12-31"
+    },
+    "retrieve": {
+      "commandName": "Project",
+      "commandLineArgs": "retrieve bars BTCUSDT -a futures -e binance -i h1 -f 2019-12-1 -t 2019-12-31"
+    },
     "backtest": {
       "commandName": "Project",
       "commandLineArgs": "backtest BTCUSDT"

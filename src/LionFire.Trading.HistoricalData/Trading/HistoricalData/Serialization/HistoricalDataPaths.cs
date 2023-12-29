@@ -14,6 +14,7 @@ public class HistoricalDataPaths
     
     public string GetDataDir(string exchange, string exchangeArea, string symbol, TimeFrame timeFrame)
     {
+        if (BaseDir == null) throw new ArgumentNullException(nameof(BaseDir));
         return Path.Combine(BaseDir, exchange, exchangeArea, timeFrame.Name, symbol);
     }
 
