@@ -212,7 +212,9 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         {
             (start, endExclusive) = RangeProvider.RangeForDate(NextDate, input.TimeFrame);
 
-            if (!input.ForceFlag && local.Chunks.Where(c => c.Start == start && c.EndExclusive == endExclusive).Any())
+            var chunks = local.Chunks.Where(c => c.Start == start && c.EndExclusive == endExclusive).FirstOrDefault();
+
+            if (!input.ForceFlag && chunks != null && chunks.ExpectedBars.HasValue && chunks.ExpectedBars == chunks.Bars)
             {
                 Console.WriteLine($"Already have chunk {NextDate.ToString(TimeFormat)}: {start.ToString(TimeFormat)} to {endExclusive.ToString(TimeFormat)}");
             }
@@ -298,6 +300,15 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinanceKline>> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime, endTime: requestTo, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
 
                 await CheckWeight_Binance(result?.ResponseHeaders);
+
+                if (!result.Success)
+                {
+                    if (result.Error != null)
+                    {
+                        if (result.Error.Code == -1121) throw new ArgumentException(result.Error.Message);
+                    }
+                    throw new Exception(result.Error?.Message ?? result.Error?.Code.ToString());
+                }
 
                 foreach (var kline in result!.Data)
                 {

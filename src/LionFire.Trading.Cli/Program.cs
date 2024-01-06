@@ -18,18 +18,20 @@ using Oakton.Descriptions;
 #if TODO
 return await new HostApplicationBuilder()
 #else
-return await Host.CreateDefaultBuilder() 
+return await Host.CreateDefaultBuilder()
 #endif
     .LionFire()
     .ConfigureHostConfiguration(c =>
-        c.AddConsul("LionFire.Trading", options => { options.Optional = true; options.Parser = new SimpleConfigurationParser(); })
+        c
+              .AddConsul("LionFire.Trading", options => { options.Optional = true; options.Parser = new SimpleConfigurationParser(); })
 #if DEBUG
-        .AddInMemoryCollection(new Dictionary<string, string>
-        {
-            ["LionFire.Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
-            ["LionFire.Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
-        })
+            .AddInMemoryCollection(new Dictionary<string, string>
+            {
+                ["LionFire.Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
+                ["LionFire.Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
+            })
 #endif
+              .AddEnvironmentVariables("DOTNET_")
         )
 
     .ConfigureServices((context, services) =>
@@ -57,8 +59,8 @@ return await Host.CreateDefaultBuilder()
             typeof(ListIndicatorsCommand),
             typeof(CalculateIndicatorCommand)
         )
-//.Run(args)
-.RunOaktonCommands(args);
+.Run(args)
+//.RunOaktonCommands(args);
 ;
 
 public static class HABX
