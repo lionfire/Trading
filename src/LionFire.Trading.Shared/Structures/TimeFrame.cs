@@ -233,6 +233,10 @@ namespace LionFire.Trading
 
         #region Derived
 
+
+        /// <summary>
+        /// RENAME: Period
+        /// </summary>
         public TimeSpan? TimeSpan
         { // TODO - Init this readonly during construction
             get
@@ -443,6 +447,21 @@ namespace LionFire.Trading
         {
             return TryParse(unit.ToLetterCode() + val.ToString());
         }
+
+        public DateTimeOffset NextBarOpen(DateTimeOffset time)
+        {
+            switch (this.ToShortString())
+            {
+
+                case "h1":
+                    return new DateTimeOffset(time.Year, time.Month, time.Day, time.Hour, 0, 0, time.Offset) + System.TimeSpan.FromHours(1);
+                case "m1":
+                    return new DateTimeOffset(time.Year, time.Month, time.Day, time.Hour, time.Minute, 0, time.Offset) + System.TimeSpan.FromMinutes(1);
+                default:
+                    throw new NotImplementedException();
+            }
+        }
+        public TimeSpan TimeUntilBarClose(DateTimeOffset time) => NextBarOpen(time) - time;
 
         #endregion
     }
