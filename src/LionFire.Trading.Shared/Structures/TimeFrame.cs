@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using TS = System.TimeSpan;
 #if cAlgo
 //using LFTimeFrame = LionFire.Trading.LionFireTimeFrame;
 using cAlgo.API;
@@ -462,6 +463,16 @@ namespace LionFire.Trading
             }
         }
         public TimeSpan TimeUntilBarClose(DateTimeOffset time) => NextBarOpen(time) - time;
+
+        public TimeFrame FromTimeSpan(TimeSpan timeSpan)
+        {
+            timeSpan += new TimeSpan(0, 0, 0, 0, 1);
+
+            if (timeSpan - TS.FromMinutes(1) < TS.FromSeconds(1)) return TimeFrame.m1;
+            if (timeSpan - TS.FromHours(1) < TS.FromSeconds(1)) return TimeFrame.h1;
+
+            throw new NotImplementedException();
+        }
 
         #endregion
     }

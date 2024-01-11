@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+		<RootNamespace>LionFire.Trading.Binance_</RootNamespace>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+		<PackageReference Include="Microsoft.Orleans.Reminders" />
+		<PackageReference Include="Microsoft.Orleans.Sdk" />
+		<PackageReference Include="Microsoft.Orleans.Streaming" />
+	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Binance.Orleans.Abstractions\LionFire.Trading.Binance.Orleans.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
