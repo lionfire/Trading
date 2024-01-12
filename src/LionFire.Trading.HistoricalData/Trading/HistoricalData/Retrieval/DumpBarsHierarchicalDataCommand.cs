@@ -16,21 +16,29 @@ public class DumpBarsHierarchicalDataInput : HistoricalDataJobInput
 [Description("Dump bars", Name = "bars")]
 public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierarchicalDataInput>
 {
+    public DumpBarsHierarchicalDataInput Input { get; set; }
+
     public DumpBarsHierarchicalDataCommand()
     {
         Usage("Dump bars").Arguments(x => x.ExchangeFlag, x => x.ExchangeAreaFlag, x => x.Symbol, x => x.IntervalFlag);
     }
 
+    public BarsFileSource? source { get; private set; }
+    public HistoricalDataPaths? HistoricalDataPaths { get; private set; }
+
     public override async Task<bool> Execute(DumpBarsHierarchicalDataInput input)
     {
+        this.Input = input;
         var host = input.BuildHost();
-
-        var source = host.Services.GetService<BarsFileSource>();
-
-        var hdp = host.Services.GetService<IOptionsMonitor<HistoricalDataPaths>>()?.CurrentValue;
+        source = host.Services.GetService<BarsFileSource>();
+        HistoricalDataPaths = host.Services.GetService<IOptionsMonitor<HistoricalDataPaths>>()?.CurrentValue;
         //var logger = host.Services.GetService<ILogger<ListAvailableHierarchicalDataCommand>>();
+        return await Execute();
+    }
 
-        var dir = hdp.GetDataDir(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame);
+    public async Task<bool> Execute()
+    {
+        var dir = HistoricalDataPaths.GetDataDir(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame);
 
         if (Directory.Exists(dir))
         {
@@ -48,13 +56,13 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
                 {
                     try
                     {
-                        if (input.TimeFrame.TimeSpan.HasValue)
+                        if (Input.TimeFrame.TimeSpan.HasValue)
                         {
-                            if (openTime < input.FromFlag) continue;
+                            if (openTime < Input.FromFlag) continue;
                             Console.Write($"{openTime.ToString("yyyy-MM-dd HH:mm")} ");
                         }
 
-                        if (isFirstBarForFile && input.VerboseFlag)
+                        if (isFirstBarForFile && Input.VerboseFlag)
                         {
                             isFirstBarForFile = false;
                             Console.WriteLine($" - {filename}");
@@ -65,12 +73,12 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
                     }
                     finally
                     {
-                        if (input.TimeFrame.TimeSpan.HasValue)
+                        if (Input.TimeFrame.TimeSpan.HasValue)
                         {
-                            openTime += input.TimeFrame.TimeSpan.Value;
+                            openTime += Input.TimeFrame.TimeSpan.Value;
                         }
                     }
-                    if (openTime >= input.ToFlag) break;
+                    if (openTime >= Input.ToFlag) break;
                 }
             }
         }

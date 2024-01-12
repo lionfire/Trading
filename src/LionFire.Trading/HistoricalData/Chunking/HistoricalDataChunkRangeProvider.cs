@@ -34,6 +34,18 @@ public class HistoricalDataChunkRangeProvider
     public (DateTime start, DateTime endExclusive) RangeForDate(DateTime date, TimeFrame timeFrame) 
         => IsLongRangeForDate(date, timeFrame) ? LongRangeForDate(date, timeFrame) : ShortRangeForDate(date, timeFrame);
 
+    public IEnumerable<(DateTime start, DateTime endExclusive)> ShortRangesForLongRange(DateTime date, TimeFrame timeFrame)
+    {
+        var longRange = LongRangeForDate(date, timeFrame);
+        var shortStart = longRange.start;
+        while (shortStart < longRange.endExclusive)
+        {
+            var shortRange = ShortRangeForDate(shortStart, timeFrame);
+            yield return shortRange;
+            shortStart = shortRange.endExclusive;
+        }
+    }
+
     public (DateTime start, DateTime endExclusive) ShortRangeForDate(DateTime date, TimeFrame timeFrame)
     {
         switch (timeFrame.Name)
@@ -68,5 +80,15 @@ public class HistoricalDataChunkRangeProvider
         {
             throw new ArgumentException($"{nameof(start)} and {nameof(endExclusive)} must be on a chunk boundary for {timeFrame.Name}");
         }
+    }
+    public bool IsValidShortRange(TimeFrame timeFrame, DateTime from, DateTime to)
+    {
+        var r = ShortRangeForDate(from, timeFrame);
+        return r.start == from && r.endExclusive == to;
+    }
+    public bool IsValidLongRange(TimeFrame timeFrame, DateTime from, DateTime to)
+    {
+        var r = LongRangeForDate(from, timeFrame);
+        return r.start == from && r.endExclusive == to;
     }
 }

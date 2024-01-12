@@ -3,11 +3,13 @@ using Binance.Net.Interfaces.Clients;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Orleans.BroadcastChannel;
 using Orleans.Concurrency;
 using Orleans.Runtime;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -26,7 +28,7 @@ public interface IUsdFuturesBarScraperG : IGrainWithStringKey
     Task<int> Offset();
     Task Offset(int newValue);
 
-    
+
 }
 
 public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
@@ -35,8 +37,7 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     public IPersistentState<BarScraperState> State { get; }
     public ILogger<UsdFuturesBarScraperG> Logger { get; }
     public IBinanceRestClient BinanceRestClient { get; }
-    public IServiceProvider ServiceProvider { get; }
-
+    public IBroadcastChannelProvider BroadcastChannelProvider { get; }
     UsdFuturesBarScraper Scraper { get; }
 
     #region Parameters from key
@@ -48,16 +49,19 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #region Lifecycle
 
+    IDisposable barsSubscription;
+    IDisposable? timer;
+
     public UsdFuturesBarScraperG(
         [PersistentState("BinanceUsdFuturesBarScraperOptions", "Trading")] IPersistentState<UsdFuturesBarScraperOptions> options,
         [PersistentState("BinanceUsdFuturesBarScrapeState", "Trading")] IPersistentState<BarScraperState> state,
         ILogger<UsdFuturesBarScraperG> logger,
         IBinanceRestClient binanceRestClient,
-        IServiceProvider serviceProvider)
+        IBroadcastChannelProvider broadcastChannelProvider)
     {
         Logger = logger;
         BinanceRestClient = binanceRestClient;
-        ServiceProvider = serviceProvider;
+        BroadcastChannelProvider = broadcastChannelProvider;
         Options = options;
         State = state;
         var s = this.GetPrimaryKeyString().Split('^');
@@ -74,13 +78,21 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         Scraper.State = State.State;
+
+        barsSubscription = Scraper.Bars.Subscribe(async bars => await OnBars(bars));
+
         return base.OnActivateAsync(cancellationToken);
+    }
+
+    public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
+    {
+        barsSubscription?.Dispose();
+        return base.OnDeactivateAsync(reason, cancellationToken);
     }
 
     public Task Init()
     {
         this.GrainFactory.GetGrain<IUsdFuturesInfoG>("0").LastDayStats();
-
 
         InitTimer();
 
@@ -105,9 +117,26 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #endregion
 
-    IDisposable? timer;
+
+    private async Task BarsToBroadcastChannel(IEnumerable<BinanceBarEnvelope> bars)
+    {
+        var confirmed = BroadcastChannelProvider.GetChannelWriter<IEnumerable<BinanceBarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.ConfirmedBars, Guid.Empty));
+        var tentative = BroadcastChannelProvider.GetChannelWriter<IEnumerable<BinanceBarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.TentativeBars, Guid.Empty));
+        var inProgress = BroadcastChannelProvider.GetChannelWriter<IEnumerable<BinanceBarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.InProgressBars, Guid.Empty));
+
+        await Task.WhenAll(
+            confirmed.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed))),
+            tentative.Publish(bars.Where(b => !b.Status.HasFlag(BarStatus.InProgress))),
+            inProgress.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed)))
+            );
+    }
 
     #region Event Handling
+
+    private async Task OnBars(IEnumerable<BinanceBarEnvelope> bars)
+    {
+        await BarsToBroadcastChannel(bars);
+    }
 
     private async Task OnTimer(object state)
     {

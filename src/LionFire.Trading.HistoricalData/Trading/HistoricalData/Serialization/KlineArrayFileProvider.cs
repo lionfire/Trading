@@ -12,7 +12,7 @@ public class KlineArrayFileProvider
 
     public HistoricalDataChunkRangeProvider RangeProvider { get; }
 
-    
+
     #endregion
 
     #region Construction

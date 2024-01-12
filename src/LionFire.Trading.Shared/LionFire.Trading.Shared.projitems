@@ -44,6 +44,5 @@
     <Compile Include="$(MSBuildThisFileDirectory)Markets\SymbolExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Math\TradeMath.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Structures\ISingleSeriesConfig.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Structures\TimeFrame.cs" />
   </ItemGroup>
 </Project>

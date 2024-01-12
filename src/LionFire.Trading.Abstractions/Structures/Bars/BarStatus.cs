@@ -8,3 +8,8 @@ public enum BarStatus
     Revision = 1 << 2,
     InProgress = 1 << 3,
 }
+
+public static class BarStatusX
+{
+    public static bool IsDone(this BarStatus barStatus) => !barStatus.HasFlag(BarStatus.InProgress);
+}

@@ -29,8 +29,19 @@ public class HistoricalDataJobInput : CommonTradingInput
     [FlagAlias("no-verify", true)]
     public bool NoVerifyFlag { get; set; }
 
+    [FlagAlias("no-update-info", true)]
+    [Oakton.IgnoreOnCommandLine]
+    public bool NoUpdateInfoFlag { get; set; }
+
     //[FlagAlias("verbose", 'v')]
     //public bool VerboseFlag { get; set; }
+
+    [FlagAlias("delete-extra-files", true)]
+    public bool DeleteExtraFilesFlag { get; set; }
+
+    //[FlagAlias("keep-extra-files", true)]
+    //[Oakton.IgnoreOnCommandLine]
+    //public bool KeepExtraFiles { get; set; }
 
     [FlagAlias("quiet", 'q')]
     public bool QuietFlag { get; set; }
@@ -43,6 +54,9 @@ public class HistoricalDataJobInput : CommonTradingInput
     public string CompressionMethod { get; set; } = "LZ4"; // TODO: Enum
 
     //public bool Compact { get; set; }
+
+    [FlagAlias("save-empty", true)]
+    public bool SaveEmptyFlag { get; set; }
 
     #region Input: Derived
 

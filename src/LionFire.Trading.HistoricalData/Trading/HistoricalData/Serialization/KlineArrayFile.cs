@@ -14,6 +14,7 @@ public class KlineArrayFile : IDisposable
     public string PartialPath { get; set; }
     public string CompletePath { get; set; }
     public bool IsComplete { get; set; }
+    public bool ShouldSave { get; set; } = true;
 
     public KlineArrayFile(string path, KlineArrayInfo info)
     {
@@ -56,6 +57,10 @@ public class KlineArrayFile : IDisposable
     {
         if (File.Exists(CompletePath)) { File.Delete(CompletePath); }
     }
+    public void DeleteExistingDownloadingFile()
+    {
+        if (File.Exists(DownloadingPath)) { File.Delete(DownloadingPath); }
+    }
     public void DeleteExistingPartialFile()
     {
         if (File.Exists(PartialPath)) { File.Delete(PartialPath); }
@@ -68,12 +73,20 @@ public class KlineArrayFile : IDisposable
     public void Dispose()
     {
         FileStream?.Dispose();
-        if (IsComplete)
+        if (!ShouldSave)
         {
-            MoveDownloadingToComplete();
-        } else
+            DeleteExistingDownloadingFile();
+        }
+        else
         {
-            MoveDownloadingToPartial();
+            if (IsComplete)
+            {
+                MoveDownloadingToComplete();
+            }
+            else
+            {
+                MoveDownloadingToPartial();
+            }
         }
     }
 }

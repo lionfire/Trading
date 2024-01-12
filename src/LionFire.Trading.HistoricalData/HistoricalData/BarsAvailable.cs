@@ -1,8 +1,11 @@
 ﻿
+using LionFire.Trading.HistoricalData.Sources;
+
 namespace LionFire.Trading.HistoricalData;
 
 public class BarsAvailable// : BarsIdentifier
 {
+    public BarsInfo? BarsInfo { get; set; }
     public DateTime First { get; set; }
     public DateTime Last { get; set; }
     public bool IsContiguous { get; set; }

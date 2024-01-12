@@ -107,13 +107,15 @@
     <PackageVersion Include="Microsoft.NETCore.Platforms" Version="7.0.4" />
     <PackageVersion Include="Microsoft.NET.Sdk.Functions" Version="4.2.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+		<PackageVersion Include="Microsoft.Orleans.BroadcastChannel" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Client" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Clustering.Consul" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Runtime" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Core.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Persistence.AdoNet" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Orleans.Sdk" Version="8.0.0" />
+		<PackageVersion Include="Microsoft.Orleans.Reminders" Version="8.0.0" />
+		<PackageVersion Include="Microsoft.Orleans.Sdk" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Server" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="8.0.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.19.6" />

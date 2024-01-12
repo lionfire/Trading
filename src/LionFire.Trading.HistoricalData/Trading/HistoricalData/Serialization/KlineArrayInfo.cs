@@ -38,13 +38,22 @@ public class KlineArrayInfo
     public decimal? Close { get; set; }
     public DateTime LastOpenTime { get; set; }
 
-    public bool IsComplete { get; set; }
 
     public List<(DateTime, DateTime)> Gaps { get; set; }
 
     public bool MissingBarsIncluded { get; set; }
 
+    #region Derived
+
+    // Derived, but send it to serialized file to be nicer to whoever is reading it
+    public bool IsComplete { get; set; } // => noGaps && !info.MissingBarsOnlyAtStart && !info.MissingBarsOnlyAtEnd;
+
     #endregion
-    
+
+    public bool MissingBarsOnlyAtEnd { get; set; }
+    public bool MissingBarsOnlyAtStart { get; set; }
+
+    #endregion
+
 }
 

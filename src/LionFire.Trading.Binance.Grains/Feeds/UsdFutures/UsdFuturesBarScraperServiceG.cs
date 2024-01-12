@@ -41,27 +41,30 @@ public class UsdFuturesBarScraperServiceG([PersistentState("BinanceUsdFuturesBar
         int enabledStaggerOffset = 0;
         int disabledStaggerOffset = 0;
 
-        foreach (var s in sortedStats)
+        if (sortedStats != null)
         {
-            i++;
-            var g = GrainFactory.GetGrain<IUsdFuturesBarScraperG>(s.Symbol + TFSeparator + tfString);
-
-            var enabled = i <= options.State.MaxSymbols;
-
-            var interval = enabled ? options.State.Interval : options.State.DisabledInterval;
-            var offset = enabled ? enabledStaggerOffset : disabledStaggerOffset;
-            logger.LogInformation("{symbol}^{tf} interval: {bars} bars (offset: {offset})", s.Symbol, tfString, interval.ToString() ?? "(disabled)", offset);
-
-            await g.Interval(interval);
-
-            if (interval > 0)
+            foreach (var s in sortedStats)
             {
-                await g.Offset(offset);
-                if (enabled) { enabledStaggerOffset++; enabledStaggerOffset %= interval; }
-                else { disabledStaggerOffset++; disabledStaggerOffset %= interval; }
-            }
+                i++;
+                var g = GrainFactory.GetGrain<IUsdFuturesBarScraperG>(s.Symbol + TFSeparator + tfString);
 
-            await g.Init();
+                var enabled = i <= options.State.MaxSymbols;
+
+                var interval = enabled ? options.State.Interval : options.State.DisabledInterval;
+                var offset = enabled ? enabledStaggerOffset : disabledStaggerOffset;
+                logger.LogInformation("{symbol}^{tf} interval: {bars} bars (offset: {offset})", s.Symbol, tfString, interval.ToString() ?? "(disabled)", offset);
+
+                await g.Interval(interval);
+
+                if (interval > 0)
+                {
+                    await g.Offset(offset);
+                    if (enabled) { enabledStaggerOffset++; enabledStaggerOffset %= interval; }
+                    else { disabledStaggerOffset++; disabledStaggerOffset %= interval; }
+                }
+
+                await g.Init();
+            }
         }
     }
 

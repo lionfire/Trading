@@ -11,42 +11,15 @@ public class HistoricalDataPaths
     public string? BaseDir { get; set; }
 
     #endregion
-    
+
+    #region (Public) Methods
+
     public string GetDataDir(string exchange, string exchangeArea, string symbol, TimeFrame timeFrame)
     {
         if (BaseDir == null) throw new ArgumentNullException(nameof(BaseDir));
         return Path.Combine(BaseDir, exchange, exchangeArea, timeFrame.Name, symbol);
     }
-
-    public string GetFileName(KlineArrayInfo info, KlineArrayFileOptions? options = null)
-    {
-        var sb = new StringBuilder();
-
-        if (info.Start.Day == 1 && info.EndExclusive.Day == 1 && info.EndExclusive.Month== info.Start.Month + 1 && info.Start.Year == info.EndExclusive.Year)
-        {
-            sb.Append(info.Start.ToString("yyyy.MM"));
-        }
-        else if (
-            info.Start.Day == 1 && info.EndExclusive.Day == 1
-            && info.Start.Month == 1 && info.EndExclusive.Month == 1
-            && info.EndExclusive.Year == info.Start.Year + 1)
-        {
-            sb.Append(info.Start.ToString("yyyy"));
-        }
-        else
-        {
-            AppendFileNameTimeString(info.Start, sb);
-            sb.Append(" - ");
-            AppendFileNameTimeString(info.EndExclusive, sb);
-        }
-
-        sb.Append(KlineArrayFileConstants.DownloadingFileExtension); // Always append this here and strip it out later
-
-        return sb.ToString();
-    }
-
-    public string GetPath(string exchange, string exchangeArea, string symbol, TimeFrame timeFrame, KlineArrayInfo info, KlineArrayFileOptions? options = null)
-        => Path.Combine(GetDataDir(exchange, exchangeArea, symbol, timeFrame), GetFileName(info, options)) + options?.FileExtension;
+    public string GetDataDir(BarsRangeReference b) => GetDataDir(b.Exchange, b.ExchangeArea, b.Symbol, b.TimeFrame);
 
     public void CreateIfMissing()
     {
@@ -56,6 +29,61 @@ public class HistoricalDataPaths
         }
         catch { }
     }
+
+    public string? GetExistingPath(string exchange, string exchangeArea, string symbol, TimeFrame timeFrame, DateTime start, DateTime endExclusive, string? suffixCode = null)
+    {
+        var dir = GetDataDir(exchange, exchangeArea, symbol, timeFrame);
+
+        var filename = GetFileName(start, endExclusive, suffixCode);
+
+        string? fileResult = null;
+        foreach (var file in Directory.GetFiles(dir, filename + "*"))
+        {
+            if (fileResult != null)
+            {
+                throw new Exception("Expected one match but got at least two: " + fileResult + ", " + file);
+            }
+            fileResult = file;
+        }
+
+        return fileResult;
+    }
+
+    #endregion
+
+    #region (static) Methods
+
+    public static string GetFileName(DateTime start, DateTime endExclusive, string? suffixCode = null)
+    {
+        var sb = new StringBuilder();
+
+        if (start.Day == 1 && endExclusive.Day == 1 &&
+            ((endExclusive.Month == start.Month + 1 && start.Year == endExclusive.Year)
+            || (endExclusive.Month == 12 && start.Month == 1 && start.Year + 1 == endExclusive.Year))
+        )
+        {
+            sb.Append(start.ToString("yyyy.MM"));
+        }
+        else if (
+            start.Day == 1 && endExclusive.Day == 1
+            && start.Month == 1 && endExclusive.Month == 1
+            && endExclusive.Year == start.Year + 1)
+        {
+            sb.Append(start.ToString("yyyy"));
+        }
+        else
+        {
+            AppendFileNameTimeString(start, sb);
+            sb.Append(" - ");
+            AppendFileNameTimeString(endExclusive, sb);
+        }
+
+        if (suffixCode != null) sb.Append(suffixCode);
+
+        return sb.ToString();
+    }
+
+    #endregion
 
     #region (public) File Paths
 
@@ -69,5 +97,22 @@ public class HistoricalDataPaths
         }
     }
 
+
+
     #endregion
+}
+
+
+public static class HistoricalDataPathsX
+{
+    public static string GetFileName(this HistoricalDataPaths hdp, KlineArrayInfo info, KlineArrayFileOptions? options = null)
+    {
+        return HistoricalDataPaths.GetFileName(info.Start, info.EndExclusive
+            , KlineArrayFileConstants.DownloadingFileExtension // Always append this here and strip it out later
+            );
+    }
+
+    public static string GetPath(this HistoricalDataPaths hdp, string exchange, string exchangeArea, string symbol, TimeFrame timeFrame, KlineArrayInfo info, KlineArrayFileOptions? options = null)
+        => Path.Combine(hdp.GetDataDir(exchange, exchangeArea, symbol, timeFrame), hdp.GetFileName(info, options)) + options?.FileExtension;
+
 }
