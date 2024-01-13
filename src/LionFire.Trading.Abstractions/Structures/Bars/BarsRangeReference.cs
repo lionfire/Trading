@@ -40,5 +40,11 @@ public record BarsRangeReference(string Exchange, string ExchangeArea, string Sy
 
         return new BarsRangeReference(exchange, ExchangeArea, symbol, timeFrame, from.ToDateTime(), to.ToDateTime());
     }
+
+    public void ThrowIfInvalid()
+    {
+        if (Start == default) throw new ArgumentNullException(nameof(Start));
+        if (EndExclusive == default) throw new ArgumentNullException(nameof(EndExclusive));
+    }
 }
 

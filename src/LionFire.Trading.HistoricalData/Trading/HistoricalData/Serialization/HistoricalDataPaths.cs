@@ -59,7 +59,7 @@ public class HistoricalDataPaths
 
         if (start.Day == 1 && endExclusive.Day == 1 &&
             ((endExclusive.Month == start.Month + 1 && start.Year == endExclusive.Year)
-            || (endExclusive.Month == 12 && start.Month == 1 && start.Year + 1 == endExclusive.Year))
+            || (start.Month == 12 && endExclusive.Month == 1 && start.Year + 1 == endExclusive.Year))
         )
         {
             sb.Append(start.ToString("yyyy.MM"));

@@ -5,6 +5,7 @@ using LionFire.Trading.HistoricalData.Serialization;
 using LionFire.Trading.HistoricalData.Sources;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using NLog.LayoutRenderers.Wrappers;
 
 namespace LionFire.Trading.Binance_;
 
@@ -79,13 +80,13 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunk
     private async Task<List<IBinanceKline>> GetRangeBars()
     {
         var j = ActivatorUtilities.CreateInstance<RetrieveHistoricalDataJob>(ServiceProvider);
+        await j.Execute(BarsRange);
         //var dir = this.HistoricalDataPaths.GetDataDir(Exchange.ToLowerInvariant(), ExchangeArea, Symbol, TimeFrame);
         //this.HistoricalDataChunkRangeProvider.LongRangeForDate(start, TimeFrame);
         //var file = KlineArrayFileProvider.GetFile(Exchange, ExchangeArea, Symbol, TimeFrame, start);
 
-        List<IBinanceKline> bars;
-
-        return await j.Execute2(BarsRange);
+        List<IBinanceKline> bars=new();
+        return bars;
     }
 
     public async Task<IEnumerable<IBinanceKline>> GetBars(DateTime start, DateTime endExclusive)

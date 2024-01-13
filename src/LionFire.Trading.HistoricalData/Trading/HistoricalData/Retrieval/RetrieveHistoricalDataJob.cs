@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using LionFire.Trading.HistoricalData.Sources;
 using Baseline;
 using Binance.Net.Interfaces.Clients;
+using LionFire.Validation;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
@@ -225,38 +226,28 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         return await Execute();
     }
 
-    public async Task<bool> Execute()
+    public async Task<bool> Execute(BarsRangeReference? barsRangeReference = null, RetrieveHistoricalDataParameters? input = null)
     {
-        var reference = new BarsRangeReference(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame, Input.FromFlag, Input.ToFlag);
-        //return await Execute2(reference, Input.ForceFlag);
+//#error NEXT: Put BarsRangeReference into RetrieveHistoricalDataParameters
+        input ??= Input;
+        barsRangeReference ??= new BarsRangeReference(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame, Input.FromFlag, Input.ToFlag);
+        barsRangeReference.ThrowIfInvalid();
 
-        var input = Input;
-
-        if (input.FromFlag == default) throw new ArgumentNullException(nameof(input.FromFlag));
-        if (input.ToFlag == default) throw new ArgumentNullException(nameof(input.ToFlag));
-        if (!input.KlineInterval.HasValue) throw new ArgumentNullException(nameof(input.KlineInterval));
+        if (!Input.KlineInterval.HasValue) throw new ArgumentNullException(nameof(Input.KlineInterval));
 
         DateTime start, endExclusive;
         KlineArrayInfo? info = null;
-        DateTime NextDate;
 
-        var local = await BarsFileSource.List(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame);
+        BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(barsRangeReference);
+        var local = await BarsFileSource.List(barsRangeReference);
+
+        bool retrievedSomething = false;
 
         bool reverse = true;
-        if (reverse)
-        {
-            NextDate = input.ToFlag;
-        }
-        else
-        {
-            NextDate = input.FromFlag;
-        }
-
-        BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame);
-
+        var NextDate = reverse ? barsRangeReference.EndExclusive : barsRangeReference.Start;
         do
         {
-            (start, endExclusive) = RangeProvider.RangeForDate(NextDate, input.TimeFrame);
+            (start, endExclusive) = RangeProvider.RangeForDate(NextDate, barsRangeReference.TimeFrame);
 
             var chunks = local.Chunks.Where(c => c.Start == start && c.EndExclusive == endExclusive).FirstOrDefault();
 
@@ -283,6 +274,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             else
             {
                 (start, endExclusive, info) = await RetrieveForDate(NextDate);
+                retrievedSomething = true;
                 Logger.LogInformation($"Retrieved chunk {NextDate.ToString(TimeFormat)}: {start.ToString(TimeFormat)} to {endExclusive.ToString(TimeFormat)}");
             }
 
@@ -290,7 +282,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             {
                 foreach (var shortRange in RangeProvider.ShortRangesForLongRange(start, input.TimeFrame))
                 {
-                    var path = BarsFileSource.HistoricalDataPaths.GetExistingPath(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, shortRange.start, shortRange.endExclusive);
+                    var path = BarsFileSource.HistoricalDataPaths.GetExistingPath(barsRangeReference.Exchange, barsRangeReference.ExchangeArea, barsRangeReference.Symbol, barsRangeReference.TimeFrame, shortRange.start, shortRange.endExclusive);
 
                     if (path != null)
                     {
@@ -317,56 +309,11 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             }
         } while (reverse ? ReverseCondition() : ForwardCondition());
 
-        //do
-        //{
-        //    (start, endExclusive) = RangeProvider.RangeForDate(NextDate, input.TimeFrame);
-
-
-        //} while (reverse ? ReverseCondition() : ForwardCondition());
-
         bool ForwardCondition() => (endExclusive < Input.ToFlag && (NextDate + Input.TimeFrame.TimeSpanApproximation < DateTime.UtcNow));
         bool ReverseCondition() => (NextDate >= Input.FromFlag);
 
-        return true;
-    }
-
-    // TODO: Move this to a base class that is not a Command Line command
-    public async Task<bool> Execute2(BarsRangeReference reference, bool force = false)
-    {
-        DateTime start, endExclusive;
-        KlineArrayInfo info;
-        var NextDate = reference.Start;
-
-        var local = await BarsFileSource.List(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame);
-
-        bool retrievedSomething = false;
-        do
-        {
-            (start, endExclusive) = RangeProvider.RangeForDate(NextDate, reference.TimeFrame);
-
-            var chunks = local.Chunks.Where(c => c.Start == start && c.EndExclusive == endExclusive).FirstOrDefault();
-
-            if (!force && chunks != null && chunks.ExpectedBars.HasValue && chunks.ExpectedBars == chunks.Bars)
-            {
-                Logger?.LogInformation($"Already have chunk {NextDate.ToString(TimeFormat)}: {start.ToString(TimeFormat)} to {endExclusive.ToString(TimeFormat)}");
-            }
-            else
-            {
-                (start, endExclusive, info) = await RetrieveForDate(NextDate);
-                retrievedSomething = true;
-                Logger?.LogInformation($"Retrieved chunk {NextDate.ToString(TimeFormat)}: {start.ToString(TimeFormat)} to {endExclusive.ToString(TimeFormat)}");
-            }
-            NextDate = endExclusive + Input.TimeFrame.TimeSpanApproximation;
-        } while (endExclusive < Input.ToFlag && (NextDate + Input.TimeFrame.TimeSpanApproximation < DateTime.UtcNow));
-
         return retrievedSomething;
     }
-
-    //public async Task<bool> Execute2(BarsRangeReference reference, bool force = false)
-    //{
-
-    //}
-
 
     private async Task<(DateTime start, DateTime end, KlineArrayInfo info)> RetrieveForDate(DateTime date)
     {

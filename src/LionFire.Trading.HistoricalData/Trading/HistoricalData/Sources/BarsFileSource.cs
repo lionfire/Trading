@@ -95,6 +95,8 @@ public class BarsFileSource : HistoricalDataProvider2Base, IHistoricalDataSource
         return path;
     }
 
+    public Task<BarsInfo?> LoadBarsInfo(BarsRangeReference range)
+        => LoadBarsInfo(range.Exchange, range.ExchangeArea, range.Symbol, range.TimeFrame);
     public async Task<BarsInfo?> LoadBarsInfo(string exchange, string exchangeArea, string symbol, TimeFrame timeFrame)
     {
         var dir = OptionsMonitor.CurrentValue.GetDataDir(exchange, exchangeArea, symbol, timeFrame);
@@ -112,6 +114,8 @@ public class BarsFileSource : HistoricalDataProvider2Base, IHistoricalDataSource
         return barsInfo;
     }
 
+    public Task<BarsAvailable> List(BarsRangeReference range)
+        => List(range.Exchange, range.ExchangeArea, range.Symbol, range.TimeFrame);
     public async Task<BarsAvailable> List(string exchange, string exchangeArea, string symbol, TimeFrame timeFrame)
     {
         var result = new BarsAvailable();

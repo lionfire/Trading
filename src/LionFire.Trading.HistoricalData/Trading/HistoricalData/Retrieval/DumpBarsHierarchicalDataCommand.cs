@@ -47,13 +47,25 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
             foreach (var path in Directory.GetFiles(dir))
             {
                 var filename = Path.GetFileName(path);
+                if (filename == BarsInfo.InfoFileName) continue;
 
                 bool isFirstBarForFile = true;
                 var (info, bars) = KlineFileDeserializer.Deserialize(path);
 
+                if (info == null)
+                {
+                    Console.WriteLine($"Failed to deserialize info from file: {path}");
+                    continue;
+                }
+                if (bars == null)
+                {
+                    Console.WriteLine($"Failed to deserialize bars from file: {path}");
+                    continue;
+                }
                 openTime = info.Start;
                 foreach (var bar in bars)
                 {
+                    if (openTime >= Input.ToFlag) break;
                     try
                     {
                         if (Input.TimeFrame.TimeSpan.HasValue)
@@ -78,7 +90,6 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
                             openTime += Input.TimeFrame.TimeSpan.Value;
                         }
                     }
-                    if (openTime >= Input.ToFlag) break;
                 }
             }
         }
