@@ -9,16 +9,16 @@ using NLog.LayoutRenderers.Wrappers;
 
 namespace LionFire.Trading.Binance_;
 
-
 public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunk
 {
     #region Dependencies
 
-    public IBinanceRestClient BinanceRestClient { get; }
-    public HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
-    public BarsFileSource BarsFileSource { get; }
-    public KlineArrayFileProvider KlineArrayFileProvider { get; }
-    HistoricalDataPaths HistoricalDataPaths { get; }
+    //public HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
+    //public BarsFileSource BarsFileSource { get; }
+    //public KlineArrayFileProvider KlineArrayFileProvider { get; }
+    //public BarsService BarsService { get; }
+    public IChunkedBars ChunkedBars { get; }
+    //HistoricalDataPaths HistoricalDataPaths { get; }
 
     #endregion
 
@@ -33,7 +33,7 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunk
 
     #endregion
 
-    public BarsRangeReference BarsRange { get; }
+    public SymbolBarsRange BarsRange { get; }
     public string Exchange => BarsRange.Exchange;
     public string ExchangeArea => BarsRange.ExchangeArea;
     public string Symbol => BarsRange.Symbol;
@@ -41,7 +41,7 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunk
 
     #region Derived
 
-    private string Dir => this.HistoricalDataPaths.GetDataDir(BarsRange);
+    //private string Dir => this.HistoricalDataPaths.GetDataDir(BarsRange);
 
     #endregion
 
@@ -49,15 +49,24 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunk
 
     #region Lifecycle
 
-    public HistoricalBarsChunkG(IBinanceRestClient binanceRestClient, IOptionsMonitor<HistoricalDataPaths> historicalDataPathsOptions, HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider, BarsFileSource barsFileSource, KlineArrayFileProvider klineArrayFileProvider)
+    public HistoricalBarsChunkG(
+        //IOptionsMonitor<HistoricalDataPaths> historicalDataPathsOptions,
+        HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider,
+        //BarsFileSource barsFileSource,
+        //KlineArrayFileProvider klineArrayFileProvider,
+        ISymbolIdParser symbolIdParser,
+        //BarsService barsService, // TODO: Use this service and eliminate the rest
+        IChunkedBars chunkedBars
+        )
     {
-        BinanceRestClient = binanceRestClient;
-        HistoricalDataChunkRangeProvider = historicalDataChunkRangeProvider;
-        BarsFileSource = barsFileSource;
-        KlineArrayFileProvider = klineArrayFileProvider;
-        HistoricalDataPaths = historicalDataPathsOptions.CurrentValue;
+        //HistoricalDataChunkRangeProvider = historicalDataChunkRangeProvider;
+        //BarsFileSource = barsFileSource;
+        //KlineArrayFileProvider = klineArrayFileProvider;
+        //BarsService = barsService;
+        ChunkedBars = chunkedBars;
+        //HistoricalDataPaths = historicalDataPathsOptions.CurrentValue;
 
-        BarsRange = BarsRangeReference.Parse(this.GetPrimaryKeyString());
+        BarsRange = SymbolBarsRange.Parse(this.GetPrimaryKeyString(), symbolIdParser);
 
         if (!ValidExchangeKeys.Contains(BarsRange.Exchange)) throw new ArgumentException($"Exchange must be one of: {string.Join(", ", ValidExchangeKeys)}");
         if (!historicalDataChunkRangeProvider.IsValidShortRange(TimeFrame, BarsRange.Start, BarsRange.EndExclusive)) throw new ArgumentException("Not a valid short chunk size.");
@@ -74,32 +83,37 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunk
 
     #endregion
 
-    #region Implementation
+    #region Implementation - TEMP: Binance specific
 
-    private List<IBinanceKline>? Bars { get; set; }
-    private async Task<List<IBinanceKline>> GetRangeBars()
+    private List<IBinanceKline>? bars;
+
+    public async Task<List<IBinanceKline>> Bars()
     {
-        var j = ActivatorUtilities.CreateInstance<RetrieveHistoricalDataJob>(ServiceProvider);
-        await j.Execute(BarsRange);
-        //var dir = this.HistoricalDataPaths.GetDataDir(Exchange.ToLowerInvariant(), ExchangeArea, Symbol, TimeFrame);
-        //this.HistoricalDataChunkRangeProvider.LongRangeForDate(start, TimeFrame);
-        //var file = KlineArrayFileProvider.GetFile(Exchange, ExchangeArea, Symbol, TimeFrame, start);
+        if (bars == null)
+        {
+            var result = await ChunkedBars.GetShortChunk(BarsRange);
 
-        List<IBinanceKline> bars=new();
+            if (result == null) throw new Exception("Failed to retrieve bars");
+
+            bars = result.Bars.Cast<IBinanceKline>().ToList(); // TODO TEMP 
+        }
         return bars;
     }
 
-    public async Task<IEnumerable<IBinanceKline>> GetBars(DateTime start, DateTime endExclusive)
+    public async Task<IEnumerable<IBinanceKline>> BarsInRange(DateTime start, DateTime endExclusive)
     {
-        Bars ??= await GetRangeBars();
+        if (bars == null) await Bars();
 
-        foreach (var bar in Bars)
+        List<IBinanceKline> list = new();
+
+        foreach (var bar in bars)
         {
             if (bar.OpenTime >= start && bar.OpenTime < endExclusive)
             {
-                yield return bar;
+                list.Add(bar);
             }
         }
+        return list;
     }
 
     #endregion

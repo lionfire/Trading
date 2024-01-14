@@ -6,5 +6,6 @@ namespace LionFire.Trading.Binance_;
 public interface IHistoricalBarsChunk : IGrainWithStringKey
 {
 
-    Task<IEnumerable<IBinanceKline>> GetBars(DateTime start, DateTime endExclusive);
+    Task<IEnumerable<IBinanceKline>> BarsInRange(DateTime start, DateTime endExclusive);
+    Task<List<IBinanceKline>> Bars();
 }

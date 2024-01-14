@@ -5,6 +5,8 @@ namespace LionFire.Trading.HistoricalData.Serialization;
 
 public class HistoricalDataChunkRangeProvider
 {
+    public IEnumerable<(DateTime, DateTime)> GetBarChunks(IRangeWithTimeFrame range)
+        => GetBarChunks(range.Start, range.EndExclusive, range.TimeFrame);
     public IEnumerable<(DateTime, DateTime)> GetBarChunks(DateTime start, DateTime endExclusive, TimeFrame timeFrame)
     {
         DateTime cursor = start;

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <VersionPrefix>1.0.1</VersionPrefix>
@@ -10,6 +10,7 @@
     <GenerateAssemblyCompanyAttribute>false</GenerateAssemblyCompanyAttribute>
     <GenerateAssemblyProductAttribute>false</GenerateAssemblyProductAttribute>
 	  <LangVersion>latest</LangVersion>
+		<Nullable>enable</Nullable>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +29,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Execution.Abstractions\LionFire.Execution.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Execution\LionFire.Execution.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging\LionFire.Extensions.Logging.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.IO.VirtualFilesystem\LionFire.IO.VirtualFilesystem.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Filesystem\LionFire.Persistence.Filesystem.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Handles\LionFire.Persistence.Handles.csproj" />
@@ -79,6 +81,7 @@
   <ItemGroup>
     <Folder Include="Backtesting2\Algos2\" />
     <Folder Include="Data\TimeSeries\" />
+    <Folder Include="Symbols\Info\" />
   </ItemGroup>
 
   <Import Project="..\LionFire.Trading.Shared\LionFire.Trading.Shared.projitems" Label="Shared" />
