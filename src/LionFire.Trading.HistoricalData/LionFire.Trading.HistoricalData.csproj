@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LionFire</RootNamespace>
+    <RootNamespace>LionFire.Trading</RootNamespace>
   </PropertyGroup>
 
 	<ItemGroup>
@@ -26,8 +26,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Data\" />
-	  <Folder Include="Trading\Data\Bars\Sources\BarsFile\" />
+	  <Folder Include="Data\Bars\Sources\BarsFile\" />
 	</ItemGroup>
 	
 </Project>
