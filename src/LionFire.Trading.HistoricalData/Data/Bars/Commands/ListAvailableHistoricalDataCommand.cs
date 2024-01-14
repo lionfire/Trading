@@ -34,7 +34,7 @@ public class ListAvailableHistoricalDataCommand : OaktonAsyncCommand<HistoricalD
         table.AddColumn("Bars", c => c.Alignment = Justify.Right);
         table.AddColumn("Expected", c => c.Alignment = Justify.Right);
 
-        var listResult = await barsFileSource.List(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame);
+        var listResult = await barsFileSource.List(new(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame));
         foreach (var item in listResult.Chunks)
         {
             table.AddRow(item.ChunkName, item.Percent.ToString(), item.Bars.ToString(), item.ExpectedBars.ToString());

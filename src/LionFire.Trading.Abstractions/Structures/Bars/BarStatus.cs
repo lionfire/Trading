@@ -1,6 +1,7 @@
-﻿namespace LionFire.Trading.Binance_;
+﻿namespace LionFire.Trading;
 
-public enum BarStatus
+[Flags]
+public enum BarStatus : byte
 {
     Unspecified = 0,
     Confirmed = 1 << 0,

@@ -1,12 +1,26 @@
 ﻿using LionFire.Trading;
 using LionFire.Trading.HistoricalData.Retrieval;
 using System.ComponentModel;
+using YamlDotNet.Serialization;
 
 namespace LionFire.Trading.HistoricalData;
 
 public class KlineArrayInfo
 {
-    public SymbolBarsRange BarsRangeReference { get; set; }
+    [YamlIgnore]
+    public SymbolBarsRange SymbolBarsRange
+    {
+        get => new SymbolBarsRange(Exchange, ExchangeArea, Symbol, TimeFrame, Start, EndExclusive);
+        set
+        {
+            ExchangeArea = value.ExchangeArea;
+            Exchange = value.Exchange;
+            Symbol = value.Symbol;
+            TimeFrame = value.TimeFrame;
+            Start = value.Start;
+            EndExclusive = value.EndExclusive;
+        }
+    }
 
     public string Exchange { get; set; }
     public string ExchangeArea { get; set; }
@@ -23,6 +37,7 @@ public class KlineArrayInfo
 
     public bool IncludesOpenTime { get; set; }
     public FieldSet FieldSet { get; set; }
+    public string DataType { get; set; }
     public string NumericType { get; set; }
 
     public string Compression { get; set; }

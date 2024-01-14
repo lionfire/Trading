@@ -234,34 +234,48 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             BinanceClient ??= BinanceClientProvider.GetPublicClient();
         }
 
-        return await Execute2(Input);
+        var listResult = await Execute2(Input);
+        return listResult != null && listResult.Count > 0;
     }
 
-    public async Task<bool> Execute2(RetrieveHistoricalDataParameters input)
+    public async Task<List<IBarsResult>?> Execute2(RetrieveHistoricalDataParameters input)
     {
+        #region Parameter Validation
+
         Input = input;
         ArgumentNullException.ThrowIfNull(input);
 
+        if (input.SymbolBarsRange == null)
+        {
+            input.SymbolBarsRange = new SymbolBarsRange(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame, input.FromFlag, input.ToFlag);
+        }
         var barsRangeReference = input.SymbolBarsRange;
-        //barsRangeReference ??= new BarsRangeReference(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame, Input.FromFlag, Input.ToFlag);
         barsRangeReference.ThrowIfInvalid();
 
         //Input.IntervalFlag ??= barsRangeReference?.TimeFrame.ToShortString();
         if (!input.KlineInterval.HasValue) throw new ArgumentNullException(nameof(input.KlineInterval));
 
+        #endregion
+
+        #region Variables
+
         DateTime start, endExclusive;
         KlineArrayInfo? info = null;
+
+        #endregion
 
         BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(barsRangeReference);
         var local = await BarsFileSource.List(barsRangeReference);
 
         bool retrievedSomething = false;
 
+        List<IBarsResult>? result = null;
         bool reverse = true;
-        var NextDate = reverse ? barsRangeReference.EndExclusive : barsRangeReference.Start;
+        bool isLong;
+        var NextDate = reverse ? (barsRangeReference.EndExclusive - TimeSpan.FromMilliseconds(1)) : barsRangeReference.Start;
         do
         {
-            (start, endExclusive) = RangeProvider.RangeForDate(NextDate, barsRangeReference.TimeFrame);
+            ((start, endExclusive), isLong) = RangeProvider.RangeForDate(NextDate, barsRangeReference.TimeFrame);
 
             var chunks = local.Chunks.Where(c => c.Start == start && c.EndExclusive == endExclusive).FirstOrDefault();
 
@@ -281,16 +295,22 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             }
             else if (chunks != null && !input.ForceFlag && barsInfo != null && barsInfo.FirstOpenTime > start)
             {
-                Logger.LogInformation("Not retrieving before FirstOpenTime time that was loaded from {path}: {firstOpenTime}",
-                    BarsFileSource.BarsInfoPath(input.ExchangeFlag, input.ExchangeAreaFlag, input.Symbol, input.TimeFrame), barsInfo.FirstOpenTime);
+                Logger.LogInformation("Not retrieving before remembered FirstOpenTime time (loaded from {path}): {firstOpenTime}",
+                    BarsFileSource.BarsInfoPath(barsRangeReference), barsInfo.FirstOpenTime);
                 break;
             }
             else
             {
-                (start, endExclusive, info) = await RetrieveForDate(NextDate);
+                //(start, endExclusive, info) = await RetrieveForDate(NextDate);
+                (var barsResult, info) = await RetrieveForDate(NextDate);
+                result ??= new();
+                result.Add(barsResult);
+
                 retrievedSomething = true;
                 Logger.LogInformation($"Retrieved chunk {NextDate.ToString(TimeFormat)}: {start.ToString(TimeFormat)} to {endExclusive.ToString(TimeFormat)}");
             }
+
+            #region Detect and delete extra files
 
             if (RangeProvider.IsValidLongRange(input.TimeFrame, start, endExclusive))
             {
@@ -315,6 +335,9 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 }
             }
 
+            #endregion
+
+            #region Loop logic
             if (reverse)
             {
                 NextDate = start - input.TimeFrame.TimeSpanApproximation;
@@ -323,15 +346,20 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             {
                 NextDate = endExclusive + input.TimeFrame.TimeSpanApproximation;
             }
+            #endregion
         } while (reverse ? ReverseCondition() : ForwardCondition());
+
+        #region Loop logic
 
         bool ForwardCondition() => (endExclusive < input.ToFlag && (NextDate + input.TimeFrame.TimeSpanApproximation < DateTime.UtcNow));
         bool ReverseCondition() => (NextDate >= input.FromFlag);
 
-        return retrievedSomething;
+        #endregion
+
+        return result;
     }
 
-    private async Task<(DateTime start, DateTime end, KlineArrayInfo info)> RetrieveForDate(DateTime date)
+    private async Task<(IBarsResult barsResult, KlineArrayInfo info)> RetrieveForDate(DateTime date)
     {
         if (Input.VerboseFlag) { DumpParameters(); }
         ValidateAndParseOptions();
@@ -357,15 +385,32 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
         KlineArrayInfo info;
         string path;
-        long bars = 0;
-        long blankBars = 0;
+        long barsCount = 0;
+        long blankBarsCount = 0;
 
         var serializer = new SerializerBuilder().ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitDefaults).Build();
         //var serializer = new YamlDotNet.Serialization.Serializer();
 
-        using (var file = KlineArrayFileProvider.GetFile(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame, date, klineArrayFileOptions))
+        IBarsResult barsResult;
+
+        var reference = new ExchangeSymbolTimeFrame(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame);
+
+        using (var file = KlineArrayFileProvider.GetFile(reference, date, klineArrayFileOptions))
         {
             info = file.Info;
+
+            switch (Input.FieldSet)
+            {
+                case FieldSet.Native:
+                    info.DataType = typeof(BinanceFuturesKlineItem2).FullName!;
+                    break;
+                case FieldSet.Ohlcv:
+                case FieldSet.Ohlc:
+                    break;
+                //case FieldSet.Unspecified:
+                default:
+                    break;
+            }
 
             if (!Input.QuietFlag)
             {
@@ -385,7 +430,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             DateTime? first = null;
             IBinanceKline? firstKline = null;
             IBinanceKline? lastKline = null;
-            List<BinanceFuturesKlineItem> listNative = new();
+            List<BinanceFuturesKlineItem2> listNative = new();
             List<OhlcvItem> listOhlcv = new();
             List<OhlcDecimalItem> listOhlc = new();
 
@@ -396,7 +441,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             path = file.FileStream.Name;
             //if (Compact) { info.DataType = typeof(OhlcvDecimalItem).FullName!; }
 
-            BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame);
+            BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(reference);
 
             do
             {
@@ -420,7 +465,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                     if (firstKline == null) { firstKline = kline; }
                     if (kline.OpenTime >= info.EndExclusive) break;
 
-                    bars++;
+                    barsCount++;
 
                     if (info.High == null || kline.HighPrice > info.High) { info.High = kline.HighPrice; }
                     if (info.Low == null || kline.LowPrice < info.Low) { info.Low = kline.LowPrice; }
@@ -441,9 +486,9 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                                 Console.WriteLine($"Inserting {blankBarsToInsert} blank bars");
                                 for (; blankBarsToInsert > 1; blankBarsToInsert--)
                                 {
-                                    bars++;
-                                    blankBars++;
-                                    listNative.Add(BinanceFuturesKlineItem.Missing);
+                                    barsCount++;
+                                    blankBarsCount++;
+                                    listNative.Add(BinanceFuturesKlineItem2.Missing);
                                 }
                             }
                         }
@@ -453,7 +498,9 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                     switch (Input.FieldSet)
                     {
                         case FieldSet.Native:
-                            listNative.Add(new BinanceFuturesKlineItem(kline.OpenPrice, kline.HighPrice, kline.LowPrice, kline.ClosePrice, kline.TakerBuyBaseVolume, kline.TakerBuyBaseVolume));
+
+                            listNative.Add(new BinanceFuturesKlineItem2(kline));
+                            //listNative.Add(new BinanceFuturesKlineItem(kline.OpenPrice, kline.HighPrice, kline.LowPrice, kline.ClosePrice, kline.TakerBuyBaseVolume, kline.TakerBuyBaseVolume));
                             break;
                         case FieldSet.Ohlcv:
                             listOhlcv.Add(new OhlcvItem(kline.OpenPrice, kline.HighPrice, kline.LowPrice, kline.ClosePrice, kline.Volume));
@@ -515,8 +562,9 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             info.IsComplete = noGaps && !info.MissingBarsOnlyAtStart && !info.MissingBarsOnlyAtEnd;
 
             info.FieldSet = Input.FieldSet;
+            info.DataType = typeof(BinanceFuturesKlineItem2).FullName!;
             info.NumericType = NumericTypeType!.Name;
-            info.Bars = bars;
+            info.Bars = barsCount;
             info.RetrieveTime = DateTime.UtcNow;
 
             bool shouldSave = true;
@@ -552,6 +600,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 stream.FlushAsync().FireAndForget();
 
                 Stream? compressionStream = null;
+                long uncompressedByteCount = 0;
                 try
                 {
                     if (Input.CompressFlag > 0) { compressionStream = stream = LZ4Stream.Encode(stream, LZ4EncoderSettings(), true); }
@@ -572,7 +621,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                         default:
                             throw new NotImplementedException();
                     }
-
+                    uncompressedByteCount += bytes.Length;
                     stream.Write(bytes, 0, bytes.Length);
                 }
                 finally
@@ -584,8 +633,9 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
                 if (!Input.QuietFlag)
                 {
+                    Logger.LogInformation("Uncompressed data size: " + uncompressedByteCount);
                     Logger.LogInformation(serializer.Serialize(file.Info));
-                    Logger.LogInformation($"Saved {bars} bars to {file.CompletePath}");
+                    Logger.LogInformation($"Saved {barsCount} bars to {file.CompletePath}");
                 }
             }
             if (info.MissingBarsOnlyAtStart)
@@ -600,11 +650,11 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                         save = false;
                         if (barsInfo.FirstOpenTime == info.FirstOpenTime)
                         {
-                            Logger.LogInformation("{path} detected start of data at '{start}', which matches already saved start date.", BarsFileSource.BarsInfoPath(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame), info.FirstOpenTime);
+                            Logger.LogInformation("{path} detected start of data at '{start}', which matches already saved start date.", BarsFileSource.BarsInfoPath(reference), info.FirstOpenTime);
                         }
                         else
                         {
-                            Logger.LogWarning("{path} detected start of data at '{start}' but saved start date is set to '{infoStart}'", BarsFileSource.BarsInfoPath(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame),
+                            Logger.LogWarning("{path} detected start of data at '{start}' but saved start date is set to '{infoStart}'", BarsFileSource.BarsInfoPath(reference),
                                info.FirstOpenTime, barsInfo.FirstOpenTime);
                         }
                     }
@@ -619,13 +669,23 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                     }
                 }
             }
+            //barsResult = new BarsResult<BinanceFuturesKlineItem2>
+            barsResult = new BarsResult<IKline>
+            {
+                Start = info.Start,
+                EndExclusive = info.EndExclusive,
+                TimeFrame = info.TimeFrame,
+                //NativeType = typeof(BinanceFuturesKlineItem),
+                //Bars = (IReadOnlyList<IKline>)(IReadOnlyList<BinanceFuturesKlineItem2>) listNative
+                Bars = new List<IKline>(listNative.OfType<IKline>())
+            };
         }
 
         if (!Input.NoVerifyFlag)
         {
             Verify();
         }
-        return (info.Start, info.EndExclusive, info);
+        return (barsResult, info);
     }
 
     #endregion

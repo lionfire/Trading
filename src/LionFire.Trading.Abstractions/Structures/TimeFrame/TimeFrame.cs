@@ -469,7 +469,7 @@ public class TimeFrame
     }
     public TimeSpan TimeUntilBarClose(DateTimeOffset time) => NextBarOpen(time) - time;
 
-    public TimeFrame FromTimeSpan(TimeSpan timeSpan)
+    public static TimeFrame FromTimeSpan(TimeSpan timeSpan)
     {
         timeSpan += new TimeSpan(0, 0, 0, 0, 1);
 

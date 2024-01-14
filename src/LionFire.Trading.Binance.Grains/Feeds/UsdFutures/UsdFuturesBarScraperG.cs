@@ -1,5 +1,6 @@
 ﻿using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.Clients;
+using LionFire.ExtensionMethods.Dumping;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -37,7 +38,10 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     public IPersistentState<BarScraperState> State { get; }
     public ILogger<UsdFuturesBarScraperG> Logger { get; }
     public IBinanceRestClient BinanceRestClient { get; }
-    public IBroadcastChannelProvider BroadcastChannelProvider { get; }
+    public IBroadcastChannelProvider TentativeChannelProvider { get; }
+    public IBroadcastChannelProvider RevisionChannelProvider { get; }
+    public IBroadcastChannelProvider InProgressChannelProvider { get; }
+    public IBroadcastChannelProvider ConfirmedChannelProvider { get; }
     UsdFuturesBarScraper Scraper { get; }
 
     #region Parameters from key
@@ -57,11 +61,16 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
         [PersistentState("BinanceUsdFuturesBarScrapeState", "Trading")] IPersistentState<BarScraperState> state,
         ILogger<UsdFuturesBarScraperG> logger,
         IBinanceRestClient binanceRestClient,
-        IBroadcastChannelProvider broadcastChannelProvider)
+        IClusterClient clusterClient
+        )
     {
         Logger = logger;
         BinanceRestClient = binanceRestClient;
-        BroadcastChannelProvider = broadcastChannelProvider;
+        TentativeChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.TentativeBars);
+        ConfirmedChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.ConfirmedBars);
+        RevisionChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.RevisionBars);
+        InProgressChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.InProgressBars);
+
         Options = options;
         State = state;
         var s = this.GetPrimaryKeyString().Split('^');
@@ -79,6 +88,7 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     {
         Scraper.State = State.State;
 
+        Logger.Log(Options.State.Interval > 0 ? LogLevel.Information : LogLevel.Trace, "Activated {symbol}^{tf} with settings: {settings}", Symbol, TimeFrame.ToShortString(), Options.State.Dump());
         barsSubscription = Scraper.Bars.Subscribe(async bars => await OnBars(bars));
 
         return base.OnActivateAsync(cancellationToken);
@@ -107,7 +117,8 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
         }
         else
         {
-            var b = TimeSpan.FromMilliseconds(5000);
+            //var b = TimeSpan.FromMilliseconds(Options.State.PollOffsetMilliseconds);
+            var b = TimeSpan.FromMilliseconds(0); // TEMP HARDCODE
             var now = DateTimeOffset.UtcNow; // ENH: use server time
             var dueTime = TimeFrame.TimeUntilBarClose(now) + (TimeFrame.TimeSpan!.Value * Options.State.Offset) + b;
             Logger.LogTrace("Next retrieve for {symbol}^{tf} in {dueTime}", Symbol, TimeFrame.ToShortString(), dueTime);
@@ -117,23 +128,28 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #endregion
 
-
-    private async Task BarsToBroadcastChannel(IEnumerable<BinanceBarEnvelope> bars)
+    private async Task BarsToBroadcastChannel(IEnumerable<BarEnvelope> bars)
     {
-        var confirmed = BroadcastChannelProvider.GetChannelWriter<IEnumerable<BinanceBarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.ConfirmedBars, Guid.Empty));
-        var tentative = BroadcastChannelProvider.GetChannelWriter<IEnumerable<BinanceBarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.TentativeBars, Guid.Empty));
-        var inProgress = BroadcastChannelProvider.GetChannelWriter<IEnumerable<BinanceBarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.InProgressBars, Guid.Empty));
+        var channelId = this.GetPrimaryKeyString();
+        Logger.LogInformation("Broadcasting to channel: {channelId}", channelId);
+
+        var confirmed = ConfirmedChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.ConfirmedBars, channelId));
+        var tentative = TentativeChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.TentativeBars, channelId));
+        var inProgress = InProgressChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.InProgressBars, channelId));
+        var revision = RevisionChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.RevisionBars, channelId));
 
         await Task.WhenAll(
-            confirmed.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed))),
-            tentative.Publish(bars.Where(b => !b.Status.HasFlag(BarStatus.InProgress))),
-            inProgress.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed)))
-            );
+           confirmed.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed)).ToArray()),
+           tentative.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Tentative) || b.Status == BarStatus.Unspecified).ToArray()),
+           //tentative.Publish(bars.ToArray()),
+           revision.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Revision)).ToArray()),
+           inProgress.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.InProgress)).ToArray())
+           );
     }
 
     #region Event Handling
 
-    private async Task OnBars(IEnumerable<BinanceBarEnvelope> bars)
+    private async Task OnBars(IEnumerable<BarEnvelope> bars)
     {
         await BarsToBroadcastChannel(bars);
     }

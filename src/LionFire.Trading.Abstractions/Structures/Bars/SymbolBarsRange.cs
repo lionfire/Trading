@@ -9,6 +9,11 @@ namespace LionFire.Trading;
 
 public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DateTime Start, DateTime EndExclusive) : ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame), IRangeWithTimeFrame
 {
+    public static List<string> Examples = new List<string>
+    {
+        "BINANCE:BTCUSDT.P m1:2024.01.01-2024.01.02",
+        "binance.futures:BTCUSDT m1:2024.01.01-2024.01.02",
+    };
     static Exception ParseError(string input, string? msg = null) => new Exception($"Invalid key: {input}.  Must be in this format: \"BINANCE:BTCUSDT.P m1:2024.01.01-2024.01.02\" and a valid short chunk size. {msg}".TrimEnd());
 
     public static SymbolBarsRange Parse(string text, ISymbolIdParser symbolIdParser)
@@ -36,14 +41,14 @@ public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbo
 
         #region TODO: Exchange-specific area
 
-        var ExchangeArea = isPerpetual || isNonPerpetualFuture ? "futures" : "spot";
+        var ExchangeArea = r.ExchangeAreaCode ?? (isPerpetual || isNonPerpetualFuture ? "futures" : "spot");
 
         #endregion
 
         #region TODO: Normalize casing after resolving SymbolInfo and ExchangeInfo
 
         if (symbol.ToUpperInvariant() != symbol) throw ParseError(text, "Symbol must be uppercase");
-        if (exchange.ToUpperInvariant() != exchange) throw ParseError(text, "Exchange must be uppercase");
+        if (exchange.ToLowerInvariant() != exchange) throw ParseError(text, "Exchange must be lowercase");
 
         #endregion
 

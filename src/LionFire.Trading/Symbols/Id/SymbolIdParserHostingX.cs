@@ -15,6 +15,7 @@ public static class SymbolIdParserHostingX
     {
         return services
             .AddSingleton<ISymbolIdParser, SymbolIdParserService>()
+            .TryAddEnumerableSingleton<ISymbolIdParserStrategy, LionFireSymbolIdParser>()
             .TryAddEnumerableSingleton<ISymbolIdParserStrategy, TradingViewSymbolIdParser>()
             ;
     }

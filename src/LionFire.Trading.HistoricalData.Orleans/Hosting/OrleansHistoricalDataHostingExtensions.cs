@@ -9,6 +9,6 @@ public static class OrleansHistoricalDataHostingExtensions
 {
     public static IServiceCollection AddOrleansHistoricalDataClient(this IServiceCollection services) 
         => services
-                .TryAddEnumerableSingleton<ILocalNetworkHistoricalDataSource2, OrleansHistoricalDataSource2>()
+                .TryAddEnumerableSingleton<ILocalNetworkHistoricalDataSource2, OrleansBars>()
                 ;
 }

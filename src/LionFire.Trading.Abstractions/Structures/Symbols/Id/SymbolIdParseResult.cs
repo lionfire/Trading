@@ -7,6 +7,7 @@ public class SymbolIdParseResult
     public string? ParserName { get; set; }
 
     public string? ExchangeCode { get; set; }
+    public string? ExchangeAreaCode { get; set; }
     public string? SymbolCode { get; set; }
     public string? TimeFrameCode { get; set; }
 

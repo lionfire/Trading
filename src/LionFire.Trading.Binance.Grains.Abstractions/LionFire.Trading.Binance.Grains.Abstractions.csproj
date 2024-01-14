@@ -11,4 +11,12 @@
     <PackageReference Include="Microsoft.Orleans.Sdk" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="HistoricalBars\" />
+  </ItemGroup>
+
 </Project>

@@ -52,7 +52,8 @@ public class UsdFuturesBarScraperServiceG([PersistentState("BinanceUsdFuturesBar
 
                 var interval = enabled ? options.State.Interval : options.State.DisabledInterval;
                 var offset = enabled ? enabledStaggerOffset : disabledStaggerOffset;
-                logger.LogInformation("{symbol}^{tf} interval: {bars} bars (offset: {offset})", s.Symbol, tfString, interval.ToString() ?? "(disabled)", offset);
+
+                logger.Log(interval > 0 ? LogLevel.Information : LogLevel.Trace, "{symbol}^{tf} interval: {bars} bars (offset: {offset})", s.Symbol, tfString, interval.ToString() ?? "(disabled)", offset);
 
                 await g.Interval(interval);
 

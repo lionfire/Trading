@@ -8,6 +8,7 @@ namespace LionFire.Trading.HistoricalData.Retrieval;
 public class HistoricalDataJobInput : CommonTradingInput
 {
 
+    [Oakton.IgnoreOnCommandLine]
     public SymbolBarsRange SymbolBarsRange { get; set; }
 
     [FlagAlias("fields", true)]

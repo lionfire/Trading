@@ -9,7 +9,7 @@ public class KlineArrayFile : IDisposable
 
     public FileStream FileStream { get; protected set; }
     public KlineArrayInfo Info { get; }
-    public SymbolBarsRange BarsRangeReference => Info.BarsRangeReference;
+    //public SymbolBarsRange BarsRangeReference => Info.BarsRangeReference;
 
 
     public string DownloadingPath { get; set; }
@@ -18,9 +18,9 @@ public class KlineArrayFile : IDisposable
     public bool IsComplete { get; set; }
     public bool ShouldSave { get; set; } = true;
 
-    public KlineArrayFile(string path, SymbolBarsRange barsRangeReference)
+    public KlineArrayFile(string path, SymbolBarsRange reference)
     {
-        KlineArrayInfo info = new KlineArrayInfo { BarsRangeReference = barsRangeReference };
+        KlineArrayInfo info = new KlineArrayInfo { SymbolBarsRange = reference };
         DownloadingPath = path ?? throw new ArgumentNullException(nameof(path));
         var chunks = path.Split(KlineArrayFileConstants.DownloadingFileExtension, StringSplitOptions.None);
         if (chunks.Length > 2) { throw new ArgumentException($"Not supported: more than one '{KlineArrayFileConstants.DownloadingFileExtension}' in the path"); }

@@ -16,7 +16,7 @@ public static class HistoricalBarsHostingX
         services
             .AddSingleton<BarsService>()
             .AddSingleton<IBars>(sp => sp.GetRequiredService<BarsService>())
-            .AddSingleton<IChunkedBars>(sp => sp.GetRequiredService<BarsService>())
+            .AddSingleton<IBars>(sp => sp.GetRequiredService<BarsService>())
 
             .AddSingleton<KlineArrayFileProvider>()
             .AddSingleton<BarsFileSource>()
@@ -30,10 +30,10 @@ public static class HistoricalBarsHostingX
 
     public static IServiceCollection AddHistoricalDataDiskSource(this IServiceCollection services)
      => services
-             .TryAddEnumerableSingleton<IBarFileSources, BarsFileSource_OLD>()
+             //.TryAddEnumerableSingleton<IBarFileSources, BarsFileSource_OLD>()
              ;
     public static IServiceCollection AddHistoricalDataDiskWriter(this IServiceCollection services)
         => services
-                .AddSingleton<ILocalDiskHistoricalDataWriter, BarArrayFileWriter>()
+                .AddSingleton<ILocalDiskHistoricalDataWriter, BarArrayFileWriter>() // REVIEW - Obsolete? Triage?
                 ;
 }

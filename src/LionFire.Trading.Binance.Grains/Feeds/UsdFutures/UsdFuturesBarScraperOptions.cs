@@ -45,4 +45,6 @@ public class UsdFuturesBarScraperOptions
     public int DisabledStaggerMinutes { get; set; }
     [Id(3)]
     public int[]? DisabledSkipMinutes { get; set; }
+    [Id(4)]
+    public double PollOffsetMilliseconds { get; set; } = 500;
 }

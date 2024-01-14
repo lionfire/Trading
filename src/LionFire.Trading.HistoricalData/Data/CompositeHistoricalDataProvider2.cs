@@ -90,7 +90,7 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
         LocalDiskSources = serviceProvider.GetService<IEnumerable<IBarFileSources>>();
         LocalDiskWriter = serviceProvider.GetService<ILocalDiskHistoricalDataWriter>();
 
-        LocalNetwork = serviceProvider.GetService<IEnumerable<ILocalNetworkHistoricalDataSource2>>();
+        //LocalNetwork = serviceProvider.GetService<IEnumerable<ILocalNetworkHistoricalDataSource2>>(); // TODO
     }
 
     protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
@@ -150,7 +150,7 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
         int totalBars = 0;
         foreach (var chunk in chunks)
         {
-            var chunkData = await GetChunkImpl<T>(timeFrame, symbol, chunk.Item1, chunk.Item2, retrieveParameters).ConfigureAwait(false);
+            var chunkData = await GetChunkImpl<T>(timeFrame, symbol, chunk.Item1.start, chunk.Item1.endExclusive, retrieveParameters).ConfigureAwait(false);
             lists.Add(chunkData);
             totalBars += chunkData.Length;
         }

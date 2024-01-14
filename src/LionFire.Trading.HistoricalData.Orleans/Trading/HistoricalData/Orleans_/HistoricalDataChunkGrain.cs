@@ -8,20 +8,20 @@ public class HistoricalDataChunkGrain : Grain, IGrainWithStringKey
     public HistoricalDataChunkGrainKey? DataKey { get; private set; }
     public object? Result { get; private set; }
 
-    public override Task OnActivateAsync()
+    public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
         DataKey = HistoricalDataChunkGrainKey.Parse(this.GetPrimaryKeyString());
 
-        return base.OnActivateAsync();
+        return base.OnActivateAsync(cancellationToken);
     }
 
-    public async Task<T[]?> Get<T>(HistoricalDataQueryOptions? options = null)
+    public async Task<T[]?> Get<T>(QueryOptions? options = null)
     {
         var k = DataKey;
 
         if (k.Type != typeof(T)) { throw new ArgumentException($"Generic Type parameter ({typeof(T).FullName}) must match Grain key ({k.Type.FullName})"); }
 
-        options = HistoricalDataQueryOptions.Default;
+        options = QueryOptions.Default;
         
         if (Result != null && options.RetrieveSources.HasFlag(HistoricalDataSourceKind.InMemory)) { return (T[]?)Result; }
 
@@ -38,5 +38,6 @@ public class HistoricalDataChunkGrain : Grain, IGrainWithStringKey
 
         return result;
     }
-
 }
+
+

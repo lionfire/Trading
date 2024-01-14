@@ -29,24 +29,25 @@ public class KlineArrayFileProvider
 
     #region KlineArrayFile
 
-    public KlineArrayFile GetFile(string exchange, string exchangeArea, string symbol, TimeFrame timeFrame, DateTime date, KlineArrayFileOptions? options = null)
+    public KlineArrayFile GetFile(ExchangeSymbolTimeFrame reference, DateTime date, KlineArrayFileOptions? options = null)
     {
-        var (start, endExclusive) = RangeProvider.RangeForDate(date, timeFrame);
+        var ((start, endExclusive), isLong) = RangeProvider.RangeForDate(date, reference.TimeFrame);
 
-        var barsRangeReference = new SymbolBarsRange(exchange, exchangeArea, symbol, timeFrame, start, endExclusive);
+        var barsRangeReference = new SymbolBarsRange(reference.Exchange,reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive);
 
         KlineArrayInfo info = new()
         {
-            Exchange = exchange,
-            ExchangeArea = exchangeArea,
-            Symbol = symbol,
-            TimeFrame = timeFrame.Name,
+            //SymbolBarsRange = new SymbolBarsRange(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive),
+            Exchange = reference.Exchange,
+            ExchangeArea = reference.ExchangeArea,
+            Symbol = reference.Symbol,
+            TimeFrame = reference.TimeFrame.Name,
             Start = start,
             EndExclusive = endExclusive,
         };
 
 
-        var file = new KlineArrayFile(HistoricalDataPaths.GetPath(exchange, exchangeArea, symbol, timeFrame, info, options), barsRangeReference);
+        var file = new KlineArrayFile(HistoricalDataPaths.GetPath(reference, info, options), barsRangeReference);
 
         return file;
     }
