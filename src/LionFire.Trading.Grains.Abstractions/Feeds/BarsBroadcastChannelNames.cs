@@ -1,6 +1,6 @@
-﻿namespace LionFire.Trading.Binance_;
+﻿namespace LionFire.Trading.Feeds;
 
-public static class BinanceBroadcastChannelNames
+public static class BarsBroadcastChannelNames
 {
     public const string ConfirmedBars = "Bars";
     public const string TentativeBars = "TentativeBars";

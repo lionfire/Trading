@@ -88,4 +88,15 @@ public class UsdFuturesBarScraperServiceG([PersistentState("BinanceUsdFuturesBar
         options.State.DisabledInterval = newValue;
         await options.WriteStateAsync();
     }
+
+    public Task Options(UsdFuturesBarScraperServiceOptions newValue)
+    {
+        options.State = newValue;
+        return options.WriteStateAsync();
+    }
+
+    public Task<UsdFuturesBarScraperServiceOptions> Options()
+    {
+        return Task.FromResult(options.State);
+    }
 }

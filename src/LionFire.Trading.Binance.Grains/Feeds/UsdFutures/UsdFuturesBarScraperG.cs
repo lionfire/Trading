@@ -1,6 +1,7 @@
 ﻿using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.Clients;
 using LionFire.ExtensionMethods.Dumping;
+using LionFire.Trading.Feeds;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -32,9 +33,25 @@ public interface IUsdFuturesBarScraperG : IGrainWithStringKey
 
 }
 
+public class GrainOptionsMonitor<T> : IOptionsMonitor<T>
+{
+    IPersistentState<T> State { get; }
+
+    public GrainOptionsMonitor(IPersistentState<T> state)
+    {
+        State = state;
+    }
+
+    public T CurrentValue => State.State;
+
+    public T Get(string? name) { throw new NotImplementedException(); }
+
+    public IDisposable? OnChange(Action<T, string?> listener) { throw new NotImplementedException(); }
+}
+
 public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 {
-    public IPersistentState<UsdFuturesBarScraperOptions> Options { get; }
+    public IPersistentState<BarPollerOptions> Options { get; }
     public IPersistentState<BarScraperState> State { get; }
     public ILogger<UsdFuturesBarScraperG> Logger { get; }
     public IBinanceRestClient BinanceRestClient { get; }
@@ -53,11 +70,11 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #region Lifecycle
 
-    IDisposable barsSubscription;
+    IDisposable? barsSubscription;
     IDisposable? timer;
 
     public UsdFuturesBarScraperG(
-        [PersistentState("BinanceUsdFuturesBarScraperOptions", "Trading")] IPersistentState<UsdFuturesBarScraperOptions> options,
+        [PersistentState("BinanceUsdFuturesBarScraperOptions", "Trading")] IPersistentState<BarPollerOptions> options,
         [PersistentState("BinanceUsdFuturesBarScrapeState", "Trading")] IPersistentState<BarScraperState> state,
         ILogger<UsdFuturesBarScraperG> logger,
         IBinanceRestClient binanceRestClient,
@@ -66,10 +83,10 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     {
         Logger = logger;
         BinanceRestClient = binanceRestClient;
-        TentativeChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.TentativeBars);
-        ConfirmedChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.ConfirmedBars);
-        RevisionChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.RevisionBars);
-        InProgressChannelProvider = clusterClient.GetBroadcastChannelProvider(BinanceBroadcastChannelNames.InProgressBars);
+        TentativeChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.TentativeBars);
+        ConfirmedChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.ConfirmedBars);
+        RevisionChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.RevisionBars);
+        InProgressChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.InProgressBars);
 
         Options = options;
         State = state;
@@ -80,9 +97,11 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
         TimeFrame = TimeFrame.Parse(s[1]);
 
         Scraper = ActivatorUtilities.CreateInstance<UsdFuturesBarScraper>(ServiceProvider, Symbol, TimeFrame);
+        scraperRevisionsSub = Scraper.Revisions.Subscribe(OnMissing);
 
         //Logger.LogInformation("Created {key} with TimeFrame: {tf}", this.GetPrimaryKeyString(), TimeFrame.ToShortString());
     }
+    IDisposable scraperRevisionsSub;
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -97,6 +116,7 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     public override Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellationToken)
     {
         barsSubscription?.Dispose();
+        scraperRevisionsSub?.Dispose();
         return base.OnDeactivateAsync(reason, cancellationToken);
     }
 
@@ -121,7 +141,8 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
             var b = TimeSpan.FromMilliseconds(0); // TEMP HARDCODE
             var now = DateTimeOffset.UtcNow; // ENH: use server time
             var dueTime = TimeFrame.TimeUntilBarClose(now) + (TimeFrame.TimeSpan!.Value * Options.State.Offset) + b;
-            Logger.LogTrace("Next retrieve for {symbol}^{tf} in {dueTime}", Symbol, TimeFrame.ToShortString(), dueTime);
+            dueTime = dueTime.Add(Options.State.RetrieveDelay);
+            Logger.LogTrace("Next retrieve for {symbol}^{tf} in {dueTime} (retrieve delay: {retrieveDelay}s)", Symbol, TimeFrame.ToShortString(), dueTime, Options.State.RetrieveDelay.TotalSeconds.ToString("0.000"));
             timer = RegisterTimer(OnTimer, null!, dueTime, TimeFrame.TimeSpan!.Value * Options.State.Interval);
         }
     }
@@ -130,13 +151,14 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     private async Task BarsToBroadcastChannel(IEnumerable<BarEnvelope> bars)
     {
-        var channelId = this.GetPrimaryKeyString();
-        Logger.LogInformation("Broadcasting to channel: {channelId}", channelId);
+        var r = new ExchangeSymbolTimeFrame("binance", "futures", Symbol, TimeFrame);
+        var channelId = r.ToId();
+        Logger.LogTrace("Broadcasting to channel: {channelId}", channelId);
 
-        var confirmed = ConfirmedChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.ConfirmedBars, channelId));
-        var tentative = TentativeChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.TentativeBars, channelId));
-        var inProgress = InProgressChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.InProgressBars, channelId));
-        var revision = RevisionChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BinanceBroadcastChannelNames.RevisionBars, channelId));
+        var confirmed = ConfirmedChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.ConfirmedBars, channelId));
+        var tentative = TentativeChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.TentativeBars, channelId));
+        var inProgress = InProgressChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.InProgressBars, channelId));
+        var revision = RevisionChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.RevisionBars, channelId));
 
         await Task.WhenAll(
            confirmed.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed)).ToArray()),
@@ -157,9 +179,49 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     private async Task OnTimer(object state)
     {
         var task = this.AsReference<IUsdFuturesBarScraperG>().RetrieveBars();
-        InitTimer();
         await task;
+        InitTimer();
     }
+
+    #region Revisions
+
+    private async void OnMissing((int missingCount, int tradeCount) x)
+    {
+        if (x.missingCount == 0)
+        {
+            if (ConsecutiveNotMissing++ > 5)
+            {
+                ConsecutiveNotMissing = 0;
+                var oldDelay = Options.State.RetrieveDelay;
+                Options.State.RetrieveDelay -= TimeSpan.FromMilliseconds(150);
+                if (Options.State.RetrieveDelay < TimeSpan.Zero) { Options.State.RetrieveDelay = TimeSpan.Zero; }
+
+                if (oldDelay != Options.State.RetrieveDelay)
+                {
+                    Logger.LogInformation("{id} Decreased RetrieveDelay to {delay}s", this.GetPrimaryKeyString(), Options.State.RetrieveDelay.TotalSeconds.ToString("0.000"));
+                    await Options.WriteStateAsync();
+                }
+            }
+        }
+        else
+        {
+            ConsecutiveNotMissing = 0;
+            if (Options.State.RetrieveDelay.TotalMilliseconds < 2000)
+            {
+                Options.State.RetrieveDelay += TimeSpan.FromMilliseconds(1000);
+            }
+            else
+            {
+                Options.State.RetrieveDelay += TimeSpan.FromMilliseconds(200);
+            }
+            Logger.LogInformation("{id} Increased RetrieveDelay to: {delay}s", this.GetPrimaryKeyString(), Options.State.RetrieveDelay.TotalSeconds.ToString("0.000"));
+            await Options.WriteStateAsync();
+        }
+    }
+    public int ConsecutiveNotMissing = 0;
+    public int ConsecutiveNotMissingBeforeOptimizing = 5;
+
+    #endregion
 
     #endregion
 

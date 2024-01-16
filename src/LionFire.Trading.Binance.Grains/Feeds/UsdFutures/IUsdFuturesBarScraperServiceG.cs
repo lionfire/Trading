@@ -17,4 +17,9 @@ public interface IUsdFuturesBarScraperServiceG : IGrainWithStringKey
     [ReadOnly]
     Task<int> DisabledInterval();
     Task DisabledInterval(int newValue);
+
+    Task Options(UsdFuturesBarScraperServiceOptions newValue);
+
+    [ReadOnly]
+    Task<UsdFuturesBarScraperServiceOptions> Options();
 }

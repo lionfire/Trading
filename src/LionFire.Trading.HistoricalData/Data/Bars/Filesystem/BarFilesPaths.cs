@@ -49,6 +49,7 @@ public class BarFilesPaths
         var filename = GetFileName(barsRange.Start, barsRange.EndExclusive, suffixCode);
 
         string? fileResult = null;
+        if (!Directory.Exists(dir)) return null;
         foreach (var file in Directory.GetFiles(dir, filename + "*"))
         {
             if (fileResult != null)

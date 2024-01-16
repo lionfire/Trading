@@ -10,7 +10,7 @@ namespace LionFire.Trading.HistoricalData.Retrieval;
 //    //Task<IEnumerable<BarsChunkInfo>> LocalBarsAvailable(SymbolReference symbolReference); // TODO
 //}
 
-public interface IBars : ITradingDataSource 
+public interface IBars : ITradingDataSource
 {
     HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
     //Task<IEnumerable<IBarsResult>> ChunkedBars(SymbolBarsRange barsRangeReference, QueryOptions? options = null);
@@ -43,11 +43,22 @@ public static class BarsX
     }
     public static async Task<IEnumerable<IKline>> Bars(this IBars bars, SymbolBarsRange barsRangeReference, QueryOptions? options = null)
     {
-        return (await bars.ChunkedBars(barsRangeReference, options)).AggregateBars();
+        return (await bars.ChunkedBars(barsRangeReference, options)).AggregateBars(barsRangeReference.Start, barsRangeReference.EndExclusive);
     }
-    public static IEnumerable<IKline> AggregateBars(this IEnumerable<IBarsResult> barsResults)
+    public static IEnumerable<IKline> AggregateBars(this IEnumerable<IBarsResult> barsResults, DateTime? start = null, DateTime? endExclusive = null)
     {
-        return barsResults.SelectMany(r => r.Bars);
+        var result = barsResults.SelectMany(r => r.Bars);
+
+        // OPTIMIZE: use math to calculate index to skip:
+        if (start.HasValue)
+        {
+            result = result.SkipWhile(b => b.OpenTime < start.Value);
+        }
+        if(endExclusive.HasValue)
+        {
+            result = result.TakeWhile(b => b.OpenTime < endExclusive.Value);
+        }
+        return result;
     }
 }
 
@@ -72,7 +83,7 @@ public class BarsService : IBars, IListableBarsSource
         //HistoricalDataPaths = historicalDataPathsOptions.CurrentValue;
     }
 
-  
+
 
     public async Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true, QueryOptions? options = null)
     {

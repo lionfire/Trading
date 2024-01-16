@@ -14,4 +14,6 @@ public class UsdFuturesBarScraperServiceOptions
     public int Interval { get; set; } = 1;
     [Id(2)]
     public int DisabledInterval { get; set; } = 0;
+
+  
 }

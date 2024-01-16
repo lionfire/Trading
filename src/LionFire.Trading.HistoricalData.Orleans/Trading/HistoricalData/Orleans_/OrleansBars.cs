@@ -35,7 +35,7 @@ public class OrleansBars : ILocalNetworkHistoricalDataSource2
 
     public async Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null)
     {
-        var grainKey = range.ToGrainId();
+        var grainKey = range.ToId();
         var grain = ClusterClient.GetGrain<IHistoricalBarsChunkG>(grainKey);
         var bars = await grain.Bars();
 

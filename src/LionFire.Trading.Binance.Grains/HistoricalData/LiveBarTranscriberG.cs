@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using LionFire.Trading.Feeds;
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.BroadcastChannel;
 
@@ -10,8 +11,8 @@ public interface ILiveBarTranscriberG : IGrainWithStringKey
 
 //[ImplicitChannelSubscription(BinanceBroadcastChannelNames.ConfirmedBars)]
 //[ImplicitChannelSubscription(BinanceBroadcastChannelNames.TentativeBars)]
-//[ImplicitChannelSubscription(BinanceBroadcastChannelNames.RevisionBars)]
-[ImplicitChannelSubscription()]
+//[ImplicitChannelSubscription(BarsBroadcastChannelNames.RevisionBars)]
+//[ImplicitChannelSubscription()]
 public sealed class LiveBarTranscriberG(ILogger<LiveBarTranscriberG> Logger) :
     Grain,
     ILiveBarTranscriberG,
@@ -19,12 +20,18 @@ public sealed class LiveBarTranscriberG(ILogger<LiveBarTranscriberG> Logger) :
 {
     //List<BarEnvelope> confirmedBars = new();
 
+    #region Lifecycle (IOnBroadcastChannelSubscribed)
+
     public async Task OnSubscribed(IBroadcastChannelSubscription subscription)
     {
         Logger.LogInformation("{grainId} subscribed to BroadcastChannel {broadcastChannelId} (provider: {broadcastChannelProvider})", this.GetPrimaryKeyString(), subscription.ChannelId, subscription.ProviderName);
         //await subscription.Attach<BarEnvelope[]>(e => OnBar(), OnError);
         await subscription.Attach<BarEnvelope[]>(OnBarFactory(subscription.ChannelId), OnError);
     }
+
+    #endregion
+
+    #region OnBar
 
     private Func<BarEnvelope[], Task> OnBarFactory(ChannelId channelId)
     {
@@ -50,7 +57,18 @@ public sealed class LiveBarTranscriberG(ILogger<LiveBarTranscriberG> Logger) :
         return Task.CompletedTask;
     }
 
-    public bool IsLastForHistoricalDataChunk(DateTime closeTime, TimeFrame timeFrame)
+    #endregion
+
+    private Task OnError(Exception ex)
+    {
+        Logger.LogError(ex, $"An error occurred: {ex}");
+
+        return Task.CompletedTask;
+    }
+
+    #region Utility
+
+    public static bool IsLastForHistoricalDataChunk(DateTime closeTime, TimeFrame timeFrame)
     {
         switch (timeFrame.ToShortString())
         {
@@ -63,10 +81,5 @@ public sealed class LiveBarTranscriberG(ILogger<LiveBarTranscriberG> Logger) :
         }
     }
 
-    private Task OnError(Exception ex)
-    {
-        Logger.LogError(ex, $"An error occurred: {ex}");
-
-        return Task.CompletedTask;
-    }
+    #endregion
 }
