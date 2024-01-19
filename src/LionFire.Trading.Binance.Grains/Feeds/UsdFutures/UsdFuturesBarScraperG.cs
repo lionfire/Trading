@@ -185,21 +185,25 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #region Revisions
 
-    private async void OnMissing((int missingCount, int tradeCount) x)
+    public static int DecreaseDelayAfterSuccessCount = 12;
+    private async void OnMissing((int missingCount, int tradeCount, bool missingInProgressBar) x)
     {
-        if (x.missingCount == 0)
+        if (x.missingCount == 0 && !x.missingInProgressBar)
         {
-            if (ConsecutiveNotMissing++ > 5)
+            if (x.tradeCount > 0)
             {
-                ConsecutiveNotMissing = 0;
-                var oldDelay = Options.State.RetrieveDelay;
-                Options.State.RetrieveDelay -= TimeSpan.FromMilliseconds(150);
-                if (Options.State.RetrieveDelay < TimeSpan.Zero) { Options.State.RetrieveDelay = TimeSpan.Zero; }
-
-                if (oldDelay != Options.State.RetrieveDelay)
+                if (ConsecutiveNotMissing++ > DecreaseDelayAfterSuccessCount)
                 {
-                    Logger.LogInformation("{id} Decreased RetrieveDelay to {delay}s", this.GetPrimaryKeyString(), Options.State.RetrieveDelay.TotalSeconds.ToString("0.000"));
-                    await Options.WriteStateAsync();
+                    ConsecutiveNotMissing = 0;
+                    var oldDelay = Options.State.RetrieveDelay;
+                    Options.State.RetrieveDelay -= TimeSpan.FromMilliseconds(150);
+                    if (Options.State.RetrieveDelay < TimeSpan.Zero) { Options.State.RetrieveDelay = TimeSpan.Zero; }
+
+                    if (oldDelay != Options.State.RetrieveDelay)
+                    {
+                        Logger.LogInformation("{id} Decreased RetrieveDelay to {delay}s", this.GetPrimaryKeyString(), Options.State.RetrieveDelay.TotalSeconds.ToString("0.000"));
+                        await Options.WriteStateAsync();
+                    }
                 }
             }
         }
