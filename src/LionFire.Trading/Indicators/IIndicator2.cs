@@ -1,4 +1,4 @@
-﻿
+﻿#if UNUSED
 using LionFire.Structures;
 using LionFire.Trading.HistoricalData;
 using QuantConnect.Data;
@@ -263,3 +263,4 @@ public class IndicatorRecorder<TOutput> : IObservable<TOutput>
         throw new NotImplementedException();
     }
 }
+#endif

@@ -3,7 +3,7 @@
 namespace LionFire.Trading.HistoricalData;
 
 [ZeroFormattable]
-public struct OhlcvItem
+public struct OhlcvItem //: IKline
 {
     [Index(0)]
     public char Code;

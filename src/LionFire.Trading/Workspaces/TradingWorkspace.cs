@@ -108,7 +108,8 @@ namespace LionFire.Trading.Workspaces
 
         private void Template_IsAutoSaveEnabledChanged()
         {
-            this.EnableAutoSave(Template.IsAutoSaveEnabled);
+            throw new NotImplementedException();
+            //this.EnableAutoSave(Template.IsAutoSaveEnabled);
         }
 
         #endregion

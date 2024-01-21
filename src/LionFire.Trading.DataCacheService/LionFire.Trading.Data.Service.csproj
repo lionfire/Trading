@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>LionFire.Trading</RootNamespace>
   </PropertyGroup>
 
@@ -21,7 +21,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging.NLog\LionFire.Extensions.Logging.NLog.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Extensions.Logging\LionFire.Extensions.Logging.csproj" />
-    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence\LionFire.Persistence.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence\LionFire.Data.Persisters.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Serialization.Json.Newtonsoft\LionFire.Serialization.Json.Newtonsoft.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading\LionFire.Trading.csproj" />

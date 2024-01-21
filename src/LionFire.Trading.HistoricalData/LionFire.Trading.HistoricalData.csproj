@@ -1,14 +1,15 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <RootNamespace>LionFire</RootNamespace>
+    <RootNamespace>LionFire.Trading</RootNamespace>
   </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Alexinea.ZeroFormatter" />
+		<PackageReference Include="Baseline" />
 		<PackageReference Include="Binance.Net" />
 		<PackageReference Include="K4os.Compression.LZ4.Streams" />
 		<PackageReference Include="McMaster.Extensions.Hosting.CommandLine" />
@@ -25,7 +26,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Trading\HistoricalData\Sources\BarsFile\" />
+	  <Folder Include="Data\Bars\Sources\BarsFile\" />
 	</ItemGroup>
 	
 </Project>

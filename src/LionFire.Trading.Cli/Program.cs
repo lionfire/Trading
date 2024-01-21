@@ -3,49 +3,47 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using LionFire.Hosting;
-using LionFire.Trading.Binance;
+using LionFire.Trading.Binance_;
 using LionFire.Trading.HistoricalData.Serialization;
 using Winton.Extensions.Configuration.Consul;
 using Winton.Extensions.Configuration.Consul.Parsers;
 using Microsoft.Extensions.Configuration;
-using LionFire.Trading.HistoricalData.Sources;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.HistoricalData.Retrieval;
 using System.Xml.Linq;
 using LionFire.Trading.Indicators;
+using Oakton.Descriptions;
 
+#if TODO
+return await new HostApplicationBuilder()
+#else
 return await Host.CreateDefaultBuilder()
-    .LionFire()
-    .ConfigureHostConfiguration(c =>
-        c.AddConsul("LionFire.Trading", options => { options.Optional = true; options.Parser = new SimpleConfigurationParser(); })
-#if DEBUG
-        .AddInMemoryCollection(new Dictionary<string, string>
-        {
-            ["LionFire.Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
-            ["LionFire.Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
-        })
 #endif
+    .LionFire()
+    .UseHistoricalBars()
+    .ConfigureHostConfiguration(c =>
+        c
+              .AddConsul("LionFire.Trading", options => { options.Optional = true; options.Parser = new SimpleConfigurationParser(); })
+              .AddEnvironmentVariables("DOTNET_")
         )
 
     .ConfigureServices((context, services) =>
     {
         services
-            .Configure<HistoricalDataPaths>(context.Configuration.GetSection("HistoricalData")
-                .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"))
+
             .AddSingleton<BinanceClientProvider>()
-            .AddSingleton<KlineArrayFileProvider>()
-            .AddSingleton<BarsFileSource>()
-            .AddSingleton<HistoricalDataChunkRangeProvider>()
             .AddSingleton<IndicatorProvider>()
+            .AddHistoricalBars(context.Configuration)
         ;
     })
     .MultiCommandProgram()
-        .Command("backtest", 
+        .Command("backtest",
             typeof(BacktestCommand)
         )
         .Command("data",
             typeof(ListAvailableHistoricalDataCommand),
-            typeof(DumpBarsHierarchicalDataCommand)
+            typeof(DumpBarsHierarchicalDataCommand),
+            typeof(RetrieveHistoricalDataJob)
         )
         .Command("indicator",
             typeof(ListIndicatorsCommand),
@@ -53,4 +51,34 @@ return await Host.CreateDefaultBuilder()
         )
 .Run(args)
 //.RunOaktonCommands(args);
-    ;
+;
+
+public static class HostApplicationBuilderX_Local
+{
+    public static HostApplicationBuilder For(this HostApplicationBuilder hab, Action<HostApplicationBuilder> a)
+    {
+        a(hab);
+        return hab;
+    }
+
+    public static HostApplicationBuilder Configure(this HostApplicationBuilder hab, Action<IConfigurationBuilder> c)
+    {
+        c(hab.Configuration);
+        return hab;
+    }
+
+    public static IHostBuilder UseHistoricalBars(this IHostBuilder hostBuilder)
+    {
+        hostBuilder.ConfigureHostConfiguration(c => c
+#if DEBUG // TODO: how to best configure this for real?
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["LionFire.Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
+                ["LionFire.Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
+            })
+#endif
+        )
+            ;
+        return hostBuilder;
+    }
+}

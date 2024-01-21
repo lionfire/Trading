@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+		<RootNamespace>LionFire.Trading.Binance_</RootNamespace>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Orleans.BroadcastChannel" />
+		<PackageReference Include="Microsoft.Orleans.Reminders" />
+		<PackageReference Include="Microsoft.Orleans.Sdk" />
+		<PackageReference Include="Microsoft.Orleans.Streaming" />
+	</ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />
+    <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Feeds.Binance\LionFire.Trading.Feeds.Binance.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Binance.Grains.Abstractions\LionFire.Trading.Binance.Grains.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.HistoricalData.csproj" />
+  </ItemGroup>
+
+</Project>
