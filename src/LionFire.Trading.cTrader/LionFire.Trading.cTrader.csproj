@@ -58,7 +58,7 @@
     <Compile Include="Sensors\PValueSensorBase.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\valor\Dycen\Lionfire.Utility\LionFire.Utility.csproj">
+    <ProjectReference Include="..\..\..\valor\Dycen\Lionfire.Utility\LionFire.Utility.csproj">
       <Project>{10df87c2-fbf7-45df-a2e3-eb22aea89e16}</Project>
       <Name>LionFire.Utility</Name>
     </ProjectReference>
