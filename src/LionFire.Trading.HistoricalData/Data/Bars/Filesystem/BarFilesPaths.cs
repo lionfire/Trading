@@ -50,8 +50,9 @@ public class BarFilesPaths
 
         string? fileResult = null;
         if (!Directory.Exists(dir)) return null;
-        foreach (var file in Directory.GetFiles(dir, filename + "*"))
+        foreach (var file in Directory.GetFiles(dir, filename + "*").Where(f => !f.Contains("downloading")))
         {
+            // ENH: Change .downloading files to start with ~
             if (fileResult != null)
             {
                 throw new Exception("Expected one match but got at least two: " + fileResult + ", " + file);

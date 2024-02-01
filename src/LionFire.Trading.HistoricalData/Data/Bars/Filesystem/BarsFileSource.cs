@@ -190,7 +190,7 @@ public class BarsFileSource : IBars, IListableBarsSource
         await Task.Run(async () =>
         {
             result.BarsInfo = await LoadBarsInfo(r);
-            foreach (var path in Directory.GetFiles(dir))
+            foreach (var path in Directory.GetFiles(dir).Where(p => !p.Contains(".downloading")))
             {
                 var extension = Path.GetExtension(path);
                 var filename = Path.GetFileName(path);

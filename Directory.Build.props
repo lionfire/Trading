@@ -8,6 +8,8 @@
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>
 
+		<EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
+
   </PropertyGroup>
   
   <PropertyGroup>

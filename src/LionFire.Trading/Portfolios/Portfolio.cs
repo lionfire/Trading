@@ -148,15 +148,8 @@ namespace LionFire.Trading.Portfolios
             }
         }
 
-        public IEnumerable<string> AllCorrelations {
-            get {
-                if (allCorrelations == null)
-                {
-                    allCorrelations = CorrelationUtils.AllCorrellationIds(Components);
-                }
-                return allCorrelations;
-            }
-        }
+        public IEnumerable<string> AllCorrelations => 
+            allCorrelations ??= CorrelationUtils.AllCorrellationIds(Components);
         private IEnumerable<string> allCorrelations;
 
         #endregion

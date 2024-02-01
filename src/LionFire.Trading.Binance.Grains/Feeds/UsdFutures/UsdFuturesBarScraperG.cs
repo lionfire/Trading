@@ -10,6 +10,7 @@ using Orleans.Concurrency;
 using Orleans.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
@@ -185,11 +186,16 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #region Revisions
 
-    public static int DecreaseDelayAfterSuccessCount = 12;
+    public static int DecreaseDelayAfterSuccessCount = 30;
     private async void OnMissing((int missingCount, int tradeCount, bool missingInProgressBar) x)
     {
+        if (x.missingInProgressBar)
+        {
+            Debug.WriteLine("OnMissing: MissingInProgressBar" + x.missingCount);
+        }
         if (x.missingCount == 0 && !x.missingInProgressBar)
         {
+            
             if (x.tradeCount > 0)
             {
                 if (ConsecutiveNotMissing++ > DecreaseDelayAfterSuccessCount)
