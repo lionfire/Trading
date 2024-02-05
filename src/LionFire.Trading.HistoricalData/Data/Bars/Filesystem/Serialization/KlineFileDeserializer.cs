@@ -20,18 +20,22 @@ public class KlineFileDeserializer
     //    Logger = logger;
     //}
 
-    public static KlineArrayInfo DeserializeInfo(string path)
+    public static KlineArrayInfo? DeserializeInfo(string path)
     {
         // TODO: Detect magic at start of file
         var (info, stream) = DeserializeStream(path);
-        stream.Dispose();
+        stream?.Dispose();
         return info;
     }
 
-    public static (KlineArrayInfo info, IReadOnlyList<IKline>) Deserialize(string path)
+    public static (KlineArrayInfo? info, IReadOnlyList<IKline>?) Deserialize(string path)
     {
         var (info, stream) = DeserializeStream(path);
 
+        if(info == null && stream == null)
+        {
+            return (null, null);
+        }
         Stream? decompressionStream = null;
 
         if (info.Compression == "LZ4") { decompressionStream = stream = LZ4Stream.Decode(stream); }
@@ -144,12 +148,18 @@ public class KlineFileDeserializer
         return (info, list);
     }
 
-    public static (KlineArrayInfo info, Stream stream) DeserializeStream(string path)
+    public static (KlineArrayInfo info, Stream? stream) DeserializeStream(string path)
     {
         var yamlBuilder = new StringBuilder();
         Stream stream;
 
         stream = File.OpenRead(path);
+        if (stream.Length == 0)
+        {
+            stream.Close();
+            stream.Dispose();
+            return (null, null);
+        }
 
         var buffer = new List<byte>();
         bool hasCarriageReturn = false;

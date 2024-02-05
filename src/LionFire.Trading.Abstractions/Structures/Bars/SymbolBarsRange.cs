@@ -75,5 +75,10 @@ public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbo
         if (Start == default) throw new ArgumentNullException(nameof(Start));
         if (EndExclusive == default) throw new ArgumentNullException(nameof(EndExclusive));
     }
+
+    public static SymbolBarsRange FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame es, DateTime start, DateTime endExclusive)
+    {
+        return new SymbolBarsRange(es.Exchange, es.ExchangeArea, es.Symbol, es.TimeFrame, start, endExclusive);
+    }
 }
 

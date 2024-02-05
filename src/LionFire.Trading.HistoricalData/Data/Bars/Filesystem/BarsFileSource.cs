@@ -80,6 +80,7 @@ public class BarsFileSource : IBars, IListableBarsSource
         IBarsResult result = await Task.Run(() =>
         {
             var (info, bars) = KlineFileDeserializer.Deserialize(path);
+            if (bars == null) return null;
 
             return new BarsResult<IKline>
             {
@@ -204,6 +205,19 @@ public class BarsFileSource : IBars, IListableBarsSource
                 catch (Exception)
                 {
                     Logger.LogWarning($"Failed to deserialize bars from file: {Path.GetFileName(path)}");
+                    continue;
+                }
+                if (info == null)
+                {
+                    Logger.LogWarning("Deserialize returned null.  Deleting file: {path}", path);
+                    try
+                    {
+                        File.Delete(path);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Deserialize returned null but failed to delete file: {path}", path);
+                    }
                     continue;
                 }
 
