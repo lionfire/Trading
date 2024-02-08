@@ -1,0 +1,25 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+
+		<RootNamespace>LionFire</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="NewFolder\**" />
+		<EmbeddedResource Remove="NewFolder\**" />
+		<None Remove="NewFolder\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="ScottPlot" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+	</ItemGroup>
+
+</Project>

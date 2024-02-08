@@ -171,6 +171,7 @@
     <PackageVersion Include="Radzen.Blazor" Version="4.24.4" />
     <PackageVersion Include="RestSharp.NetCore" Version="105.2.3" />
     <PackageVersion Include="RethinkDb.Driver" Version="2.3.150" />
+    <PackageVersion Include="ScottPlot" Version="5.0.21" />
     <PackageVersion Include="Serilog.AspNetCore" Version="8.0.1" />
     <PackageVersion Include="Serilog.Expressions" Version="4.0.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="8.0.0" />
