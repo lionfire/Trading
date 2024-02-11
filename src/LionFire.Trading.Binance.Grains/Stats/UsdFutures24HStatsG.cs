@@ -10,25 +10,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static LionFire.Trading.Binance_.UsdFutures24HStatsG;
 
 
 namespace LionFire.Trading.Binance_;
 
-public interface IUsdFuturesInfoG : IGrainWithStringKey, IRemindable
-{
-
-    ValueTask AutoRefreshInterval(TimeSpan? timeSpan);
-    Task<StatsState> LastDayStats();
-
-    Task<StatsState> RetrieveLastDayStats();
-}
-
-public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG
+public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG, IRemindable
 {
     private static readonly string ReminderName = typeof(UsdFutures24HStatsG).Name;
 
-    public IPersistentState<StatsState> State { get; }
+    public IPersistentState<Binance24HStatsState> State { get; }
     public ILogger<UsdFutures24HStatsG> Logger { get; }
     public IReminderRegistry ReminderRegistry { get; }
     public IGrainContext GrainContext { get; }
@@ -37,7 +27,7 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG
     IGrainReminder? reminder;
 
     public UsdFutures24HStatsG(
-        [PersistentState("binance-futures-usd-stats-24h-state", "Trading")] IPersistentState<StatsState> state,
+        [PersistentState("binance-futures-usd-stats-24h-state", "Trading")] IPersistentState<Binance24HStatsState> state,
         ILogger<UsdFutures24HStatsG> logger,
         IReminderRegistry reminderRegistry,
         IGrainContext grainContext,
@@ -78,18 +68,18 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG
         await RetrieveLastDayStats();
     }
 
-    public Task<StatsState> LastDayStats()
+    public Task<Binance24HStatsState> LastDayStats()
     {
         return Task.FromResult(State.State);
     }
 
-    public async Task<StatsState> RetrieveLastDayStats()
+    public async Task<Binance24HStatsState> RetrieveLastDayStats()
     {
         Logger.LogInformation("Retrieving 24h stats");
 
         var info = await BinanceRestClient.UsdFuturesApi.ExchangeData.GetTickersAsync(); // WEIGHT: 80
 
-        var statsState = new StatsState
+        var statsState = new Binance24HStatsState
         {
             RetrievedOn = DateTimeOffset.UtcNow,
 
@@ -160,15 +150,7 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG
         return State.State;
     }
 
-    [Alias("binance-futures-usd-stats-24h")]
-    [GenerateSerializer]
-    public class StatsState
-    {
-        [Id(0)]
-        public DateTimeOffset RetrievedOn { get; set; }
-        [Id(1)]
-        public List<Binance24HPriceStats> List { get; set; }
-    }
+   
 
     //[Alias("binance-futures-usd-symbols")]
     //public class SymbolsState
@@ -179,72 +161,6 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG
     //{
 
     //}
-}
-
-[Immutable]
-[GenerateSerializer]
-public class Binance24HPriceStats
-{
-    [Id(0)]
-    public string Symbol { get; set; }
-    [Id(1)]
-    public decimal QuoteVolume { get; set; }
-
-
-    /// <summary>
-    /// The actual price change in the last 24 hours
-    /// </summary>
-    [Id(2)]
-    public decimal PriceChange { get; set; }
-
-    /// <summary>
-    /// The price change in percentage in the last 24 hours
-    /// </summary>
-    [Id(3)]
-    public decimal PriceChangePercent { get; set; }
-
-    /// <summary>
-    /// The weighted average price in the last 24 hours
-    /// </summary>
-    [Id(4)]
-    public decimal WeightedAveragePrice { get; set; }
-
-    /// <summary>
-    /// The most recent trade quantity
-    /// </summary>
-    [Id(5)]
-    public decimal LastQuantity { get; set; }
-
-    /// <summary>
-    /// Time at which this 24 hours opened
-    /// </summary>
-    [Id(6)]
-    public DateTime OpenTime { get; set; }
-
-    /// <summary>
-    /// Time at which this 24 hours closed
-    /// </summary>
-    [Id(7)]
-    public DateTime CloseTime { get; set; }
-
-    /// <summary>
-    /// The first trade ID in the last 24 hours
-    /// </summary>
-    [Id(8)]
-    public long FirstTradeId { get; set; }
-
-    /// <summary>
-    /// The last trade ID in the last 24 hours
-    /// </summary>
-    [Id(9)]
-    public long LastTradeId { get; set; }
-
-    /// <summary>
-    /// The amount of trades made in the last 24 hours
-    /// </summary>
-    [Id(10)]
-    public long TotalTrades { get; set; }
-
 }
 
 //[RegisterConverter]

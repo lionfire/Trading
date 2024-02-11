@@ -12,6 +12,63 @@ namespace LionFire.Trading.ScottPlot_;
 public static class ScottPlotUtils
 {
 
+    public static Plot? CreateVolumeScottPlot(this IEnumerable<IKline>? bars, string? name = null, TimeSpan? timeSpan = null, Plot? plot = null, bool frameless = false)
+    {
+        plot ??= new();
+
+        plot.Add.Palette = new ScottPlot.Palettes.Penumbra();
+        plot.Style.DarkMode();
+        plot.ScaleFactor = 0.5f;
+
+        var barsSeries = plot.Add.Bars(bars.Select(b => (double)b.Volume).ToArray());
+        barsSeries.Color = new(255, 255, 255, 255);
+
+        // tell the plot to autoscale with no padding beneath the bars
+        plot.Axes.Margins(bottom: 0);
+
+        //if (diffPercent > 3.0)
+        //{
+        //    //candles.Axes.YAxis.Max = highPercent;
+        //    //candles.Axes.YAxis.Min = lowPercent;
+        //    if (last > first)
+        //    {
+        //        plot.Style.Background(figure: Color.FromHex("#025836"), data: Color.FromHex("#1b4049"));
+        //    }
+        //    else
+        //    {
+        //        plot.Style.Background(figure: Color.FromHex("#823836"), data: Color.FromHex("#4b3049"));
+        //    }
+        //}
+        //else if (diffPercent > 1.0)
+        //{
+        //    candles.Axes.YAxis.Max = 3;
+        //    candles.Axes.YAxis.Min = -3;
+        //    if (last > first)
+        //    {
+        //        plot.Style.Background(figure: Color.FromHex("#023114"), data: Color.FromHex("#0b3049"));
+        //    }
+        //    else
+        //    {
+        //        plot.Style.Background(figure: Color.FromHex("#4c212b"), data: Color.FromHex("#0b3049"));
+        //    }
+        //}
+        //else
+        {
+            //candles.Axes.YAxis.Max = 1;
+            //candles.Axes.YAxis.Min = -1;
+            plot.Style.Background(figure: Color.FromHex("#22222200"), data: Color.FromHex("#0b304900"));
+        }
+        plot.Style.ColorAxes(Color.FromHex("#a0acb5"));
+        plot.Style.ColorGrids(Color.FromHex("#00000000"));
+
+        if (frameless)
+        {
+            plot.Layout.Frameless();
+        }
+
+        return plot;
+    }
+
     public static Plot CreateScottPlot(this IEnumerable<IKline>? bars, string? name = null, TimeSpan? timeSpan = null, Plot? plot = null, bool frameless = false)
     {
         plot ??= new();
