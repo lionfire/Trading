@@ -32,6 +32,8 @@ public interface IUsdFuturesBarScraperG : IGrainWithStringKey
     Task Offset(int newValue);
 
 
+    Task OnMissing((int missingCount, int tradeCount, bool missingInProgressBar) x);
+
 }
 
 public class GrainOptionsMonitor<T> : IOptionsMonitor<T>
@@ -98,11 +100,13 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
         TimeFrame = TimeFrame.Parse(s[1]);
 
         Scraper = ActivatorUtilities.CreateInstance<UsdFuturesBarScraper>(ServiceProvider, Symbol, TimeFrame);
-        scraperRevisionsSub = Scraper.Revisions.Subscribe(OnMissing);
+        scraperRevisionsSub = Scraper.Revisions.Subscribe(x => this.AsReference<IUsdFuturesBarScraperG>().OnMissing(x));
 
         //Logger.LogInformation("Created {key} with TimeFrame: {tf}", this.GetPrimaryKeyString(), TimeFrame.ToShortString());
     }
+
     IDisposable scraperRevisionsSub;
+
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
@@ -187,7 +191,7 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     #region Revisions
 
     public static int DecreaseDelayAfterSuccessCount = 30;
-    private async void OnMissing((int missingCount, int tradeCount, bool missingInProgressBar) x)
+    async Task IUsdFuturesBarScraperG.OnMissing((int missingCount, int tradeCount, bool missingInProgressBar) x)
     {
         if (x.missingInProgressBar)
         {
@@ -195,7 +199,7 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
         }
         if (x.missingCount == 0 && !x.missingInProgressBar)
         {
-            
+
             if (x.tradeCount > 0)
             {
                 if (ConsecutiveNotMissing++ > DecreaseDelayAfterSuccessCount)

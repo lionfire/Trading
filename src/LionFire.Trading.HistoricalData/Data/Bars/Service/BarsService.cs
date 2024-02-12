@@ -5,19 +5,16 @@ using LionFire.Trading.HistoricalData.Sources;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-//public interface IBars : ITradingDataSource
-//{
-//    //Task<IEnumerable<BarsChunkInfo>> LocalBarsAvailable(SymbolReference symbolReference); // TODO
-//}
-
 public interface IBars : ITradingDataSource
 {
     HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
     //Task<IEnumerable<IBarsResult>> ChunkedBars(SymbolBarsRange barsRangeReference, QueryOptions? options = null);
+//    //Task<IEnumerable<BarsChunkInfo>> LocalBarsAvailable(SymbolReference symbolReference); // TODO?
     Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null);
 
     Task<IBarsResult?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null);
 }
+
 public static class BarsX
 {
     public static async Task<IEnumerable<IBarsResult>> ChunkedBars(this IBars @this, SymbolBarsRange r, QueryOptions? options = null)
@@ -82,8 +79,6 @@ public class BarsService : IBars, IListableBarsSource
         HistoricalDataChunkRangeProvider = historicalDataChunkRangeProvider;
         //HistoricalDataPaths = historicalDataPathsOptions.CurrentValue;
     }
-
-
 
     public async Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true, QueryOptions? options = null)
     {

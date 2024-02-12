@@ -16,7 +16,6 @@ public static class HistoricalBarsHostingX
         services
             .AddSingleton<BarsService>()
             .AddSingleton<IBars>(sp => sp.GetRequiredService<BarsService>())
-            .AddSingleton<IBars>(sp => sp.GetRequiredService<BarsService>())
 
             .AddSingleton<KlineArrayFileProvider>()
             .AddSingleton<BarsFileSource>()

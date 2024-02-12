@@ -7,8 +7,16 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading;
 
+//public record IndicatorDataRange(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DateTime Start, DateTime EndExclusive, string IndicatorKey, int Version, string[] ) : SymbolBarsRange(Exchange, ExchangeArea, Symbol, TimeFrame,Start,EndExclusive)
+//{
+
+//}
+
+
 public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DateTime Start, DateTime EndExclusive) : ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame), IRangeWithTimeFrame
 {
+    #region Parsing
+
     public static List<string> Examples = new List<string>
     {
         "BINANCE:BTCUSDT.P m1:2024.01.01-2024.01.02",
@@ -69,12 +77,13 @@ public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbo
         return new SymbolBarsRange(exchange, ExchangeArea, symbol, timeFrame, from.ToDateTime(), to.ToDateTime());
     }
 
-
     public void ThrowIfInvalid()
     {
         if (Start == default) throw new ArgumentNullException(nameof(Start));
         if (EndExclusive == default) throw new ArgumentNullException(nameof(EndExclusive));
     }
+
+    #endregion
 
     public static SymbolBarsRange FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame es, DateTime start, DateTime endExclusive)
     {
