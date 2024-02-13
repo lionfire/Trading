@@ -715,7 +715,8 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 if (h.Key != "X-MBX-USED-WEIGHT-1M") continue;
                 foreach (var v in h.Value)
                 {
-                    Console.WriteLine($"{h.Key} = {v}");
+                    //Console.WriteLine($"{h.Key} = {v}");
+                    Logger.LogInformation("{header} = {value}", h.Key, v);
                     if (int.TryParse(v, out var weight))
                     {
                         result = weight;

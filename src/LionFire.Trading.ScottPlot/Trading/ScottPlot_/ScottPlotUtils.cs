@@ -20,7 +20,7 @@ public static class ScottPlotUtils
         plot.Style.DarkMode();
         plot.ScaleFactor = 0.5f;
 
-        var barsSeries = plot.Add.Bars(bars.Select(b => (double)b.Volume).ToArray());
+        var barsSeries = plot.Add.Bars(bars.Select(b => (double)b.Volume).Reverse().ToArray());
         barsSeries.Color = new(255, 255, 255, 255);
 
         // tell the plot to autoscale with no padding beneath the bars

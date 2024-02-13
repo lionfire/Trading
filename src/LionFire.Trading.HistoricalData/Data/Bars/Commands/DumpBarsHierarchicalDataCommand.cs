@@ -37,7 +37,7 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
 
     public async Task<bool> Execute()
     {
-        var dir = HistoricalDataPaths.GetDataDir(new (Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame));
+        var dir = HistoricalDataPaths.GetDataDir(new(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame));
 
         if (Directory.Exists(dir))
         {
@@ -49,7 +49,16 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
                 if (filename == BarsInfo.InfoFileName) continue;
 
                 bool isFirstBarForFile = true;
-                var (info, bars) = KlineFileDeserializer.Deserialize(path);
+                KlineArrayInfo? info;
+                IReadOnlyList<IKline>? bars;
+                try
+                {
+                    (info, bars) = KlineFileDeserializer.Deserialize(path);
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Failed to deserialize file: {path}", ex);
+                }
 
                 if (info == null)
                 {

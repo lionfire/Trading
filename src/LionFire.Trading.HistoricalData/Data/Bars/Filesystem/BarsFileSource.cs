@@ -77,19 +77,27 @@ public class BarsFileSource : IBars, IListableBarsSource
         var path = HistoricalDataPaths.GetExistingPath(range);
         if (path == null) return null;
 
-        IBarsResult result = await Task.Run(() =>
+        IBarsResult? result = await Task.Run(() =>
         {
-            var (info, bars) = KlineFileDeserializer.Deserialize(path);
-            if (bars == null) return null;
-
-            return new BarsResult<IKline>
+            try
             {
-                Start = range.Start,
-                EndExclusive = range.EndExclusive,
-                TimeFrame = range.TimeFrame,
-                Bars = bars,
-                //NativeType = typeof(IBinanceKline),
-            };
+                var (info, bars) = KlineFileDeserializer.Deserialize(path);
+                if (bars == null) return null;
+
+                return new BarsResult<IKline>
+                {
+                    Start = range.Start,
+                    EndExclusive = range.EndExclusive,
+                    TimeFrame = range.TimeFrame,
+                    Bars = bars,
+                    //NativeType = typeof(IBinanceKline),
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to load chunk from path: {path}", path);
+                return null;
+            }
         });
 
         return result;
