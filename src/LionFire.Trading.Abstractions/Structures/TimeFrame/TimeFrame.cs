@@ -229,6 +229,9 @@ public class TimeFrame
 
     #region Properties
 
+    /// <summary>
+    /// Format: unit + value, e.g. m1, h1, d1, mn1.  This is reverse of normal display order to avoid the problem with variable names cannot start with a number.
+    /// </summary>
     public string Name { get; set; }
 
     public TimeFrameUnit TimeFrameUnit { get; set; }

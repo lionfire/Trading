@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+		<RootNamespace>LionFire</RootNamespace>
+	</PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Base\LionFire.Base.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Structures\LionFire.Structures.csproj" />
+    <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Notifications.Abstractions\LionFire.Trading.Notifications.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Binance.Grains.Abstractions\LionFire.Trading.Binance.Grains.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>
