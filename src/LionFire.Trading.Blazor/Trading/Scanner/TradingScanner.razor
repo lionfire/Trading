@@ -1,16 +1,19 @@
-
 @rendermode @(new InteractiveServerRenderMode(false))
+
+@inject ILogger<TradingScanner> Logger
+@inject ISymbolStatsCache SymbolStatsCache
+@inject ScannerVM VM
 
 @using LionFire.Trading.Notifications
 @using MudBlazor
 @using LightweightCharts.Blazor.Charts
 
-@inject TradingAlertsEnumerableListener TradingAlertsEnumerableListener
-@inject ILogger<TradingAlertsDashboard> Logger
-@inject ISymbolStatsCache SymbolStatsCache
+@namespace LionFire.Trading.Scanner
 
+@* <MudPaper class="Pane"> *@
 
-<MudPaper clas="Pane">
+<div>
+
 
     <div class="PaneTitle">Scanner Alerts</div>
 
@@ -19,22 +22,22 @@
         <MudStack Row Spacing=1 AlignItems=@AlignItems.Center>
             <MudIcon Icon=@Icons.Material.Filled.ShowChart Title="Show Chart" />
             <MudToggleGroup bind-Values="VisibleTimeFrames" T="string" SelectionMode=@SelectionMode.MultiSelection Style="" Outline=@true Delimiters=@true Dense=@true Rounded=@true FixedContent="@true">
-                @foreach(var tfs in TimeFrameSettings.Where(kvp=>kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp=>kvp.Value.TimeFrame.TimeSpan!.Value.TotalSeconds))
+                @foreach (var tfs in TimeFrameSettings.Where(kvp => kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp => kvp.Value.TimeFrame.TimeSpan!.Value.TotalSeconds))
                 {
-                        <MudToggleItem Value="@(tfs.Key)"/>
+                    <MudToggleItem Value="@(tfs.Key)" />
                 }
             </MudToggleGroup>
-        </MudStack >
+        </MudStack>
 
-      <MudStack Row Spacing=1 AlignItems=@AlignItems.Center>
+        <MudStack Row Spacing=1 AlignItems=@AlignItems.Center>
             <MudIcon Icon=@Icons.Material.Outlined.Notifications Title="Enable Alarms" />
             <MudToggleGroup bind-Values="AlertingTimeFrames" T="string" SelectionMode=@SelectionMode.MultiSelection Style="" Outline=@true Delimiters=@true Dense=@true Rounded=@true FixedContent="@true">
-                @foreach(var tfs in TimeFrameSettings.Where(kvp=>kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp=>kvp.Value.TimeFrame.TimeSpan!.Value.TotalSeconds))
+                @foreach (var tfs in TimeFrameSettings.Where(kvp => kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp => kvp.Value.TimeFrame.TimeSpan!.Value.TotalSeconds))
                 {
-                        <MudToggleItem Value="@(tfs.Key)"/>
+                    <MudToggleItem Value="@(tfs.Key)" />
                 }
             </MudToggleGroup>
-        </MudStack >
+        </MudStack>
 
     </MudStack>
 
@@ -53,23 +56,24 @@
             var p = LionFire.Trading.SymbolParsing.TryParse(alert.Symbol);
             <tr Class=HoverOnlyParent>
                 <td Class="FadeUnlessHoverParent">
-                    <MudStack Class="FadeUnlessHover" >
-                       <MudIconButton Class=@($"{(GetSymbolScannerSettings(alert.Symbol).PinnedToTop? "" : "HoverOnly")}") Icon=@Icons.Material.Outlined.VerticalAlignTop Size="Size.Small" />
-                       <MudIconButton Class=@($"{(GetSymbolScannerSettings(alert.Symbol).Pinned? "" : "HoverOnly")}") Icon=@Icons.Material.Outlined.PushPin Size="Size.Small"/>
-                       <MudIconButton Class=@($"{(GetSymbolScannerSettings(alert.Symbol).PinnedToBottom? "" : "HoverOnly")}") Icon=@Icons.Material.Outlined.VerticalAlignBottom Size="Size.Small" />
+                    <MudStack Class="FadeUnlessHover">
+                        <MudIconButton Class=@($"{(VM.GetSymbolScannerSettings(alert.Symbol).PinnedToTop? "" : "HoverOnly")}") Icon=@Icons.Material.Outlined.VerticalAlignTop Size="Size.Small" />
+                        <MudIconButton Class=@($"{(VM.GetSymbolScannerSettings(alert.Symbol).Pinned? "" : "HoverOnly")}") Icon=@Icons.Material.Outlined.PushPin Size="Size.Small" />
+                        <MudIconButton Class=@($"{(VM.GetSymbolScannerSettings(alert.Symbol).PinnedToBottom? "" : "HoverOnly")}") Icon=@Icons.Material.Outlined.VerticalAlignBottom Size="Size.Small" />
                     </MudStack>
-               </td>
+                </td>
                 @* <td class="MarketCapRank">@SymbolStatsCache.MarketCapRank(alert.Symbol)</td> *@
                 <td class=@($"Vol24H {VolumeClass(SymbolStatsCache.Volume24H(alert.Symbol))}")>
-                    @((((double)SymbolStatsCache.Volume24H(alert.Symbol))/Volume24HScale).ToString("N0")) @Volume24HScaleUnit
+                    @((((double)SymbolStatsCache.Volume24H(alert.Symbol)) / Volume24HScale).ToString("N0")) <span class=@("Unit " + (Volume24HScaleUnit == "B" ? "Billion" : ""))>@Volume24HScaleUnit</span>
                 </td>
 
                 @{
-                    if(p.Success)
+                    if (p.Success)
                     {
                         <td class="SymbolBase">
                             <div>
-                                @if (p.Scale != 1) {
+                                @if (p.Scale != 1)
+                                {
                                     <span class="SymbolScalePrefix">@(p.Scale)</span>
                                 }
                                 <span class="SymbolBaseMainText">@p.BaseAsset</span>
@@ -77,30 +81,33 @@
                             </div>
                         </td>
 
-                    } else {
+                    }
+                    else
+                    {
                         <td class="Symbol" colspan=2>@alert.ExchangeSymbolTimeFrame?.Symbol</td>
                     }
                 }
 
                 <td>
-                    <ScottPlotChart Bars=@alert.LastBars Name=@(p.BaseAsset + " " + alert.TimeFrame.ToShortString()) Width=210 Height=80 TimeSpan=@alert.TimeFrame.TimeSpan.Value ShowVolume=@true />
+                    <ScottPlotChart Bars=@alert.LastBars BaseAsset=@p.BaseAsset TimeFrame=@alert.TimeFrame Name=@(p.BaseAsset + " " + alert.TimeFrame.ToShortString()) Width=210 Height=80 TimeSpan=@alert.TimeFrame.TimeSpan.Value ShowVolume=@true />
                     @* <ChartComponent @ref="Chart" /> *@
                 </td>
 
                 <td>
-                    <div>
-                         @* <MudIcon Icon=@Icons.Material.Filled.CrisisAlert Title="Alarm is currently triggered" /> *@
-                        <span class=@($"AlertTypeCode {(alert.IsTriggered? "Triggered" : "")}")>@alert.AlertTypeCode</span>
+                    <div title=@($"Over Threshold by: {((alert.OverThresholdRatio??0) * 100.0).ToString("N0")}%")>
+                        @* <MudIcon Icon=@Icons.Material.Filled.CrisisAlert Title="Alarm is currently triggered" /> *@
+                        <span class=@($"AlertTypeCode Alert-{alert.AlertTypeCode} Severity-{Math.Max(0, Math.Min(9, alert.Severity ?? 0))} {(alert.IsTriggered? "Triggered" : "")}")>@alert.AlertTypeCode</span>
                         <span class="AlertStatus">@alert.Status</span>
-                        <span style="opacity: 0.6;">!@((alert.OverThresholdRatio*100.0).ToString())%</span>
+                        @* <span style="opacity: 0.6;">!@((alert.OverThresholdRatio * 100.0).ToString())%</span> *@
                     </div>
                 </td>
                 @* <td class="Message">@alert.Message</td> *@
-              @*   <td>
-                    Vol 180% SMA(80m)
-                </td> *@
+                @*   <td>
+            Vol 180% SMA(80m)
+            </td> *@
             </tr>
         }
     </MudSimpleTable>
 
-</MudPaper>
+</div>
+@* </MudPaper> *@

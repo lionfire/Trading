@@ -1,0 +1,161 @@
+.AlertIcon {
+    min-width: 30px;
+    text-align: center;
+}
+
+table.TradingAlerts td {
+    padding: 0 4px;
+}
+
+table.TradingAlerts span {
+    display: inline-block;
+}
+
+.MarketCapRank {
+    text-align: center;
+    color: #242dd1;
+    border-radius: 5px;
+    border: 1px solid #242dd140;
+}
+
+.Vol24H {
+    text-align: right;
+}
+
+    .Vol24H .Unit:not(.Billion) {
+        opacity: 0.8;
+    }
+
+    .Vol24H .Unit.Billion {
+        color: black;
+        background-color: #4283f890
+    }
+
+    .Vol24H.Low5 {
+        background-color: #be1682FF;
+        color: black !important;
+    }
+
+    .Vol24H.Low4 {
+        background-color: #9f156dC0;
+        color: black !important;
+    }
+
+    .Vol24H.Low3 {
+        background-color: #8e1763A0;
+        /*color: white;*/
+    }
+
+    .Vol24H.Low2 {
+        background-color: #be168250;
+        /*color: white;*/
+    }
+
+    .Vol24H.Low1 {
+        background-color: #be168230;
+        /*color: white;*/
+    }
+
+.SymbolScalePrefix {
+    opacity: 0.9;
+    color: #777;
+}
+
+.SymbolBase {
+    min-width: 5em;
+}
+
+    .SymbolBase > div {
+        vertical-align: middle;
+        padding: 0 4px;
+    }
+
+.SymbolBaseMainText {
+    font-weight: 600;
+    font-size: 150%;
+    margin: 0 1px;
+}
+
+.SymbolBase {
+    text-align: right;
+}
+
+.SymbolQuote {
+    display: inline-block;
+}
+
+    .SymbolQuote:not(.Default) {
+        opacity: 0.9;
+        color: #e45de1;
+        background: #FFFFFF08;
+    }
+
+    .SymbolQuote.Default {
+        opacity: 0.5;
+        color: #888;
+    }
+
+.AlertStatus {
+    opacity: 0.8;
+}
+
+.AlertTypeCode {
+    padding: 1px 4px;
+    border-radius: 4px;
+}
+
+    .AlertTypeCode.Triggered {
+        background: #FFFFFF80;
+        color: black;
+    }
+
+    .AlertTypeCode .Serverity-9 {
+        opacity: 1;
+    }
+
+    .AlertTypeCode .Serverity-8 {
+        opacity: 0.9;
+    }
+
+    .AlertTypeCode .Serverity-7 {
+        opacity: 0.8;
+    }
+
+    .AlertTypeCode .Serverity-6 {
+        opacity: 0.7;
+    }
+
+    .AlertTypeCode .Serverity-5 {
+        opacity: 0.6;
+    }
+
+    .AlertTypeCode .Serverity-4 {
+        opacity: 0.5;
+    }
+
+    .AlertTypeCode .Serverity-3 {
+        opacity: 0.4;
+    }
+
+    .AlertTypeCode .Serverity-2 {
+        opacity: 0.3;
+    }
+
+    .AlertTypeCode .Serverity-1 {
+        opacity: 0.2;
+    }
+
+.Alert-Vlm.Triggered {
+    background: #e45de1;
+    color: black;
+}
+
+.Alert-Up.Triggered {
+    background: #00A010;
+    color: black;
+}
+
+.Alert-Down.Triggered {
+    background: #A01010;
+    color: black;
+}

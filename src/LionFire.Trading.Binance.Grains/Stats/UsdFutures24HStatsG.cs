@@ -1,12 +1,14 @@
 ﻿using Binance.Net.Interfaces;
 using Binance.Net.Interfaces.Clients;
 using Binance.Net.Objects.Models.Spot;
+using LionFire.DependencyMachines;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.Extensions.Logging;
 using Orleans.Runtime;
 using Orleans.Timers;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,12 +21,25 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG, IRemindable
     private static readonly string ReminderName = typeof(UsdFutures24HStatsG).Name;
 
     public IPersistentState<Binance24HStatsState> State { get; }
+    private static Binance24HStatsState? LastState { get; set; }
     public ILogger<UsdFutures24HStatsG> Logger { get; }
     public IReminderRegistry ReminderRegistry { get; }
     public IGrainContext GrainContext { get; }
     public IBinanceRestClient BinanceRestClient { get; }
 
     IGrainReminder? reminder;
+
+    #region Metrics
+
+    static Meter Meter = new("LionFire.Trading.Binance_.UsdFutures24HStatsG", "1.0.0");
+    static Counter<int> Retrieves = Meter.CreateCounter<int>("Retrieves");
+    static ObservableGauge<int> SymbolCount = Meter.CreateObservableGauge<int>("SymbolCount", () =>  LastState?.List?.Count ?? 0);
+    static int x = 0;
+    static Histogram<long> RetrieveTime = Meter.CreateHistogram<long>("RetrieveTime");
+
+    #endregion
+
+    #region Lifecycle
 
     public UsdFutures24HStatsG(
         [PersistentState("binance-futures-usd-stats-24h-state", "Trading")] IPersistentState<Binance24HStatsState> state,
@@ -39,6 +54,15 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG, IRemindable
         GrainContext = grainContext;
         BinanceRestClient = binanceRestClient;
     }
+
+    public ValueTask OnActivateAsync(CancellationToken cancellationToken)
+    {
+        LastState = State.State;
+        return default;
+    }
+
+    #endregion
+
 
     public async ValueTask AutoRefreshInterval(TimeSpan? timeSpan)
     {
@@ -76,8 +100,19 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG, IRemindable
     public async Task<Binance24HStatsState> RetrieveLastDayStats()
     {
         Logger.LogInformation("Retrieving 24h stats");
+        Retrieves.Add(1);
 
-        var info = await BinanceRestClient.UsdFuturesApi.ExchangeData.GetTickersAsync(); // WEIGHT: 80
+        CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinance24HPrice>> info;
+
+        try
+        {
+            using var _ = new DisposableStopwatch(s => RetrieveTime.Record(s.ElapsedMilliseconds));
+            info = await BinanceRestClient.UsdFuturesApi.ExchangeData.GetTickersAsync(); // WEIGHT: 80
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Failed to get 24H stats", ex);
+        }
 
         var statsState = new Binance24HStatsState
         {
@@ -106,10 +141,9 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG, IRemindable
                 };
             }).ToList()
         };
+        if (statsState != null) { LastState = statsState; }
         State.State = statsState;
         await State.WriteStateAsync();
-
-
 
         //HashSet<string> quoteCurrencyWhitelist = new HashSet<string>
         //{
@@ -150,7 +184,7 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG, IRemindable
         return State.State;
     }
 
-   
+
 
     //[Alias("binance-futures-usd-symbols")]
     //public class SymbolsState

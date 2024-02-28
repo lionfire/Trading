@@ -1,0 +1,32 @@
+@using ScottPlot
+@using ScottPlot.Blazor
+@using LionFire.Trading
+@using LionFire.Trading.ScottPlot_
+
+
+@* <BlazorPlot @ref=BlazorPlot Style=@($"width: {Width}x; height: {Height}x;") /> *@
+<div>
+    @if (ImageBytes.Length > 0)
+    {
+        <img style="display: block;" src="@String.Format("data:image/png;base64,{0}", Convert.ToBase64String(ImageBytes))" />
+    }
+</div>
+<div style=@($"margin-top: -{EffectiveVolumeVerticalOverlap}px; background: linear-gradient(#ffffffa0, #00000000)")>
+    @if (ShowVolume && VolumeImageBytes.Length > 0)
+    {
+        <img style="display: block;" src="@String.Format("data:image/png;base64,{0}", Convert.ToBase64String(VolumeImageBytes))" />
+    }
+</div>
+
+<div style=@($"margin-top: -{Height}px;")>
+    <div class="ChartInfo">
+        @if (TimeFrame != null)
+        {
+            @TimeFrame.ToString()
+        }
+    </div>
+    <div class="ChartWatermark" style=@($"font-size: {Height * 0.5}px;")>
+        @BaseAsset
+    </div>
+</div>
+

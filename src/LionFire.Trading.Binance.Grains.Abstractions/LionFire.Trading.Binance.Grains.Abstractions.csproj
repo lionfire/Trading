@@ -4,7 +4,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-  </PropertyGroup>
+		<EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
+	</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Binance.Net" />

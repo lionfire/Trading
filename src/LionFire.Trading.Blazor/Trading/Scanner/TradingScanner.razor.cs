@@ -1,12 +1,10 @@
-
-using LionFire.Trading.Alerts;
+using Microsoft.AspNetCore.Components.Web;
+using System.Reactive.Disposables;
 
 namespace LionFire.Trading.Scanner;
 
 public partial class TradingScanner : IDisposable
 {
-    public ScannerVM VM { get; set; } = new();
-
     #region Settings
 
     // TODO: Store for user, per id'ed widget
@@ -54,9 +52,6 @@ public partial class TradingScanner : IDisposable
 
     #region UI Class Logic
 
- 
-
-
     // ENH: Make configurable and maybe also somehow dynamic
     string VolumeClass(decimal vol)
     {
@@ -89,12 +84,13 @@ public partial class TradingScanner : IDisposable
 
     #region Lifecycle
 
-    CancellationTokenSource cts = new CancellationTokenSource();
-
+    CompositeDisposable disposables = new();
     override protected async Task OnInitializedAsync()
     {
         await InitTimeFrameSettings();
-        Listen().FireAndForget();
+        await VM.StartAsync(default);
+        disposables.Add(VM.Changed.Subscribe(_ => InvokeAsync(StateHasChanged).FireAndForget()));
+
         //await Chart.InitializationCompleted;
         await base.OnInitializedAsync();
     }
@@ -103,8 +99,7 @@ public partial class TradingScanner : IDisposable
         // TODO: Get settings for user
         // ENH: Get timeframes available in system
 
-        TimeFrameSettings =
-        [
+        TimeFrameSettings = new() {
             new()
             {
                 TimeFrame = TimeFrame.m1,
@@ -132,16 +127,16 @@ public partial class TradingScanner : IDisposable
                 Available = true,
                 Favorite = true
             },
-              new()
+            new()
             {
                 TimeFrame = TimeFrame.h1,
                 ChartBarsToShow = 72,
                 //Alerts = true,
                 //CanAlert = true,
                 //Available = true,
-                //Favorite = true
+               //Favorite = true
             },
-              new()
+            new()
             {
                 TimeFrame = TimeFrame.d3,
                 ChartBarsToShow = 90,
@@ -149,86 +144,18 @@ public partial class TradingScanner : IDisposable
                 //CanAlert = true,
                 Available = true,
                 Favorite = true
-            },
-        ];
-
+            }
+        };
 
         return ValueTask.CompletedTask;
     }
 
     public void Dispose()
     {
-        cts?.Cancel();
+        disposables?.Dispose();
     }
 
     #endregion
 
-    #region State
-
-    #region Items
-
-    Dictionary<string, ScannerSymbolItem> Items { get; } = new();
-    private object itemsLock = new();
-    public ScannerSymbolItem GetSymbol(string symbol)
-    {
-        if (Items.ContainsKey(symbol)) return Items[symbol];
-
-        lock (itemsLock)
-        {
-            return Items.GetOrAdd(symbol, symbol => new ScannerSymbolItem(symbol) { Parent = this });
-        }
-    }
-
-    public ScannerSymbolItem GetSymbolTimeFrame(string symbol, TimeFrame timeFrame)
-    {
-        return GetSymbol(symbol).GetTimeFrame(timeFrame);
-    }
-
-    #endregion
-
-   
-    #endregion
-
-    #region Loop
-
-    ChartComponent Chart { get; set; }
-
-    public async Task Listen()
-    {
-        if (cts != null) cts.Cancel();
-        cts = new();
-
-        TradingAlertsEnumerableListener.ActiveAlerts.Connect().Subscribe(async alerts =>
-        {
-
-            //var series = await Chart.AddLineSeriesAsync();
-            //series.Data..AddPoints(alerts.Select(a => new Point(a.Time, a.Price)));
-
-            InvokeAsync(StateHasChanged).FireAndForget();
-        });
-
-        await foreach (var signal in TradingAlertsEnumerableListener.Alerts.WithCancellation(cts.Token))
-        {
-            if (string.IsNullOrWhiteSpace(signal.Key) || string.IsNullOrWhiteSpace(signal.Symbol) || string.IsNullOrWhiteSpace(signal.TimeFrame?.Name))
-            {
-                Logger.LogWarning("Ignoring alert with missing field(s): {alert}", signal);
-                continue;
-            }
-
-            GetSymbol(signal.Symbol).GetTimeFrame(signal.TimeFrame).SetSignal(signal);
-
-            //if (alert.IsTriggered)
-            //{
-            //    alerts.AddOrUpdate(alert.Key, alert, (k, v) => alert);
-            //}
-            //else
-            //{
-            //    alerts.TryRemove(alert.Key, out _);
-            //}
-            await InvokeAsync(StateHasChanged);
-        }
-
-    }
-
-    #endregion
+    //ChartComponent Chart { get; set; }
 }

@@ -1,0 +1,14 @@
+.ChartWatermark {
+    opacity: 0.09;
+    color: #6e8bb5;
+    text-align: center;
+    text-shadow: 0px 0px 3px #00000080;
+    /*position: absolute;*/
+    /*top: 10%;*/
+}
+.ChartInfo {
+    opacity: 0.28;
+    color: white;
+    position: absolute;
+    /*top: 0;*/
+}

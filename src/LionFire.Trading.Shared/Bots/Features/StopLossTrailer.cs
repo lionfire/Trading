@@ -70,7 +70,7 @@ namespace LionFire.Trading.Bots.Features
             //l.LogTrace("GetSL " + factor);
             switch (Value.Unit)
             {
-                case Unit.Profit:
+                case TradingUnit.Profit:
                     //l.LogTrace("GetSL - profit: " + position.Position.NetProfit + " factor: " + factor + " Value.Number: " + Value.Number);
                     return (position.Position.TradeType == TradeType.Buy) ? (Math.Max(0.0, position.Position.NetProfit) * factor * Value.Number + position.Position.EntryPrice) : (position.Position.EntryPrice - Math.Max(0.0, position.Position.NetProfit) * factor * Value.Number);
                 default:
@@ -103,7 +103,7 @@ namespace LionFire.Trading.Bots.Features
 
             switch (Key.Unit)
             {
-                case Unit.ClosePoints:
+                case TradingUnit.ClosePoints:
                     var val = DoubleFunctions.Lerp(Value.StartNumber, Value.Number, Key.StartNumber, Key.Number, position.ClosePoints);
 
                     //var val = (position.ClosePoints * Key.Number) + ((1.0 - position.ClosePoints) * Key.StartNumber);
@@ -113,7 +113,7 @@ namespace LionFire.Trading.Bots.Features
 
                     switch (Value.Unit)
                     {
-                        case Unit.NearChannel:
+                        case TradingUnit.NearChannel:
                             double sl;
                             if (position.Position.TradeType == TradeType.Buy)
                             {
@@ -140,7 +140,7 @@ namespace LionFire.Trading.Bots.Features
                     }
                     break;
 
-                case Unit.Bars:
+                case TradingUnit.Bars:
                     // FIXME  review x/y
                     var spreadAmount = Spread * position.Symbol.PipSize;
                     if (position.Position.TradeType == TradeType.Buy)

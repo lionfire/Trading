@@ -6,13 +6,13 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Scanner;
-public class ScannerSymbolTimeFrameItem
+public class ScannerSymbolTimeFrame
 
 {
-    public required ScannerSymbolItem Parent { get; init; }
+    public required ScannerSymbol Parent { get; init; }
     public string TimeFrame { get; }
 
-    public ScannerSymbolTimeFrameItem(string timeFrame)
+    public ScannerSymbolTimeFrame(string timeFrame)
     {
         TimeFrame = timeFrame;
     }

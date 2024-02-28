@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -7,11 +7,19 @@
     <RootNamespace>LionFire</RootNamespace>
   </PropertyGroup>
 
-  <ItemGroup>
-    <Folder Include="Trading\Scanner\" />
-  </ItemGroup>
 
+	<ItemGroup>
+		<PackageReference Include="LightweightCharts.Blazor" />
+		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="ScottPlot.Blazor" />
+		<PackageReference Include="SkiaSharp.NativeAssets.Linux" />
+		<PackageReference Include="System.Reactive" />
+	</ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Base\LionFire.Base.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Structures\LionFire.Structures.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.ScottPlot\LionFire.Trading.ScottPlot.csproj" />
     <ProjectReference Include="..\LionFire.Trading.UI\LionFire.Trading.UI.csproj" />
   </ItemGroup>
 
