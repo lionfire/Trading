@@ -7,10 +7,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading
+namespace LionFire.Trading;
+
+public interface IOnBar
 {
-    public interface IOnBar
-    {
-        void OnBar(object sender, TimeFrame timeFrame);
-    }
+    void OnBar(object sender, TimeFrame timeFrame);
 }
