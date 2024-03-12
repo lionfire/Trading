@@ -5,12 +5,14 @@ using System.Collections;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-// TODO CLEANUP
+// TODO CLEANUP and REVIEW
 
-public interface IBarsResult
+
+
+public interface IBarsResult //: IValuesResult<IKline>
 {
-//    string Name { get; }
-//    HistoricalDataSourceKind2 SourceType { get; }
+    //    string Name { get; }
+    //    HistoricalDataSourceKind2 SourceType { get; }
     DateTime EndExclusive { get; init; }
     DateTime Start { get; init; }
     TimeFrame TimeFrame { get; init; }
@@ -24,11 +26,12 @@ public interface IBarsResult
     IBarsResult Trim(DateTime start, DateTime endExclusive);
 }
 
-public sealed class BarsResult<TKline> : IBarsResult 
+public sealed class BarsResult<TKline> : IBarsResult
     where TKline : IKline
 {
     IReadOnlyList<IKline> IBarsResult.Bars => (IReadOnlyList<IKline>)Bars;
     public required IReadOnlyList<TKline> Bars { get; init; }
+    //public IEnumerable<IKline> Values => Bars.OfType<IKline>();
 
     public Type NativeType { get => typeof(TKline); }
 
@@ -78,11 +81,11 @@ public sealed class BarsResult<TKline> : IBarsResult
     public BarsResult<TKline> Trim(DateTime start, DateTime endExclusive)
     {
         if (start < Start) throw new ArgumentException($"start ({start}) < Start ({Start})");
-
+        if (TimeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
         int newStartIndex = 0;
         if (start > Start)
         {
-            double newStartIndexDouble = (start - Start) / TimeFrame.TimeSpan!.Value;
+            double newStartIndexDouble = (start - Start) / TimeFrame.TimeSpan;
             if (newStartIndexDouble % 1.0 != 0.0)
             {
                 throw new ArgumentException("Start time does not fall on a TimeFrame boundary");
@@ -94,7 +97,8 @@ public sealed class BarsResult<TKline> : IBarsResult
         if (endExclusive > EndExclusive) { throw new ArgumentException("endExclusive > EndExclusive"); }
         if (endExclusive < EndExclusive)
         {
-            double newEndIndexExclusiveDouble = (EndExclusive - endExclusive) / TimeFrame.TimeSpan!.Value;
+            if (TimeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException();
+            double newEndIndexExclusiveDouble = (EndExclusive - endExclusive) / TimeFrame.TimeSpan;
             if (newEndIndexExclusiveDouble % 1.0 != 0.0)
             {
                 throw new ArgumentException("End time does not fall on a TimeFrame boundary");

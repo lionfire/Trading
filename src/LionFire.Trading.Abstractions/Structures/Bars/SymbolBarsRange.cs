@@ -13,7 +13,7 @@ namespace LionFire.Trading;
 //}
 
 
-public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DateTime Start, DateTime EndExclusive) : ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame), IRangeWithTimeFrame
+public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DateTimeOffset Start, DateTimeOffset EndExclusive) : ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame), IRangeWithTimeFrame
 {
     #region Parsing
 
@@ -24,7 +24,7 @@ public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbo
     };
     static Exception ParseError(string input, string? msg = null) => new Exception($"Invalid key: {input}.  Must be in this format: \"BINANCE:BTCUSDT.P m1:2024.01.01-2024.01.02\" and a valid short chunk size. {msg}".TrimEnd());
 
-    public static SymbolBarsRange Parse(string text, ISymbolIdParser symbolIdParser)
+    public static new SymbolBarsRange Parse(string text, ISymbolIdParser symbolIdParser)
     {
         var s0 = text.Split(' ');
         if (s0.Length != 2) throw ParseError(text);

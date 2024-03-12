@@ -4,7 +4,7 @@ namespace LionFire.Trading;
 public interface IRangeWithTimeFrame
 {
     TimeFrame TimeFrame { get; }
-    DateTime Start { get; }
-    DateTime EndExclusive { get; }
+    DateTimeOffset Start { get; }
+    DateTimeOffset EndExclusive { get; }
 }
 

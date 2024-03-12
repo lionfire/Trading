@@ -472,17 +472,19 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
                     var expectedNextOpenTime = lastOpenTime == default || interval == null ? default : Input.TimeFrame.GetNextOpenTimeForOpen(lastOpenTime);
 
+                    if (Input.TimeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
+
                     if (expectedNextOpenTime != default)
                     {
                         if (expectedNextOpenTime != kline.OpenTime)
                         {
                             info.Gaps ??= new();
-                            info.Gaps.Add((expectedNextOpenTime, kline.OpenTime - Input.TimeFrame.TimeSpan!.Value));
+                            info.Gaps.Add((expectedNextOpenTime, kline.OpenTime - Input.TimeFrame.TimeSpan));
                             Console.WriteLine($"[WARN] GAP DETECTED - Unexpected jump from {lastOpenTime.ToString(TimeFormat)} to {kline.OpenTime.ToString(TimeFormat)}");
 
                             if (InsertBlankBars)
                             {
-                                var blankBarsToInsert = (kline.OpenTime - expectedNextOpenTime) / Input.TimeFrame.TimeSpan!.Value;
+                                var blankBarsToInsert = (kline.OpenTime - expectedNextOpenTime) / Input.TimeFrame.TimeSpan;
                                 Console.WriteLine($"Inserting {blankBarsToInsert} blank bars");
                                 for (; blankBarsToInsert > 1; blankBarsToInsert--)
                                 {
@@ -524,14 +526,15 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
                 //if (reverse)
                 //{
-                //    nextStartTime = lastKline.OpenTime - Input.TimeFrame.TimeSpan!.Value;
+                //    nextStartTime = lastKline.OpenTime - Input.TimeFrame.TimeSpan;
                 //}
                 //else
                 //{
-                nextStartTime = lastKline.OpenTime + Input.TimeFrame.TimeSpan!.Value;
+                if (Input.TimeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
+                nextStartTime = lastKline.OpenTime + Input.TimeFrame.TimeSpan;
                 //}
-            } while (lastKline != null && (nextStartTime + Input.TimeFrame.TimeSpan!.Value < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar);
-            bool ForwardCondition() => lastKline != null && (nextStartTime + Input.TimeFrame.TimeSpan!.Value < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar;
+            } while (lastKline != null && (nextStartTime + Input.TimeFrame.TimeSpan < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar);
+            bool ForwardCondition() => lastKline != null && (nextStartTime + Input.TimeFrame.TimeSpan < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar;
             //bool ReverseCondition() => firstKline != null && (nextStartTime >= info.Start) && !detectedStart.HasValue;
 
             if (first.HasValue)

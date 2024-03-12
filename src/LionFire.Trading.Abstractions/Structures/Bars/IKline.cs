@@ -77,7 +77,8 @@ public static class IKlineX
         {
             if (noGaps)
             {
-                if (bar.OpenTime != last + timeFrame.TimeSpan!.Value)
+                if (timeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
+                if (bar.OpenTime != last + timeFrame.TimeSpan)
                 {
                     return false;
                 }

@@ -9,6 +9,7 @@ public static class OrleansHistoricalDataHostingExtensions
 {
     public static IServiceCollection AddOrleansHistoricalDataClient(this IServiceCollection services) 
         => services
-                .TryAddEnumerableSingleton<ILocalNetworkHistoricalDataSource2, OrleansBars>()
+                //.TryAddEnumerableSingleton<ILocalNetworkHistoricalDataSource2, OrleansBars>()
+                .TryAddEnumerableSingleton<LionFire.Trading.HistoricalData.Retrieval.IBars, OrleansBars>()
                 ;
 }

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Logging;
 using System.ComponentModel;
 
+
 namespace LionFire.Trading.HistoricalData;
 
 [Alias("historical-bars-chunk")]

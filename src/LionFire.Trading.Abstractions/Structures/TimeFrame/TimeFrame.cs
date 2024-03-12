@@ -13,6 +13,52 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading;
 
+public static class TimeFrameTimeSpanX
+{
+    // TODO: Use the inverse of these as ApproximateTimeSpan
+    public static readonly TimeSpan y1 = -TimeSpan.FromDays(365);
+    public static readonly TimeSpan y2 = -TimeSpan.FromDays(365 * 2);
+    public static readonly TimeSpan y3 = -TimeSpan.FromDays(365 * 3);
+
+    public static readonly TimeSpan mn1 = -TimeSpan.FromDays(30);
+    public static readonly TimeSpan mn2 = -TimeSpan.FromDays(30 * 2);
+
+    // 1 tick = 100 nanoseconds
+    //   = 0.1 microseconds
+    //   = 0.0001 milliseconds
+    //   = 0.0000001 seconds
+    public static readonly long EstimatedTickNanoseconds = 100 * 1000; // Deliberately low so we have room for things like t1000 without bumping into s1.
+    public static readonly TimeSpan t1 = -TimeSpan.FromMilliseconds(EstimatedTickNanoseconds);
+    public static readonly TimeSpan t2 = -TimeSpan.FromMilliseconds(EstimatedTickNanoseconds * 2);
+    public static readonly TimeSpan t3 = -TimeSpan.FromMilliseconds(EstimatedTickNanoseconds * 3);
+
+    public static TimeFrame ToTimeFrame(this TimeSpan timeSpan)
+    {
+        if (timeSpan > TimeSpan.Zero)
+        {
+            if (timeSpan == TimeSpan.FromMinutes(1)) return TimeFrame.m1;
+            if (timeSpan == TimeSpan.FromMinutes(5)) return TimeFrame.m5;
+            if (timeSpan == TimeSpan.FromHours(1)) return TimeFrame.h1;
+            if (timeSpan == TimeSpan.FromHours(4)) return TimeFrame.h4;
+            // TODO: more
+        }
+        else
+        {
+            // Special ones: y, mn, t
+        }
+
+        throw new NotImplementedException();
+
+    }
+    public static bool IsValidTimeFrame(this TimeSpan timeSpan)
+    {
+        if (timeSpan == TimeSpan.MaxValue) return false;
+        if (timeSpan == TimeSpan.MinValue) return false;
+        if (timeSpan <= TimeSpan.Zero) return false;
+        if (timeSpan == default) return false;
+        return true;
+    }
+}
 
 #if !cAlgo
 
@@ -69,12 +115,12 @@ public class TimeFrame
         mn1 = new TimeFrame("mn1");
     }
 
-    public long? GetExpectedBarCount(DateTime start, DateTime endExclusive) 
-        => !TimeSpan.HasValue ? null : (long?)((endExclusive - start) / TimeSpan.Value);
+    public long? GetExpectedBarCount(DateTime start, DateTime endExclusive)
+        => TimeSpan <= TimeSpan.Zero ? null : (long?)((endExclusive - start) / TimeSpan);
     public long? GetExpectedBarCountForNow(DateTime start, DateTime endExclusive)
     {
         var now = DateTime.UtcNow;
-        return GetExpectedBarCount(start, endExclusive > now ? GetPeriodStart(now) + TimeSpan.Value : endExclusive);
+        return GetExpectedBarCount(start, endExclusive > now ? GetPeriodStart(now) + TimeSpan : endExclusive);
     }
 
     public static TimeFrame t1 { get; private set; }
@@ -109,6 +155,9 @@ public class TimeFrame
     public static TimeFrame d3 { get; private set; }
     public static TimeFrame w1 { get; private set; }
     public static TimeFrame mn1 { get; private set; }
+    public static TimeFrame y1 { get; private set; }
+    public static TimeFrame y2 { get; private set; }
+    public static TimeFrame y3 { get; private set; }
 
     #endregion
 
@@ -154,9 +203,11 @@ public class TimeFrame
         }
 
         TimeFrameValue = Int32.Parse(name.Substring(type.Length));
+
+        TimeSpan = ParseTimeSpan(TimeFrameUnit, TimeFrameValue);
     }
 
-    public static TimeFrame Parse(string timeFrameCode) 
+    public static TimeFrame Parse(string timeFrameCode)
         => TryParse(timeFrameCode) ?? throw new ArgumentException($"Failed to parse TimeFrame from '{timeFrameCode}'");
 
     public static TimeFrame TryParse(string timeFrameCode)
@@ -242,44 +293,84 @@ public class TimeFrame
 
     #region Derived
 
+    /// <summary>
+    /// If irregular, returns MaxValue
+    /// </summary>
+    /// <param name="unit"></param>
+    /// <param name="value"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public static TimeSpan ParseTimeSpan(TimeFrameUnit unit, int value)
+    {
+        TimeSpan timeSpan;
+        switch (unit)
+        {
+            case TimeFrameUnit.Tick:
+                timeSpan = TimeSpan.MaxValue;
+                break;
+            case TimeFrameUnit.Minute:
+                timeSpan = System.TimeSpan.FromMinutes(value);
+                break;
+            case TimeFrameUnit.Hour:
+                timeSpan = System.TimeSpan.FromHours(value);
+                break;
+            case TimeFrameUnit.Day:
+                timeSpan = System.TimeSpan.FromDays(value);
+                break;
+            case TimeFrameUnit.Week:
+                timeSpan = System.TimeSpan.FromDays(value * 7);
+                break;
+            case TimeFrameUnit.Month:
+                timeSpan = TimeSpan.MaxValue; // Irregular due to different month lengths
+                break;
+            case TimeFrameUnit.Year:
+                timeSpan = TimeSpan.MaxValue; // Irregular due to leap days
+                break;
+            default:
+                throw new ArgumentNullException(nameof(unit));
+        }
+        return timeSpan;
+    }
+
+    public TimeSpan ApproximateTimeSpan => TimeSpan > TimeSpan.Zero ? TimeSpan : -TimeSpan;
 
     /// <summary>
     /// RENAME: Period
     /// </summary>
-    public TimeSpan? TimeSpan
-    { // TODO - Init this readonly during construction
-        get
-        {
-            if (!timeSpan.HasValue)
-            {
-                switch (TimeFrameUnit)
-                {
-                    case TimeFrameUnit.Tick:
-                        timeSpan = null;
-                        break;
-                    case TimeFrameUnit.Minute:
-                        timeSpan = System.TimeSpan.FromMinutes(TimeFrameValue);
-                        break;
-                    case TimeFrameUnit.Hour:
-                        timeSpan = System.TimeSpan.FromHours(TimeFrameValue);
-                        break;
-                    case TimeFrameUnit.Day:
-                        timeSpan = System.TimeSpan.FromDays(TimeFrameValue);
-                        break;
-                    case TimeFrameUnit.Week:
-                        timeSpan = System.TimeSpan.FromDays(TimeFrameValue * 7);
-                        break;
-                    case TimeFrameUnit.Month:
-                        timeSpan = null;
-                        break;
-                    default:
-                        throw new ArgumentNullException("TimeFrameUnit");
-                }
-            }
-            return timeSpan;
-        }
-    }
-    private TimeSpan? timeSpan;
+    public TimeSpan TimeSpan { get; init; }
+    //{ // TODO - Init this readonly during construction
+    //    get
+    //    {
+    //        if (timeSpan.HasValue)
+    //        {
+    //            switch (TimeFrameUnit)
+    //            {
+    //                case TimeFrameUnit.Tick:
+    //                    timeSpan = null;
+    //                    break;
+    //                case TimeFrameUnit.Minute:
+    //                    timeSpan = System.TimeSpan.FromMinutes(TimeFrameValue);
+    //                    break;
+    //                case TimeFrameUnit.Hour:
+    //                    timeSpan = System.TimeSpan.FromHours(TimeFrameValue);
+    //                    break;
+    //                case TimeFrameUnit.Day:
+    //                    timeSpan = System.TimeSpan.FromDays(TimeFrameValue);
+    //                    break;
+    //                case TimeFrameUnit.Week:
+    //                    timeSpan = System.TimeSpan.FromDays(TimeFrameValue * 7);
+    //                    break;
+    //                case TimeFrameUnit.Month:
+    //                    timeSpan = null;
+    //                    break;
+    //                default:
+    //                    throw new ArgumentNullException("TimeFrameUnit");
+    //            }
+    //        }
+    //        return timeSpan;
+    //    }
+    //}
+    //private TimeSpan? timeSpan;
 
     public static TimeSpan TickApproximationTime = System.TimeSpan.FromMilliseconds(200);
     public TimeSpan TimeSpanApproximation
@@ -448,8 +539,8 @@ public class TimeFrame
         {
             throw new NotImplementedException("month");
         }
-        if (!this.TimeSpan.HasValue) throw new NotImplementedException();
-        return openTime + TimeSpan.Value;
+        if (TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
+        return openTime + TimeSpan;
     }
 
     public static TimeFrame TryGet(TimeFrameUnit unit, int val)

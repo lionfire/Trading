@@ -22,7 +22,7 @@
         <MudStack Row Spacing=1 AlignItems=@AlignItems.Center>
             <MudIcon Icon=@Icons.Material.Filled.ShowChart Title="Show Chart" />
             <MudToggleGroup bind-Values="VisibleTimeFrames" T="string" SelectionMode=@SelectionMode.MultiSelection Style="" Outline=@true Delimiters=@true Dense=@true Rounded=@true FixedContent="@true">
-                @foreach (var tfs in TimeFrameSettings.Where(kvp => kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp => kvp.Value.TimeFrame.TimeSpan!.Value.TotalSeconds))
+                @foreach (var tfs in TimeFrameSettings.Where(kvp => kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp => kvp.Value.TimeFrame.ApproximateTimeSpan.TotalSeconds))
                 {
                     <MudToggleItem Value="@(tfs.Key)" />
                 }
@@ -32,7 +32,7 @@
         <MudStack Row Spacing=1 AlignItems=@AlignItems.Center>
             <MudIcon Icon=@Icons.Material.Outlined.Notifications Title="Enable Alarms" />
             <MudToggleGroup bind-Values="AlertingTimeFrames" T="string" SelectionMode=@SelectionMode.MultiSelection Style="" Outline=@true Delimiters=@true Dense=@true Rounded=@true FixedContent="@true">
-                @foreach (var tfs in TimeFrameSettings.Where(kvp => kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp => kvp.Value.TimeFrame.TimeSpan!.Value.TotalSeconds))
+                @foreach (var tfs in TimeFrameSettings.Where(kvp => kvp.Value.Available && kvp.Value.Favorite).OrderBy(kvp => kvp.Value.TimeFrame.ApproximateTimeSpan.TotalSeconds))
                 {
                     <MudToggleItem Value="@(tfs.Key)" />
                 }

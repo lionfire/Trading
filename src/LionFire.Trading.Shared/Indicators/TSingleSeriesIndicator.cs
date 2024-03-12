@@ -28,7 +28,7 @@ namespace LionFire.Trading
         public string Symbol { get; set; }
         public string TimeFrame { get; set; }
         public DataSeries IndicatorBarSource { get; set; }
-        public BarComponent IndicatorBarComponent { get; set; } = BarComponent.Close;
+        public OhlcAspect IndicatorBarComponent { get; set; } = OhlcAspect.Close;
 
         public double SignalThreshold { get; set; } = 0.75; // MOVE to Signal Indicator?
         public bool Log { get; set; } = false;

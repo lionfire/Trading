@@ -1,6 +1,7 @@
 ﻿using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.HistoricalData.Serialization;
 using Orleans;
+using System.Threading.Tasks;
 
 namespace LionFire.Trading.HistoricalData.Orleans_;
 

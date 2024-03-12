@@ -53,7 +53,8 @@ public class KlineFileDeserializer
 
                     DateTime openTime = info.Start;
                     TimeFrame timeFrame = TimeFrame.Parse(info.TimeFrame);
-                    TimeSpan timeSpan = timeFrame.TimeSpan!.Value;
+                    TimeSpan timeSpan = timeFrame.TimeSpan;
+                    if (timeSpan < TimeSpan.Zero) throw new NotImplementedException();
 
                     if (info.DataType == null || info.DataType == typeof(LionFire.Trading.HistoricalData.Binance.BinanceFuturesKlineItem).FullName)
                     {

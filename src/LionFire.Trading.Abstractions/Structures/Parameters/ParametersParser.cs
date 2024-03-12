@@ -6,6 +6,9 @@ namespace LionFire.Trading;
 
 public static class ParametersParser
 {
+    public static int ParseIntParameter(string key, char startSeparator = '(', char endSeparator = ')', char escapeCharacter = '\\')
+        => int.Parse(TryGetParameters(key, startSeparator, endSeparator, escapeCharacter) ?? throw new ArgumentException());
+
     public static uint ParseUintParameter(string key, char startSeparator = '(', char endSeparator = ')', char escapeCharacter = '\\')
         => uint.Parse(TryGetParameters(key, startSeparator, endSeparator, escapeCharacter) ?? throw new ArgumentException());
 

@@ -34,6 +34,7 @@ return await Host.CreateDefaultBuilder()
             .AddSingleton<BinanceClientProvider>()
             .AddSingleton<IndicatorProvider>()
             .AddHistoricalBars(context.Configuration)
+            .AddIndicators()
         ;
     })
     .MultiCommandProgram()

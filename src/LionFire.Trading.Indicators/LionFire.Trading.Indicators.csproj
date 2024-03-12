@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>LionFire.Trading</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CircularBuffer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.HistoricalData.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -145,10 +145,11 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
             //var b = TimeSpan.FromMilliseconds(Options.State.PollOffsetMilliseconds);
             var b = TimeSpan.FromMilliseconds(0); // TEMP HARDCODE
             var now = DateTimeOffset.UtcNow; // ENH: use server time
-            var dueTime = TimeFrame.TimeUntilBarClose(now) + (TimeFrame.TimeSpan!.Value * Options.State.Offset) + b;
+            if (TimeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
+            var dueTime = TimeFrame.TimeUntilBarClose(now) + (TimeFrame.TimeSpan * Options.State.Offset) + b;
             dueTime = dueTime.Add(Options.State.RetrieveDelay);
             Logger.LogTrace("Next retrieve for {symbol}^{tf} in {dueTime} (retrieve delay: {retrieveDelay}s)", Symbol, TimeFrame.ToShortString(), dueTime, Options.State.RetrieveDelay.TotalSeconds.ToString("0.000"));
-            timer = RegisterTimer(OnTimer, null!, dueTime, TimeFrame.TimeSpan!.Value * Options.State.Interval);
+            timer = RegisterTimer(OnTimer, null!, dueTime, TimeFrame.TimeSpan * Options.State.Interval);
         }
     }
 

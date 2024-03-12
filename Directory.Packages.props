@@ -28,7 +28,7 @@
     <PackageVersion Include="BlazorPro.Spinkit" Version="1.2.0" />
     <PackageVersion Include="Caliburn.Micro" Version="4.0.212" />
     <PackageVersion Include="Caliburn.Micro.Core" Version="4.0.212" />
-    <PackageVersion Include="CircularBuffer" Version="1.3.0" />
+    <PackageVersion Include="CircularBuffer" Version="1.4.0" />
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageVersion Include="Consul" Version="1.7.14.1" />

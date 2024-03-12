@@ -1,6 +1,7 @@
 ﻿using LionFire.Trading.HistoricalData;
 using LionFire.Trading.HistoricalData.Retrieval;
 
+
 namespace LionFire.Trading;
 
 public static class BarsX

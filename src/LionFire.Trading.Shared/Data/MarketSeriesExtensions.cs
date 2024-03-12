@@ -14,17 +14,17 @@ namespace LionFire.Trading
 {
     public static class MarketSeriesExtensions
     {
-        public static DataSeriesType GetDataSeries(this MarketSeries marketSeries, BarComponent source)
+        public static DataSeriesType GetDataSeries(this MarketSeries marketSeries, OhlcAspect source)
         {
             switch (source)
             {
-                case BarComponent.Open:
+                case OhlcAspect.Open:
                     return marketSeries.Open;
-                case BarComponent.High:
+                case OhlcAspect.High:
                     return marketSeries.High;
-                case BarComponent.Low:
+                case OhlcAspect.Low:
                     return marketSeries.Low;
-                case BarComponent.Close:
+                case OhlcAspect.Close:
                     return marketSeries.Close;
                 default:
                     throw new ArgumentException();

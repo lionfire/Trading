@@ -14,12 +14,12 @@ namespace LionFire.Trading.Indicators
             this.owner = owner;
         }
 
-        public IMovingAverageIndicator MovingAverage(MovingAverageType movingAverageType, int periods, BarComponent indicatorBarComponent = BarComponent.Close, DataSeries indicatorBarSource = null)
+        public IMovingAverageIndicator MovingAverage(MovingAverageType movingAverageType, int periods, OhlcAspect indicatorBarComponent = OhlcAspect.Close, DataSeries indicatorBarSource = null)
         {
             switch (movingAverageType)
             {
                 case MovingAverageType.Simple:
-                    return new SimpleMovingAverage(new TSimpleMovingAverage
+                    return new SimpleMovingAverage_Old(new TSimpleMovingAverage
                     {
                         TimeFrame = owner.TimeFrame,
                         Symbol = owner.Symbol.Code,

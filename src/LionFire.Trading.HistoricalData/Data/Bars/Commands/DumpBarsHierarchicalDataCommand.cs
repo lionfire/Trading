@@ -76,7 +76,7 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
                     if (openTime >= Input.ToFlag) break;
                     try
                     {
-                        if (Input.TimeFrame.TimeSpan.HasValue)
+                        if (Input.TimeFrame.TimeSpan > TimeSpan.Zero)
                         {
                             if (openTime < Input.FromFlag) continue;
                             Console.Write($"{openTime.ToString("yyyy-MM-dd HH:mm")} ");
@@ -93,9 +93,9 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
                     }
                     finally
                     {
-                        if (Input.TimeFrame.TimeSpan.HasValue)
+                        if (Input.TimeFrame.TimeSpan > TimeSpan.Zero)
                         {
-                            openTime += Input.TimeFrame.TimeSpan.Value;
+                            openTime += Input.TimeFrame.TimeSpan;
                         }
                     }
                 }

@@ -4,13 +4,6 @@ using System.Text;
 
 namespace LionFire.Trading;
 
-//public record ExchangeArea(string Exchange, string ExchangeArea) { }
-[Alias("exchange-symbol")]
-[GenerateSerializer]
-public record ExchangeSymbol(string Exchange, string ExchangeArea, string Symbol)
-{
-}
-
 [GenerateSerializer]
 [Alias("exchange-symbol-timeframe")]
 public record ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol)
