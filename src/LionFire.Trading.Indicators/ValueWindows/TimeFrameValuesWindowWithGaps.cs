@@ -29,7 +29,7 @@ public sealed class TimeFrameValuesWindowWithGaps<T> : TimeFrameValuesWindow<T>
 
     #endregion
 
-    protected override void OnMissingBar(DateTime openTime)
+    protected override void OnMissingBar(DateTimeOffset openTime)
     {
         AddFillerBar();
     }

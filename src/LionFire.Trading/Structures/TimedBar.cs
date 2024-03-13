@@ -32,7 +32,7 @@ namespace LionFire.Trading
         {
             get
             {
-                if (OpenTime == default(DateTime))
+                if (OpenTime == default)
                 { return DataStatus.Invalid; }
                 else if (OpenTime == DateTime.MaxValue)
                 { return DataStatus.NotLoaded; }
@@ -55,12 +55,9 @@ namespace LionFire.Trading
 
         }
 
-        DateTime IMarketDataPoint.Time
-        {
-            get { return OpenTime; }
-        }
+        DateTimeOffset IMarketDataPoint.Time => OpenTime;
 
-        public DateTime OpenTime { get; set; }
+        public DateTimeOffset OpenTime { get; set; }
         public double High { get; set; }
         public double Low { get; set; }
         //public double Open { get; set; }
@@ -117,7 +114,7 @@ namespace LionFire.Trading
         //    Volume = double.NaN;
         //}
 
-        public TimedBar(DateTime date, double open, double high, double low, double close, double volume)
+        public TimedBar(DateTimeOffset date, double open, double high, double low, double close, double volume)
         {
             this.OpenTime = date;
             this.open = open;
@@ -127,7 +124,7 @@ namespace LionFire.Trading
             this.Volume = volume;
             Validate();
         }
-        public TimedBar(DateTime date)
+        public TimedBar(DateTimeOffset date)
         {
             this.OpenTime = date;
             this.open = double.NaN;

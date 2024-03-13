@@ -27,8 +27,8 @@ public class KlineArrayInfo
     public string Symbol { get; set; }
     public string TimeFrame { get; set; }
 
-    public DateTime Start { get; set; }
-    public DateTime EndExclusive { get; set; }
+    public DateTimeOffset Start { get; set; }
+    public DateTimeOffset EndExclusive { get; set; }
 
     /// <summary>
     /// If squashed from multiple files, uses oldest time

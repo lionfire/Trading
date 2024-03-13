@@ -8,8 +8,8 @@ public sealed class HistoricalDataMemoryCacheKey : IEquatable<HistoricalDataMemo
     public string? Exchange;
     public string? ExchangeArea;
     public string? Symbol;
-    public DateTime Start;
-    public DateTime EndExclusive;
+    public DateTimeOffset Start;
+    public DateTimeOffset EndExclusive;
 
     #region Misc
 

@@ -1,8 +1,10 @@
-﻿using System.Numerics;
+﻿using LionFire.Trading.ValueWindows;
+using System.Numerics;
+using System.Reactive;
 
 namespace LionFire.Trading.Indicators;
 
-public class RollingSum<T> : IIndicator<uint, T,T>
+public class RollingSum<T> : IndicatorBase<RollingSum<T>, int, T, T>, IIndicator<int, T, T>
     where T : INumber<T>
 {
     public static IndicatorCharacteristics Characteristics(uint parameter)
@@ -30,6 +32,18 @@ public class RollingSum<T> : IIndicator<uint, T,T>
         };
     }
 
+    public RollingSum(int period, TimeFrame timeFrame)
+    {
+        window = new(period, timeFrame);
+    }
+    
+    TimeFrameValuesWindow<T> window;
+
+    public static IndicatorCharacteristics Characteristics(int parameter)
+    {
+        throw new NotImplementedException();
+    }
+
     public static IEnumerable<T> Compute(uint period, IEnumerable<T> inputs)
     {
         var result = new List<T>();
@@ -51,6 +65,17 @@ public class RollingSum<T> : IIndicator<uint, T,T>
             }
         }
         return result;
+    }
+
+    public static IIndicator<int, T, T> Create(int p)
+    {
+        throw new NotImplementedException();
+    }
+
+    public override void OnNext(IEnumerable<T> value)
+    {
+        window.PushFront(value);
+        throw new NotImplementedException();
     }
 }
 

@@ -7,10 +7,8 @@ namespace LionFire.Trading
 {
     public static class DateTimeExtensions
     {
-        public static string ToDefaultString(this DateTime dateTime)
-        {
-            return dateTime.ToString("yyyy.MM.dd HH:mm:ss");
-        }
+        public static string ToDefaultString(this DateTime dateTime) => dateTime.ToString("yyyy.MM.dd HH:mm:ss");
+        public static string ToDefaultString(this DateTimeOffset dateTime) => dateTime.ToString("yyyy.MM.dd HH:mm:ss");
 
         public static string ToCurrencyString(this double val)
         {

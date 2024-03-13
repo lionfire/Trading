@@ -4,12 +4,9 @@ using System.Diagnostics;
 
 namespace LionFire.Trading.ValueWindows;
 
-public class TimeFrameValuesWindow<T>
+public class ValuesWindow<T>
 {
-
     #region Parameters
-
-    public TimeSpan TimeSpan { get; }
 
     #region Derived
 
@@ -19,13 +16,12 @@ public class TimeFrameValuesWindow<T>
 
     #endregion
 
+
     #region Lifecycle
 
-    public TimeFrameValuesWindow(int period, TimeFrame timeFrame)
+    public ValuesWindow(int period)
     {
         values = new CircularBuffer<T>(period);
-        if (timeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException();
-        TimeSpan = timeFrame.TimeSpan;
     }
 
     #endregion
@@ -34,13 +30,41 @@ public class TimeFrameValuesWindow<T>
 
     protected CircularBuffer<T> values;
 
-    public uint ValueCount { get; private set; }
-
-    public DateTimeOffset LastOpenTime { get; protected set; }
+    public uint ValueCount { get; protected set; }
 
     #region Derived
 
     public bool IsFull => ValueCount >= values.Capacity;
+
+    #endregion
+
+    #endregion
+}
+
+public class TimeFrameValuesWindow<T> : ValuesWindow<T>
+{
+
+    #region Parameters
+
+    public TimeSpan TimeSpan { get; }
+
+    #endregion
+
+    #region Lifecycle
+
+    public TimeFrameValuesWindow(int period, TimeFrame timeFrame):base(period)
+    {
+        if (timeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException();
+        TimeSpan = timeFrame.TimeSpan;
+    }
+
+    #endregion
+
+    #region State
+
+    public DateTimeOffset LastOpenTime { get; protected set; }
+
+    #region Derived
 
     public DateTimeOffset FirstOpenTime => LastOpenTime - TimeSpan * Math.Min(ValueCount, values.Capacity);
     public DateTimeOffset NextExpectedOpenTime => LastOpenTime + TimeSpan;
@@ -86,7 +110,7 @@ public class TimeFrameValuesWindow<T>
 
         var endDiff = LastOpenTime - lastOpenTime;
 
-        var modulus = endDiff.Ticks % TimeSpan.UtcTicks;
+        var modulus = endDiff.Ticks % TimeSpan.Ticks;
         if(modulus != 0) { 
             throw new ArgumentException($"{nameof(lastOpenTime)} must fall exactly on a TimeFrame.TimeSpan.  lastOpenTime: {lastOpenTime}, TimeSpan: {TimeSpan}, modulus: {modulus}");
             // Alternate idea: allow time values off step with TimeSpan and
@@ -94,7 +118,7 @@ public class TimeFrameValuesWindow<T>
             //  - use Math.Ceiling() to get takeBars.
         }
 
-        var skipEndBars = (int)(endDiff.UtcTicks / TimeSpan.Ticks);
+        var skipEndBars = (int)(endDiff.Ticks / TimeSpan.Ticks);
 
         var takeBars = (int)((lastOpenTime.UtcTicks - firstOpenTime.Ticks) / TimeSpan.Ticks);
 

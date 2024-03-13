@@ -9,7 +9,7 @@ namespace LionFire.Trading
     public interface IDoubleDataSeries : ISeries<double>
     {
     }
-    public interface ITimeSeries : ISeries<DateTime>
+    public interface ITimeSeries : ISeries<DateTimeOffset>
     {
     }
 

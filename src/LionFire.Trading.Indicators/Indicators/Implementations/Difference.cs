@@ -32,7 +32,12 @@ public class Difference<T> : IndicatorBase<Difference<T>, Unit, (T, T), T>, IInd
         throw new NotImplementedException();
     }
 
-    public override void OnNext((T, T) value)
+    //public override void OnNext((T, T) value)
+    //{
+    //    throw new NotImplementedException();
+    //}
+
+    public override void OnNext(IEnumerable<(T, T)> value)
     {
         throw new NotImplementedException();
     }

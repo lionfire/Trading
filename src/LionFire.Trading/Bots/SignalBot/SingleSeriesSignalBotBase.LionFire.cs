@@ -293,24 +293,24 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        public DateTime LastLongOpenTime
+        public DateTimeOffset LastLongOpenTime
         {
             get
             {
                 var index = LastLongOpenIndex;
-                if (index == int.MinValue) return default(DateTime);
+                if (index == int.MinValue) return default;
 
                 return MarketSeries.OpenTime[index];
             }
         }
 
         // Does not take SL into effect yet
-        public DateTime LastLongCloseTime
+        public DateTimeOffset LastLongCloseTime
         {
             get
             {
                 var index = LastLongCloseIndex;
-                if (index == int.MaxValue) return default(DateTime);
+                if (index == int.MaxValue) return default;
 
                 return MarketSeries.OpenTime[index];
             }
@@ -345,24 +345,24 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        public DateTime LastShortOpenTime
+        public DateTimeOffset LastShortOpenTime
         {
             get
             {
                 var index = LastShortOpenIndex;
-                if (index == int.MinValue) return default(DateTime);
+                if (index == int.MinValue) return default;
 
                 return MarketSeries.OpenTime[index];
             }
         }
 
         // Does not take SL into effect yet
-        public DateTime LastShortCloseTime
+        public DateTimeOffset LastShortCloseTime
         {
             get
             {
                 var index = LastShortCloseIndex;
-                if (index == int.MaxValue) return default(DateTime);
+                if (index == int.MaxValue) return default;
 
                 return MarketSeries.OpenTime[index];
             }
@@ -384,23 +384,23 @@ namespace LionFire.Trading.Bots
             }
         }
 
-        public DateTime LastOpenTime
+        public DateTimeOffset LastOpenTime
         {
             get
             {
                 var index = LastOpenIndex;
-                if (index == int.MinValue) return default(DateTime);
+                if (index == int.MinValue) return default;
                 return MarketSeries.OpenTime[index];
             }
         }
 
         // Does not take SL into effect yet
-        public DateTime LastCloseTime
+        public DateTimeOffset LastCloseTime
         {
             get
             {
                 var index = LastCloseIndex;
-                if (index == int.MaxValue) return default(DateTime);
+                if (index == int.MaxValue) return default;
 
                 return MarketSeries.OpenTime[index];
             }

@@ -14,26 +14,26 @@ public abstract class HistoricalDataProvider2Base : IHistoricalDataProvider2
 {
     public virtual string Name => this.GetType().Name.Replace("Source","").Replace("2","");
     
-    void SetDefaults(ref DateTime? endExclusive, ref HistoricalDataQueryParameters? retrieveOptions)
+    void SetDefaults(ref DateTimeOffset? endExclusive, ref HistoricalDataQueryParameters? retrieveOptions)
     {
-        endExclusive ??= DateTime.UtcNow + TimeSpan.FromHours(1);
+        endExclusive ??= DateTimeOffset.UtcNow + TimeSpan.FromHours(1);
         retrieveOptions ??= HistoricalDataQueryParameters.Default;
     }
 
     #region CanProvide
 
-    public virtual Task<bool> CanGet<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime? endExclusive = null, HistoricalDataQueryParameters? retrieveParameters = null)
+    public virtual Task<bool> CanGet<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset? endExclusive = null, HistoricalDataQueryParameters? retrieveParameters = null)
     {
         SetDefaults(ref endExclusive, ref retrieveParameters);
         return CanGet<T>(timeFrame, symbol, start, endExclusive, retrieveParameters);
     }
-    protected abstract Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTime Start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions);
+    protected abstract Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset Start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveOptions);
 
     #endregion
 
     #region Get
 
-    public virtual async Task<T[]?> Get<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime? endExclusive = null, HistoricalDataQueryParameters? retrieveParameters = null)
+    public virtual async Task<T[]?> Get<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset? endExclusive = null, HistoricalDataQueryParameters? retrieveParameters = null)
     {
         SetDefaults(ref endExclusive, ref retrieveParameters);
 
@@ -44,7 +44,7 @@ public abstract class HistoricalDataProvider2Base : IHistoricalDataProvider2
 
     
 
-    protected abstract Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions);
+    protected abstract Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveOptions);
 
     #endregion
 

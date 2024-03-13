@@ -1,27 +1,33 @@
-﻿using LionFire.Trading.HistoricalData.Retrieval;
+﻿#if FUTURE
+using LionFire.Trading.HistoricalData.Retrieval;
 using System.Threading.Channels;
 
 namespace LionFire.Trading.Indicators.Harness;
+
+public static class Examples
+{
+    public static void Example()
+    {
+        var sourceRef = new SymbolValueAspect("Binance", "Futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close);
+
+        IServiceProvider sp = null!;
+
+        var indicator = ActivatorUtilities.CreateInstance<IndicatorHarness<SimpleMovingAverage, uint, double, double>>(sp, new IndicatorHarnessOptions<uint>
+        {
+            TimeFrame = TimeFrame.m1,
+            Parameters = 55,
+            InputReferences = new[] { sourceRef },
+        });
+    }
+}
 
 public class RealTimeIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator<TParameters, TInput, TOutput>
 {
 
-    public static void Example()
-    {
-        var sourceRef = new SymbolValueAspect("Binance", "Futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close);
-
-        var indicator = new IndicatorHarness<SimpleMovingAverage>(55, [sourceRef]);
-
-        var inputs = new double[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-        var period = 3;
-        var result = SimpleMovingAverage.Compute(period, inputs);
-        Console.WriteLine(string.Join(", ", result));
-    }
-
     #region State
 
-    List<Channel> inputChannels;
+    //List<Channel<int>> inputChannels;
 
     #endregion
 
@@ -35,3 +41,4 @@ public class RealTimeIndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
 
 }
 
+#endif

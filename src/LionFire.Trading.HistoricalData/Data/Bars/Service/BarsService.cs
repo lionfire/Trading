@@ -127,14 +127,17 @@ public class BarsServiceBarSeries : IHistoricalTimeSeries<IKline>
 
     #region Methods
 
-    public ValueTask<IEnumerable<IKline>?> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive)
+    public async ValueTask<HistoricalDataResult<IKline>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        BarsService.HistoricalDataChunkRangeProvider.GetBarChunks(start, endExclusive, ExchangeSymbolTimeFrame.TimeFrame);
+        var bars = await BarsService.Bars(SymbolBarsRange.FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame, start, endExclusive));
+
+        return bars.Any() ? (HistoricalDataResult<IKline>)new(bars) : HistoricalDataResult<IKline>.NoData;
     }
 
     #endregion
 
 }
+
 public class BarsServiceAspectSeries<T> : IHistoricalTimeSeries<T>
 {
     #region Identity
@@ -164,11 +167,13 @@ public class BarsServiceAspectSeries<T> : IHistoricalTimeSeries<T>
 
     #region Methods
 
-    public ValueTask<IEnumerable<T>?> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive)
+    public async ValueTask<HistoricalDataResult<T>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        BarsService.HistoricalDataChunkRangeProvider.GetBarChunks(start, endExclusive, ExchangeSymbolTimeFrame.TimeFrame);
-    }
+        var bars = await BarsService.Bars(SymbolBarsRange.FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame, start, endExclusive));
 
+        return bars.Any() ? (HistoricalDataResult<T>)new(bars.Cast<T>()) : HistoricalDataResult<T>.NoData;
+    }
+    
     #endregion
 }
 

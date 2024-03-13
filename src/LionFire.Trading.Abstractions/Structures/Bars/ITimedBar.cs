@@ -7,7 +7,7 @@ namespace LionFire.Trading
 {
     public interface IMarketDataPoint
     {
-        DateTime Time { get; }
+        DateTimeOffset Time { get; }
     }
 
     public interface ITimedBar : IMarketDataPoint
@@ -17,6 +17,6 @@ namespace LionFire.Trading
         double Low { get; set; }
         double Close { get; set; }
         double Volume { get; set; }
-        DateTime OpenTime { get; set; }
+        DateTimeOffset OpenTime { get; set; }
     }
 }

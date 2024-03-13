@@ -259,7 +259,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
         #region Variables
 
-        DateTime start, endExclusive;
+        DateTimeOffset start, endExclusive;
         KlineArrayInfo? info = null;
 
         #endregion
@@ -359,7 +359,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         return result;
     }
 
-    private async Task<(IBarsResult barsResult, KlineArrayInfo info)> RetrieveForDate(DateTime date)
+    private async Task<(IBarsResult barsResult, KlineArrayInfo info)> RetrieveForDate(DateTimeOffset date)
     {
         if (Input.VerboseFlag) { DumpParameters(); }
         ValidateAndParseOptions();
@@ -446,7 +446,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             do
             {
                 Logger.LogInformation($"{nextStartTime} - {requestTo}");
-                CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinanceKline>> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime, endTime: requestTo, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
+                CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinanceKline>> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime.DateTime, endTime: requestTo.DateTime, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
 
                 await CheckWeight_Binance(result?.ResponseHeaders);
 

@@ -1,6 +1,7 @@
 ﻿//using LionFire.Resolves;
 using Binance.Net.Interfaces;
 using DynamicData;
+using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Persistence;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.HistoricalData.Serialization;
@@ -245,5 +246,15 @@ public class BarsFileSource : IBars, IListableBarsSource
     }
 
     #endregion
+
+    public IHistoricalTimeSeries<IKline> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
+    {
+        throw new NotImplementedException();
+    }
+
+    public IHistoricalTimeSeries<decimal> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, DataPointAspect aspect)
+    {
+        throw new NotImplementedException();
+    }
 
 }

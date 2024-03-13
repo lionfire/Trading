@@ -67,7 +67,7 @@ public class BarFilesPaths
 
     #region (static) Methods
 
-    public static string GetFileName(DateTime start, DateTime endExclusive, string? suffixCode = null)
+    public static string GetFileName(DateTimeOffset start, DateTimeOffset endExclusive, string? suffixCode = null)
     {
         var sb = new StringBuilder();
 
@@ -101,7 +101,7 @@ public class BarFilesPaths
 
     #region (public) File Paths
 
-    public static void AppendFileNameTimeString(DateTime date, StringBuilder sb)
+    public static void AppendFileNameTimeString(DateTimeOffset date, StringBuilder sb)
     {
         sb.Append(date.ToString("yyyy.MM.dd"));
         if (date.Hour != 0 || date.Minute != 0)
@@ -110,8 +110,6 @@ public class BarFilesPaths
             sb.Append(date.ToString("HH.mm"));
         }
     }
-
-
 
     #endregion
 }

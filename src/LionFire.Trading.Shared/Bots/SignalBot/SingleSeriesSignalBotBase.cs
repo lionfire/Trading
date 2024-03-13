@@ -32,8 +32,8 @@ namespace LionFire.Trading.Bots
     {
 #if !cAlgo
         //IEnumerable<Position> ReversePositions { get; }
-        DateTime LastOpenTime {get;}
-        DateTime LastCloseTime { get; }
+        DateTimeOffset LastOpenTime {get;}
+        DateTimeOffset LastCloseTime { get; }
         TradeKind? LastTradeType {get;}
 #endif
     }

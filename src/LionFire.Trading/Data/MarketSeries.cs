@@ -69,7 +69,7 @@ namespace LionFire.Trading
 
         #region Data
 
-        public BarType this[DateTime time]
+        public BarType this[DateTimeOffset time]
         {
             get
             {
@@ -358,7 +358,7 @@ namespace LionFire.Trading
             TickReceived?.Invoke(this, bid, ask);
         }
 
-        internal void AddDataPointAtTime(DateTime time)
+        internal void AddDataPointAtTime(DateTimeOffset time)
         {
             OpenTime.Add(time);
             foreach (var ds in AllDataSeries)
@@ -485,7 +485,7 @@ namespace LionFire.Trading
             this.tickVolume.Add(bar.Volume);
         }
 
-        public void Add(DateTime time, double open, double high, double low, double close, double volume)
+        public void Add(DateTimeOffset time, double open, double high, double low, double close, double volume)
         {
             this.openTime.Add(time);
             this.open.Add(open);
@@ -495,7 +495,7 @@ namespace LionFire.Trading
             this.tickVolume.Add(volume);
         }
 
-        private void Add(DateTime[] time, double[] open, double[] high, double[] low, double[] close, double[] volume)
+        private void Add(DateTimeOffset[] time, double[] open, double[] high, double[] low, double[] close, double[] volume)
         {
             this.openTime.Add(time);
             this.open.Add(open);
@@ -504,7 +504,7 @@ namespace LionFire.Trading
             this.close.Add(close);
             this.tickVolume.Add(volume);
         }
-        private void Add(DateTime[] time, double[] open, double[] high, double[] low, double[] close, double[] volume, int count)
+        private void Add(DateTimeOffset[] time, double[] open, double[] high, double[] low, double[] close, double[] volume, int count)
         {
             for (int i = 0; i < count; i++)
             {
@@ -546,12 +546,12 @@ namespace LionFire.Trading
             var dateTime = ParseDate(lines[1]);
             return dateTime;
         }
-        public long FindPositionForDate(FileStream fs, DateTime seekDate, bool getPreviousBar = true)
+        public long FindPositionForDate(FileStream fs, DateTimeOffset seekDate, bool getPreviousBar = true)
         {
             int rewindAmount = 100000;
 
-            DateTime firstDate;
-            DateTime lastDate;
+            DateTimeOffset firstDate;
+            DateTimeOffset lastDate;
             string line;
 
             fs.Seek(0, SeekOrigin.Begin);
@@ -648,7 +648,7 @@ namespace LionFire.Trading
             return Math.Max(0, seekBytes + bytesDelta - 2); // Minus 2 for \r\n -- first line is discarded.
         }
 
-        public void ImportFromFile(string path, DateTime? startDate = null, DateTime? endDate = null, bool getPreviousBar = true)
+        public void ImportFromFile(string path, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null, bool getPreviousBar = true)
         {
             int lines = 0;
             long totalBytes = new FileInfo(path).Length;
@@ -661,7 +661,7 @@ namespace LionFire.Trading
 
 
             int bufferSize = 128;
-            DateTime[] openTimeBuffer = new DateTime[bufferSize];
+            DateTimeOffset[] openTimeBuffer = new DateTimeOffset[bufferSize];
             double[] openBuffer = new double[bufferSize];
             double[] highBuffer = new double[bufferSize];
             double[] lowBuffer = new double[bufferSize];

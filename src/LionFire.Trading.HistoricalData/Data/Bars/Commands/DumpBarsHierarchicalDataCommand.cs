@@ -41,7 +41,7 @@ public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierar
 
         if (Directory.Exists(dir))
         {
-            DateTime openTime;
+            DateTimeOffset openTime;
 
             foreach (var path in Directory.GetFiles(dir))
             {

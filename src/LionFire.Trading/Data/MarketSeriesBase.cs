@@ -130,7 +130,7 @@ namespace LionFire.Trading
         public abstract DataType this[int index] { get; set; }
         protected abstract void Add(DataType dataPoint);
 
-        public void Add(List<DataType> dataPoints, DateTime? startDate = null, DateTime? endDate = null)
+        public void Add(List<DataType> dataPoints, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null)
         {
             if (dataPoints == null) { Debug.WriteLine("MarketSeriesBase Add - NULL dataPoints - FIXME !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); return; }
             var lastDataEndDate = this[LastIndex].Time;
@@ -138,8 +138,8 @@ namespace LionFire.Trading
             // TODO: Fill range from startDate to endDate with "NoData" and if a range is loaded that creates a gap with existing ranges, fill that with "MissingData"
 
             //if (bars.Count == 0) return;
-            var resultsStartDate = dataPoints.Count == 0 ? default(DateTime) : dataPoints[0].Time;
-            var resultsEndDate = dataPoints.Count == 0 ? default(DateTime) : dataPoints[dataPoints.Count - 1].Time;
+            var resultsStartDate = dataPoints.Count == 0 ? default : dataPoints[0].Time;
+            var resultsEndDate = dataPoints.Count == 0 ? default : dataPoints[dataPoints.Count - 1].Time;
             if (!startDate.HasValue) { startDate = resultsStartDate; Debug.WriteLine("WARN -!startDate.HasValue in MarketSeries.Add"); }
             if (!endDate.HasValue) { endDate = resultsEndDate; Debug.WriteLine("WARN -!endDate.HasValue in MarketSeries.Add"); }
 
@@ -147,7 +147,7 @@ namespace LionFire.Trading
             int dataPointsCopied = 0;
 #endif
 
-            if (this.Count == 0 && DataEndDate == default(DateTime) && DataStartDate == default(DateTime))
+            if (this.Count == 0 && DataEndDate == default(DateTimeOffset) && DataStartDate == default(DateTimeOffset))
             {
                 foreach (var b in dataPoints)
                 {
@@ -182,7 +182,7 @@ namespace LionFire.Trading
 #endif
                     }
 
-                    if (DataStartDate != default(DateTime) && endDate.Value + TimeFrame.TimeSpan < DataStartDate)
+                    if (DataStartDate != default(DateTimeOffset) && endDate.Value + TimeFrame.TimeSpan < DataStartDate)
                     {
                         Debug.WriteLine($"[DATA GAP] endDate: {endDate.Value}, DataStartDate: {DataStartDate}");
                         throw new NotImplementedException("TODO REVIEW this gap length");
@@ -211,7 +211,7 @@ namespace LionFire.Trading
 #endif
                     }
 
-                    if (DataEndDate != default(DateTime) && startDate.Value - TimeFrame.TimeSpan > DataEndDate)
+                    if (DataEndDate != default(DateTimeOffset) && startDate.Value - TimeFrame.TimeSpan > DataEndDate)
                     {
                         Debug.WriteLine($"[DATA GAP] startDate: {startDate.Value}, DataEndDate: {DataEndDate}");
                         throw new NotImplementedException("TODO REVIEW this gap length");
@@ -222,23 +222,23 @@ namespace LionFire.Trading
 
             var oldEnd = DataEndDate;
             var oldStart = DataStartDate;
-            if (DataEndDate == default(DateTime) || startDate.Value - TimeFrame.TimeSpan <= DataEndDate && endDate.Value > DataEndDate)
+            if (DataEndDate == default(DateTimeOffset) || startDate.Value - TimeFrame.TimeSpan <= DataEndDate && endDate.Value > DataEndDate)
             {
                 DataEndDate = endDate.Value;
             }
-            if (DataStartDate == default(DateTime) || endDate.Value + TimeFrame.TimeSpan >= DataStartDate && startDate.Value < DataStartDate)
+            if (DataStartDate == default(DateTimeOffset) || endDate.Value + TimeFrame.TimeSpan >= DataStartDate && startDate.Value < DataStartDate)
             {
                 DataStartDate = startDate.Value;
             }
 
-            var addedSpan = this[LastIndex].Time - (lastDataEndDate == default(DateTime) ? this[FirstIndex].Time : lastDataEndDate);
+            var addedSpan = this[LastIndex].Time - (lastDataEndDate == default(DateTimeOffset) ? this[FirstIndex].Time : lastDataEndDate);
             if (addedSpan > TimeSpan.Zero)
             {
                 BackwardForward bf = BackwardForward.None;
                 if (oldEnd != DataEndDate) bf |= BackwardForward.Forward;
                 if (oldStart != DataStartDate) bf |= BackwardForward.Backward;
                 Debug.WriteLine($"[{this}] ADDED DATA: {addedSpan} {bf} ");
-                
+
                 DataAdded?.Invoke(bf);
             }
             //Debug.WriteLine($"[{this} - new range] {DataStartDate} - {DataEndDate} (last data: {this[LastIndex].Time})           (was {oldStart} - {oldEnd} (last data: {lastDataEndDate}))");
@@ -250,11 +250,11 @@ namespace LionFire.Trading
 
         public event Action<BackwardForward> DataAdded;
 
-        
+
 
         #region Data Gaps (Incomplete
 
-        private void AddGap(DateTime startDate, DateTime endDate)
+        private void AddGap(DateTimeOffset startDate, DateTimeOffset endDate)
         {
             if (HasGap(startDate, endDate))
             {
@@ -262,7 +262,7 @@ namespace LionFire.Trading
                 throw new NotImplementedException("TODO: Resolve Overlapping gaps");
             }
             Debug.WriteLine($"UNTESTED - {this.ToString()} GAP: {startDate} - {endDate}");
-            if (Gaps == null) { Gaps = new SortedDictionary<DateTime, DateTime>(); }
+            if (Gaps == null) { Gaps = new SortedDictionary<DateTimeOffset, DateTimeOffset>(); }
             if (Gaps.ContainsKey(startDate))
             {
                 var existingEnd = Gaps[startDate];
@@ -273,17 +273,17 @@ namespace LionFire.Trading
             }
             Gaps.Add(startDate, endDate);
         }
-        private void EraseGap(DateTime startDate, DateTime endDate)
+        private void EraseGap(DateTimeOffset startDate, DateTimeOffset endDate)
         {
             if (HasGap(startDate, endDate))
             {
-                if (Gaps.Contains(new KeyValuePair<DateTime, DateTime>(startDate, endDate)))
+                if (Gaps.Contains(new KeyValuePair<DateTimeOffset, DateTimeOffset>(startDate, endDate)))
                 {
                     Gaps.Remove(startDate);
                 }
                 else
                 {
-                    if (!AntiGaps.Contains(new KeyValuePair<DateTime, DateTime>(startDate, endDate)))
+                    if (!AntiGaps.Contains(new KeyValuePair<DateTimeOffset, DateTimeOffset>(startDate, endDate)))
                     {
                         AntiGaps.Add(startDate, endDate); // TODO  - make sense of this
                     }
@@ -301,7 +301,7 @@ namespace LionFire.Trading
 
 
 
-        public bool HasData(DateTime startDate, DateTime endDate)
+        public bool HasData(DateTimeOffset startDate, DateTimeOffset endDate)
         {
             if (Last.Time >= endDate && First.Time <= startDate) return true;
 
@@ -312,7 +312,7 @@ namespace LionFire.Trading
             }
             return true;
         }
-        public bool HasGap(DateTime startDate, DateTime endDate)
+        public bool HasGap(DateTimeOffset startDate, DateTimeOffset endDate)
         {
             if (Gaps == null || Gaps.Count == 0) { return false; }
             foreach (var kvp in Gaps)
@@ -322,8 +322,8 @@ namespace LionFire.Trading
             }
             return false;
         }
-        private SortedDictionary<DateTime, DateTime> Gaps;
-        private SortedDictionary<DateTime, DateTime> AntiGaps = new SortedDictionary<DateTime, DateTime>();
+        private SortedDictionary<DateTimeOffset, DateTimeOffset> Gaps;
+        private SortedDictionary<DateTimeOffset, DateTimeOffset> AntiGaps = new SortedDictionary<DateTimeOffset, DateTimeOffset>();
 
 
         #endregion
@@ -485,12 +485,12 @@ namespace LionFire.Trading
 
         #endregion
 
-        public DateTime? CloseTime
+        public DateTimeOffset? CloseTime
         {
             get
             {
-                var result = DateTime.UtcNow;
-                if ((result.DayOfWeek == DayOfWeek.Friday && result.Hour >= 22)||
+                var result = DateTimeOffset.UtcNow;
+                if ((result.DayOfWeek == DayOfWeek.Friday && result.Hour >= 22) ||
                     result.DayOfWeek == DayOfWeek.Saturday ||
                     (result.DayOfWeek == DayOfWeek.Sunday && result.Hour < 21))
                 {
@@ -498,7 +498,7 @@ namespace LionFire.Trading
                     {
                         result = result - TimeSpan.FromDays(1);
                     }
-                    result = new DateTime(result.Year, result.Month, result.Day, 22, 0, 0);
+                    result = new DateTimeOffset(result.Year, result.Month, result.Day, 22, 0, 0, TimeSpan.Zero);
                 }
                 return result;
             }
@@ -527,7 +527,7 @@ namespace LionFire.Trading
 
         #region DataStartDate
 
-        public DateTime DataStartDate
+        public DateTimeOffset DataStartDate
         {
             get { return dataStartDate; }
             set
@@ -537,13 +537,13 @@ namespace LionFire.Trading
                 OnPropertyChanged(nameof(DataStartDate));
             }
         }
-        private DateTime dataStartDate;
+        private DateTimeOffset dataStartDate;
 
         #endregion
 
         #region DataEndDate
 
-        public DateTime DataEndDate
+        public DateTimeOffset DataEndDate
         {
             get { return dataEndDate; }
             set
@@ -553,7 +553,7 @@ namespace LionFire.Trading
                 OnPropertyChanged(nameof(DataEndDate));
             }
         }
-        private DateTime dataEndDate;
+        private DateTimeOffset dataEndDate;
 
         #endregion
 
@@ -561,10 +561,10 @@ namespace LionFire.Trading
         public int FirstIndex { get { return OpenTime.FirstIndex; } }
         public int LastIndex { get { return OpenTime.LastIndex; } }
 
-        public ConcurrentDictionary<DateTime, DataLoadResult> DataLoadResults
+        public ConcurrentDictionary<DateTimeOffset, DataLoadResult> DataLoadResults
         {
             get; private set;
-        } = new ConcurrentDictionary<DateTime, DataLoadResult>();
+        } = new ConcurrentDictionary<DateTimeOffset, DataLoadResult>();
 
         public TimeSeries OpenTime
         {
@@ -575,12 +575,12 @@ namespace LionFire.Trading
         /// <param name="time"></param>
         /// <param name="loadHistoricalData">If true, this may block for a long time!</param>
         /// <returns></returns>
-        public int FindIndex(DateTime time, bool loadHistoricalData = false)
+        public int FindIndex(DateTimeOffset time, bool loadHistoricalData = false)
         {
             return openTime.FindIndex(time);
 
             // OLD - result -1 doens't work anymore since we allow negative indices
-            //if (openTime[result] == default(DateTime) && loadHistoricalData)
+            //if (openTime[result] == default(DateTimeOffset) && loadHistoricalData)
             //{
             //    var first = OpenTime.First();
             //    if (time < first)
@@ -604,7 +604,7 @@ namespace LionFire.Trading
 
         public SemaphoreSlim DataLock { get; private set; } = new SemaphoreSlim(1);
 
-        public Task EnsureDataAvailable(DateTime? startDate, DateTime endDate, int minBars = 0, bool forceRetrieve = false)
+        public Task EnsureDataAvailable(DateTimeOffset? startDate, DateTimeOffset endDate, int minBars = 0, bool forceRetrieve = false)
         {
             return Feed.Data.EnsureDataAvailable(this, startDate, endDate, minBars, forceRetrieve);
         }
@@ -613,8 +613,8 @@ namespace LionFire.Trading
 
         #region Events
 
-        public event Action<DateTime, DateTime> LoadHistoricalDataCompleted;
-        public void RaiseLoadHistoricalDataCompleted(DateTime startDate, DateTime endDate)
+        public event Action<DateTimeOffset, DateTimeOffset> LoadHistoricalDataCompleted;
+        public void RaiseLoadHistoricalDataCompleted(DateTimeOffset startDate, DateTimeOffset endDate)
         {
             LoadHistoricalDataCompleted?.Invoke(startDate, endDate);
             OnPropertyChanged(nameof(Count));

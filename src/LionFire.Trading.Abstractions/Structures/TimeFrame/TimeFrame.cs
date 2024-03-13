@@ -115,11 +115,11 @@ public class TimeFrame
         mn1 = new TimeFrame("mn1");
     }
 
-    public long? GetExpectedBarCount(DateTime start, DateTime endExclusive)
+    public long? GetExpectedBarCount(DateTimeOffset start, DateTimeOffset endExclusive)
         => TimeSpan <= TimeSpan.Zero ? null : (long?)((endExclusive - start) / TimeSpan);
-    public long? GetExpectedBarCountForNow(DateTime start, DateTime endExclusive)
+    public long? GetExpectedBarCountForNow(DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        var now = DateTime.UtcNow;
+        var now = DateTimeOffset.UtcNow;
         return GetExpectedBarCount(start, endExclusive > now ? GetPeriodStart(now) + TimeSpan : endExclusive);
     }
 
@@ -223,7 +223,7 @@ public class TimeFrame
         return TryParse(timeFrameCode);
     }
 
-    public DateTime GetOpenTimeBefore(DateTime date)
+    public DateTimeOffset GetOpenTimeBefore(DateTimeOffset date)
     {
         switch (TimeFrameUnit)
         {
@@ -231,21 +231,21 @@ public class TimeFrame
                 throw new NotSupportedException();
             case TimeFrameUnit.Second:
                 if (60 % TimeFrameValue != 0) { throw new NotImplementedException(); }
-                if (date.Millisecond != 0) { return new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second); }
+                if (date.Millisecond != 0) { return new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, TS.Zero); }
                 else
                 {
                     return date - System.TimeSpan.FromSeconds(1);
                 }
             case TimeFrameUnit.Minute:
                 if (60 % TimeFrameValue != 0) { throw new NotImplementedException(); }
-                if (date.Second != 0 || date.Millisecond != 0) { return new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, 0); }
+                if (date.Second != 0 || date.Millisecond != 0) { return new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, date.Minute, 0,TS.Zero); }
                 else
                 {
                     return date - System.TimeSpan.FromMinutes(1);
                 }
             case TimeFrameUnit.Hour:
                 if (24 % TimeFrameValue != 0) { throw new NotImplementedException(); }
-                if (date.Minute != 0 || date.Second != 0 || date.Millisecond != 0) { return new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0); }
+                if (date.Minute != 0 || date.Second != 0 || date.Millisecond != 0) { return new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, 0, 0,TS.Zero); }
                 else
                 {
                     return date - System.TimeSpan.FromHours(1);
@@ -409,7 +409,7 @@ public class TimeFrame
 
     #region Utilities
 
-    public DateTime GetPeriodStart(DateTime time)
+    public DateTimeOffset GetPeriodStart(DateTimeOffset time)
     {
         switch (TimeFrameUnit)
         {
@@ -421,7 +421,7 @@ public class TimeFrame
                 if ((60 / this.TimeFrameValue) % 1.0 == 0.0)
                 {
                     var second = (time.Minute / this.TimeFrameValue) * TimeFrameValue;
-                    return new DateTime(time.Year, time.Month, time.Day, time.Hour, time.Minute, second);
+                    return new DateTimeOffset(time.Year, time.Month, time.Day, time.Hour, time.Minute, second, TS.Zero);
                 }
                 else
                 {
@@ -431,7 +431,7 @@ public class TimeFrame
                 if ((60 / this.TimeFrameValue) % 1.0 == 0.0)
                 {
                     var minute = (time.Minute / this.TimeFrameValue) * TimeFrameValue;
-                    return new DateTime(time.Year, time.Month, time.Day, time.Hour, minute, 0);
+                    return new DateTimeOffset(time.Year, time.Month, time.Day, time.Hour, minute, 0, TS.Zero);
                 }
                 else
                 {
@@ -441,7 +441,7 @@ public class TimeFrame
                 if ((24 / this.TimeFrameValue) % 1.0 == 0.0)
                 {
                     var hour = (time.Hour / this.TimeFrameValue) * TimeFrameValue;
-                    return new DateTime(time.Year, time.Month, time.Day, hour, 0, 0);
+                    return new DateTimeOffset(time.Year, time.Month, time.Day, hour, 0, 0, TS.Zero);
                 }
                 else
                 {

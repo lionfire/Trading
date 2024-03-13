@@ -16,9 +16,9 @@ namespace LionFire.Trading.Data
         public MarketSeries MarketSeries { get { return MarketSeriesBase as MarketSeries; } }
         public MarketTickSeries MarketTickSeries { get { return MarketSeriesBase as MarketTickSeries; } }
 
-        public DateTime StartDate;
-        public DateTime EndDate;
-        public DateTime QueryDate;
+        public DateTimeOffset StartDate;
+        public DateTimeOffset EndDate;
+        public DateTimeOffset QueryDate;
         public bool IsAvailable { get; set; }
         public bool IsPartial { get; set; }
 

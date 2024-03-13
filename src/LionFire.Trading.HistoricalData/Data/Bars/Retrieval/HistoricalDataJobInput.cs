@@ -19,7 +19,7 @@ public class HistoricalDataJobInput : CommonTradingInput
     public string NumericTypeFlag { get; set; } = "native"; // TODO enum
 
 
-    [Description("If non-default Fields and/or NumericType specified, set this to true to clean up the data that is downsampled to create the requested data")]
+    [Description("If non-default Fields and/or NumericType specified, set this to true to clean up the data that is down-sampled to create the requested data")]
     [FlagAlias("clean-up", true)]
     public bool CleanUpRawDataFlag { get; set; } = false;
 
@@ -76,9 +76,9 @@ public class HistoricalDataJobInput : CommonTradingInput
     public KlineInterval? KlineInterval => TimeFrame.Name.ToKlineInterval();
 
     [Oakton.IgnoreOnCommandLine]
-    public DateTime EffectiveTo => TimeFrame.TimeSpanApproximation >= TimeSpan.FromSeconds(2) ? ToFlag - TimeSpan.FromSeconds(1) : ToFlag;
+    public DateTimeOffset EffectiveTo => TimeFrame.TimeSpanApproximation >= TimeSpan.FromSeconds(2) ? ToFlag - TimeSpan.FromSeconds(1) : ToFlag;
 
-    public DateTime GetEffectiveTo(DateTime to) => TimeFrame.TimeSpanApproximation >= TimeSpan.FromSeconds(2) ? to - TimeSpan.FromSeconds(1) : to - TimeSpan.FromMilliseconds(1);
+    public DateTimeOffset GetEffectiveTo(DateTimeOffset to) => TimeFrame.TimeSpanApproximation >= TimeSpan.FromSeconds(2) ? to - TimeSpan.FromSeconds(1) : to - TimeSpan.FromMilliseconds(1);
 
     #endregion
 

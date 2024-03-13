@@ -8,8 +8,8 @@ namespace LionFire.Trading
     
     public struct TimedBarStruct : ITimedBar
     {
-        DateTime IMarketDataPoint.Time { get { return OpenTime; } }
-        public DateTime OpenTime { get; set; }
+        DateTimeOffset IMarketDataPoint.Time { get { return OpenTime; } }
+        public DateTimeOffset OpenTime { get; set; }
         public double Open { get; set; }
         public double High { get; set; }
         public double Low { get; set; }

@@ -95,7 +95,7 @@ namespace LionFire.Trading
 
         #endregion
 
-        public bool IsSamePeriod(DateTime time, DateTime time2)
+        public bool IsSamePeriod(DateTimeOffset time, DateTimeOffset time2)
         {
             var tf = MarketSeries.TimeFrame;
             var periodStart = MarketSeries.TimeFrame.GetPeriodStart(time);
@@ -105,13 +105,13 @@ namespace LionFire.Trading
 
         #region ServerTimeFromTick
 
-        public DateTime ServerTimeFromM1Bar
+        public DateTimeOffset ServerTimeFromM1Bar
         {
             get { return serverTimeFromM1Bar; }
             set
             {
                 if (serverTimeFromM1Bar == value) return;
-                if (serverM1BarToTimeFrameTime == default(DateTime)) { serverM1BarToTimeFrameTime = value; }
+                if (serverM1BarToTimeFrameTime == default) { serverM1BarToTimeFrameTime = value; }
 
                 var oldTime = serverTimeFromM1Bar;
                 serverTimeFromM1Bar = value;
@@ -127,13 +127,13 @@ namespace LionFire.Trading
                 }
             }
         }
-        private DateTime serverTimeFromM1Bar;
-        DateTime serverM1BarToTimeFrameTime;
+        private DateTimeOffset serverTimeFromM1Bar;
+        DateTimeOffset serverM1BarToTimeFrameTime;
 
         #endregion
 
         object Lock = new object();
-        private void OnTimeFrameRollover(DateTime previousMinute)
+        private void OnTimeFrameRollover(DateTimeOffset previousMinute)
         {
             lock (Lock)
             {

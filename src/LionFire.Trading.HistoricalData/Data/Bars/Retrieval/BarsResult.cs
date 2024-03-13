@@ -7,33 +7,37 @@ namespace LionFire.Trading.HistoricalData.Retrieval;
 
 // TODO CLEANUP and REVIEW
 
-
-
-public interface IBarsResult //: IValuesResult<IKline>
+public interface IBarsResult : ITimeSeriesResult<IKline>
 {
     //    string Name { get; }
     //    HistoricalDataSourceKind2 SourceType { get; }
-    DateTime EndExclusive { get; init; }
-    DateTime Start { get; init; }
-    TimeFrame TimeFrame { get; init; }
 
-
-    IReadOnlyList<IKline> Bars { get; }
+    IReadOnlyList<IKline> Bars => Values;
     Type NativeType { get; }
 
     bool IsUpToDate { get; }
 
-    IBarsResult Trim(DateTime start, DateTime endExclusive);
+    IBarsResult Trim(DateTimeOffset start, DateTimeOffset endExclusive);
 }
 
 public sealed class BarsResult<TKline> : IBarsResult
     where TKline : IKline
 {
-    IReadOnlyList<IKline> IBarsResult.Bars => (IReadOnlyList<IKline>)Bars;
+
+    #region Values
+
+    //IReadOnlyList<IKline> IBarsResult.Bars => (IReadOnlyList<IKline>)Bars;
+    IReadOnlyList<IKline> IValuesResult<IKline>.Values => (IReadOnlyList<IKline>)Bars;
+
     public required IReadOnlyList<TKline> Bars { get; init; }
     //public IEnumerable<IKline> Values => Bars.OfType<IKline>();
 
+    #endregion
+
     public Type NativeType { get => typeof(TKline); }
+
+
+    #region Constructors
 
     private BarsResult<TKline> CloneWithBars(IBarsResult barsResult, IReadOnlyList<TKline> bars)
     {
@@ -46,13 +50,11 @@ public sealed class BarsResult<TKline> : IBarsResult
         };
     }
 
-    #region Constructors
-
     #endregion
 
     public required TimeFrame TimeFrame { get; init; }
-    public required DateTime Start { get; init; }
-    public required DateTime EndExclusive { get; init; }
+    public required DateTimeOffset Start { get; init; }
+    public required DateTimeOffset EndExclusive { get; init; }
 
     //public required DateTime LastBarOpenTime { get; init; }
     //public required DateTime LastBarCloseTime { get; init; }
@@ -78,7 +80,7 @@ public sealed class BarsResult<TKline> : IBarsResult
 
     #region Methods
 
-    public BarsResult<TKline> Trim(DateTime start, DateTime endExclusive)
+    public BarsResult<TKline> Trim(DateTimeOffset start, DateTimeOffset endExclusive)
     {
         if (start < Start) throw new ArgumentException($"start ({start}) < Start ({Start})");
         if (TimeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
@@ -108,7 +110,7 @@ public sealed class BarsResult<TKline> : IBarsResult
 
         return CloneWithBars(this, Bars.Skip(newStartIndex).Take(newEndIndexExclusive - newStartIndex).ToList());
     }
-    IBarsResult IBarsResult.Trim(DateTime start, DateTime endExclusive) => Trim(start, endExclusive);
+    IBarsResult IBarsResult.Trim(DateTimeOffset start, DateTimeOffset endExclusive) => Trim(start, endExclusive);
 
     #endregion
 

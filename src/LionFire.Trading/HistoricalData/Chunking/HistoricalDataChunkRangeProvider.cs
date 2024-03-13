@@ -25,9 +25,9 @@ public class HistoricalDataChunkRangeProvider
         switch (timeFrame.Name)
         {
             case "m1":
-                return date < new DateTimeOffset(now.Year, now.Month, 1);
+                return date < new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
             case "h1":
-                return date < new DateTimeOffset(now.Year, 1, 1);
+                return date < new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
             default:
                 throw new NotImplementedException();
         }

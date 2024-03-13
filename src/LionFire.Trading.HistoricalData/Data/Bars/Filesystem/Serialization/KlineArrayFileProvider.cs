@@ -29,7 +29,7 @@ public class KlineArrayFileProvider
 
     #region KlineArrayFile
 
-    public KlineArrayFile GetFile(ExchangeSymbolTimeFrame reference, DateTime date, KlineArrayFileOptions? options = null)
+    public KlineArrayFile GetFile(ExchangeSymbolTimeFrame reference, DateTimeOffset date, KlineArrayFileOptions? options = null)
     {
         var ((start, endExclusive), isLong) = RangeProvider.RangeForDate(date, reference.TimeFrame);
 

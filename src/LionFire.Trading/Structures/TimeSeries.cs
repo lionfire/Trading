@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public sealed class TimeSeries : DataSeries<DateTime>, ITimeSeries
+    public sealed class TimeSeries : DataSeries<DateTimeOffset>, ITimeSeries
     {
-        public DateTime UnsetValue { get { return default(DateTime); } }
+        public DateTimeOffset UnsetValue { get { return default; } }
 
-        public int FindIndex(DateTime time)
+        public int FindIndex(DateTimeOffset time)
         {
             var result = list.FindLastIndex(d => d <= time);
             if (result == -1)

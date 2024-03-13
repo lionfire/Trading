@@ -56,14 +56,14 @@ namespace LionFire.Trading
         TimedBar Last { get; }
         
 
-        int FindIndex(DateTime time, bool loadHistoricalData = false);
+        int FindIndex(DateTimeOffset time, bool loadHistoricalData = false);
 
-        TimedBar this[DateTime time] { get; }
+        TimedBar this[DateTimeOffset time] { get; }
         TimedBar this[int index] { get; }
 
         #endregion
 
-        //IEnumerable<SymbolBar> GetBars(DateTime fromTimeExclusive, DateTime endTimeInclusive);
+        //IEnumerable<SymbolBar> GetBars(DateTimeOffset fromTimeExclusive, DateTimeOffset endTimeInclusive);
 
         event Action<TimedBar> Bar;
         //event Action<SymbolBar> SymbolBar;

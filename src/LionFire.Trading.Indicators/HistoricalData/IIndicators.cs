@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.HistoricalData.Retrieval;
+﻿#if TODO
+using LionFire.Trading.HistoricalData.Retrieval;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,10 +8,6 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.HistoricalData.Indicators;
 
-public interface IValuesResult<out T>
-{
-    IEnumerable<T> Values { get; }
-}
 
 
 public interface IIndicators
@@ -42,7 +39,7 @@ public class IndicatorsDataService : IIndicators
 
 public class IndicatorsComputationService : IIndicators
 {
-    public IndicatorsDataService(IBars bars)
+    public IndicatorsComputationService(IBars bars)
     {
 
     }
@@ -58,3 +55,5 @@ public class IndicatorsComputationService : IIndicators
     }
 
 }
+
+#endif

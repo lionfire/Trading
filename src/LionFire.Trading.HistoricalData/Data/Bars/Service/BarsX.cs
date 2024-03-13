@@ -31,7 +31,7 @@ public static class BarsX
     {
         return (await bars.ChunkedBars(barsRangeReference, options)).AggregateBars(barsRangeReference.Start, barsRangeReference.EndExclusive);
     }
-    public static IEnumerable<IKline> AggregateBars(this IEnumerable<IBarsResult> barsResults, DateTime? start = null, DateTime? endExclusive = null)
+    public static IEnumerable<IKline> AggregateBars(this IEnumerable<IBarsResult> barsResults, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
         var result = barsResults.SelectMany(r => r.Bars);
 

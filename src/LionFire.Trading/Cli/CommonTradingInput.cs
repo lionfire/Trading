@@ -15,11 +15,11 @@ public class CommonTradingInput : NetCoreInput
     public string Symbol { get; set; } = "BTCUSDT";
 
     [FlagAlias("from", 'f')]
-    public DateTime FromFlag { get => fromFlag > ToFlag ? ToFlag : fromFlag; set => fromFlag = value; }
-    private DateTime fromFlag = DateTime.UtcNow - TimeSpan.FromHours(24);
+    public DateTimeOffset FromFlag { get => fromFlag > ToFlag ? ToFlag : fromFlag; set => fromFlag = value; }
+    private DateTimeOffset fromFlag = DateTimeOffset.UtcNow - TimeSpan.FromHours(24);
 
     [FlagAlias("to", 't')]
-    public DateTime ToFlag { get; set; } = DateTime.UtcNow + TimeSpan.FromHours(25);
+    public DateTimeOffset ToFlag { get; set; } = DateTimeOffset.UtcNow + TimeSpan.FromHours(25);
 
     [FlagAlias("timeframe", 'i')]
     public string IntervalFlag { get; set; } = "h1";

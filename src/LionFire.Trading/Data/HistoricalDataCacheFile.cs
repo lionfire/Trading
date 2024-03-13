@@ -17,9 +17,9 @@ namespace LionFire.Trading.Data
 
     public class HistoricalDataCacheFileHeader
     {
-        public DateTime StartDate { get; set; }
-        public DateTime EndDate { get; set; }
-        public DateTime QueryDate { get; set; }
+        public DateTimeOffset StartDate { get; set; }
+        public DateTimeOffset EndDate { get; set; }
+        public DateTimeOffset QueryDate { get; set; }
     }
 
 
@@ -46,21 +46,21 @@ string text = new string(
         #region (Static) Utility Methods
 
 
-        public static (DateTime chunkStartDate, DateTime chunkEndDate) GetChunkRange(TimeFrame tf, DateTime date, out DateTime chunkStartDate, out DateTime chunkEndDate) // TOC#7
+        public static (DateTimeOffset chunkStartDate, DateTimeOffset chunkEndDate) GetChunkRange(TimeFrame tf, DateTimeOffset date, out DateTimeOffset chunkStartDate, out DateTimeOffset chunkEndDate) // TOC#7
         {
             switch (tf.TimeFrameUnit)
             {
                 case TimeFrameUnit.Tick:
-                    chunkStartDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, 0, 0, DateTimeKind.Utc);
-                    chunkEndDate = new DateTime(chunkStartDate.Year, chunkStartDate.Month, chunkStartDate.Day, chunkStartDate.Hour, 59, 59, 999, DateTimeKind.Utc);
+                    chunkStartDate = new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, 0, 0, TimeSpan.Zero);
+                    chunkEndDate = new DateTimeOffset(chunkStartDate.Year, chunkStartDate.Month, chunkStartDate.Day, chunkStartDate.Hour, 59, 59, 999, TimeSpan.Zero);
                     break;
                 case TimeFrameUnit.Minute:
-                    chunkStartDate = new DateTime(date.Year, date.Month, date.Day, 0, 0, 0, DateTimeKind.Utc);
-                    chunkEndDate = new DateTime(date.Year, date.Month, date.Day, 23, 59, 59, 999, DateTimeKind.Utc);
+                    chunkStartDate = new DateTimeOffset(date.Year, date.Month, date.Day, 0, 0, 0, TimeSpan.Zero);
+                    chunkEndDate = new DateTimeOffset(date.Year, date.Month, date.Day, 23, 59, 59, 999, TimeSpan.Zero);
                     break;
                 case TimeFrameUnit.Hour:
-                    chunkStartDate = new DateTime(date.Year, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                    chunkEndDate = new DateTime(date.Year, 12, 31, 23, 59, 59, 999, DateTimeKind.Utc);
+                    chunkStartDate = new DateTimeOffset(date.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+                    chunkEndDate = new DateTimeOffset(date.Year, 12, 31, 23, 59, 59, 999, TimeSpan.Zero);
                     break;
                 default:
                     throw new NotImplementedException($"TimeFrameUnit {tf.TimeFrameUnit} not supported yet");
@@ -78,7 +78,7 @@ string text = new string(
 
         #region Identity
 
-        public static string GetKey(string brokerName, string symbolCode, TimeFrame tf, DateTime date, string brokerSubType = null)
+        public static string GetKey(string brokerName, string symbolCode, TimeFrame tf, DateTimeOffset date, string brokerSubType = null)
         {
             var subType = brokerSubType == null ? "" : $" ({brokerSubType})";
 
@@ -119,28 +119,28 @@ string text = new string(
 
         #region StartDate
 
-        public DateTime StartDate
+        public DateTimeOffset StartDate
         {
             get { return startDate; }
             set { startDate = value; }
         }
-        private DateTime startDate;
+        private DateTimeOffset startDate;
 
         #endregion
 
         #region EndDate
 
-        public DateTime EndDate
+        public DateTimeOffset EndDate
         {
             get { return endDate; }
             set { endDate = value; }
         }
-        private DateTime endDate;
+        private DateTimeOffset endDate;
 
         #endregion
-        public DateTime QueryDate { get; set; }
+        public DateTimeOffset QueryDate { get; set; }
 
-        public DateTime LastDataDate
+        public DateTimeOffset LastDataDate
         {
             get
             {
@@ -152,16 +152,10 @@ string text = new string(
                 {
                     return Ticks[Ticks.Count - 1].Time;
                 }
-                return default(DateTime);
+                return default;
             }
         }
-        public string Key
-        {
-            get
-            {
-                return GetKey(Feed?.Template?.Exchange, SymbolCode, TimeFrame, StartDate, BrokerSubType);
-            }
-        }
+        public string Key => GetKey(Feed?.Template?.Exchange, SymbolCode, TimeFrame, StartDate, BrokerSubType);
 
         #endregion
 
@@ -185,7 +179,7 @@ string text = new string(
 
         #region Construction
 
-        public HistoricalDataCacheFile(MarketSeriesBase series, DateTime chunkDate)
+        public HistoricalDataCacheFile(MarketSeriesBase series, DateTimeOffset chunkDate)
         {
             this.MarketSeriesBase = series;
             this.Feed = series.Feed;
@@ -216,7 +210,7 @@ string text = new string(
             return path;
         }
 
-        public HistoricalDataCacheFile(MarketSeriesBase series, DateTime start, DateTime end, DateTime queryDate)
+        public HistoricalDataCacheFile(MarketSeriesBase series, DateTimeOffset start, DateTimeOffset end, DateTimeOffset queryDate)
         {
             this.MarketSeriesBase = series;
             this.Feed = series.Feed;
@@ -228,7 +222,7 @@ string text = new string(
 
 
 
-        public static async Task<HistoricalDataCacheFile> GetCacheFile(MarketSeriesBase marketSeries, DateTime chunkDate)
+        public static async Task<HistoricalDataCacheFile> GetCacheFile(MarketSeriesBase marketSeries, DateTimeOffset chunkDate)
         {
             HistoricalDataCacheFile cacheFile = cache.GetOrAdd(
                 GetKey(marketSeries.Feed.Template.Exchange, marketSeries.SymbolCode, marketSeries.TimeFrame, chunkDate),
@@ -330,7 +324,7 @@ string text = new string(
             get
             {
                 if (!IsPartial) return TimeSpan.MinValue;
-                return DateTime.UtcNow - new DateTime(Math.Max(LastDataDate.Ticks, QueryDate.Ticks));
+                return DateTimeOffset.UtcNow - new DateTimeOffset(Math.Max(LastDataDate.Ticks, QueryDate.Ticks), TimeSpan.Zero);
             }
         }
 
@@ -425,9 +419,9 @@ string text = new string(
                     //var json = JsonConvert.SerializeObject(Header);
                     //sw.Write(json);
                     sw.Write(versionNumber);
-                    sw.Write(Header.StartDate.ToBinary());
-                    sw.Write(Header.EndDate.ToBinary());
-                    sw.Write(Header.QueryDate.ToBinary());
+                    sw.Write(Header.StartDate.ToBinaryWithoutOffset());
+                    sw.Write(Header.EndDate.ToBinaryWithoutOffset());
+                    sw.Write(Header.QueryDate.ToBinaryWithoutOffset());
 
                     if (TimeFrame == TimeFrame.t1)
                     {
@@ -435,7 +429,7 @@ string text = new string(
                         {
                             foreach (var tick in Ticks)
                             {
-                                sw.Write(tick.Time.ToBinary());
+                                sw.Write(tick.Time.ToBinaryWithoutOffset()); // Assume +0000 timezone
                                 sw.Write(tick.Bid);
                                 sw.Write(tick.Ask);
                             }
@@ -449,7 +443,7 @@ string text = new string(
                             {
                                 var tick = series[i];
                                 if (tick.Time < StartDate || tick.Time > EndDate) continue;
-                                sw.Write(tick.Time.ToBinary());
+                                sw.Write(tick.Time.DateTime.ToBinary()); // Assume +0000 timezone
                                 sw.Write(tick.Bid);
                                 sw.Write(tick.Ask);
                             }
@@ -461,7 +455,7 @@ string text = new string(
                         {
                             foreach (var bar in Bars)
                             {
-                                sw.Write(bar.OpenTime.ToBinary());
+                                sw.Write(bar.OpenTime.DateTime.ToBinary());
                                 sw.Write(bar.Open);
                                 sw.Write(bar.High);
                                 sw.Write(bar.Low);
@@ -478,7 +472,7 @@ string text = new string(
                             {
                                 var bar = series[i];
                                 if (bar.OpenTime < StartDate || bar.OpenTime > EndDate) continue;
-                                sw.Write(bar.OpenTime.ToBinary());
+                                sw.Write(bar.OpenTime.DateTime.ToBinary());
                                 sw.Write(bar.Open);
                                 sw.Write(bar.High);
                                 sw.Write(bar.Low);
@@ -538,7 +532,7 @@ string text = new string(
             string path = null;
             try
             {
-                again:
+            again:
                 if (File.Exists(FilePath))
                 {
                     if (EnforceFileMinimumSizes && new FileInfo(FilePath).Length < MinFileSize) { File.Delete(FilePath); goto again; }
@@ -614,9 +608,10 @@ string text = new string(
                                 throw new InvalidDataException("Cache file data versions supported: 1");
                             }
 
-                            this.StartDate = DateTime.FromBinary(br.ReadInt64());
-                            this.EndDate = DateTime.FromBinary(br.ReadInt64());
-                            this.QueryDate = DateTime.FromBinary(br.ReadInt64());
+
+                            this.StartDate = br.ReadInt64().ToDateTimeOffset();
+                            this.EndDate = br.ReadInt64().ToDateTimeOffset();
+                            this.QueryDate = br.ReadInt64().ToDateTimeOffset();
 
                             if (!loadOnlyHeader)
                             {
@@ -626,7 +621,7 @@ string text = new string(
                                     while (br.BaseStream.Position < br.BaseStream.Length)
                                     {
                                         ticks.Add(new Tick(
-                                        DateTime.FromBinary(br.ReadInt64())
+                                        br.ReadInt64().ToDateTimeOffset()
                                         , br.ReadDouble()
                                         , br.ReadDouble()
                                         ));
@@ -639,7 +634,7 @@ string text = new string(
                                     while (br.BaseStream.Position < br.BaseStream.Length)
                                     {
                                         bars.Add(new TimedBar(
-                                        DateTime.FromBinary(br.ReadInt64())
+                                        br.ReadInt64().ToDateTimeOffset()
                                         , br.ReadDouble()
                                         , br.ReadDouble()
                                         , br.ReadDouble()

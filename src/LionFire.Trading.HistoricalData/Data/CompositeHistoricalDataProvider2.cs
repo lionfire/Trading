@@ -21,12 +21,12 @@ public abstract class HistoricalDataNetworkSource : HistoricalDataProvider2Base,
 
 public class BinanceSpotHistoricalDataSource : HistoricalDataNetworkSource
 {
-    protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTime Start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
+    protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset Start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveOptions)
     {
         throw new NotImplementedException();
     }
 
-    protected override Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
+    protected override Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveOptions)
     {
         throw new NotImplementedException();
     }
@@ -34,12 +34,12 @@ public class BinanceSpotHistoricalDataSource : HistoricalDataNetworkSource
 
 public class BinanceFuturesHistoricalDataSource : HistoricalDataNetworkSource
 {
-    protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTime Start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
+    protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset Start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveOptions)
     {
         throw new NotImplementedException();
     }
 
-    protected override Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
+    protected override Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveOptions)
     {
         throw new NotImplementedException();
     }
@@ -93,7 +93,7 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
         //LocalNetwork = serviceProvider.GetService<IEnumerable<ILocalNetworkHistoricalDataSource2>>(); // TODO
     }
 
-    protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
+    protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveOptions)
     {
         var chunks = HistoricalDataChunkRangeProvider.GetBarChunks(start, endExclusive, timeFrame);
 
@@ -106,7 +106,7 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
         return Task.FromResult(true);
     }
 
-    protected override async Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveParameters)
+    protected override async Task<T[]?> GetImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveParameters)
     {
         HistoricalDataMemoryCacheKey? memoryCacheKey;
         if (Options.UseMemoryCache)
@@ -176,7 +176,7 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
         //}
     }
 
-    protected async Task<T[]?> GetChunkImpl<T>(TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveParameters)
+    protected async Task<T[]?> GetChunkImpl<T>(TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveParameters)
     {
         //HistoricalDataChunkRangeProvider.ValidateIsChunkBoundary(start, endExclusive, timeFrame);
         // TODO:
@@ -235,11 +235,11 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
         return null;
     }
 
-    private Task OnRetrievedFromInternet<T>(string sourceId, T[] data, TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveParameters) 
+    private Task OnRetrievedFromInternet<T>(string sourceId, T[] data, TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveParameters) 
         => LocalDiskWriter == null ? Task.CompletedTask
             : LocalDiskWriter.Save(sourceId, data, timeFrame, symbol, start, endExclusive, retrieveParameters);
 
-    //public virtual Span<OhlcDecimalItem> GetOhlcDecimal(DateTime start, DateTime endExclusive, TimeFrame timeFrame, HistoricalDataQueryOptions? retrieveParameters = null)
+    //public virtual Span<OhlcDecimalItem> GetOhlcDecimal(DateTimeOffset start, DateTimeOffset endExclusive, TimeFrame timeFrame, HistoricalDataQueryOptions? retrieveParameters = null)
     //{
     //    retrieveParameters ??= HistoricalDataQueryOptions.Default;
 
@@ -255,7 +255,7 @@ public class CompositeHistoricalDataProvider2 : HistoricalDataProvider2Base
 
 public class BarArrayFileWriter : ILocalDiskHistoricalDataWriter
 {
-    public Task Save<T>(string sourceId, T[] data, TimeFrame timeFrame, string symbol, DateTime start, DateTime endExclusive, HistoricalDataQueryParameters retrieveParameters)
+    public Task Save<T>(string sourceId, T[] data, TimeFrame timeFrame, string symbol, DateTimeOffset start, DateTimeOffset endExclusive, HistoricalDataQueryParameters retrieveParameters)
     {
         throw new NotImplementedException();
     }

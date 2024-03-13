@@ -36,7 +36,7 @@ namespace LionFire.Trading
 
         public string Code { get; set; }
         public Bar Bar { get; set; }
-        public DateTime Time { get; set; }
+        public DateTimeOffset Time { get; set; }
 
         #endregion
 

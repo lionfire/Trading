@@ -9,13 +9,13 @@ namespace LionFire.Trading
     {
         public bool IsValid { get { return Time != default(DateTime); } }
         
-        public Tick(DateTime time, double bid = double.NaN, double ask = double.NaN) {
+        public Tick(DateTimeOffset time, double bid = double.NaN, double ask = double.NaN) {
             this.Time = time;
             Bid = bid;
             Ask = ask;
         }
 
-        public DateTime Time { get; set; }
+        public DateTimeOffset Time { get; set; }
         public double Bid;
         public double Ask;
 
@@ -23,7 +23,7 @@ namespace LionFire.Trading
         public bool HasAsk { get { return !double.IsNaN(Ask); } }
 
         //public static Tick Invalid { get; set; }
-        public static readonly Tick Invalid = new Tick { Time = default(DateTime), Bid=double.NaN, Ask = double.NaN  };
+        public static readonly Tick Invalid = new Tick { Time = default, Bid=double.NaN, Ask = double.NaN  };
 
         public override string ToString()
         {

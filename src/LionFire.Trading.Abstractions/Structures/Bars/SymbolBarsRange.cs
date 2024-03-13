@@ -85,7 +85,7 @@ public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbo
 
     #endregion
 
-    public static SymbolBarsRange FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame es, DateTime start, DateTime endExclusive)
+    public static SymbolBarsRange FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame es, DateTimeOffset start, DateTimeOffset endExclusive)
     {
         return new SymbolBarsRange(es.Exchange, es.ExchangeArea, es.Symbol, es.TimeFrame, start, endExclusive);
     }

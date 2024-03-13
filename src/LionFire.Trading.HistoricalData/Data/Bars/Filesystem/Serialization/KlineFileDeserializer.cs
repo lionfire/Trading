@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using ZeroFormatter;
 
@@ -51,7 +52,7 @@ public class KlineFileDeserializer
                     //list = ZeroFormatterSerializer.Deserialize<List<BinanceFuturesKlineItem>>(stream);
 
 
-                    DateTime openTime = info.Start;
+                    DateTimeOffset openTime = info.Start;
                     TimeFrame timeFrame = TimeFrame.Parse(info.TimeFrame);
                     TimeSpan timeSpan = timeFrame.TimeSpan;
                     if (timeSpan < TimeSpan.Zero) throw new NotImplementedException();
