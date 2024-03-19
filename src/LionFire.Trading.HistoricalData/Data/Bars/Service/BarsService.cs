@@ -6,24 +6,6 @@ using LionFire.Trading.Data;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-public interface IBars : ITradingDataSource
-
-{
-    HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
-    //Task<IEnumerable<IBarsResult>> ChunkedBars(SymbolBarsRange barsRangeReference, QueryOptions? options = null);
-    //    //Task<IEnumerable<BarsChunkInfo>> LocalBarsAvailable(SymbolReference symbolReference); // TODO?
-    Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null);
-
-    Task<IBarsResult?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null);
-
-    // REVIEW - make IBars more generic? Add more features to IHistoricalTimeSeries<T>?
-
-    IHistoricalTimeSeries<IKline> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame);
-    IHistoricalTimeSeries<decimal> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, DataPointAspect aspect);
-
-
-}
-
 // TODO: Bring in ideas from CompositeHistoricalDataProvider2 if it's really helpful
 public class BarsService : IBars, IListableBarsSource
 {
@@ -98,82 +80,5 @@ public class BarsService : IBars, IListableBarsSource
     // OPTIMIZE: Cache rather than recreate
     public IHistoricalTimeSeries<decimal> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, DataPointAspect aspect) => new BarsServiceAspectSeries<decimal>(exchangeSymbolTimeFrame, this, aspect);
 
-}
-
-public class BarsServiceBarSeries : IHistoricalTimeSeries<IKline>
-{
-
-    #region Identity
-
-    public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
-
-    #endregion
-
-    #region Dependencies
-
-    public BarsService BarsService { get; }
-
-    #endregion
-
-    #region Lifecycle
-
-    public BarsServiceBarSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, BarsService barsService)
-    {
-        ExchangeSymbolTimeFrame = exchangeSymbolTimeFrame;
-        BarsService = barsService;
-    }
-
-    #endregion
-
-    #region Methods
-
-    public async ValueTask<HistoricalDataResult<IKline>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive)
-    {
-        var bars = await BarsService.Bars(SymbolBarsRange.FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame, start, endExclusive));
-
-        return bars.Any() ? (HistoricalDataResult<IKline>)new(bars) : HistoricalDataResult<IKline>.NoData;
-    }
-
-    #endregion
-
-}
-
-public class BarsServiceAspectSeries<T> : IHistoricalTimeSeries<T>
-{
-    #region Identity
-
-    public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
-    public DataPointAspect Aspect { get; }
-
-    #endregion
-
-    #region Dependencies
-
-    public BarsService BarsService { get; }
-
-    #endregion
-
-    #region Lifecycle
-
-    public BarsServiceAspectSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, BarsService barsService, DataPointAspect aspect)
-    {
-        ExchangeSymbolTimeFrame = exchangeSymbolTimeFrame;
-        BarsService = barsService;
-        Aspect = aspect;
-    }
-
-
-    #endregion
-
-    #region Methods
-
-    public async ValueTask<HistoricalDataResult<T>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive)
-    {
-        var bars = await BarsService.Bars(SymbolBarsRange.FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame, start, endExclusive));
-
-        return bars.Any() ? (HistoricalDataResult<T>)new(bars.Cast<T>()) : HistoricalDataResult<T>.NoData;
-    }
-    
-    #endregion
 }
 

@@ -36,7 +36,20 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
     #endregion
 
     public uint Options { get; init; }
+
+    #region Parameters
+
+    #region Derived
+
     public uint Period => Options;
+    public override uint Lookback => Options;
+
+    #endregion
+
+    #endregion
+
+
+    #region Lifecycle
 
     public SimpleMovingAverage(uint period)
     {
@@ -45,6 +58,8 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
     }
     public static IIndicator<uint, double, double> Create(uint p) => new SimpleMovingAverage(p);
 
+    #endregion
+
     #region State
 
     CircularBuffer<double> buffer;
@@ -52,19 +67,19 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
 
     #endregion
 
-    public override void OnNext(IEnumerable<double> inputs)
+    public override void OnNext(IReadOnlyList<double> inputs)
     {
         var s = subject;
-        List<double>? result;
+        List<double>? output;
         if (s != null && !s.HasObservers)
         {
             subject = null;
             s = null;
-            result = null;
+            output = null;
         }
         else
         {
-            result = new List<double>(inputs.Count());
+            output = new List<double>(inputs.Count);
         }
 
         foreach (var input in inputs)
@@ -74,24 +89,34 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
             sum += input;
             buffer.PushFront(input);
 
-            if (result != null)
+            if (output != null)
             {
                 if (buffer.IsFull)
                 {
-                    result.Add(sum / Period);
+                    output.Add(sum / Period);
             }
                 else
                 {
-                    result.Add(double.NaN);
+                    output.Add(double.NaN);
                 }
             }
         }
-        if (result != null)
+        if (output != null)
         {
-            s!.OnNext(result);
+            s!.OnNext(output);
         }
     }
 
+    #region Methods
+
+    public override void Clear()
+    {
+        base.Clear();
+        buffer.Clear();
+        sum = 0.0;
+    }
+
+    #endregion
     #region OLD
     // REFACTOR - genericize?
     //public static IEnumerable<double> Compute(uint period, IEnumerable<double> inputs)

@@ -15,6 +15,10 @@ public record IndicatorHarnessOptions<TParameters>
     #endregion
 
     public required TParameters Parameters { get; init; }
+
+    /// <summary>
+    /// Allow/prefer forgetting values older than this many bars.
+    /// </summary>
     public int Memory { get; init; } = 1;
 
     public required TimeFrame TimeFrame { get; init; }

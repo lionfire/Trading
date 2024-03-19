@@ -5,8 +5,8 @@ using System.Reactive.Subjects;
 namespace LionFire.Trading.Indicators;
 
 public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
-    : IObservable<IEnumerable<TOutput>>
-    , IObserver<IEnumerable<TInput>>
+    : IObservable<IReadOnlyList<TOutput>>
+    , IObserver<IReadOnlyList<TInput>>
     , IObserver<TInput>
 
     where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator<TParameters, TInput, TOutput>
@@ -32,21 +32,31 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #endregion
 
+    #region Parameters
+
+    #region Derived
+
+    public abstract uint Lookback { get; }
+    
+    #endregion
+
+    #endregion
+
     #region State
 
-    protected Subject<IEnumerable<TOutput>>? subject;
+    protected Subject<IReadOnlyList<TOutput>>? subject;
 
     #endregion
 
     #region IObservable
 
-    public IDisposable Subscribe(IObserver<IEnumerable<TOutput>> observer)
+    public IDisposable Subscribe(IObserver<IReadOnlyList<TOutput>> observer)
     {
         subject ??= new();
         return subject.Subscribe(observer);
     }
 
-    public abstract void OnNext(IEnumerable<TInput> value);
+    public abstract void OnNext(IReadOnlyList<TInput> value);
     public virtual void OnNext(TInput value) => OnNext([value]);
 
     public virtual void OnCompleted() { }
@@ -58,5 +68,13 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #endregion
 
+    #region Methods
+
+    public virtual void Clear()
+    {
+        subject?.OnCompleted();
+    }
+
+    #endregion
 }
 

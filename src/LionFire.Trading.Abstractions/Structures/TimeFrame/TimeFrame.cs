@@ -238,14 +238,14 @@ public class TimeFrame
                 }
             case TimeFrameUnit.Minute:
                 if (60 % TimeFrameValue != 0) { throw new NotImplementedException(); }
-                if (date.Second != 0 || date.Millisecond != 0) { return new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, date.Minute, 0,TS.Zero); }
+                if (date.Second != 0 || date.Millisecond != 0) { return new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, date.Minute, 0, TS.Zero); }
                 else
                 {
                     return date - System.TimeSpan.FromMinutes(1);
                 }
             case TimeFrameUnit.Hour:
                 if (24 % TimeFrameValue != 0) { throw new NotImplementedException(); }
-                if (date.Minute != 0 || date.Second != 0 || date.Millisecond != 0) { return new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, 0, 0,TS.Zero); }
+                if (date.Minute != 0 || date.Second != 0 || date.Millisecond != 0) { return new DateTimeOffset(date.Year, date.Month, date.Day, date.Hour, 0, 0, TS.Zero); }
                 else
                 {
                     return date - System.TimeSpan.FromHours(1);
@@ -466,10 +466,7 @@ public class TimeFrame
 
     #region Misc
 
-    public override string ToString()
-    {
-        return Name;
-    }
+    public override string ToString() => Name;
 
 
     public DateTime Round(DateTime value)
@@ -527,18 +524,18 @@ public class TimeFrame
         return null;
     }
 
-    public DateTime GetCloseTimeForOpen(DateTime openTime, TimeSpan? epsilon = null)
+    public DateTime GetInclusiveCloseTimeForOpen(DateTime openTime, TimeSpan? epsilon = null)
     {
-        epsilon ??= System.TimeSpan.FromMilliseconds(1);
+        epsilon ??= System.TimeSpan.FromMilliseconds(1); // REVIEW: should this be 0, and exclusive?
         return GetNextOpenTimeForOpen(openTime) - epsilon.Value;
     }
 
     public DateTime GetNextOpenTimeForOpen(DateTime openTime)
     {
-        if (TimeFrameUnit == TimeFrameUnit.Month)
-        {
-            throw new NotImplementedException("month");
-        }
+        //if (TimeFrameUnit == TimeFrameUnit.Month)
+        //{
+        //    throw new NotImplementedException("month");
+        //}
         if (TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
         return openTime + TimeSpan;
     }
@@ -573,8 +570,54 @@ public class TimeFrame
         throw new NotImplementedException();
     }
 
+    public long ToExactBarCount(TS timeSpan)
+    {
+        throw new NotImplementedException();
+    }
+
+    public DateTimeOffset AddBar(DateTimeOffset barTime)
+    {
+        if (TimeSpan < TimeSpan.Zero) throw new NotImplementedException("Irregular TimeFrames");
+        return barTime + TimeSpan;
+    }
+    public DateTimeOffset AddBars(DateTimeOffset barTime, long count)
+    {
+        if (TimeSpan < TimeSpan.Zero) throw new NotImplementedException("Irregular TimeFrames");
+        return barTime + (TimeSpan * count);
+    }
+
+    ///// <summary>
+    ///// </summary>
+    ///// <param name="openTime">Assumed to be a valid Open Time for this TimeFrame (otherwise bevahior is undefined)</param>
+    ///// <returns></returns>
+    ///// <exception cref="NotImplementedException"></exception>
+    //public DateTimeOffset GetNextOpenTime(DateTimeOffset openTime)
+    //{
+    //    if (TimeSpan < TimeSpan.Zero) throw new NotImplementedException("Irregular TimeFrames");
+    //    return openTime + TimeSpan;
+    //}
+
     #endregion
 }
+#endif
+
+#if FUTURE?
+//public static class TimeFrameBarX
+//{
+//// Add/subtract
+//}
+
+//public readonly struct TimeFrameBar
+//{
+//    public TimeFrameBar(TimeFrame timeFrame, DateTimeOffset openTime)
+//    {
+//        TimeFrame = timeFrame;
+//        OpenTime = openTime;
+//    }
+
+//    public TimeFrame TimeFrame { get; }
+//    public DateTimeOffset OpenTime { get; }
+//}
 #endif
 
 public static class TimeFrameExtensions

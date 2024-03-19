@@ -8,14 +8,10 @@ namespace LionFire.Trading;
 
 public interface IValuesResult<out T>
 {
-    IReadOnlyList<T> Values { get; }
+    IEnumerable<T>? Values { get; }
+
+    bool IsSuccess { get { return Values != null; } }
+
+    string? FailReason => null;
 }
 
-public interface ITimeSeriesResult<out T> : IValuesResult<T>
-{
-    DateTimeOffset EndExclusive { get; init; }
-    DateTimeOffset Start { get; init; }
-    TimeFrame TimeFrame { get; init; }
-
-    // ENH: IEnumerable<(DateTimeOffset, T)> ValuesWithTimestamps { get; }
-}

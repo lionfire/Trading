@@ -1,0 +1,75 @@
+﻿using CircularBuffer;
+
+namespace LionFire.Trading.ValueWindows;
+
+public abstract class ValuesWindowBase<T>
+{
+    #region Parameters
+
+    #region Derived
+
+    public uint Size => (uint)values.Capacity;
+
+    #endregion
+
+    #endregion
+
+
+    #region Lifecycle
+
+    public ValuesWindowBase(uint period)
+    {
+        values = new CircularBuffer<T>((int)period);
+    }
+
+    #endregion
+
+    #region State
+
+    protected CircularBuffer<T> values;
+
+    public uint ValueCount { get; protected set; }
+
+    #region Derived
+
+    public uint Capacity => (uint)values.Capacity;
+    public bool IsFull => ValueCount >= values.Capacity;
+
+    #endregion
+
+    #endregion
+
+    #region Accessors
+
+    /// <summary>
+    /// Values in reverse chronological order, with raw access to the buffer
+    /// </summary>
+    public IList<ArraySegment<T>> ReversedValuesBuffer => values.ToArraySegments();
+
+    public T[] ToReverseArray(uint length)
+    {
+        var array = new T[length];
+        var segments = values.ToArraySegments();
+
+        var count1 = Math.Min(length, segments[0].Count);
+        var count2 = Math.Min(length - count1, segments[1].Count);
+
+        Array.Copy(segments[0].Array!, segments[0].Offset, array, 0, count1);
+        Array.Copy(segments[1].Array!, segments[1].Offset, array, count1, count2);
+
+        return array;
+    }
+
+    #endregion
+
+    #region Methods
+
+    public void Clear()
+    {
+        values.Clear();
+        ValueCount = 0;
+    }
+
+    #endregion
+
+}

@@ -1,47 +1,9 @@
-﻿using CircularBuffer;
-using Oakton.Descriptions;
+﻿using Oakton.Descriptions;
 using System.Diagnostics;
 
 namespace LionFire.Trading.ValueWindows;
 
-public class ValuesWindow<T>
-{
-    #region Parameters
-
-    #region Derived
-
-    public int Size => values.Capacity;
-
-    #endregion
-
-    #endregion
-
-
-    #region Lifecycle
-
-    public ValuesWindow(int period)
-    {
-        values = new CircularBuffer<T>(period);
-    }
-
-    #endregion
-
-    #region State
-
-    protected CircularBuffer<T> values;
-
-    public uint ValueCount { get; protected set; }
-
-    #region Derived
-
-    public bool IsFull => ValueCount >= values.Capacity;
-
-    #endregion
-
-    #endregion
-}
-
-public class TimeFrameValuesWindow<T> : ValuesWindow<T>
+public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
 {
 
     #region Parameters
@@ -52,7 +14,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindow<T>
 
     #region Lifecycle
 
-    public TimeFrameValuesWindow(int period, TimeFrame timeFrame):base(period)
+    public TimeFrameValuesWindow(int period, TimeFrame timeFrame) : base(period)
     {
         if (timeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException();
         TimeSpan = timeFrame.TimeSpan;
@@ -86,11 +48,6 @@ public class TimeFrameValuesWindow<T> : ValuesWindow<T>
     /// Values in reverse chronological order, with raw access to the buffer
     /// </summary>
     public (DateTimeOffset lastOpenTime, IList<ArraySegment<T>> arraySegments) ReversedValuesBufferWithTime => (LastOpenTime, values.ToArraySegments());
-    
-    /// <summary>
-    /// Values in reverse chronological order, with raw access to the buffer
-    /// </summary>
-    public IList<ArraySegment<T>> ReversedValuesBuffer => values.ToArraySegments();
 
     /// <summary>
     /// Values in chronological order
@@ -101,7 +58,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindow<T>
     {
         return TryGetReverseValues(firstOpenTime, lastOpenTime)?.Reverse();
     }
-    
+
     // OPTIMIZE: direct buffer access
     public IEnumerable<T>? TryGetReverseValues(DateTimeOffset firstOpenTime, DateTimeOffset lastOpenTime)
     {
@@ -111,7 +68,8 @@ public class TimeFrameValuesWindow<T> : ValuesWindow<T>
         var endDiff = LastOpenTime - lastOpenTime;
 
         var modulus = endDiff.Ticks % TimeSpan.Ticks;
-        if(modulus != 0) { 
+        if (modulus != 0)
+        {
             throw new ArgumentException($"{nameof(lastOpenTime)} must fall exactly on a TimeFrame.TimeSpan.  lastOpenTime: {lastOpenTime}, TimeSpan: {TimeSpan}, modulus: {modulus}");
             // Alternate idea: allow time values off step with TimeSpan and
             //  - use Math.Floor() to get skipEndBars.
@@ -128,7 +86,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindow<T>
     #endregion
 
     #region Methods
-
+    
     /// <summary>
     /// If overriding this, either add a bar or throw a different exception.
     /// </summary>
@@ -138,6 +96,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindow<T>
     {
         throw new Exception($"Expected {NextExpectedOpenTime} but got {openTime}");
     }
+
     public uint PushFront(T value, DateTimeOffset openTime)
     {
         uint newBars = 0;

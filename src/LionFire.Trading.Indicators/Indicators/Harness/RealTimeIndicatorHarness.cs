@@ -1,9 +1,9 @@
-﻿#if FUTURE
-using LionFire.Trading.HistoricalData.Retrieval;
+﻿using LionFire.Trading.HistoricalData.Retrieval;
 using System.Threading.Channels;
 
 namespace LionFire.Trading.Indicators.Harness;
 
+#if FUTURE
 public static class Examples
 {
     public static void Example()
@@ -20,6 +20,9 @@ public static class Examples
         });
     }
 }
+
+// TODO: Subscribable
+// TODO: MaxMemory: allow 
 
 public class RealTimeIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator<TParameters, TInput, TOutput>
@@ -40,5 +43,4 @@ public class RealTimeIndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
     #endregion
 
 }
-
 #endif

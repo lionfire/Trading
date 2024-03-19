@@ -1,8 +1,19 @@
 ﻿namespace LionFire.Trading.Data;
 
-public readonly record struct HistoricalDataResult<TValue>
+public interface IHistoricalDataResult
 {
-    public HistoricalDataResult(IEnumerable<TValue> items) : this()
+    Type Type { get; }
+}
+public interface IHistoricalDataResult<out TValue> : IHistoricalDataResult
+{
+    IReadOnlyList<TValue>? Items { get; }
+}
+
+public readonly record struct HistoricalDataResult<TValue> : IHistoricalDataResult<TValue>
+{
+    public Type Type => typeof(TValue);
+
+    public HistoricalDataResult(IReadOnlyList<TValue> items) : this()
     {
         Items = items;
         IsSuccess = items != null;
@@ -19,6 +30,6 @@ public readonly record struct HistoricalDataResult<TValue>
 
     public bool IsSuccess { get; init; }
     public string? FailReason { get; init; }
-    public IEnumerable<TValue>? Items { get; init; }
+    public IReadOnlyList<TValue>? Items { get; init; }
 }
 

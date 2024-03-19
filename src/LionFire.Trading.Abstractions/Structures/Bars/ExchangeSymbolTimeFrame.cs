@@ -26,6 +26,8 @@ public record ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, stri
 
         return new ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame.Parse(s[1]));
     }
+
+    public SymbolBarsRange ToRange(DateTimeOffset start, DateTimeOffset endExclusive) => SymbolBarsRange.FromExchangeSymbolTimeFrame(this, start, endExclusive);
 }
 
 public static class ExchangeSymbolTimeFrameX

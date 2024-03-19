@@ -1,4 +1,5 @@
 ﻿using LionFire.Orleans_.ObserverGrains;
+using LionFire.Trading.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LionFire.Trading.Indicators.Inputs;
@@ -6,7 +7,13 @@ namespace LionFire.Trading.Indicators.Inputs;
 
 public interface IMarketDataResolver
 {
-    ITimeSeriesSource? TryResolve(object reference);
+    IHistoricalTimeSeries Resolve(object reference)
+    {
+        var result = TryResolve(reference);
+        if (result == null) throw new ArgumentException("Failed to resolve: " + reference);
+        return result;
+    }
+    IHistoricalTimeSeries? TryResolve(object reference);
 }
 
 public class MarketDataResolver : IMarketDataResolver
@@ -18,13 +25,13 @@ public class MarketDataResolver : IMarketDataResolver
         ServiceProvider = serviceProvider;
     }
 
-    public ITimeSeriesSource? TryResolve(object reference)
+    public IHistoricalTimeSeries? TryResolve(object reference)
     {
         // FUTURE ENH: IInputResolver<T> where T is SymbolValueAspect, etc.
 
         if (reference is SymbolValueAspect sva)
         {
-            return ActivatorUtilities.CreateInstance<SymbolValueAspectInput<decimal>>(ServiceProvider, sva);
+            return ActivatorUtilities.CreateInstance<BarsServiceAspectSeries<decimal>>(ServiceProvider, sva);
         }
 
         return null;
