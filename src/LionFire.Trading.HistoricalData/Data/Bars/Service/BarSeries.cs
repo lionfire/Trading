@@ -2,27 +2,28 @@
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-public class BarsServiceBarSeries : IHistoricalTimeSeries<IKline>
+public class BarSeries : IHistoricalTimeSeries<IKline>
 {
 
     #region Identity
 
     public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
+    public Type ValueType => typeof(IKline);
 
     #endregion
 
     #region Dependencies
 
-    public BarsService BarsService { get; }
+    public IBars Bars { get; }
 
     #endregion
 
     #region Lifecycle
 
-    public BarsServiceBarSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, BarsService barsService)
+    public BarSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, IBars barsService)
     {
         ExchangeSymbolTimeFrame = exchangeSymbolTimeFrame;
-        BarsService = barsService;
+        Bars = barsService;
     }
 
     #endregion
@@ -31,9 +32,9 @@ public class BarsServiceBarSeries : IHistoricalTimeSeries<IKline>
 
     public async ValueTask<HistoricalDataResult<IKline>> Get(DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        var bars = await BarsService.Bars(SymbolBarsRange.FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame, start, endExclusive));
+        var bars = await Bars.Get(SymbolBarsRange.FromExchangeSymbolTimeFrame(ExchangeSymbolTimeFrame, start, endExclusive));
 
-        return bars.Any() ? (HistoricalDataResult<IKline>)new(bars) : HistoricalDataResult<IKline>.NoData;
+        return bars?.Values?.Any() == true ? new(bars.Values) : HistoricalDataResult<IKline>.NoData;
     }
 
     #endregion

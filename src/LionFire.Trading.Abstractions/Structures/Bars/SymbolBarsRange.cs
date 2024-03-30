@@ -9,9 +9,11 @@ namespace LionFire.Trading;
 
 //public record IndicatorDataRange(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DateTime Start, DateTime EndExclusive, string IndicatorKey, int Version, string[] ) : SymbolBarsRange(Exchange, ExchangeArea, Symbol, TimeFrame,Start,EndExclusive)
 //{
-
 //}
 
+public record TimeFrameRange(TimeFrame TimeFrame, DateTimeOffset Start, DateTimeOffset EndExclusive) :  IRangeWithTimeFrame
+{
+}
 
 public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DateTimeOffset Start, DateTimeOffset EndExclusive) : ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame), IRangeWithTimeFrame
 {
@@ -74,7 +76,7 @@ public record SymbolBarsRange(string Exchange, string ExchangeArea, string Symbo
 
         #endregion
 
-        return new SymbolBarsRange(exchange, ExchangeArea, symbol, timeFrame, from.ToDateTime(), to.ToDateTime());
+        return new SymbolBarsRange(exchange, ExchangeArea, symbol, timeFrame, from.ToDateTime(default, DateTimeKind.Utc), to.ToDateTime(default, DateTimeKind.Utc));
     }
 
     public void ThrowIfInvalid()

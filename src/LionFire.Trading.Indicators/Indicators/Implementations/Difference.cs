@@ -1,4 +1,5 @@
-﻿using System.Reactive;
+﻿#if FUTURE
+using System.Reactive;
 
 namespace LionFire.Trading.Indicators;
 
@@ -43,3 +44,5 @@ public class Difference<T> : IndicatorBase<Difference<T>, Unit, (T, T), T>, IInd
     }
 }
 
+
+#endif

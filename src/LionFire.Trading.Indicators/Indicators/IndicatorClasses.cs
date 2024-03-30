@@ -41,7 +41,7 @@ public abstract class IndicatorTimeSeriesComponent<T> : IIndicatorTimeSeriesComp
 {
     TimeFrameValuesWindowWithGaps<T> window;
 
-    public IndicatorTimeSeriesComponent(int capacity, TimeFrame timeFrame)
+    public IndicatorTimeSeriesComponent(uint capacity, TimeFrame timeFrame)
     {
         window = new(capacity, timeFrame);
     }
@@ -52,14 +52,14 @@ public abstract class IndicatorTimeSeriesComponent<T> : IIndicatorTimeSeriesComp
 
 public class IndicatorInput<T> : IndicatorTimeSeriesComponent<T>
 {
-    public IndicatorInput(int lookbackPeriod, TimeFrame timeFrame) : base(lookbackPeriod, timeFrame)
+    public IndicatorInput(uint lookbackPeriod, TimeFrame timeFrame) : base(lookbackPeriod, timeFrame)
     {
     }
 }
 
 public class IndicatorOutput<T> : IndicatorTimeSeriesComponent<T>
 {
-    public IndicatorOutput(int memory, TimeFrame timeFrame) : base(memory, timeFrame)
+    public IndicatorOutput(uint memory, TimeFrame timeFrame) : base(memory, timeFrame)
     {
     }
 }

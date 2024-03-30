@@ -3,29 +3,73 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LionFire.Trading.HistoricalData.Sources;
 using LionFire.Trading.Data;
+using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
 // TODO: Bring in ideas from CompositeHistoricalDataProvider2 if it's really helpful
-public class BarsService : IBars, IListableBarsSource
+
+/// <summary>
+/// A multi-source service for retrieving historical data.
+/// 
+/// Sources:
+/// - BarsFileSource (local disk cache)
+/// - RetrieveHistoricalDataJob (retrieve from exchange over Internet)
+/// </summary>
+public class BarsService : IBars, IListableBarsSource, IChunkedBars
 {
+    #region Identity
+
     public string Name => this.GetType().Name;
     public HistoricalDataSourceKind2 SourceType => HistoricalDataSourceKind2.Compound;
 
+    #endregion
+
+    #region Dependencies
+
     public IServiceProvider ServiceProvider { get; }
-    public BarsFileSource BarsFileSource { get; }
+    public ILogger<BarsService> Logger { get; }
+
+    #region Components
+
+    public IEnumerable<IBars> AllSources { get; } // UNUSED. FUTURE: configure local/disk/network/remote etc. services from this collection
+    public BarsFileSource BarsFileSource { get; } // FUTURE: Replace the type with a more generic interface marker for Local Disk file source
+
+    #endregion
+
+    #endregion
+
+    #region Parameters
+
     public HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
 
-    public BarsService(IServiceProvider serviceProvider, BarsFileSource barsFileSource
+    #endregion
+
+    #region Lifecycle
+
+    public BarsService(IServiceProvider serviceProvider
+        , BarsFileSource barsFileSource
         , IOptionsMonitor<BarFilesPaths> historicalDataPathsOptions
         , HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider
+        //, IEnumerable<IBars> allSources
+        , ILogger<BarsService> logger
         )
     {
         ServiceProvider = serviceProvider;
         BarsFileSource = barsFileSource;
         HistoricalDataChunkRangeProvider = historicalDataChunkRangeProvider;
+        //AllSources = allSources;
+        Logger = logger;
         //HistoricalDataPaths = historicalDataPathsOptions.CurrentValue;
+        //foreach (var bars in allSources)
+        //{
+        //    logger.LogInformation($"IBars source: {bars.Name} {bars.SourceType}");
+        //}
     }
+
+    #endregion
+
+    #region IChunkedBars
 
     public async Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true, QueryOptions? options = null)
     {
@@ -48,9 +92,7 @@ public class BarsService : IBars, IListableBarsSource
         return chunk;
     }
 
-    public Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true) => ((IBars)BarsFileSource).GetShortChunk(range, fallbackToLongChunk);
-
-    public Task<BarChunksAvailable> List(ExchangeSymbolTimeFrame reference) => ((IListableBarsSource)BarsFileSource).List(reference);
+    public Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true) => ((IChunkedBars)BarsFileSource).GetShortChunk(range, fallbackToLongChunk);
 
     public async Task<IBarsResult?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null)
     {
@@ -73,12 +115,17 @@ public class BarsService : IBars, IListableBarsSource
         return chunk;
     }
 
+    #endregion
 
-    // OPTIMIZE: Cache rather than recreate
-    public IHistoricalTimeSeries<IKline> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame) => new BarsServiceBarSeries(exchangeSymbolTimeFrame, this);
+    #region IListableBarsSource
 
-    // OPTIMIZE: Cache rather than recreate
-    public IHistoricalTimeSeries<decimal> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, DataPointAspect aspect) => new BarsServiceAspectSeries<decimal>(exchangeSymbolTimeFrame, this, aspect);
+    /// <summary>
+    /// Pass-through to BarsFileSource
+    /// </summary>
+    /// <param name="reference"></param>
+    /// <returns></returns>
+    public Task<BarChunksAvailable> List(ExchangeSymbolTimeFrame reference) => ((IListableBarsSource)BarsFileSource).List(reference);
 
+    #endregion
 }
 

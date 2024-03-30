@@ -11,8 +11,16 @@ public static class TradingValueUtils<T>
     {
         if (typeof(T).IsAssignableTo(typeof(INumber<>).MakeGenericType(typeof(T))))
         {
-            MissingValue = (T)(object) typeof(TradingNumberUtils<>).GetProperty(nameof(TradingNumberUtils<int>.MissingValue))!.GetValue(null)!;
-            Zero = (T)(object) typeof(INumber<>).GetProperty(nameof(INumber<int>.Zero))!.GetValue(null)!;
+            MissingValue = (T)(object)typeof(TradingNumberUtils<>).MakeGenericType(typeof(T)).GetProperty(nameof(TradingNumberUtils<int>.MissingValue))!.GetValue(null)!;
+
+            if (typeof(T) == typeof(double))
+            {
+                Zero = (T)(object)0.0;
+            }
+            else
+            {
+                Zero = (T)(object)typeof(INumberBase<>).MakeGenericType(typeof(T)).GetProperty(nameof(INumber<int>.Zero))!.GetValue(null)!;
+            }
         }
         else
         {

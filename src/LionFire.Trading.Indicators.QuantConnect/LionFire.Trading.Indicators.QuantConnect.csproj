@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+ <ItemGroup>
+    <PackageReference Include="QuantConnect.Indicators" />
+  </ItemGroup>
+
+
+	<ItemGroup>
+		<ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.HistoricalData.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Indicators\LionFire.Trading.Indicators.csproj" />
+	</ItemGroup>
+</Project>

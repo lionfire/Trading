@@ -1,4 +1,6 @@
-﻿using LionFire.ExtensionMethods;
+﻿#if FUTURE // maybe, when there are multiple exchange sources
+
+using LionFire.ExtensionMethods;
 using LionFire.Structures;
 using LionFire.Trading.HistoricalData.Serialization;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +55,7 @@ public class ExchangeHistoricalDataSourceProvider
 }
 
 /// <summary>
-/// 
+/// OLD - Superceded by BarsService, but this mas more abstractions
 /// </summary>
 /// <remarks>
 /// 
@@ -261,3 +263,5 @@ public class BarArrayFileWriter : ILocalDiskHistoricalDataWriter
     }
 }
 
+
+#endif

@@ -1,6 +1,8 @@
 ﻿using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
+using LionFire.Trading.HistoricalData.Serialization;
 using LionFire.Trading.ValueWindows;
+using System.Reactive;
 using System.Runtime.InteropServices;
 
 namespace LionFire.Trading.Indicators.Harness;
@@ -12,14 +14,15 @@ public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput
 
     public static async ValueTask<IValuesResult<TOutput>> TryGetReverseOutput(
         //IServiceProvider serviceProvider,
-        SymbolBarsRange range,
+        TimeFrameRange range,
         TIndicator indicator,
         //TParameters parameters,
         IReadOnlyList<IHistoricalTimeSeries> inputs,
         uint? maxFastForwardBars = null, // If memory.LastOpenTime is within this many bars from inputStart, calculate to bring memory up to speed with desired range.EndExclusive
         TimeFrameValuesWindowWithGaps<TOutput>? memory = null,
         bool skipAhead = false,
-        bool noCopy
+        bool noCopy = true,
+        HistoricalDataChunkRangeProvider? historicalDataChunkRangeProvider = null
         )
     {
 
@@ -45,7 +48,7 @@ public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput
 
         TimeFrameValuesWindowWithGaps<TOutput> actualMemory;
         bool reusingMemory;
-        var inputStart = range.TimeFrame.AddBars(range.Start, -indicator.Lookback);
+        var inputStart = range.TimeFrame.AddBars(range.Start, -(Math.Max(0, indicator.Lookback - 1)));
 
         if (memory == null)
         {
@@ -89,7 +92,7 @@ public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput
             inputStart = range.TimeFrame.AddBar(memory.LastOpenTime); // Continue where memory left off
         }
 
-        actualMemory = reusingMemory ? memory! : new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, range.TimeFrame);
+        actualMemory = reusingMemory ? memory! : new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, range.TimeFrame, range.Start - range.TimeFrame.TimeSpan);
 
         #endregion
 
@@ -104,30 +107,23 @@ public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput
 
         #region Input sources
 
+        TInput[] inputData = await indicator.GetInputData(inputs, inputStart, range.EndExclusive).ConfigureAwait(false);
+
         #endregion
+
+        var subscription = indicator.Subscribe(o => actualMemory.PushFront(o)); // OPTIMIZE: Avoid subscription, and return TOutput from OnNextFromArray
 
         #region Calculate   
 
 
-        DateTimeOffset openTimeCursor = inputStart;
-        var inputBarCount = range.TimeFrame.ToExactBarCount(range.EndExclusive - inputStart);
-
-        var inputData = new T[inputs.Count][];
-
-        for(int inputIndex = 0; inputIndex < inputs.Count; inputIndex++)
+        for (int i = 0; i < inputData.Length; i++)
         {
-            inputs[inputIndex].TryGetValueChunks
+            indicator.OnNextFromArray(inputData, i); // OPTIMIZE - send entire array
         }
 
-        //for(int i = 0; i < inputBarCount; i++)
-        //{
-        //    var input = inputs[i].GetReverse(inputStart, memory.LastOpenTime);
-        //    indicator.OnNext(input);
-        //}
-
-
-
         #endregion
+
+        subscription.Dispose();
 
         #region return result
 

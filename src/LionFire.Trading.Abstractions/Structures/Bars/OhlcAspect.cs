@@ -29,6 +29,16 @@ public enum DataPointAspect
 
 public static class DataPointAspectX
 {
+    public static T GetValue<T>(this DataPointAspect aspect, IKline kline)
+    {
+        decimal value = aspect.GetValue(kline);
+
+        if (value is T ret) { return ret; }
+        else
+        {
+            return (T)Convert.ChangeType(value, typeof(T));
+        }
+    }
     public static decimal GetValue(this DataPointAspect aspect, IKline kline)
     {
         return aspect switch

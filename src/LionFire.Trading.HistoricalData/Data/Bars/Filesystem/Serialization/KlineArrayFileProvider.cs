@@ -42,8 +42,8 @@ public class KlineArrayFileProvider
             ExchangeArea = reference.ExchangeArea,
             Symbol = reference.Symbol,
             TimeFrame = reference.TimeFrame.Name,
-            Start = start,
-            EndExclusive = endExclusive,
+            Start = start.UtcDateTime,
+            EndExclusive = endExclusive.UtcDateTime,
         };
 
 

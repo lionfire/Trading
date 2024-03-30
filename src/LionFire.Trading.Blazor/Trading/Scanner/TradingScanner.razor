@@ -89,7 +89,7 @@
                 }
 
                 <td>
-                    <ScottPlotChart Bars=@alert.LastBars BaseAsset=@p.BaseAsset TimeFrame=@alert.TimeFrame Name=@(p.BaseAsset + " " + alert.TimeFrame.ToShortString()) Width=210 Height=80 TimeSpan=@alert.TimeFrame.TimeSpan.Value ShowVolume=@true />
+                    <ScottPlotChart Bars=@alert.LastBars BaseAsset=@p.BaseAsset TimeFrame=@alert.TimeFrame Name=@(p.BaseAsset + " " + alert.TimeFrame.ToShortString()) Width=210 Height=80 TimeSpan=@alert.TimeFrame.TimeSpan ShowVolume=@true />
                     @* <ChartComponent @ref="Chart" /> *@
                 </td>
 

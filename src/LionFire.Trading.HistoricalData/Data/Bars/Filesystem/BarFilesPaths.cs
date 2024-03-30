@@ -52,6 +52,10 @@ public class BarFilesPaths
         if (!Directory.Exists(dir)) return null;
         foreach (var file in Directory.GetFiles(dir, filename + "*").Where(f => !f.Contains("downloading")))
         {
+            var filenameWithoutExtension = Path.GetFileNameWithoutExtension(file);
+            filenameWithoutExtension = filenameWithoutExtension.TrimEnd(".part");
+            if (filenameWithoutExtension != filename) continue;
+
             // ENH: Change .downloading files to start with ~
             if (fileResult != null)
             {

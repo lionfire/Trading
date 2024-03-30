@@ -1,0 +1,9 @@
+﻿global using System;
+global using System.Collections.Generic;
+global using System.Linq;
+global using System.Text;
+global using System.Threading.Tasks;
+global using LionFire.Trading;
+global using LionFire.Trading.Indicators;
+global using LionFire.Trading.Indicators.Harness;
+global using Xunit;

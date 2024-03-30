@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading.Data;
+﻿using System.Linq;
+
+namespace LionFire.Trading.Data;
 
 public interface IHistoricalDataResult
 {
@@ -6,6 +8,8 @@ public interface IHistoricalDataResult
 }
 public interface IHistoricalDataResult<out TValue> : IHistoricalDataResult
 {
+    // TODO: Reconcile with IValuesResult
+
     IReadOnlyList<TValue>? Items { get; }
 }
 
@@ -13,6 +17,7 @@ public readonly record struct HistoricalDataResult<TValue> : IHistoricalDataResu
 {
     public Type Type => typeof(TValue);
 
+    public HistoricalDataResult(IEnumerable<TValue> items) : this(items.ToList()) { }
     public HistoricalDataResult(IReadOnlyList<TValue> items) : this()
     {
         Items = items;

@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.ValueWindows;
+﻿#if FUTURE
+using LionFire.Trading.ValueWindows;
 using System.Numerics;
 using System.Reactive;
 
@@ -79,3 +80,5 @@ public class RollingSum<T> : IndicatorBase<RollingSum<T>, int, T, T>, IIndicator
     }
 }
 
+
+#endif

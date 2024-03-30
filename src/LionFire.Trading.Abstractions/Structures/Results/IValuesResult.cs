@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading;
 
+// TODO: Reconcile with IHistoricalDataResult
 public interface IValuesResult<out T>
 {
-    IEnumerable<T>? Values { get; }
+    IReadOnlyList<T>? Values { get; }
 
-    bool IsSuccess { get { return Values != null; } }
+    bool IsSuccess => Values != null;
 
     string? FailReason => null;
 }

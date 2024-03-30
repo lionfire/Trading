@@ -1,5 +1,4 @@
-﻿using LionFire.Results;
-using LionFire.Trading.Data;
+﻿using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.Indicators.Inputs;
 using LionFire.Trading.ValueWindows;
@@ -12,7 +11,7 @@ public abstract class IndicatorExecutorBase<TIndicator, TParameters, TInput, TOu
     #region Dependencies
 
     public IServiceProvider ServiceProvider { get; }
-    public IBars Bars { get; }
+    //public IBars Bars { get; }
 
     #endregion
 
@@ -25,10 +24,10 @@ public abstract class IndicatorExecutorBase<TIndicator, TParameters, TInput, TOu
 
     #region Lifecycle
 
-    public IndicatorExecutorBase(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options, IBars bars, IMarketDataResolver inputResolver)
+    public IndicatorExecutorBase(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options)
     {
         ServiceProvider = serviceProvider;
-        Bars = bars;
+        //Bars = bars;
 
         IndicatorHarnessOptions<TParameters>.FallbackToDefaults(options);
         Parameters = options.Parameters;
@@ -37,33 +36,34 @@ public abstract class IndicatorExecutorBase<TIndicator, TParameters, TInput, TOu
 
         List<IHistoricalTimeSeries> inputs = new(options.InputReferences.Length);
 
+        var marketDataResolver = ServiceProvider.GetRequiredService<IMarketDataResolver>();
         foreach (var input in options.InputReferences)
         {
-            inputs.Add(inputResolver.Resolve(input));
+            inputs.Add(marketDataResolver.Resolve(input));
         }
         Inputs = inputs;
     }
 
-    IIndicator<TParameters, TInput, TOutput> CreateIndicator()
+    TIndicator CreateIndicator()
     {
-        var indicator = TIndicator.Create(Parameters);
-        return indicator;
+        return ActivatorUtilities.CreateInstance<TIndicator>(ServiceProvider, Parameters!);
+        //return TIndicator.Create<TIndicator>(Parameters);
     }
 
     #endregion
 
     #region State
 
-    protected IIndicator<TParameters, TInput, TOutput> Indicator { get; init; }
+    protected TIndicator Indicator { get; init; }
     protected IReadOnlyList<IHistoricalTimeSeries> Inputs { get; init; }
 
     #endregion
 
     #region Methods
 
-    public virtual async ValueTask<IValueResult<IEnumerable<TOutput>>> GetReverseOutput(DateTimeOffset firstOpenTime, DateTimeOffset? lastOpenTime = null)
+    public virtual async ValueTask<IValuesResult<TOutput>> GetReverseOutput(DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        var result = await TryGetReverseOutput(firstOpenTime, lastOpenTime);
+        var result = await TryGetReverseOutput(start, endExclusive);
         if (result == null)
         {
             throw new Exception("Failed to get output");
@@ -71,7 +71,7 @@ public abstract class IndicatorExecutorBase<TIndicator, TParameters, TInput, TOu
         return result;
     }
 
-    public abstract ValueTask<IValueResult<IEnumerable<TOutput>>?> TryGetReverseOutput(DateTimeOffset firstOpenTime, DateTimeOffset? lastOpenTime = null);
+    public abstract ValueTask<IValuesResult<TOutput>> TryGetReverseOutput(DateTimeOffset start, DateTimeOffset endExclusive);
 
     #endregion
 }

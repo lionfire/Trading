@@ -2,6 +2,7 @@
 using Binance.Net.Interfaces;
 using LionFire.Trading.HistoricalData.Binance;
 using System.Collections;
+using System.Collections.Immutable;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
@@ -12,7 +13,7 @@ public interface IBarsResult : ITimeSeriesResult<IKline>
     //    string Name { get; }
     //    HistoricalDataSourceKind2 SourceType { get; }
 
-    IReadOnlyList<IKline> Bars => Values;
+    IReadOnlyList<IKline>? Bars => Values;
     Type NativeType { get; }
 
     bool IsUpToDate { get; }
@@ -26,11 +27,9 @@ public sealed class BarsResult<TKline> : IBarsResult
 
     #region Values
 
-    //IReadOnlyList<IKline> IBarsResult.Bars => (IReadOnlyList<IKline>)Bars;
-    IReadOnlyList<IKline> IValuesResult<IKline>.Values => (IReadOnlyList<IKline>)Bars;
-
-    public required IReadOnlyList<TKline> Bars { get; init; }
-    //public IEnumerable<IKline> Values => Bars.OfType<IKline>();
+    //public IReadOnlyList<IReadOnlyList<TKline>>? Chunks { get; init; }
+    public required IReadOnlyList<TKline> Values { get; init; }
+    IReadOnlyList<IKline>? IValuesResult<IKline>.Values => (IReadOnlyList<IKline>?)Values;
 
     #endregion
 
@@ -46,7 +45,7 @@ public sealed class BarsResult<TKline> : IBarsResult
             TimeFrame = barsResult.TimeFrame,
             Start = barsResult.Start,
             EndExclusive = barsResult.EndExclusive,
-            Bars = bars,
+            Values = bars,
         };
     }
 
@@ -67,7 +66,9 @@ public sealed class BarsResult<TKline> : IBarsResult
     /// Note: this can become false over time.  It never goes back to true.
     /// 
     /// </summary>
-    public bool IsUpToDate => Bars.Count == TimeFrame.GetExpectedBarCountForNow(Start, EndExclusive);
+    public bool IsUpToDate => Values.Count == TimeFrame.GetExpectedBarCountForNow(Start, EndExclusive);
+
+
 
     //IsForeverUpToDate || DateTime.UtcNow < (LastBarCloseTime + TimeFrame.TimeSpan!.Value);
 
@@ -95,7 +96,7 @@ public sealed class BarsResult<TKline> : IBarsResult
             newStartIndex = (int)newStartIndexDouble;
         }
 
-        int newEndIndexExclusive = Bars.Count;
+        int newEndIndexExclusive = Values.Count;
         if (endExclusive > EndExclusive) { throw new ArgumentException("endExclusive > EndExclusive"); }
         if (endExclusive < EndExclusive)
         {
@@ -108,7 +109,7 @@ public sealed class BarsResult<TKline> : IBarsResult
             newEndIndexExclusive = (int)newEndIndexExclusiveDouble;
         }
 
-        return CloneWithBars(this, Bars.Skip(newStartIndex).Take(newEndIndexExclusive - newStartIndex).ToList());
+        return CloneWithBars(this, Values.Skip(newStartIndex).Take(newEndIndexExclusive - newStartIndex).ToList());
     }
     IBarsResult IBarsResult.Trim(DateTimeOffset start, DateTimeOffset endExclusive) => Trim(start, endExclusive);
 

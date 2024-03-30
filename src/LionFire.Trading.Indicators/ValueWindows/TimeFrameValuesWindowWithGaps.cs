@@ -19,10 +19,10 @@ public sealed class TimeFrameValuesWindowWithGaps<T> : TimeFrameValuesWindow<T>
 
     #region Lifecycle
 
-    public TimeFrameValuesWindowWithGaps(uint period, TimeFrame timeFrame) : this(period, timeFrame, DefaultDefault)
+    public TimeFrameValuesWindowWithGaps(uint period, TimeFrame timeFrame, DateTimeOffset? nextOpenTime = null) : this(period, timeFrame, DefaultDefault, nextOpenTime)
     {
     }
-    public TimeFrameValuesWindowWithGaps(uint period, TimeFrame timeFrame, T missingValue) : base(period, timeFrame)
+    public TimeFrameValuesWindowWithGaps(uint period, TimeFrame timeFrame, T missingValue, DateTimeOffset? nextOpenTime = null) : base(period, timeFrame, nextOpenTime)
     {
         MissingValue = missingValue;
     }

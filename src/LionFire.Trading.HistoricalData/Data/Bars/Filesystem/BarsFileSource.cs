@@ -14,7 +14,7 @@ using static LionFire.Trading.HistoricalData.ListAvailableHistoricalDataCommand;
 
 namespace LionFire.Trading.HistoricalData.Sources;
 
-public class BarsFileSource : IBars, IListableBarsSource
+public class BarsFileSource : IChunkedBars, IListableBarsSource
 {
     public string Name => "Filesystem";
     public HistoricalDataSourceKind2 SourceType => HistoricalDataSourceKind2.Local;
@@ -73,12 +73,14 @@ public class BarsFileSource : IBars, IListableBarsSource
         return TryLoadChunk(range);
     }
 
+    public static bool DeleteExceptionFiles = true;
+
     private async Task<IBarsResult?> TryLoadChunk(SymbolBarsRange range)
     {
         var path = HistoricalDataPaths.GetExistingPath(range);
         if (path == null) return null;
 
-        IBarsResult? result = await Task.Run(() =>
+        IBarsResult? result = await Task.Run(async () =>
         {
             try
             {
@@ -90,13 +92,26 @@ public class BarsFileSource : IBars, IListableBarsSource
                     Start = range.Start,
                     EndExclusive = range.EndExclusive,
                     TimeFrame = range.TimeFrame,
-                    Bars = bars,
+                    Values = bars,
                     //NativeType = typeof(IBinanceKline),
                 };
             }
             catch (Exception ex)
             {
+                await Task.Delay(1000 * 1);
                 Logger.LogError(ex, "Failed to load chunk from path: {path}", path);
+                if (DeleteExceptionFiles)
+                {
+                    try
+                    {
+                        File.Delete(path);
+                        Logger.LogWarning("Deleted erroring file: " + path);
+                    }
+                    catch (Exception ex2)
+                    {
+                        Logger.LogError(ex2, "Failed to delete erroring file: " + path);
+                    }
+                }
                 return null;
             }
         });

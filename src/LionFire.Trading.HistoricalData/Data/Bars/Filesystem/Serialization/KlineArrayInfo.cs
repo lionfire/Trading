@@ -17,8 +17,8 @@ public class KlineArrayInfo
             Exchange = value.Exchange;
             Symbol = value.Symbol;
             TimeFrame = value.TimeFrame;
-            Start = value.Start;
-            EndExclusive = value.EndExclusive;
+            Start = value.Start.UtcDateTime;
+            EndExclusive = value.EndExclusive.UtcDateTime;
         }
     }
 
@@ -27,8 +27,8 @@ public class KlineArrayInfo
     public string Symbol { get; set; }
     public string TimeFrame { get; set; }
 
-    public DateTimeOffset Start { get; set; }
-    public DateTimeOffset EndExclusive { get; set; }
+    public DateTime Start { get; set; }
+    public DateTime EndExclusive { get; set; }
 
     /// <summary>
     /// If squashed from multiple files, uses oldest time

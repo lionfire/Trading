@@ -10,6 +10,6 @@ public class ListValueResult<T> : IValuesResult<T>
 
     public IReadOnlyList<T> List { get; }
 
-    public IEnumerable<T> Values => List;
+    public IReadOnlyList<T> Values => List;
 }
 

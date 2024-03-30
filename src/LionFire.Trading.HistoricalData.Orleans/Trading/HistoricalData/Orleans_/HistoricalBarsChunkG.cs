@@ -15,7 +15,8 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
 {
     #region Dependencies
 
-    public IBars BarsService { get; }
+    public IChunkedBars BarsService { get; }
+   
 
     #endregion
 
@@ -48,7 +49,7 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
     public HistoricalBarsChunkG(
         HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider,
         ISymbolIdParser symbolIdParser,
-        IBars bars
+        IChunkedBars bars
         )
     {
         BarsService = bars;

@@ -14,10 +14,11 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
 
     #region Lifecycle
 
-    public TimeFrameValuesWindow(int period, TimeFrame timeFrame) : base(period)
+    public TimeFrameValuesWindow(uint period, TimeFrame timeFrame, DateTimeOffset? nextOpenTime = null) : base(period)
     {
-        if (timeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException();
+        if (timeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException("TODO: Use timeFrame.AddBars");
         TimeSpan = timeFrame.TimeSpan;
+        LastOpenTime = nextOpenTime == null ? DateTimeOffset.MinValue : timeFrame.AddBars(nextOpenTime.Value, -1);
     }
 
     #endregion
@@ -30,6 +31,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
 
     public DateTimeOffset FirstOpenTime => LastOpenTime - TimeSpan * Math.Min(ValueCount, values.Capacity);
     public DateTimeOffset NextExpectedOpenTime => LastOpenTime + TimeSpan;
+    public bool HasNextExpectedOpenTime => LastOpenTime != DateTimeOffset.MinValue;
 
     #endregion
 
@@ -86,7 +88,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
     #endregion
 
     #region Methods
-    
+
     /// <summary>
     /// If overriding this, either add a bar or throw a different exception.
     /// </summary>
@@ -97,6 +99,20 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
         throw new Exception($"Expected {NextExpectedOpenTime} but got {openTime}");
     }
 
+    public uint PushFront(IReadOnlyList<T> values)
+    {
+        uint newBars = 0;
+        foreach (var value in values)
+        {
+            newBars += PushFront(value, NextExpectedOpenTime);
+        }
+        return newBars;
+    }
+
+    public uint PushFront(T value)
+    {
+        return PushFront(value, NextExpectedOpenTime);
+    }
     public uint PushFront(T value, DateTimeOffset openTime)
     {
         uint newBars = 0;
@@ -107,7 +123,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
             return 0;
         }
 
-        while (openTime > NextExpectedOpenTime)
+        while (HasNextExpectedOpenTime && openTime > NextExpectedOpenTime)
         {
             newBars++; // Derived class either throws or adds a bar
             OnMissingBar(openTime);

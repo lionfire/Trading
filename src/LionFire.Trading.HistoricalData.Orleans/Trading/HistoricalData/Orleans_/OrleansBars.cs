@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.HistoricalData.Orleans_;
 
 
-public class OrleansBars : ILocalNetworkHistoricalDataSource2
+public class OrleansBars : ILocalNetworkBars, IChunkedBars
 {
     #region Identity
 
@@ -42,7 +42,7 @@ public class OrleansBars : ILocalNetworkHistoricalDataSource2
 
         var result = new BarsResult<IKline>
         {
-            Bars = bars,
+            Values = bars,
             Start = range.Start,
             EndExclusive = range.EndExclusive,
             TimeFrame = range.TimeFrame,

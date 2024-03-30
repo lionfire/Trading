@@ -1,12 +1,15 @@
 ﻿using Baseline.Dates;
 using CircularBuffer;
+using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
 using Microsoft.Extensions.Options;
 using System.Threading.Channels;
 
 namespace LionFire.Trading.Indicators;
 
-public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, double, double>, IIndicator<uint, double, double>
+public class SimpleMovingAverage
+    : SingleInputIndicatorBase<SimpleMovingAverage, uint, double, double>
+    , IIndicator<SimpleMovingAverage, uint, double, double>
 {
     #region Static
 
@@ -48,7 +51,6 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
 
     #endregion
 
-
     #region Lifecycle
 
     public SimpleMovingAverage(uint period)
@@ -56,7 +58,7 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
         Options = period;
         buffer = new((int)period);
     }
-    public static IIndicator<uint, double, double> Create(uint p) => new SimpleMovingAverage(p);
+    public static SimpleMovingAverage Create(uint p) => new SimpleMovingAverage(p);
 
     #endregion
 
@@ -94,16 +96,16 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
                 if (buffer.IsFull)
                 {
                     output.Add(sum / Period);
-            }
+                }
                 else
                 {
                     output.Add(double.NaN);
                 }
             }
         }
-        if (output != null)
+        if (output != null && s != null)
         {
-            s!.OnNext(output);
+            s.OnNext(output);
         }
     }
 
@@ -117,6 +119,7 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
     }
 
     #endregion
+
     #region OLD
     // REFACTOR - genericize?
     //public static IEnumerable<double> Compute(uint period, IEnumerable<double> inputs)
@@ -130,5 +133,27 @@ public class SimpleMovingAverage : IndicatorBase<SimpleMovingAverage, uint, doub
     //}
     #endregion
 
+    //#region Input Handling
+
+    //// TODO: Can this be moved to a base class somehow?
+
+    //public override async ValueTask<(object, int)> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
+    //{
+    //    var x = (IHistoricalTimeSeries<double>)sources[0];
+
+    //    var d = await x.Get(start, endExclusive).ConfigureAwait(false);
+
+    //    if (!d.IsSuccess || d.Items?.Any() != true) throw new Exception("Failed to get data");
+
+    //    return (d.Items, d.Items.Count);
+    //}
+
+    //public override void OnNextFromArray(object inputData, int index)
+    //{
+    //    var x = (IReadOnlyList<double>)inputData;
+    //    OnNext(x[index]);
+    //}
+
+    //#endregion
 }
 

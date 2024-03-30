@@ -43,8 +43,8 @@ public class RetrieveHistoricalDataParameters : HistoricalDataJobInput
         Symbol = barsRangeReference.Symbol;
         ExchangeFlag = barsRangeReference.Exchange;
         ExchangeAreaFlag = barsRangeReference.ExchangeArea;
-        FromFlag = barsRangeReference.Start;
-        ToFlag = barsRangeReference.EndExclusive;
+        FromFlag = barsRangeReference.Start.DateTime;
+        ToFlag = barsRangeReference.EndExclusive.DateTime;
     }
 }
 
@@ -92,7 +92,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
     #region Lifecycle
 
-    public RetrieveHistoricalDataJob() { }
+    //public RetrieveHistoricalDataJob() { }
     public RetrieveHistoricalDataJob(IBinanceRestClient? binanceClient, ILogger<RetrieveHistoricalDataJob>? logger, KlineArrayFileProvider? klineArrayFileProvider, BarsFileSource barsFileSource, HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider)
     {
         BinanceClient = binanceClient;
@@ -446,7 +446,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             do
             {
                 Logger.LogInformation($"{nextStartTime} - {requestTo}");
-                CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinanceKline>> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime.DateTime, endTime: requestTo.DateTime, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
+                CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinanceKline>> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime, endTime: requestTo.DateTime, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
 
                 await CheckWeight_Binance(result?.ResponseHeaders);
 
@@ -680,7 +680,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 TimeFrame = info.TimeFrame,
                 //NativeType = typeof(BinanceFuturesKlineItem),
                 //Bars = (IReadOnlyList<IKline>)(IReadOnlyList<BinanceFuturesKlineItem2>) listNative
-                Bars = new List<IKline>(listNative.OfType<IKline>())
+                Values = new List<IKline>(listNative.OfType<IKline>())
             };
         }
 

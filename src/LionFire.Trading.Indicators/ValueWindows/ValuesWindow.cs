@@ -4,7 +4,7 @@ public class ValuesWindow<T> : ValuesWindowBase<T>
 {
     #region Lifecycle
 
-    public ValuesWindow(int period) : base(period)
+    public ValuesWindow(uint period) : base(period)
     {
     }
 
