@@ -1,6 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <IntermediateOutputPath>C:\Users\ja\AppData\Local\Temp\vs2C19.tmp\Debug\</IntermediateOutputPath>
+    <Configurations>Debug;Release</Configurations>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <IntermediateOutputPath>C:\Users\ja\AppData\Local\Temp\vs2C19.tmp\Release\</IntermediateOutputPath>

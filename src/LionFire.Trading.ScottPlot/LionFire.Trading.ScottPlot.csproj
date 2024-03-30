@@ -6,6 +6,8 @@
 		<Nullable>enable</Nullable>
 
 		<RootNamespace>LionFire</RootNamespace>
+
+		<Configurations>Debug;Release</Configurations>
 	</PropertyGroup>
 
 	<ItemGroup>

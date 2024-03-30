@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 		<RootNamespace>LionFire.Trading.Binance_</RootNamespace>
+		<Configurations>Debug;Release</Configurations>
   </PropertyGroup>
 
 	<ItemGroup>
