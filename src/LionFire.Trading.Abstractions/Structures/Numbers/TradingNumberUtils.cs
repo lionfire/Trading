@@ -17,6 +17,10 @@ public static class TradingValueUtils<T>
             {
                 Zero = (T)(object)0.0;
             }
+            else if (typeof(T) == typeof(decimal))
+            {
+                Zero = (T)(object)0.0M;
+            }
             else
             {
                 Zero = (T)(object)typeof(INumberBase<>).MakeGenericType(typeof(T)).GetProperty(nameof(INumber<int>.Zero))!.GetValue(null)!;
