@@ -9,17 +9,6 @@ using QuantConnect.Data.Market;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
-public abstract class QuantConnectIndicatorWrapper<TConcrete, TQuantConnectIndicator, TParameters, TInput, TOutput> : SingleInputIndicatorBase<TConcrete, TParameters, TInput, TOutput>
-      where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator<TConcrete, TParameters, TInput, TOutput>
-{
-    #region State
-
-    public TQuantConnectIndicator WrappedIndicator { get; protected set; }
-
-    #endregion
-
-}
-
 public class PAverageTrueRange
 {
     public int Period { get; set; }
@@ -67,11 +56,17 @@ public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, g
 
     public override void OnNext(IReadOnlyList<IKline> inputs)
     {
+        // Stub time and period values.  QuantConnect checks the symbol ID and increasing end times.
+        DateTime endTime = new DateTime(2000, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+        TimeSpan period = new TimeSpan(0, 1, 0);
+
         foreach (var input in inputs)
         {
-            var bar = new TradeBar(default, default, open: default /* UNUSED for ATR */, input.HighPrice, input.LowPrice, input.ClosePrice, default);
+            var bar = new TradeBar(time: endTime, symbol: QuantConnect.Symbol.None, open: default /* UNUSED for ATR */, input.HighPrice, input.LowPrice, input.ClosePrice,  volume: default, period: period);
+
 
             WrappedIndicator.Update(bar);
+            endTime += period;
             if (WrappedIndicator.IsReady && subject != null)
             {
                 subject.OnNext(new List<decimal> { WrappedIndicator.Current.Price });

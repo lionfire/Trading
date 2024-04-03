@@ -2,6 +2,7 @@
 using LionFire.Trading.Data;
 using Microsoft.Extensions.DependencyInjection;
 using LionFire.Trading.HistoricalData.Retrieval;
+using LionFire.Execution;
 namespace LionFire.Trading.Indicators.Inputs;
 
 
@@ -34,6 +35,10 @@ public class MarketDataResolver : IMarketDataResolver
             ExchangeSymbolTimeFrame exchangeSymbolTimeFrame = sva;
             DataPointAspect aspect = sva.Aspect;
             return ActivatorUtilities.CreateInstance<BarAspectSeries<decimal>>(ServiceProvider, exchangeSymbolTimeFrame, aspect);
+        }
+        else if(reference is ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
+        {
+            return ActivatorUtilities.CreateInstance<BarSeries>(ServiceProvider, exchangeSymbolTimeFrame);
         }
 
         return null;

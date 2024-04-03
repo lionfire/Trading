@@ -11,8 +11,16 @@
 		<EnableSourceControlManagerQueries>true</EnableSourceControlManagerQueries>
 
   </PropertyGroup>
-  
-  <PropertyGroup>
+
+	<PropertyGroup>
+		<Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+		<!-- <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory)..\build\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+    <BaseOutputPath Condition=" '$(BaseOutputPath)' == '' ">$(MSBuildThisFileDirectory)..\build\bin\$(MSBuildProjectName)\</BaseOutputPath> -->
+		<BaseIntermediateOutputPath>z:\build\obj\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
+		<BaseOutputPath Condition=" '$(BaseOutputPath)' == '' ">z:\build\bin\$(MSBuildProjectName)\</BaseOutputPath>
+	</PropertyGroup>
+	
+	<PropertyGroup>
     <Authors>Jared Thirsk</Authors>
     <Company>Jared Thirsk</Company>
   </PropertyGroup>
