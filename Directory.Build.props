@@ -1,9 +1,12 @@
 <Project>
 
   <PropertyGroup>
-    <LangVersion>latest</LangVersion>
+		<PlatformTarget Condition=" '$(PlatformTarget)' == '' ">AnyCPU</PlatformTarget>
+		
+		<LangVersion>latest</LangVersion>
     <BaseIntermediateOutputPath>$(BuildRoot)\obj\$(Configuration)\$(Platform)\$(MSBuildProjectName)\</BaseIntermediateOutputPath>
 	  <BaseOutputPath>$(BuildRoot)\bin\$(Configuration)\$(Platform)\$(MSBuildProjectName)\</BaseOutputPath>
+		<OutputPath>$(BaseOutputPath)</OutputPath>
 
     <RunAnalyzersDuringBuild>False</RunAnalyzersDuringBuild>
     <RunAnalyzersDuringLiveAnalysis>False</RunAnalyzersDuringLiveAnalysis>

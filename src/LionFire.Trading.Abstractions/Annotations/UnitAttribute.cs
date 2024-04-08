@@ -8,7 +8,7 @@ namespace LionFire.Parsing.String
     [System.AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = true)]
     public sealed class UnitAttribute : Attribute
     {
-        public string Unit { get; private set; }
+        public string Unit { get; private set; } = null!;
 
         public bool IsPrefix { get; set; }
 

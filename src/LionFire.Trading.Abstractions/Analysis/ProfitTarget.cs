@@ -14,7 +14,7 @@
         //public bool AllowTPForLoss { get; set; }
 
         // FUTURE
-        public IProbability Chance { get; set; }
+        public IProbability? Chance { get; set; }
 
     }
 }

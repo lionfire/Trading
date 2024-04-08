@@ -7,9 +7,9 @@ namespace LionFire.Trading
 {
     public class AccountInfo
     {
-        public string Exchange { get; set;  }
-        public string ExchangeArea { get; set;  }
-        public string Currency { get; set;  }
+        public string? Exchange { get; set;  }
+        public string? ExchangeArea { get; set;  }
+        public string? Currency { get; set;  }
         public bool IsLive { get; set;  }
         
         public int AccountNumber { get; set;  }

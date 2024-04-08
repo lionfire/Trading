@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Binance.Net;
+//using Binance.Net;
 
 public static class ServiceProviderProvider
 {
@@ -12,7 +12,7 @@ public static class ServiceProviderProvider
     {
         var Configuration = new ConfigurationManager();
         Configuration.AddInMemoryCollection([
-            new ("LionFire.Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\")
+            new ("LionFire.Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\") // HARDCODE HARDPATH
         ]);
 
         IServiceCollection services = new ServiceCollection();
