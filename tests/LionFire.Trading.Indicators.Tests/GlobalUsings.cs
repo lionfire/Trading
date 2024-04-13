@@ -5,5 +5,5 @@ global using System.Text;
 global using System.Threading.Tasks;
 global using LionFire.Trading;
 global using LionFire.Trading.Indicators;
-global using LionFire.Trading.Indicators.Harness;
+global using LionFire.Trading.Indicators.Harnesses;
 global using Xunit;

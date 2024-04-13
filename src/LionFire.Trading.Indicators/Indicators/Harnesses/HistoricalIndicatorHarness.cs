@@ -1,8 +1,9 @@
 ﻿using LionFire.Trading.HistoricalData.Retrieval;
-using LionFire.Trading.Indicators.Inputs;
+//using LionFire.Trading.Indicators.Inputs;
 using LionFire.Trading.ValueWindows;
 
-namespace LionFire.Trading.Indicators.Harness;
+
+namespace LionFire.Trading.Indicators.Harnesses;
 
 //public static class HistoricalIndicatorHarnessSample
 //{
@@ -41,8 +42,8 @@ namespace LionFire.Trading.Indicators.Harness;
 /// <typeparam name="TParameters"></typeparam>
 /// <typeparam name="TInput"></typeparam>
 /// <typeparam name="TOutput"></typeparam>
-public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IndicatorExecutorBase<TIndicator, TParameters, TInput, TOutput>
-    where TIndicator : IIndicator<TParameters, TInput, TOutput>
+public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
+    where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 {
 
     #region Lifecycle

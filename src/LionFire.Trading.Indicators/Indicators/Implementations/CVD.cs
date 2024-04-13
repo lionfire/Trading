@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if TODO
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -12,7 +13,7 @@ public class CVD
 {
     public override uint Lookback => throw new NotImplementedException();
 
-    public static IndicatorCharacteristics Characteristics(uint parameter)
+    public static IOComponent Characteristics(uint parameter)
     {
         throw new NotImplementedException();
     }
@@ -27,3 +28,5 @@ public class CVD
         throw new NotImplementedException();
     }
 }
+
+#endif

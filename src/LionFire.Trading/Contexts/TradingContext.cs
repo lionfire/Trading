@@ -1,14 +1,20 @@
 ﻿using LionFire.MultiTyping;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace LionFire.Trading;
 
-public class TradingContext 
+//namespace LionFire.Trading
+//{
+//    public interface ITradingContext
+//    {
+//        TradingOptions Options {
+//            get;
+//        }
+//    }
+
+//}
+public class TradingContext
 {
-    public MultiTyped MultiTyped { get; set; } // Replace with Flex?
+    public MultiTyped? MultiTyped { get; set; } // Replace with Flex?
 
     #region Configuration
 
@@ -25,6 +31,6 @@ public class TradingContext
     }
 
     #endregion
-    
-    
+
+
 }

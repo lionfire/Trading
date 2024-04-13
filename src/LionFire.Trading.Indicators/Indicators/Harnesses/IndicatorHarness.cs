@@ -3,10 +3,10 @@ using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.Indicators.Inputs;
 using LionFire.Trading.ValueWindows;
 
-namespace LionFire.Trading.Indicators.Harness;
+namespace LionFire.Trading.Indicators.Harnesses;
 
-public abstract class IndicatorExecutorBase<TIndicator, TParameters, TInput, TOutput>
-    where TIndicator : IIndicator<TParameters, TInput, TOutput>
+public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
+    where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 {
     #region Dependencies
 
@@ -24,7 +24,7 @@ public abstract class IndicatorExecutorBase<TIndicator, TParameters, TInput, TOu
 
     #region Lifecycle
 
-    public IndicatorExecutorBase(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options)
+    public IndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options)
     {
         ServiceProvider = serviceProvider;
         //Bars = bars;

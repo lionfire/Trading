@@ -1,4 +1,4 @@
-﻿namespace LionFire.Trading.Indicators.Harness;
+﻿namespace LionFire.Trading.Indicators.Harnesses;
 
 public record IndicatorHarnessOptions<TParameters>
 {

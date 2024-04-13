@@ -58,6 +58,7 @@ namespace LionFire.Trading.Accounts
             get
             {
                 return tradingContext ?? DependencyContext.Current.GetService<TradingContext>();
+
             }
             set { tradingContext = value; }
         }

@@ -5,7 +5,7 @@ using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.Indicators.Inputs;
 using LionFire.Trading.ValueWindows;
 
-namespace LionFire.Trading.Indicators.Harness;
+namespace LionFire.Trading.Indicators.Harnesses;
 
 /// <summary>
 /// Combination Realtime and Historical Indicator Harness

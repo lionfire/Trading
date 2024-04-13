@@ -4,11 +4,12 @@ using LionFire.Trading.HistoricalData.Serialization;
 using LionFire.Trading.ValueWindows;
 using System.Reactive;
 using System.Runtime.InteropServices;
+using LionFire.Trading.HistoricalData;
 
-namespace LionFire.Trading.Indicators.Harness;
+namespace LionFire.Trading.Indicators.Harnesses;
 
 public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput, TOutput>
-      where TIndicator : IIndicator<TParameters, TInput, TOutput>
+      where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 {
     public static uint MaxFastForwardBars = 1;
 
@@ -17,7 +18,7 @@ public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput
         TimeFrameRange range,
         TIndicator indicator,
         //TParameters parameters,
-        IReadOnlyList<IHistoricalTimeSeries> inputs,
+        IReadOnlyList<IHistoricalTimeSeries> inputSources,
         uint? maxFastForwardBars = null, // If memory.LastOpenTime is within this many bars from inputStart, calculate to bring memory up to speed with desired range.EndExclusive
         TimeFrameValuesWindowWithGaps<TOutput>? memory = null,
         bool skipAhead = false,
@@ -48,7 +49,10 @@ public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput
 
         TimeFrameValuesWindowWithGaps<TOutput> actualMemory;
         bool reusingMemory;
-        var inputStart = range.TimeFrame.AddBars(range.Start, -(Math.Max(0, indicator.Lookback - 1)));
+
+        // TODO ENH: There should be an inputStart date for each Input.  Some inputs may go back a lot farther
+        //var inputStart = range.TimeFrame.AddBars(range.Start, -(Math.Max(0, indicator.Parameters.Inputs[0].Lookback - 1)));
+        var inputStart = range.TimeFrame.AddBars(range.Start, -(Math.Max(0, indicator.MaxLookback - 1)));
 
         if (memory == null)
         {
@@ -107,7 +111,7 @@ public static class HistoricalIndicatorExecutorX<TIndicator, TParameters, TInput
 
         #region Input sources
 
-        TInput[] inputData = await indicator.GetInputData(inputs, inputStart, range.EndExclusive).ConfigureAwait(false);
+        TInput[] inputData = await indicator.GetInputData(inputSources, inputStart, range.EndExclusive).ConfigureAwait(false);
 
         #endregion
 

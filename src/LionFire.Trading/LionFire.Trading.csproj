@@ -80,8 +80,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Backtesting2\Algos2\" />
+    <Folder Include="Contexts\Harnesses\" />
     <Folder Include="Data\TimeSeries\" />
+    <Folder Include="HistoricalData\Chunking\" />
     <Folder Include="Symbols\Info\" />
   </ItemGroup>
 

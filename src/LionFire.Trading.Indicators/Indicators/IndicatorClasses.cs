@@ -63,30 +63,3 @@ public class IndicatorOutput<T> : IndicatorTimeSeriesComponent<T>
     {
     }
 }
-
-//public interface IIndicatorCharacteristics
-//{
-//    IReadOnlyList<IIndicatorInputCharacteristics> Inputs { get; }
-//    IReadOnlyList<IIndicatorOutputCharacteristics> Outputs { get; }
-//}
-public class IndicatorCharacteristics
-{
-    public required IReadOnlyList<IndicatorInputCharacteristics> Inputs { get; init; }
-    public required IReadOnlyList<IndicatorOutputCharacteristics> Outputs { get; init; }
-}
-
-public class IndicatorComponentCharacteristics
-{
-    public required string Name { get; init; }
-    public required Type Type { get; init; }
-    //public bool? TimeIndexed { get; init; }
-    //public bool? TimeGaps { get; init; }
-}
-
-public class IndicatorInputCharacteristics : IndicatorComponentCharacteristics
-{
-}
-public class IndicatorOutputCharacteristics : IndicatorComponentCharacteristics
-{
-
-}

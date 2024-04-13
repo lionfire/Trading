@@ -2,6 +2,7 @@
 using CircularBuffer;
 using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
+using LionFire.Trading.IO;
 using Microsoft.Extensions.Options;
 using System.Threading.Channels;
 
@@ -9,32 +10,43 @@ namespace LionFire.Trading.Indicators;
 
 public class SimpleMovingAverage
     : SingleInputIndicatorBase<SimpleMovingAverage, uint, double, double>
-    , IIndicator<SimpleMovingAverage, uint, double, double>
+    , IIndicator2<SimpleMovingAverage, uint, double, double>
 {
     #region Static
 
-    public static IndicatorCharacteristics Characteristics(uint parameter)
-    {
-        return new IndicatorCharacteristics
-        {
-            Inputs = new List<IndicatorInputCharacteristics>
-            {
-                new IndicatorInputCharacteristics
-                {
+    public static List<InputSlot> Inputs()
+        => [new () {
                     Name = "Source",
                     Type = typeof(double),
-                }
-            },
-            Outputs = new List<IndicatorOutputCharacteristics>
-            {
-                new IndicatorOutputCharacteristics
-                {
-                    Name = "Average",
+                }];
+    public static List<OutputSlot> Outputs()
+            => [new () {
+                     Name = "Average",
                     Type = typeof(double),
-                }
-            },
-        };
-    }
+                }];
+
+    //public static IOComponent Characteristics(uint parameter)
+    //{
+    //    return new IOComponent
+    //    {
+    //        Inputs = new List<InputSlot>
+    //        {
+    //            new InputSlot
+    //            {
+    //                Name = "Source",
+    //                Type = typeof(double),
+    //            }
+    //        },
+    //        Outputs = new List<OutputSlot>
+    //        {
+    //            new OutputSlot
+    //            {
+    //                Name = "Average",
+    //                Type = typeof(double),
+    //            }
+    //        },
+    //    };
+    //}
 
     #endregion
 
@@ -45,7 +57,7 @@ public class SimpleMovingAverage
     #region Derived
 
     public uint Period => Options;
-    public override uint Lookback => Options;
+    public override uint MaxLookback => Options;
 
     #endregion
 

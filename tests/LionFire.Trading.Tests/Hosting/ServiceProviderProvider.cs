@@ -2,7 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-//using Binance.Net;
+using Binance.Net;
 
 public static class ServiceProviderProvider
 {

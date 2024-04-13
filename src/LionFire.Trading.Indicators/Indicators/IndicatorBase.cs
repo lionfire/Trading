@@ -10,7 +10,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
     , IObserver<IReadOnlyList<TInput>>
     , IObserver<TInput>
 
-    where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator<TConcrete, TParameters, TInput, TOutput>
+    where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator2<TConcrete, TParameters, TInput, TOutput>
 {
 
     #region (static) Implementation
@@ -37,13 +37,18 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #region Derived
 
-    public abstract uint Lookback { get; }
+    public abstract uint MaxLookback { get; }
     
     #endregion
 
     #endregion
 
     #region State
+
+    /// <summary>
+    /// If true, do not omit output when new input is available
+    /// </summary>
+    public bool IsPaused { get; set; }
 
     protected Subject<IReadOnlyList<TOutput>>? subject;
 

@@ -5,6 +5,7 @@ using LionFire.Trading.Backtesting2;
 namespace LionFire.Trading.Optimizing2;
 
 
+#if OLD // TOTRIAGE
 public abstract class SignalProvider : IValueProvider<double>
 {
     public BacktestRunner? Context { get; set; }
@@ -73,10 +74,7 @@ public class MAFilter : SignalProvider, IFilterProvider
     }
 }
 
-public class Algo
-{
-}
-
+#endif
 
 public class OptimizationJobParameters
 {

@@ -9,13 +9,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading
+namespace LionFire.Trading;
+
+public interface ISingleSeriesConfig
 {
-    public interface ISingleSeriesConfig
-    {
-        TimeFrame TimeFrame { get; }
+    TimeFrame TimeFrame { get; }
 
-        Symbol Symbol { get; }
+    Symbol Symbol { get; }
 
-    }
 }

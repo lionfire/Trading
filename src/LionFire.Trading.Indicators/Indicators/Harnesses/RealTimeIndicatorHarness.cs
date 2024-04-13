@@ -1,7 +1,7 @@
 ﻿using LionFire.Trading.HistoricalData.Retrieval;
 using System.Threading.Channels;
 
-namespace LionFire.Trading.Indicators.Harness;
+namespace LionFire.Trading.Indicators.Harnesses;
 
 #if FUTURE
 public static class Examples

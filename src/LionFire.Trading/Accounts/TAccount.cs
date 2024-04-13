@@ -12,7 +12,9 @@ namespace LionFire.Trading.Accounts
     [Asset(@"Accounts")] 
     public abstract class TAccount : TFeed
     {
-        
+
+        #region Review
+
         public double CommissionPerMillion { get; set; }
         public string Currency { get; set; }
         public bool IsLive { get; set; }
@@ -21,6 +23,8 @@ namespace LionFire.Trading.Accounts
         public int? BackFillMinutes { get; set; }
 
         public double StopOutLevel { get; set; } = double.NaN;
+
+        #endregion
 
         #region Derived
 

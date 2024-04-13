@@ -19,8 +19,10 @@
 		<!--<PackageReference Include="QuantConnect.Indicators" />-->
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\LionFire.Trading.Historical\LionFire.Trading.Historical.csproj" />
     <ProjectReference Include="..\..\src\LionFire.Trading.Indicators.QuantConnect\LionFire.Trading.Indicators.QuantConnect.csproj" />
     <ProjectReference Include="..\..\src\LionFire.Trading.Indicators\LionFire.Trading.Indicators.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Tests\LionFire.Trading.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -47,12 +47,12 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
 
 public abstract class SingleInputIndicatorBase<TConcrete, TParameters, TInput, TOutput>
     : IndicatorBase<TConcrete, TParameters, TInput, TOutput>
-    where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator<TConcrete, TParameters, TInput, TOutput>
+    where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator2<TConcrete, TParameters, TInput, TOutput>
 {
     #region Input Handling
 
-    // TODO: Can this be moved to a base class somehow?
 
+    // TODO: Move this out of this class. Instead, have OnInput(inputId, data), and have something else push to this indicator
     public override async Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
     {
         IHistoricalTimeSeries<TInput> source;

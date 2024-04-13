@@ -20,7 +20,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Oakton\LionFire.Oakton.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />
-    <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.HistoricalData.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.Historical.Framework.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Indicators\LionFire.Trading.Indicators.csproj" />
   </ItemGroup>
 

@@ -1,7 +1,8 @@
 ﻿
+using LionFire.Base;
 using System.Linq;
 
-namespace LionFire.Trading.HistoricalData.Serialization;
+namespace LionFire.Trading.HistoricalData;
 
 public class HistoricalDataChunkRangeProvider
 {

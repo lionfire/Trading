@@ -10,7 +10,7 @@ using QuantConnect.Data.Market;
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
 public abstract class QuantConnectIndicatorWrapper<TConcrete, TQuantConnectIndicator, TParameters, TInput, TOutput> : SingleInputIndicatorBase<TConcrete, TParameters, TInput, TOutput>
-    where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator<TConcrete, TParameters, TInput, TOutput>
+    where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator2<TConcrete, TParameters, TInput, TOutput>
 {
     #region State
 

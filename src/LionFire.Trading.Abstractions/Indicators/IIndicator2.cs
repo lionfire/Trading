@@ -1,24 +1,24 @@
 ﻿using LionFire.Trading.Data;
-using LionFire.Trading.Indicators.Harness;
+using LionFire.Trading.IO;
 
 namespace LionFire.Trading.Indicators;
 
-public interface IIndicator
+public interface IIndicator2
 {
-    uint Lookback { get; }
+    uint MaxLookback { get; }
     uint? DefaultMaxFastForwardBars => 5;
 }
 
 
-public interface IIndicator<TIndicator, TParameters, TInput, TOutput>
-    : IIndicator<TParameters, TInput, TOutput>
-    where TIndicator : IIndicator<TParameters, TInput, TOutput>
+public interface IIndicator2<TIndicator, TParameters, TInput, TOutput>
+    : IIndicator2<TParameters, TInput, TOutput>
+    where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 {
     static abstract TIndicator Create(TParameters p);
 }
 
-public interface IIndicator<TParameters, TInput, TOutput>
-: IIndicator
+public interface IIndicator2<TParameters, TInput, TOutput>
+: IIndicator2
 , IObservable<IReadOnlyList<TOutput>>
 , IObserver<IReadOnlyList<TInput>>
 {
@@ -31,7 +31,9 @@ public interface IIndicator<TParameters, TInput, TOutput>
     //{
     //    new HistoricalIndicatorExecutorX<ITIndicator, >
     //}
-    static abstract IndicatorCharacteristics Characteristics(TParameters parameter);
+    //static abstract IOComponent Characteristics(TParameters parameter);
+    static abstract List<InputSlot> Inputs();
+    static abstract List<OutputSlot> Outputs();
 
     void Clear();
 

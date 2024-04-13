@@ -21,7 +21,7 @@
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Binance.Grains.Abstractions\LionFire.Trading.Binance.Grains.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
-    <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.HistoricalData.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.Historical.Framework.csproj" />
   </ItemGroup>
 
 </Project>

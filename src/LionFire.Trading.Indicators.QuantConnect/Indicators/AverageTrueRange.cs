@@ -1,57 +1,75 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-using LionFire.Trading;
+﻿
 using QuantConnect.Data.Market;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
-public class PAverageTrueRange
+public class PAverageTrueRange : IndicatorParameters
 {
-    public int Period { get; set; }
+    public uint Period { get; set; }
     public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
+
+    public IReadOnlyList<InstantiatedInputSlot> Inputs
+      => [new  InstantiatedInputSlot() {
+                    Name = "Source",
+                    Type = typeof(IKline),
+                    Lookback = Period,
+                }];
 }
 
-public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, global::QuantConnect.Indicators.AverageTrueRange, PAverageTrueRange, IKline, decimal>, IIndicator<AverageTrueRange, PAverageTrueRange, IKline, decimal>
+public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, global::QuantConnect.Indicators.AverageTrueRange, PAverageTrueRange, IKline, decimal>, IIndicator2<AverageTrueRange, PAverageTrueRange, IKline, decimal>
 {
     #region Static
 
-    public static IndicatorCharacteristics Characteristics(PAverageTrueRange parameter)
-    {
-        return new IndicatorCharacteristics
-        {
-            Inputs = new List<IndicatorInputCharacteristics>
-            {
-                new IndicatorInputCharacteristics
-                {
+    public static List<InputSlot> Inputs()
+        => [new () {
                     Name = "Source",
                     Type = typeof(IKline),
-                }
-            },
-            Outputs = new List<IndicatorOutputCharacteristics>
-            {
-                new IndicatorOutputCharacteristics
-                {
-                    Name = "Average True Range",
+                }];
+    public static List<OutputSlot> Outputs()
+            => [new () {
+                     Name = "Average True Range",
                     Type = typeof(decimal),
-                }
-            },
-        };
-    }
+                }];
+
+
+    public static List<OutputSlot> Outputs(PAverageTrueRange p)
+            => [new () {
+                     Name = "Average True Range",
+                    Type = typeof(decimal),
+                }];
+    //public static IOComponent Characteristics(PAverageTrueRange parameter)
+    //{
+    //    return new IOComponent
+    //    {
+    //        Inputs = new List<InputSlot>
+    //        {
+    //            new InputSlot
+    //            {
+    //                Name = "Source",
+    //                Type = typeof(IKline),
+    //            }
+    //        },
+    //        Outputs = new List<OutputSlot>
+    //        {
+    //            new OutputSlot
+    //            {
+    //                Name = "Average True Range",
+    //                Type = typeof(decimal),
+    //            }
+    //        },
+    //    };
+    //}
 
     #endregion
 
-    public override uint Lookback => (uint)Parameters.Period;
-    PAverageTrueRange  Parameters;
+    public override uint MaxLookback => (uint)Parameters.Period;
+    PAverageTrueRange Parameters;
 
     public static AverageTrueRange Create(PAverageTrueRange p) => new AverageTrueRange(p);
     public AverageTrueRange(PAverageTrueRange parameters)
     {
         Parameters = parameters;
-        WrappedIndicator = new global::QuantConnect.Indicators.AverageTrueRange(parameters.Period, parameters.MovingAverageType);
+        WrappedIndicator = new global::QuantConnect.Indicators.AverageTrueRange((int)parameters.Period, parameters.MovingAverageType);
     }
 
     public override void OnNext(IReadOnlyList<IKline> inputs)
@@ -62,7 +80,7 @@ public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, g
 
         foreach (var input in inputs)
         {
-            var bar = new TradeBar(time: endTime, symbol: QuantConnect.Symbol.None, open: default /* UNUSED for ATR */, input.HighPrice, input.LowPrice, input.ClosePrice,  volume: default, period: period);
+            var bar = new TradeBar(time: endTime, symbol: QuantConnect.Symbol.None, open: default /* UNUSED for ATR */, input.HighPrice, input.LowPrice, input.ClosePrice, volume: default, period: period);
 
 
             WrappedIndicator.Update(bar);

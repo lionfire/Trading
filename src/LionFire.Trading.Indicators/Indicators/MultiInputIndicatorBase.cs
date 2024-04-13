@@ -5,7 +5,7 @@ namespace LionFire.Trading.Indicators;
 public abstract class MultiInputIndicatorBase<TConcrete, TParameters, TInput1, TInput2, TOutput>
     : IndicatorBase<TConcrete, TParameters, (TInput1,TInput2), TOutput>
 
-    where TConcrete : IndicatorBase<TConcrete, TParameters, (TInput1, TInput2), TOutput>, IIndicator<TConcrete, TParameters, (TInput1, TInput2), TOutput>
+    where TConcrete : IndicatorBase<TConcrete, TParameters, (TInput1, TInput2), TOutput>, IIndicator2<TConcrete, TParameters, (TInput1, TInput2), TOutput>
     //where TInput : (TInput1, TInput2)
 {
     #region Input Handling
@@ -61,3 +61,8 @@ public abstract class MultiInputIndicatorBase<TConcrete, TParameters, TInput1, T
     #endregion
 }
 
+
+public static class InputUtils
+{
+
+}

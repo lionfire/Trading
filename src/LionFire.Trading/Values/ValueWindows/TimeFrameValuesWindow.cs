@@ -1,6 +1,7 @@
 ﻿using Oakton.Descriptions;
 using System.Diagnostics;
 
+
 namespace LionFire.Trading.ValueWindows;
 
 public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>

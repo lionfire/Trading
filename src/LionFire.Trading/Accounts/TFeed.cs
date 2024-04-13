@@ -67,6 +67,8 @@ namespace LionFire.Trading.Accounts
 
         public virtual string Key => Exchange + "^" + (string.IsNullOrWhiteSpace(ExchangeArea) ? "" : $"^{ExchangeArea}") + AccountId;
 
+        // REVIEW - What are Children? Document here
+        // REVIEW - Do Children belong here?  More specific collections?
         public InstantiationCollection? Children { get; set; }
         IInstantiationCollection? IHierarchicalTemplate.Children => Children;
 
