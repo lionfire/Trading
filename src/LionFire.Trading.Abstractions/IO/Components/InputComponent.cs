@@ -2,7 +2,8 @@
 
 public interface IInputComponent
 {
-    IReadOnlyList<InputSlot> Inputs { get; }
+    static abstract IReadOnlyList<InputSlot> TInputs();
+    IReadOnlyList<Input> Inputs { get; }
 }
 
 public class InputComponent : IInputComponent

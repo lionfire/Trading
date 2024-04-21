@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.Data;
+﻿#if false // TODO Maybe
+using LionFire.Trading.Data;
 
 namespace LionFire.Trading.Indicators;
 
@@ -61,8 +62,4 @@ public abstract class MultiInputIndicatorBase<TConcrete, TParameters, TInput1, T
     #endregion
 }
 
-
-public static class InputUtils
-{
-
-}
+#endif

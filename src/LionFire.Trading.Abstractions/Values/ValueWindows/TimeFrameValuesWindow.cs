@@ -1,6 +1,5 @@
-﻿using Oakton.Descriptions;
-using System.Diagnostics;
-
+﻿using System.Diagnostics;
+using System.Linq;
 
 namespace LionFire.Trading.ValueWindows;
 
@@ -46,6 +45,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
     /// Values in reverse chronological order
     /// </summary>
     public (DateTimeOffset firstOpenTime, DateTimeOffset lastOpenTime, T[] reverseValues) ValuesReverse => (FirstOpenTime, LastOpenTime, values.ToArray());
+    public T this[int index] => values[index];
 
     /// <summary>
     /// Values in reverse chronological order, with raw access to the buffer

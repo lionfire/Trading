@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading
 {
-    public sealed class TimeSeries : DataSeries<DateTimeOffset>, ITimeSeries
+    public sealed class TimeSeries : DataSeries<DateTimeOffset>, IHistoricalTimeSeriesOrig
     {
         public DateTimeOffset UnsetValue { get { return default; } }
 

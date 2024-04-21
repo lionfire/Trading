@@ -25,22 +25,21 @@ public interface IIndicator2<TParameters, TInput, TOutput>
     //static abstract IndicatorMachine CreateMachine();
 
     //static abstract TIndicator Create<TIndicator>(TParameters p)
-    //where TIndicator : IIndicator<TParameters, TInput, TOutput>;
+    //where TIndicator : IIndicator<TParameters, InputSlot, TOutput>;
 
-    //IReadOnlyList<TOutput> Compute(TParameters parameter, IReadOnlyList<TInput> values)
+    //IReadOnlyList<TOutput> Compute(TParameters parameter, IReadOnlyList<InputSlot> values)
     //{
     //    new HistoricalIndicatorExecutorX<ITIndicator, >
     //}
     //static abstract IOComponent Characteristics(TParameters parameter);
-    static abstract List<InputSlot> Inputs();
+    static abstract List<Trading.InputSlot> Inputs();
     static abstract List<OutputSlot> Outputs();
 
     void Clear();
 
     #region Input Handling
 
-    // OPTIMIZE: try the return value as an array
-    Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
+  
 
     void OnNextFromArray(IReadOnlyList<TInput> inputData, int index);
 

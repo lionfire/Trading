@@ -18,7 +18,7 @@ namespace LionFire.Trading
         NotLoaded = 3,
     }
 
-    public interface IBarSeries : ISeries<TimedBar>, IEnumerable<TimedBar>
+    public interface IBarSeries : IHistoricalSeries<TimedBar>, IEnumerable<TimedBar>
     {
     }
 

@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CircularBuffer" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Orleans.Sdk" />
@@ -37,7 +38,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Backtesting\" />
+    <Folder Include="Bots\Backtesting\" />
     <Folder Include="Portfolios\" />
   </ItemGroup>
 

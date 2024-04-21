@@ -17,7 +17,7 @@ namespace LionFire.Trading
         DataSeries<TimedBar>, IBarSeries
 
     {
-        TimedBar ISeries<TimedBar>.this[int index]
+        TimedBar IHistoricalSeries<TimedBar>.this[int index]
         {
             get
             {
@@ -38,7 +38,7 @@ namespace LionFire.Trading
             }
         }
 
-        TimedBar ISeries<TimedBar>.LastValue
+        TimedBar IHistoricalSeries<TimedBar>.LastValue
         {
             get
             {
@@ -46,7 +46,7 @@ namespace LionFire.Trading
             }
         }
 
-        TimedBar ISeries<TimedBar>.Last(int index)
+        TimedBar IHistoricalSeries<TimedBar>.Last(int index)
         {
             throw new NotImplementedException();
         }

@@ -84,45 +84,22 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #region Input Handling
 
-    //public abstract Task<(object, int)> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
-    public abstract Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
-
-    //public abstract void OnNextFromArray(object inputData, int index);
-
-
-    //public override async Task<(IReadOnlyList<TInput>, int)> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
-    //{
-    //    var d1 = GetData<TInput1>(sources[0], start, endExclusive);
-    //    var d2 = GetData<TInput2>(sources[1], start, endExclusive);
-    //    await Task.WhenAll(d1, d2);
-
-    //    int count = d1.Result.count;
-    //    if (count != d2.Result.count) throw new ArgumentException("Input data counts do not match");
-
-    //    return (new object[] { d1.Result.data, d2.Result.data }, count);
-    //}
-
-    public void OnNextFromArray(IReadOnlyList<TInput> inputData, int index)
-    {
-        OnNext(inputData[index]);
-    }
+    public void OnNextFromArray(IReadOnlyList<TInput> inputData, int index) => OnNext(inputData[index]);
 
     #endregion
 
     //#region Input
-
-
 
     //public void OnNextFromPreparedSources(IReadOnlyList<IHistoricalTimeSeries> sources, int index)
     //{
     //    OnNext(InputFromSources(sources, index));
     //}
 
-    //public Func<IReadOnlyList<IHistoricalTimeSeries>, int, TInput> TInput InputFromSources(IReadOnlyList<IHistoricalTimeSeries> s)
+    //public Func<IReadOnlyList<IHistoricalTimeSeries>, int, InputSlot> InputSlot InputFromSources(IReadOnlyList<IHistoricalTimeSeries> s)
     //{
     //    var s = (IHistoricalTimeSeries<decimal>)s[0];
 
-    //    return (TInput) s[0][index];
+    //    return (InputSlot) s[0][index];
     //}
 
     //#endregion

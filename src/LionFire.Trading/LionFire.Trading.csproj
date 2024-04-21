@@ -80,6 +80,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Backtesting\Optimization\" />
     <Folder Include="Contexts\Harnesses\" />
     <Folder Include="Data\TimeSeries\" />
     <Folder Include="HistoricalData\Chunking\" />

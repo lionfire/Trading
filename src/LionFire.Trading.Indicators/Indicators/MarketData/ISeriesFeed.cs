@@ -10,7 +10,7 @@ namespace LionFire.Trading.Data;
 //{
 //}
 
-//public class IndicatorHarnessInput<TInput> : IHistoricalTimeSeries
+//public class IndicatorHarnessInput<InputSlot> : IHistoricalTimeSeries
 //{
 
 

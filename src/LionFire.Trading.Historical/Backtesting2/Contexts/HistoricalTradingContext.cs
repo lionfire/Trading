@@ -60,7 +60,7 @@ public class HistoricalTradingContext : TradingContext2, ITradingContext2
         ////    Period = 14
         ////};
 
-        //var h = new HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>(ServiceProvider, new()
+        //var h = new HistoricalIndicatorHarness<TIndicator, TParameters, InputSlot, TOutput>(ServiceProvider, new()
         //{
         //    Parameters = parameters,
         //    TimeFrame = TimeFrame,

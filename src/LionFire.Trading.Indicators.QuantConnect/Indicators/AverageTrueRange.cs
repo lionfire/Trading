@@ -8,8 +8,8 @@ public class PAverageTrueRange : IndicatorParameters
     public uint Period { get; set; }
     public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
 
-    public IReadOnlyList<InstantiatedInputSlot> Inputs
-      => [new  InstantiatedInputSlot() {
+    public IReadOnlyList<Input> Inputs
+      => [new Input() {
                     Name = "Source",
                     Type = typeof(IKline),
                     Lookback = Period,

@@ -23,7 +23,7 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
             Converter = i => (TOutput)(object)i!;
         }
     }
-    //public static HistoricalTimeSeriesTypeAdapter<TInput, TOutput> Create(IHistoricalTimeSeries input)
+    //public static HistoricalTimeSeriesTypeAdapter<InputSlot, TOutput> Create(IHistoricalTimeSeries input)
     //{
     //    return Activator.CreateInstance(typeof(HistoricalTimeSeriesTypeAdapter<,>).MakeGenericType(input.ValueType, typeof(TOutput)), input);
     //}
@@ -44,7 +44,6 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
     }
 }
 
-
 public abstract class SingleInputIndicatorBase<TConcrete, TParameters, TInput, TOutput>
     : IndicatorBase<TConcrete, TParameters, TInput, TOutput>
     where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator2<TConcrete, TParameters, TInput, TOutput>
@@ -52,28 +51,11 @@ public abstract class SingleInputIndicatorBase<TConcrete, TParameters, TInput, T
     #region Input Handling
 
 
-    // TODO: Move this out of this class. Instead, have OnInput(inputId, data), and have something else push to this indicator
-    public override async Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
-    {
-        IHistoricalTimeSeries<TInput> source;
-        if (sources[0].GetType().IsAssignableTo(typeof(IHistoricalTimeSeries<TInput>)))
-        {
-            source = (IHistoricalTimeSeries<TInput>)sources[0];
-        }
-        else
-        {
-            source = (IHistoricalTimeSeries<TInput>)Activator.CreateInstance(typeof(HistoricalTimeSeriesTypeAdapter<,>).MakeGenericType(sources[0].ValueType, typeof(TOutput)), sources[0])!;
-        }
-        var data = await source.Get(start, endExclusive).ConfigureAwait(false);
-
-        if (!data.IsSuccess || data.Items?.Any() != true) throw new Exception("Failed to get data");
-
-        return data.Items.ToArray(); // COPY
-    }
+ 
 
     //public override void OnNextFromArray(object inputData, int index)
     //{
-    //    var x = (IReadOnlyList<TInput>)inputData;
+    //    var x = (IReadOnlyList<InputSlot>)inputData;
     //    OnNext(x[index]);
     //}
 
