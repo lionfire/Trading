@@ -252,7 +252,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         var barsRangeReference = input.SymbolBarsRange;
         barsRangeReference.ThrowIfInvalid();
 
-        //Input.IntervalFlag ??= barsRangeReference?.TimeFrame.ToShortString();
+        //InputSignal.IntervalFlag ??= barsRangeReference?.TimeFrame.ToShortString();
         if (!input.KlineInterval.HasValue) throw new ArgumentNullException(nameof(input.KlineInterval));
 
         #endregion
@@ -526,7 +526,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
                 //if (reverse)
                 //{
-                //    nextStartTime = lastKline.OpenTime - Input.TimeFrame.TimeSpan;
+                //    nextStartTime = lastKline.OpenTime - InputSignal.TimeFrame.TimeSpan;
                 //}
                 //else
                 //{
@@ -561,7 +561,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                           && (lastKline != null && lastKline.OpenTime + Input.TimeFrame.TimeSpan != info.EndExclusive);
 
             //info.IsComplete = noGaps && (firstKline != null && firstKline.OpenTime == info.Start)
-            //&& (lastKline != null && lastKline.OpenTime + Input.TimeFrame.TimeSpan == info.EndExclusive);
+            //&& (lastKline != null && lastKline.OpenTime + InputSignal.TimeFrame.TimeSpan == info.EndExclusive);
             info.IsComplete = noGaps && !info.MissingBarsOnlyAtStart && !info.MissingBarsOnlyAtEnd;
 
             info.FieldSet = Input.FieldSet;
@@ -645,7 +645,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             {
                 //detectedStart = info.Start;
                 Logger.LogInformation("Detected start of data at {start}", info.FirstOpenTime);
-                //if (!Input.NoUpdateInfo)
+                //if (!InputSignal.NoUpdateInfo)
                 {
                     bool save = true;
                     if (barsInfo != null)

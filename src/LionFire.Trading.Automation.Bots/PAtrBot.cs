@@ -64,12 +64,12 @@ public class AtrBot : StandardBot2<PAtrBot>
 
     #region Inputs
 
-    public IReadOnlyList<Input> Inputs
+    public IReadOnlyList<InputSignal> Inputs
     {
         get
         {
             // TInputs with specifics on lookbacks
-            return [new Input() {
+            return [new InputSignal() {
                     Name = "ATR",
                     Type = typeof(AverageTrueRange),
                     Lookback = Parameters.ATR.Period,

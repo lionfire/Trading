@@ -3,7 +3,7 @@
 public interface IInputComponent
 {
     static abstract IReadOnlyList<InputSlot> TInputs();
-    IReadOnlyList<Input> Inputs { get; }
+    IReadOnlyList<InputSignal> Inputs { get; }
 }
 
 public class InputComponent : IInputComponent

@@ -23,7 +23,7 @@ public class Harness_ : BinanceDataTest
 
         var tolerance = 0.000_01;
 
-        // Input   | Average
+        // InputSignal   | Average
         // 42331.9 | 42331.9  (premature)
         // 42350.4 | 42341.15 (premature)
         // 42360.2 | 42347.5

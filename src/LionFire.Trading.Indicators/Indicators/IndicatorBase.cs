@@ -88,7 +88,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #endregion
 
-    //#region Input
+    //#region InputSignal
 
     //public void OnNextFromPreparedSources(IReadOnlyList<IHistoricalTimeSeries> sources, int index)
     //{

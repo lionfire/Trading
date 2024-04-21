@@ -130,7 +130,7 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     //    await Task.WhenAll(d1, d2);
 
     //    int count = d1.Result.count;
-    //    if (count != d2.Result.count) throw new ArgumentException("Input data counts do not match");
+    //    if (count != d2.Result.count) throw new ArgumentException("InputSignal data counts do not match");
 
     //    return (new object[] { d1.Result.data, d2.Result.data }, count);
     //}

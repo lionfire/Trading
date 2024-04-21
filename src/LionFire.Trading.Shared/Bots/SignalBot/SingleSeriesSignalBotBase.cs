@@ -372,7 +372,7 @@ p.onBars.Add(new StopLossTrailer(p)
 
             //var closePointsTSL = new StopLossTrailerConfig
             //{
-            //    Input = new RangedNumber(1, Unit.ClosePoints, 0.2),
+            //    InputSignal = new RangedNumber(1, Unit.ClosePoints, 0.2),
             //    StopLossLocation = new RangedNumber(0.85, Unit.NearChannel, 0.5),
             //    Function = DoubleFunctions.Linear
             //};

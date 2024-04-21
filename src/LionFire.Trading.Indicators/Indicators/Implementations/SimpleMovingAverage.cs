@@ -145,7 +145,7 @@ public class SimpleMovingAverage
     //}
     #endregion
 
-    //#region Input Handling
+    //#region InputSignal Handling
 
     //// TODO: Can this be moved to a base class somehow?
 
