@@ -1,6 +1,13 @@
 ﻿namespace LionFire.Trading.Automation;
 
-public class PTimeFrameBot2<TConcrete> : PBot2<TConcrete>
+public interface IPTimeFrameBot2
+{
+    TimeFrame TimeFrame
+    {
+        get;
+    }
+}
+public class PTimeFrameBot2<TConcrete> : PBot2<TConcrete>, IPTimeFrameBot2
 {
     public required TimeFrame TimeFrame { get; set; }
 

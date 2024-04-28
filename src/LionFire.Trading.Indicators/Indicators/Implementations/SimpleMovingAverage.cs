@@ -14,12 +14,12 @@ public class SimpleMovingAverage
 {
     #region Static
 
-    public static List<InputSlot> Inputs()
+    public static IReadOnlyList<InputSlot> InputSlots()
         => [new () {
                     Name = "Source",
                     Type = typeof(double),
                 }];
-    public static List<OutputSlot> Outputs()
+    public static IReadOnlyList<OutputSlot> Outputs()
             => [new () {
                      Name = "Average",
                     Type = typeof(double),
@@ -29,7 +29,7 @@ public class SimpleMovingAverage
     //{
     //    return new IOComponent
     //    {
-    //        Inputs = new List<InputSlot>
+    //        InputSignals = new List<InputSlot>
     //        {
     //            new InputSlot
     //            {

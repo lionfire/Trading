@@ -53,14 +53,14 @@ public class HistoricalTradingContext : TradingContext2, ITradingContext2
 
         //// TODO >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-        ////var parameters = new TParameters
+        ////var parameters = new TValue
         ////{
         ////    //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
         ////    MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
         ////    Period = 14
         ////};
 
-        //var h = new HistoricalIndicatorHarness<TIndicator, TParameters, InputSlot, TOutput>(ServiceProvider, new()
+        //var h = new HistoricalIndicatorHarness<TIndicator, TValue, InputSlot, TOutput>(ServiceProvider, new()
         //{
         //    Parameters = parameters,
         //    TimeFrame = TimeFrame,

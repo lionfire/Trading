@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="coverlet.collector" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="xunit" />
+		<PackageReference Include="xunit.runner.visualstudio" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
+		<ProjectReference Include="..\..\src\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
+		<ProjectReference Include="..\..\src\LionFire.Trading.Indicators.QuantConnect\LionFire.Trading.Indicators.QuantConnect.csproj" />
+		<ProjectReference Include="..\..\src\LionFire.Trading\LionFire.Trading.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Tests\LionFire.Trading.Tests.csproj" />
+	</ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

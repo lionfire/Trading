@@ -1,4 +1,5 @@
-﻿namespace LionFire.Trading.Automation;
+﻿
+namespace LionFire.Trading.Automation;
 
 public interface IBotController
 {
@@ -14,10 +15,20 @@ public class BacktestBotController
 
 }
 
-public class BotBase2<TParameters> : IBot2
-    where TParameters : PBot2
+
+// TODO?
+//public abstract class BotBase2<TConcrete, TParameters>
+//    where TConcrete : IBot2
+//{
+//}
+
+public abstract class BotBase2<TParameters> 
+    where TParameters : PBot2<TParameters>
 {
     public TParameters Parameters => parameters;
+
+    public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
+
     private TParameters parameters;
 
     private IBotController controller;
@@ -27,13 +38,18 @@ public class BotBase2<TParameters> : IBot2
         this.parameters = parameters;
         controller = botController;
 
-        if(parameters is PTimeFrameBot2 ptf)
+        if(parameters is IPTimeFrameBot2 ptf)
         {
 
         }
     }
 
     public virtual void OnBar(IKline kline) { }
+
+    public static IReadOnlyList<InputSlot> InputSlots()
+    {
+        throw new NotImplementedException();
+    }
 
 
     #region Controlling the bot
@@ -50,7 +66,7 @@ public class BotBase2<TParameters> : IBot2
     // - Live bot: OnTick
     // - Backtest bot: OnTick
     // - Backtest bot: OnBar
-    
+
     // Lower priority, since bots will typically run live with ticks and we will be able to confirm bars (unless there's lag)
     // - Live bot: tentative bar becomes available
     // - Live bot: confirmed bar becomes available

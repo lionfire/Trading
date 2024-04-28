@@ -2,7 +2,7 @@
 using LionFire.Trading;
 using LionFire.Trading.Indicators.Harnesses;
 using TIndicator = LionFire.Trading.Indicators.QuantConnect_.AverageTrueRange;
-using TParameters = LionFire.Trading.Indicators.QuantConnect_.PAverageTrueRange;
+using TParameters = LionFire.Trading.Indicators.QuantConnect_.PAverageTrueRange<decimal>;
 
 //namespace LionFire.Trading.Indicators.Harnesses.Tests;
 
@@ -19,7 +19,10 @@ public class Harness_ : BinanceDataTest
             {
                 //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
                 MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
-                Period = 14
+                Period = 14,
+                
+                //Source = 
+
             },
             TimeFrame = TimeFrame.h1,
             InputReferences = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC

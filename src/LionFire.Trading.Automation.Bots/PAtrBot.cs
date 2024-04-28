@@ -38,17 +38,27 @@ public class PStandardBot : PBot2<PStandardBot>
     #endregion
 }
 
-public class PAtrBot : PSymbolBarsBot2
+public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
 {
-    public required PAverageTrueRange ATR { get; init; }
+    public required PAverageTrueRange<TValue> ATR { get; init; }
 
     public required PStandardBot Standard { get; set; }
     public static PStandardBot StandardDefaults { get; set; } = new PStandardBot
     {
         //OpenThreshold
     };
+
+    public PAtrBot() { }
+    public PAtrBot(uint period) 
+    {
+        ATR = new PAverageTrueRange<TValue>
+        {
+            Period = period,
+        };
+    }
 }
 
+#if TODO
 [Bot(Direction = BotDirection.Unidirectional)]
 public class AtrBot : StandardBot2<PAtrBot>
 {
@@ -64,18 +74,20 @@ public class AtrBot : StandardBot2<PAtrBot>
 
     #region Inputs
 
-    public IReadOnlyList<InputSignal> Inputs
+    public IReadOnlyList<IInputSignal> Inputs
     {
         get
         {
-            // TInputs with specifics on lookbacks
-            return [new InputSignal() {
-                    Name = "ATR",
-                    Type = typeof(AverageTrueRange),
-                    Lookback = Parameters.ATR.Period,
-                    Phase = 0,
-                    Source = Parameters.Input,
-                }];
+            // TInputSlots with specifics on lookbacks
+            return [
+                //new InputSignal<decimal>() {
+                //    Name = "ATR",
+                //    Type = typeof(AverageTrueRange),
+                //    Lookback = Parameters.ATR.Period,
+                //    Phase = 0,
+                //    Source = Parameters.Input,
+                //}
+                ];
         }
     }
 
@@ -100,9 +112,9 @@ public class AtrBot : StandardBot2<PAtrBot>
             TimeFrame = parameters.TimeFrame,
         });
 
-        eATR.GetWindow(OutputExecutionOptions.Memory)
+        eATR.GetWindow(OutputExecutionOptions.Memory);
 
-        ATR = eATR.Memory;
+        //ATR = eATR.Memory;
     }
 
 
@@ -125,3 +137,4 @@ public class AtrBot : StandardBot2<PAtrBot>
     }
 
 }
+#endif

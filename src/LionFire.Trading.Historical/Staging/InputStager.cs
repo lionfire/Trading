@@ -11,7 +11,7 @@ namespace LionFire.Trading.Historical.Staging;
 public class InputStaging<TInput1, TInput2>
 {
     public InputStaging(HistoricalDataChunkRangeProvider chunker,
-        IReadOnlyList<InputSignal> inputs)
+        IReadOnlyList<IInputSignal> inputs)
     {
 
     }

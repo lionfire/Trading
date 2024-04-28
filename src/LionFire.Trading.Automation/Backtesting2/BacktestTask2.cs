@@ -27,13 +27,13 @@ public class BacktestTask2 : IStartable
 
     #region Parameters
 
-    public PBacktestTask2 Parameters { get; }
+    public IPBacktestTask2 Parameters { get; }
 
     #endregion
 
     #region Lifecycle
 
-    public BacktestTask2(IServiceProvider serviceProvider, PBacktestTask2 parameters)
+    public BacktestTask2(IServiceProvider serviceProvider, IPBacktestTask2 parameters)
     {
         ServiceProvider = serviceProvider;
         Parameters = parameters;
@@ -103,7 +103,7 @@ public class BacktestTask2 : IStartable
     #region State
 
     public BacktestAccount2? BacktestAccount { get; private set; }
-    public DateTimeOffset BacktestDate { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset BacktestDate { get; protected set; } = DateTimeOffset.UtcNow;
 
     #endregion
 
@@ -120,7 +120,7 @@ public class BacktestTask2 : IStartable
 /// How to do this?
 /// - 
 /// </summary>
-public class BacktestHarness : IStartable
+public class BacktestHarness 
 {
     List<IIndicatorHarness> indicatorHarnesses;
     List<BacktestBotHarness> backtestBotHarnesses;
@@ -149,9 +149,21 @@ public class BacktestHarness : IStartable
 
         return true;
     }
+
     public int Commonality(BacktestTask2 task)
     {
+        int commonality = 0;
 
+        // Something like this:
+        //foreach(var input in task.Inputs)
+        //{
+        //    if (this.InputCounts.Contains(input.Key))
+        //    {
+        //        commonality += InputCounts[input.Key];
+        //    }
+        //}
+
+        return commonality;
     }
 
     public bool Enqueue(BacktestTask2 task)
@@ -169,23 +181,23 @@ public class BacktestHarness : IStartable
 
     public Task Run(CancellationToken cancellationToken = default)
     {
-
+        throw new NotImplementedException();
     }
 
 }
 
 // Activating bots
-// - Try ctor(TParameters)
-// - Try ctor(IServiceProvider, TParameters)
-// - Try GetService<IFactory<TBot, TParameters>>().Create(TParameters)
+// - Try ctor(TValue)
+// - Try ctor(IServiceProvider, TValue)
+// - Try GetService<IFactory<TBot, TValue>>().Create(TValue)
 // - save successful result to static
 public class BacktestTask2<TParameters> : BacktestTask2
     //where TBot : IBot2
-    where TParameters : PBot2
+    where TParameters : IPBacktestTask2
 {
     IBot2 Bot { get; }
 
-    public BacktestTask2(IServiceProvider serviceProvider, TParameters parameters)
+    public BacktestTask2(IServiceProvider serviceProvider, TParameters parameters):base(serviceProvider, parameters)
     {
         if (typeof(TParameters) is IFactory<IBot2> factory)
         {

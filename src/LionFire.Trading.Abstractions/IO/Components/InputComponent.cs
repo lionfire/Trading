@@ -2,12 +2,15 @@
 
 public interface IInputComponent
 {
-    static abstract IReadOnlyList<InputSlot> TInputs();
-    IReadOnlyList<InputSignal> Inputs { get; }
+    static abstract IReadOnlyList<InputSlot> InputSlots();
+    IReadOnlyList<IInputSignal> InputSignals { get; }
 }
 
-public class InputComponent : IInputComponent
+public abstract class InputComponent 
+    // : IInputComponent
 {
-    public required IReadOnlyList<InputSlot> Inputs { get; init; }
+    //public static abstract IReadOnlyList<InputSlot> InputSlots();
+
+    public required IReadOnlyList<IInputSignal> InputSignals { get; init; }
 }
 

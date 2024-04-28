@@ -1,9 +1,9 @@
 ﻿namespace LionFire.Trading.Automation;
 
-public class StandardBot2<TParameters> : Bot2<TParameters>
-      where TParameters : PBot2
+public abstract class StandardBot2<TParameters> : Bot2<TParameters>
+      where TParameters : PBot2<TParameters>
 {
-    public StandardBot2(TParameters parameters) : base(parameters)
+    public StandardBot2(TParameters parameters, IBotController botController) : base(parameters, botController)
     {
     }
 

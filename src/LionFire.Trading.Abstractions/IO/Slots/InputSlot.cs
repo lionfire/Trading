@@ -10,12 +10,29 @@ public class InputSlot : Slot
 
 public interface IInputParameters
 {
+    int Phase { get; }
+}
+
+public class InputParameters<T> : IInputParameters
+{
+    public required T Parameters { get; init; }
+    public int Phase { get; init; }
+}
+
+public interface IInputSignal : IInstanceFor<InputSlot>
+{
 
 }
 
-public class InputSignal<TParameters> 
-    : IInstanceFor<InputSlot>
-    //: IParameterizedTemplateInstance<InputSlot, IInputParameters>
+/// <typeparam name="TValue"></typeparam>
+/// <remarks>
+/// Could be:
+/// - historical
+/// - real-time
+/// - both
+/// </remarks>
+public class InputSignal<TValue> : IInputSignal
+    //, IParameterizedTemplateInstance<InputSlot, IInputParameters>
 {
     #region Relationships
 
@@ -28,14 +45,17 @@ public class InputSignal<TParameters>
 
     #region Parameters
 
+    public required IInputParameters Parameters { get; init; }
+
+    // REVIEW - does this belong here?
     public uint Lookback { get; set; }
-    public int Phase { get; set; }
 
     #endregion
-
 }
 
-public class IndicatorParameters
+public interface IParametersFor<T> { }
+
+public class IndicatorParameters<TIndicator> : IParametersFor<TIndicator>
 {
 }
 

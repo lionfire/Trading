@@ -46,11 +46,11 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
     #region Lifecycle
 
-    public IndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions outputOptions)
+    public IndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions? outputOptions = null)
     {
         ServiceProvider = serviceProvider;
-        OutputExecutionOptions = outputOptions;
-        OutputComponentOptions.FallbackToDefaults(outputOptions);
+        OutputExecutionOptions = outputOptions ?? new();
+        OutputComponentOptions.FallbackToDefaults(OutputExecutionOptions);
         Parameters = options.Parameters;
         TimeFrame = options.TimeFrame;
         Indicator = CreateIndicator();

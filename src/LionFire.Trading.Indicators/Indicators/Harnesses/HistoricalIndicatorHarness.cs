@@ -1,7 +1,7 @@
 ﻿using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.HistoricalData.Retrieval;
-//using LionFire.Trading.Indicators.Inputs;
+//using LionFire.Trading.Indicators.InputSignals;
 using LionFire.Trading.ValueWindows;
 
 
@@ -50,7 +50,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
     #region Configuration
 
     /// <summary>
-    /// Fast-forward: Continue with current indicator state even though some inputs are not requested (will be wasted).  It may typically make sense to match this value with the MaxLookback on the Inputs, or at least the computationally expensive inputs.
+    /// Fast-forward: Continue with current indicator state even though some inputs are not requested (will be wasted).  It may typically make sense to match this value with the MaxLookback on the InputSignals, or at least the computationally expensive inputs.
     /// </summary>
     public static uint MaxFastForwardBars = 1;
 
@@ -58,7 +58,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
     #region Lifecycle
 
-    public HistoricalIndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions outputExecutionOptions) : base(serviceProvider, options, outputExecutionOptions)
+    public HistoricalIndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions? outputExecutionOptions=null) : base(serviceProvider, options, outputExecutionOptions)
     {
      
     }
@@ -97,7 +97,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
     private async ValueTask<IValuesResult<TOutput>> _TryGetReverseOutput(
         TimeFrameRange range,
-        //TParameters parameters,
+        //TValue parameters,
         uint? maxFastForwardBars = null, // If memory.LastOpenTime is within this many bars from inputStart, calculate to bring memory up to speed with desired range.EndExclusive
         TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null,
         bool skipAhead = false,

@@ -1,8 +1,29 @@
 ﻿namespace LionFire.Trading.Automation;
 
-public class PBacktestTask2<PBot, TBot>
-     //where PBot : ITemplate<TBot>
+public interface IPBacktestTask2
 {
+    bool TicksEnabled { get; }
+    ExchangeSymbol? ExchangeSymbol { get; }
+    ExchangeSymbol[]? ExchangeSymbols { get; set; }
+    TimeFrame TimeFrame { get; }
+    DateTimeOffset Start { get; }
+    DateTimeOffset EndExclusive { get; }
+}
+
+[Flags]
+public enum SimulationFeatures
+{
+    Unspecified = 0,
+    Bars = 1 << 0,
+    Ticks = 1 << 1,
+    OrderBook = 1 << 2,
+}
+
+public class PBacktestTask2<PBot> : IPBacktestTask2
+//where PBot : ITemplate<TBot>
+{
+    public SimulationFeatures SimulationFeatures { get; set; }
+
     public bool TicksEnabled { get; set; }
 
     /// <summary>
@@ -10,14 +31,23 @@ public class PBacktestTask2<PBot, TBot>
     /// </summary>
     public bool OrderBook { get; set; }
 
-    public required SymbolBarsRange SymbolBarsRange { get; init; }
+    //public required SymbolBarsRange SymbolBarsRange { get; init; }
+
+    #region ExchangeSymbol(s) discriminated union
 
     /// <summary>
-    /// Primary symbol being traded.
-    /// (Some bots may trade multiple symbols, in which case this symbol may be unused or superfluous.)
+    /// null if ExchangeSymbols is set instead
     /// </summary>
-    public string Symbol => SymbolBarsRange.Symbol;
-    public TimeFrame TimeFrame => SymbolBarsRange.TimeFrame;
-    public DateTimeOffset Start => SymbolBarsRange.Start;
-    public DateTimeOffset EndExclusive => SymbolBarsRange.EndExclusive;
+    public ExchangeSymbol? ExchangeSymbol { get; init; }
+
+    /// <summary>
+    /// null if ExchangeSymbol is set instead.  Order is important, with the first symbol typically being the primary one.
+    /// </summary>
+    public ExchangeSymbol[]? ExchangeSymbols { get; set; }
+
+    #endregion
+
+    public required TimeFrame TimeFrame { get; init; }
+    public DateTimeOffset Start { get; init; }
+    public DateTimeOffset EndExclusive { get; init; }
 }

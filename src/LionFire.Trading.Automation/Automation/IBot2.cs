@@ -2,6 +2,6 @@
 
 namespace LionFire.Trading.Automation;
 
-public interface IBot2 : IInputComponent
+public interface IBot2
 {
 }

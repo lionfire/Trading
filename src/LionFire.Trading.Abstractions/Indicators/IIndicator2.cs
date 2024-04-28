@@ -24,16 +24,16 @@ public interface IIndicator2<TParameters, TInput, TOutput>
 {
     //static abstract IndicatorMachine CreateMachine();
 
-    //static abstract TIndicator Create<TIndicator>(TParameters p)
-    //where TIndicator : IIndicator<TParameters, InputSlot, TOutput>;
+    //static abstract TIndicator Create<TIndicator>(TValue p)
+    //where TIndicator : IIndicator<TValue, InputSlot, TOutput>;
 
-    //IReadOnlyList<TOutput> Compute(TParameters parameter, IReadOnlyList<InputSlot> values)
+    //IReadOnlyList<TOutput> Compute(TValue parameter, IReadOnlyList<InputSlot> values)
     //{
     //    new HistoricalIndicatorExecutorX<ITIndicator, >
     //}
-    //static abstract IOComponent Characteristics(TParameters parameter);
-    static abstract List<Trading.InputSlot> Inputs();
-    static abstract List<OutputSlot> Outputs();
+    //static abstract IOComponent Characteristics(TValue parameter);
+    static abstract IReadOnlyList<InputSlot> InputSlots();
+    static abstract IReadOnlyList<OutputSlot> Outputs();
 
     void Clear();
 

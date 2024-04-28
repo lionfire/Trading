@@ -2,7 +2,7 @@
 
 public class PBot2<TConcrete> : IPBotHierarchical2
 {
-    public IEnumerable<IPBotHierarchical2> Children => getChildren(this);
+    public IEnumerable<IPBot2> Children => getChildren(this);
 
 
     static PBot2()

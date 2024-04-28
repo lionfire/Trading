@@ -45,11 +45,12 @@ public class BotInfo
 {
     public IReadOnlyList<InputInfo> GetInputs(Type botType)
     {
-        if (!botType.IsAssignableTo(IBot2)) throw new ArgumentException(ArgumentException($"Type {botType} is not an IBot2.");
+        if (!botType.IsAssignableTo(typeof(IBot2))) throw new ArgumentException($"Type {botType} is not an IBot2.");
 
-        var inputSlots = (List<InputSlot>)botType.GetMethod("Inputs")!.Invoke(null, null)!;
+        var inputSlots = (List<InputSlot>)botType.GetMethod("InputSignals")!.Invoke(null, null)!;
 
 
+        throw new NotImplementedException();
     }
 }
 
@@ -59,9 +60,10 @@ public class OptimizationRunInfo
     public static OptimizationRunInfo Get(POptimization optimization)
     {
         //optimization.BotType
+        throw new NotImplementedException();
     }
 
-    public List<ParameterOptimizationInfo> ParameterOptimizationInfos { get; set; }
+    //public List<ParameterOptimizationInfo> ParameterOptimizationInfos { get; set; }
 }
 
 public static class POptimizationUtils
@@ -95,11 +97,11 @@ public class OptimizationTask : AppTask
 
     ConcurrentDictionary<int, BacktestHarness> harnesses = new();
 
-    List<> parameterSpaces;
+    //List<> parameterSpaces;
 
     public Task Start(CancellationToken cancellationToken = default)
     {
-
+        throw new NotImplementedException();
     }
 
 }

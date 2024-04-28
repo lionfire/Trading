@@ -1,4 +1,4 @@
-﻿//using LionFire.Trading.Indicators.Inputs;
+﻿//using LionFire.Trading.Indicators.InputSignals;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;

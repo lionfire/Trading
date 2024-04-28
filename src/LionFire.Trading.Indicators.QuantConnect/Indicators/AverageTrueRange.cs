@@ -1,38 +1,46 @@
 ﻿
+using LionFire.Assets;
+using LionFire.Trading.HistoricalData.Retrieval;
 using QuantConnect.Data.Market;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
-public class PAverageTrueRange : IndicatorParameters
+public class PAverageTrueRange<TValue> : IndicatorParameters<AverageTrueRange>
 {
     public uint Period { get; set; }
     public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
 
-    public IReadOnlyList<InputSignal> Inputs
-      => [new InputSignal() {
-                    Name = "Source",
-                    Type = typeof(IKline),
-                    Lookback = Period,
-                }];
+    //public required InputSignal<TValue> Source { get; set; }
+
+    // TODO: Move this to InputSignal?
+    public int LookbackForInputSlot(InputSlot inputSlot) => (int)Period;
 }
 
-public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, global::QuantConnect.Indicators.AverageTrueRange, PAverageTrueRange, IKline, decimal>, IIndicator2<AverageTrueRange, PAverageTrueRange, IKline, decimal>
+// TODO: replace decimal with generic type
+public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, global::QuantConnect.Indicators.AverageTrueRange, PAverageTrueRange<decimal>, IKline, decimal>, IIndicator2<AverageTrueRange, PAverageTrueRange<decimal>, IKline, decimal>
 {
     #region Static
 
-    public static List<InputSlot> Inputs()
-        => [new () {
+    public static IReadOnlyList<InputSlot> InputSlots()
+      => [new InputSlot() {
                     Name = "Source",
-                    Type = typeof(IKline),
+                    Type = typeof(IKline<decimal>),
+                //Lookback = Period, // Doesn't belong here
+                    Aspects = DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close,
                 }];
-    public static List<OutputSlot> Outputs()
+    //public static List<InputSlot> InputSlots()
+    //    => [new () {
+    //                Name = "Source",
+    //                Type = typeof(IKline),
+    //            }];
+    public static IReadOnlyList<OutputSlot> Outputs()
             => [new () {
                      Name = "Average True Range",
                     Type = typeof(decimal),
                 }];
 
 
-    public static List<OutputSlot> Outputs(PAverageTrueRange p)
+    public static List<OutputSlot> Outputs(PAverageTrueRange<decimal> p)
             => [new () {
                      Name = "Average True Range",
                     Type = typeof(decimal),
@@ -41,7 +49,7 @@ public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, g
     //{
     //    return new IOComponent
     //    {
-    //        Inputs = new List<InputSlot>
+    //        InputSignals = new List<InputSlot>
     //        {
     //            new InputSlot
     //            {
@@ -63,10 +71,10 @@ public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, g
     #endregion
 
     public override uint MaxLookback => (uint)Parameters.Period;
-    PAverageTrueRange Parameters;
+    PAverageTrueRange<decimal> Parameters;
 
-    public static AverageTrueRange Create(PAverageTrueRange p) => new AverageTrueRange(p);
-    public AverageTrueRange(PAverageTrueRange parameters)
+    public static AverageTrueRange Create(PAverageTrueRange<decimal> p) => new AverageTrueRange(p);
+    public AverageTrueRange(PAverageTrueRange<decimal> parameters)
     {
         Parameters = parameters;
         WrappedIndicator = new global::QuantConnect.Indicators.AverageTrueRange((int)parameters.Period, parameters.MovingAverageType);

@@ -8,7 +8,8 @@ namespace LionFire.Trading;
 /// <remarks>
 /// Based on IBinanceKline
 /// </remarks>
-public interface IKline
+/// <typeparam name="T">Typically supported: decimal, double, float</typeparam>
+public interface IKline<T>
 {
     /// <summary>
     /// The time this candlestick opened
@@ -18,27 +19,27 @@ public interface IKline
     /// <summary>
     /// The price at which this candlestick opened
     /// </summary>
-    decimal OpenPrice { get; }
+    T OpenPrice { get; }
 
     /// <summary>
     /// The highest price in this candlestick
     /// </summary>
-    decimal HighPrice { get; }
+    T HighPrice { get; }
 
     /// <summary>
     /// The lowest price in this candlestick
     /// </summary>
-    decimal LowPrice { get; }
+    T LowPrice { get; }
 
     /// <summary>
     /// The price at which this candlestick closed
     /// </summary>
-    decimal ClosePrice { get; }
+    T ClosePrice { get; }
 
     /// <summary>
     /// The volume traded during this candlestick
     /// </summary>
-    decimal Volume { get; }
+    T Volume { get; }
 
     /// <summary>
     /// The close time of this candlestick
@@ -48,7 +49,7 @@ public interface IKline
     /// <summary>
     /// The volume traded during this candlestick in the asset form
     /// </summary>
-    decimal QuoteVolume { get; }
+    T QuoteVolume { get; }
 
     /// <summary>
     /// The amount of trades in this candlestick
@@ -58,12 +59,16 @@ public interface IKline
     /// <summary>
     /// Taker buy base asset volume
     /// </summary>
-    decimal TakerBuyBaseVolume { get; }
+    T TakerBuyBaseVolume { get; }
 
     /// <summary>
     /// Taker buy quote asset volume
     /// </summary>
-    decimal TakerBuyQuoteVolume { get; }
+    T TakerBuyQuoteVolume { get; }
+}
+
+public interface IKline : IKline<decimal>
+{
 }
 
 public static class IKlineX
