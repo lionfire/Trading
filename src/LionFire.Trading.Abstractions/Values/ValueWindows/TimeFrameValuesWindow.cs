@@ -14,6 +14,11 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
 
     #region Lifecycle
 
+    public TimeFrameValuesWindow(uint period, TimeSpan timeSpan, DateTimeOffset? nextOpenTime = null) : base(period)
+    {
+        TimeSpan = timeSpan;
+        LastOpenTime = nextOpenTime == null ? DateTimeOffset.MinValue : nextOpenTime.Value - timeSpan;
+    }
     public TimeFrameValuesWindow(uint period, TimeFrame timeFrame, DateTimeOffset? nextOpenTime = null) : base(period)
     {
         if (timeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException("TODO: Use timeFrame.AddBars");
@@ -105,16 +110,23 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
         uint newBars = 0;
         foreach (var value in values)
         {
-            newBars += PushFront(value, NextExpectedOpenTime);
+            newBars += Push(value, NextExpectedOpenTime, front: true);
+        }
+        return newBars;
+    }
+    public uint PushBack(IReadOnlyList<T> values)
+    {
+        uint newBars = 0;
+        foreach (var value in values)
+        {
+            newBars += Push(value, NextExpectedOpenTime, front: false);
         }
         return newBars;
     }
 
-    public uint PushFront(T value)
-    {
-        return PushFront(value, NextExpectedOpenTime);
-    }
-    public uint PushFront(T value, DateTimeOffset openTime)
+    public uint PushFront(T value) => Push(value, NextExpectedOpenTime, front: true);
+    public uint PushBack(T value) => Push(value, NextExpectedOpenTime, front: false);
+    public uint Push(T value, DateTimeOffset openTime, bool front)
     {
         uint newBars = 0;
 
@@ -131,11 +143,22 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
         }
 
         newBars++;
-        values.PushFront(value);
+        LastOpenTime += TimeSpan;
+
+        if (front) values.PushFront(value);
+        else values.PushBack(value);
 
         ValueCount += newBars;
         return newBars;
     }
+
+    public T PopBack()
+    {
+        var value = values.Back();
+        ValueCount--;
+        return value;
+    }
+    // ENH: PopFront for completeness, but we currently have no use case for popping with forward mode.
 
     #endregion
 

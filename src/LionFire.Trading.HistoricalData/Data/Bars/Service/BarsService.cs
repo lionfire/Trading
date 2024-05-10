@@ -41,7 +41,7 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
 
     #region Parameters
 
-    public HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
+    public DateChunker HistoricalDataChunkRangeProvider { get; }
 
     #endregion
 
@@ -50,7 +50,7 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
     public BarsService(IServiceProvider serviceProvider
         , BarsFileSource barsFileSource
         , IOptionsMonitor<BarFilesPaths> historicalDataPathsOptions
-        , HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider
+        , DateChunker historicalDataChunkRangeProvider
         //, IEnumerable<IBars> allSources
         , ILogger<BarsService> logger
         )

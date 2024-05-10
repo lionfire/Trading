@@ -22,11 +22,11 @@ public class BarsFileSource : IChunkedBars, IListableBarsSource
 
     public IOptionsMonitor<BarFilesPaths> OptionsMonitor { get; }
     public ILogger<BarsFileSource> Logger { get; }
-    public HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
+    public DateChunker HistoricalDataChunkRangeProvider { get; }
 
     #region Lifecycle
 
-    public BarsFileSource(IOptionsMonitor<BarFilesPaths> optionsMonitor, ILogger<BarsFileSource> logger, HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider)
+    public BarsFileSource(IOptionsMonitor<BarFilesPaths> optionsMonitor, ILogger<BarsFileSource> logger, DateChunker historicalDataChunkRangeProvider)
     {
         OptionsMonitor = optionsMonitor;
         Logger = logger;

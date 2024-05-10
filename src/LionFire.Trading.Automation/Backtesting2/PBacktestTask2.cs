@@ -2,38 +2,64 @@
 
 public interface IPBacktestTask2
 {
-    bool TicksEnabled { get; }
+
+    IPTimeFrameBot2 Bot { get; }
+
+    BotHarnessFeatures Features { get; }
+    bool TicksEnabled() => Features.HasFlag(BotHarnessFeatures.Ticks);
+
     ExchangeSymbol? ExchangeSymbol { get; }
     ExchangeSymbol[]? ExchangeSymbols { get; set; }
     TimeFrame TimeFrame { get; }
     DateTimeOffset Start { get; }
     DateTimeOffset EndExclusive { get; }
+
+    /// <summary>
+    /// Backtest optimization: use short Chunks instead of long
+    /// </summary>
+    bool ShortChunks { get; }
+
 }
 
 [Flags]
-public enum SimulationFeatures
+public enum BotHarnessFeatures
 {
     Unspecified = 0,
     Bars = 1 << 0,
     Ticks = 1 << 1,
+    /// <summary>
+    /// Refuse to run if order book info is not available for the symbol being traded
+    /// </summary>
     OrderBook = 1 << 2,
 }
 
 public class PBacktestTask2<PBot> : IPBacktestTask2
-//where PBot : ITemplate<TBot>
+    where PBot : IPTimeFrameBot2
 {
-    public SimulationFeatures SimulationFeatures { get; set; }
+    #region Bot
 
-    public bool TicksEnabled { get; set; }
+    public required PBot Bot { get; init; }
+    IPTimeFrameBot2 IPBacktestTask2.Bot => Bot;
 
-    /// <summary>
-    /// Refuse to run if order book info is not available for the symbol being traded
-    /// </summary>
-    public bool OrderBook { get; set; }
+    #endregion
 
-    //public required SymbolBarsRange SymbolBarsRange { get; init; }
+    #region Time
+
+    public TimeFrame TimeFrame => Bot.TimeFrame;
+    public DateTimeOffset Start { get; init; }
+    public DateTimeOffset EndExclusive { get; init; }
+
+    #endregion
+
+    #region Features
+
+    public BotHarnessFeatures Features { get; set; } = BotHarnessFeatures.Bars;
+
+    #endregion
 
     #region ExchangeSymbol(s) discriminated union
+
+    // OPTIMIZATION idea: always use an ExchangeSymbol field for first element of ExchangeSymbols
 
     /// <summary>
     /// null if ExchangeSymbols is set instead
@@ -47,7 +73,9 @@ public class PBacktestTask2<PBot> : IPBacktestTask2
 
     #endregion
 
-    public required TimeFrame TimeFrame { get; init; }
-    public DateTimeOffset Start { get; init; }
-    public DateTimeOffset EndExclusive { get; init; }
+    #region Performance tuning
+
+    public bool ShortChunks { get; init; }
+
+    #endregion
 }

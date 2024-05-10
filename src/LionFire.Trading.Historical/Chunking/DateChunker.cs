@@ -1,20 +1,28 @@
 ﻿
 using LionFire.Base;
 using System.Linq;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace LionFire.Trading.HistoricalData;
 
-public class HistoricalDataChunkRangeProvider
+public class DateChunker
 {
     public IEnumerable<((DateTimeOffset start, DateTimeOffset endExclusive), bool isLong)> GetBarChunks(IRangeWithTimeFrame range)
         => GetBarChunks(range.Start, range.EndExclusive, range.TimeFrame);
-    public IEnumerable<((DateTimeOffset start, DateTimeOffset endExclusive), bool isLong)> GetBarChunks(DateTimeOffset start, DateTimeOffset endExclusive, TimeFrame timeFrame)
+    public IEnumerable<((DateTimeOffset start, DateTimeOffset endExclusive), bool isLong)> GetBarChunks(DateTimeOffset start, DateTimeOffset endExclusive, TimeFrame timeFrame, bool shortOnly = false)
     {
         DateTimeOffset cursor = start;
 
         do
         {
             var range = RangeForDate(cursor, timeFrame);
+            if (shortOnly && range.isLong)
+            {
+                foreach (var shortened in ShortRangesForLongRange(cursor, timeFrame))
+                {
+                    yield return ((shortened.start, shortened.endExclusive), false);
+                }
+            }
             yield return range;
             cursor = range.Item1.endExclusive;
         } while (cursor < endExclusive);
@@ -23,12 +31,18 @@ public class HistoricalDataChunkRangeProvider
     public bool IsLongRangeForDate(DateTimeOffset date, TimeFrame timeFrame)
     {
         var now = DateTimeOffset.UtcNow;
+
+        if (timeFrame.TimeFrameUnit == TimeFrameUnit.Minute)
+        {
+            return date < new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+        }
+        if (timeFrame.TimeFrameUnit == TimeFrameUnit.Hour)
+        {
+            return date < new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        }
+
         switch (timeFrame.Name)
         {
-            case "m1":
-                return date < new DateTimeOffset(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
-            case "h1":
-                return date < new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
             default:
                 throw new NotImplementedException();
         }
@@ -61,6 +75,14 @@ public class HistoricalDataChunkRangeProvider
             default:
                 throw new NotImplementedException();
         }
+    }
+
+    public (DateTimeOffset start, DateTimeOffset endExclusive) MaxCountForLongRange(TimeFrame timeFrame)
+    {
+        // Choose a leap year
+        // Choose longest month
+        // OPTIMIZE: This could be replaced with constants
+        return LongRangeForDate(new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero), timeFrame);
     }
 
     public (DateTimeOffset start, DateTimeOffset endExclusive) LongRangeForDate(DateTimeOffset date, TimeFrame timeFrame)

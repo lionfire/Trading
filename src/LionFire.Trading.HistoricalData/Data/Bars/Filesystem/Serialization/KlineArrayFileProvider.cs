@@ -10,14 +10,14 @@ public class KlineArrayFileProvider
 
     BarFilesPaths HistoricalDataPaths { get; }
 
-    public HistoricalDataChunkRangeProvider RangeProvider { get; }
+    public DateChunker RangeProvider { get; }
 
 
     #endregion
 
     #region Construction
 
-    public KlineArrayFileProvider(IOptionsMonitor<BarFilesPaths> hdp, IConfiguration configuration, HistoricalDataChunkRangeProvider rangeProvider)
+    public KlineArrayFileProvider(IOptionsMonitor<BarFilesPaths> hdp, IConfiguration configuration, DateChunker rangeProvider)
     {
         HistoricalDataPaths = hdp.CurrentValue;
         HistoricalDataPaths.CreateIfMissing();

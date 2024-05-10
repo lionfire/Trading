@@ -1,32 +1,25 @@
-﻿using CircularBuffer;
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections;
 
 namespace LionFire.Trading;
 
-public sealed class ArraySegmentsValueResult<T> : IValuesResult<T>, IArraySegmentsValuesResult<T>
+public readonly struct ArraySegmentsValueResult<T>(IList<ArraySegment<T>> arraySegments)
+: IValuesResult<T>
+, IArraySegmentsValuesResult<T>
 {
     #region Parameter (wrapped data)
 
-    private ReadOnlyListWrapperOfTwoArraySegments Wrapper { get; init; }
+    private ReadOnlyListWrapperOfTwoArraySegments Wrapper { get; init; } = new ReadOnlyListWrapperOfTwoArraySegments(arraySegments);
 
     #region Derived
 
-    public IList<ArraySegment<T>> ArraySegments => Wrapper.ArraySegments;
-    public IReadOnlyList<T> Values => Wrapper;
+    public readonly IList<ArraySegment<T>> ArraySegments => Wrapper.ArraySegments;
+    public readonly IReadOnlyList<T> Values => Wrapper;
 
     #endregion
 
     #endregion
 
-    public ArraySegmentsValueResult(IList<ArraySegment<T>> arraySegments)
-    {
-        Wrapper = new ReadOnlyListWrapperOfTwoArraySegments(arraySegments);
-    }
+    #region (inner) Wrapper Type
 
     readonly struct ReadOnlyListWrapperOfTwoArraySegments : IReadOnlyList<T>
     {
@@ -59,4 +52,6 @@ public sealed class ArraySegmentsValueResult<T> : IValuesResult<T>, IArraySegmen
 
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
+
+    #endregion
 }

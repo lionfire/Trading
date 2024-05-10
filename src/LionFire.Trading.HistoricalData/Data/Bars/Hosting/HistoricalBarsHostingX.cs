@@ -21,7 +21,7 @@ public static class HistoricalBarsHostingX
             .AddSingleton<KlineArrayFileProvider>()
             .AddSingleton<BarsFileSource>()
 
-            .AddSingleton<HistoricalDataChunkRangeProvider>()
+            .AddSingleton<DateChunker>()
             .Configure<BarFilesPaths>(configuration.GetSection("LionFire.Trading:HistoricalData")
                 .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"))
         ;

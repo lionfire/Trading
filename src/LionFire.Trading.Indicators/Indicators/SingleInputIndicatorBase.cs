@@ -16,7 +16,7 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
 
         if (typeof(TInput) == typeof(decimal) && typeof(TOutput) == typeof(double))
         {
-            Converter = i => (TOutput)(object) decimal.ToDouble((decimal)(object)i!);
+            Converter = i => (TOutput)(object)decimal.ToDouble((decimal)(object)i!);
         }
         else
         {
@@ -35,10 +35,11 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
         var result = await Input.Get(start, endExclusive);
         if (!result.IsSuccess) return new HistoricalDataResult<TOutput> { IsSuccess = false, FailReason = result.FailReason };
 
-        var output = new List<TOutput>(result.Items.Count);
+        var output = new TOutput[result.Items.Length];
+        int i = 0;
         foreach (var item in result.Items)
         {
-            output.Add(Converter(item));
+            output[i] = Converter(item);
         }
         return new HistoricalDataResult<TOutput> { IsSuccess = true, Items = output };
     }
@@ -51,7 +52,7 @@ public abstract class SingleInputIndicatorBase<TConcrete, TParameters, TInput, T
     #region Input Handling
 
 
- 
+
 
     //public override void OnNextFromArray(object inputData, int index)
     //{

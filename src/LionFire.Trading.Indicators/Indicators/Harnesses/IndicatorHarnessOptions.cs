@@ -1,6 +1,12 @@
 ﻿namespace LionFire.Trading.Indicators.Harnesses;
 
-public record IndicatorHarnessOptions<TParameters>
+public interface IIndicatorHarnessOptions
+{
+     TimeFrame TimeFrame { get; }
+    object[] InputReferences { get; }
+}
+
+public record IndicatorHarnessOptions<TParameters>: IIndicatorHarnessOptions
 {
 
     public required TParameters Parameters { get; init; }

@@ -2,18 +2,19 @@
 using LionFire.Assets;
 using LionFire.Trading.HistoricalData.Retrieval;
 using QuantConnect.Data.Market;
+using System;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
 public class PAverageTrueRange<TValue> : IndicatorParameters<AverageTrueRange>
 {
-    public uint Period { get; set; }
+    public int Period { get; set; }
     public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
 
     //public required InputSignal<TValue> Source { get; set; }
 
     // TODO: Move this to InputSignal?
-    public int LookbackForInputSlot(InputSlot inputSlot) => (int)Period;
+    public int LookbackForInputSlot(InputSlot inputSlot) => Period;
 }
 
 // TODO: replace decimal with generic type
@@ -77,9 +78,10 @@ public class AverageTrueRange : QuantConnectIndicatorWrapper<AverageTrueRange, g
     public AverageTrueRange(PAverageTrueRange<decimal> parameters)
     {
         Parameters = parameters;
-        WrappedIndicator = new global::QuantConnect.Indicators.AverageTrueRange((int)parameters.Period, parameters.MovingAverageType);
+        WrappedIndicator = new global::QuantConnect.Indicators.AverageTrueRange(parameters.Period, parameters.MovingAverageType);
     }
 
+    public override bool IsReady => throw new NotImplementedException();
     public override void OnNext(IReadOnlyList<IKline> inputs)
     {
         // Stub time and period values.  QuantConnect checks the symbol ID and increasing end times.

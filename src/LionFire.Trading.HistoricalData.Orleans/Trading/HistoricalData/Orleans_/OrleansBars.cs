@@ -20,13 +20,13 @@ public class OrleansBars : ILocalNetworkBars, IChunkedBars
 
     public IClusterClient ClusterClient { get; }
 
-    public HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
+    public DateChunker HistoricalDataChunkRangeProvider { get; }
 
     #endregion
 
     #region Lifecycle
 
-    public OrleansBars(IClusterClient clusterClient, HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider)
+    public OrleansBars(IClusterClient clusterClient, DateChunker historicalDataChunkRangeProvider)
     {
         ClusterClient = clusterClient;
         HistoricalDataChunkRangeProvider = historicalDataChunkRangeProvider;

@@ -8,7 +8,7 @@ public sealed class TimeFrameValuesWindowWithGaps<T> : TimeFrameValuesWindow<T>
     #region (static)
 
     static T DefaultDefault => TradingValueUtils<T>.MissingValue;
-    
+
     #endregion
 
     #region Parameters
@@ -19,8 +19,15 @@ public sealed class TimeFrameValuesWindowWithGaps<T> : TimeFrameValuesWindow<T>
 
     #region Lifecycle
 
+    public TimeFrameValuesWindowWithGaps(uint period, TimeSpan timeSpan, DateTimeOffset? nextOpenTime = null) : this(period, timeSpan, DefaultDefault, nextOpenTime)
+    {
+    }
     public TimeFrameValuesWindowWithGaps(uint period, TimeFrame timeFrame, DateTimeOffset? nextOpenTime = null) : this(period, timeFrame, DefaultDefault, nextOpenTime)
     {
+    }
+    public TimeFrameValuesWindowWithGaps(uint period, TimeSpan timeSpan, T missingValue, DateTimeOffset? nextOpenTime = null) : base(period, timeSpan, nextOpenTime)
+    {
+        MissingValue = missingValue;
     }
     public TimeFrameValuesWindowWithGaps(uint period, TimeFrame timeFrame, T missingValue, DateTimeOffset? nextOpenTime = null) : base(period, timeFrame, nextOpenTime)
     {

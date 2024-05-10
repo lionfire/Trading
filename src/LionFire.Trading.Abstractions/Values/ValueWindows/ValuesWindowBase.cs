@@ -2,6 +2,7 @@
 
 namespace LionFire.Trading.ValueWindows;
 
+// REVIEW - not sure this class needs to exist: just use CircularBuffer directly
 public abstract class ValuesWindowBase<T>
 {
     #region Parameters
@@ -42,11 +43,11 @@ public abstract class ValuesWindowBase<T>
     #region Accessors
 
     /// <summary>
-    /// Values in reverse chronological order, with raw access to the buffer
+    /// Values with raw access to the buffer
     /// </summary>
-    public IList<ArraySegment<T>> ReversedValuesBuffer => values.ToArraySegments();
+    public IList<ArraySegment<T>> ValuesBuffer => values.ToArraySegments();
 
-    public T[] ToReverseArray(uint length)
+    public T[] ToArray(uint length)
     {
         var array = new T[length];
         var segments = values.ToArraySegments();

@@ -10,15 +10,16 @@ public interface IHistoricalDataResult<out TValue> : IHistoricalDataResult
 {
     // TODO: Reconcile with IValuesResult
 
-    IReadOnlyList<TValue>? Items { get; }
+    TValue[] Items { get; }
 }
 
 public readonly record struct HistoricalDataResult<TValue> : IHistoricalDataResult<TValue>
 {
     public Type Type => typeof(TValue);
 
-    public HistoricalDataResult(IEnumerable<TValue> items) : this(items.ToList()) { }
-    public HistoricalDataResult(IReadOnlyList<TValue> items) : this()
+    public HistoricalDataResult(IEnumerable<TValue> items) : this(items.ToArray()) { }
+    public HistoricalDataResult(IReadOnlyList<TValue> items) : this(items.ToArray()) { }
+    public HistoricalDataResult(TValue[] items)
     {
         Items = items;
         IsSuccess = items != null;
@@ -26,7 +27,7 @@ public readonly record struct HistoricalDataResult<TValue> : IHistoricalDataResu
     }
     public HistoricalDataResult(string failReason) : this()
     {
-        Items = null;
+        Items = [];
         IsSuccess = false;
         FailReason = failReason;
     }
@@ -35,6 +36,6 @@ public readonly record struct HistoricalDataResult<TValue> : IHistoricalDataResu
 
     public bool IsSuccess { get; init; }
     public string? FailReason { get; init; }
-    public IReadOnlyList<TValue>? Items { get; init; }
+    public TValue[] Items { get; init; }
 }
 

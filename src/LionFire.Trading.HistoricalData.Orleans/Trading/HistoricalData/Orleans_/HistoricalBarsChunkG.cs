@@ -47,7 +47,7 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
     #region Lifecycle
 
     public HistoricalBarsChunkG(
-        HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider,
+        DateChunker historicalDataChunkRangeProvider,
         ISymbolIdParser symbolIdParser,
         IChunkedBars bars
         )

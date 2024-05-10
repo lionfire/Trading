@@ -1,69 +1,26 @@
 ﻿using LionFire.Trading.Data;
-using LionFire.Trading.HistoricalData;
-using LionFire.Trading.HistoricalData.Retrieval;
 //using LionFire.Trading.Indicators.InputSignals;
 using LionFire.Trading.ValueWindows;
 
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
-//public static class HistoricalIndicatorHarnessSample
-//{
-//    public static ValueTask<IValuesResult<IEnumerable<double>>?> Example(DateTimeOffset first, DateTimeOffset last)
-//    {
-//        var sourceRef = new SymbolValueAspect("Binance", "Futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close);
-
-//        IServiceProvider sp = null!;
-
-//        var options = new IndicatorHarnessOptions<uint>
-//        {
-//            InputReferences = [sourceRef],
-//            Parameters = 55, // MA period
-//            TimeFrame = TimeFrame.m1,
-//        };
-//        //options = IndicatorHarnessOptions<uint>.FallbackToDefaults(options);
-
-//        var indicatorHarness = ActivatorUtilities.CreateInstance<HistoricalIndicatorHarness<SimpleMovingAverage, uint, double, double>>(sp, options);
-
-//        var values = indicatorHarness.TryGetReverseOutput(first, last);
-
-//        return values;
-//    }
-//}
 
 
-/// <remarks>
-/// Planned optimizations:
-/// - keep a memory of N most recent bars
-/// - only calculate new portions necessary
-/// - listen to the corresponding real-time indicator, if available, and append to memory
-/// 
-/// For now, this is the same as one-shot execution with no caching.
-/// </remarks>
-/// <typeparam name="TIndicator"></typeparam>
-/// <typeparam name="TParameters"></typeparam>
-/// <typeparam name="TInput"></typeparam>
-/// <typeparam name="TOutput"></typeparam>
 public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 {
-    #region Configuration
-
-    /// <summary>
-    /// Fast-forward: Continue with current indicator state even though some inputs are not requested (will be wasted).  It may typically make sense to match this value with the MaxLookback on the InputSignals, or at least the computationally expensive inputs.
-    /// </summary>
-    public static uint MaxFastForwardBars = 1;
-
-    #endregion
-
     #region Lifecycle
 
-    public HistoricalIndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions? outputExecutionOptions=null) : base(serviceProvider, options, outputExecutionOptions)
+    public HistoricalIndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions? outputExecutionOptions = null) : base(serviceProvider, options, outputExecutionOptions)
     {
-     
     }
 
     #endregion
+
+    #region Methods
+
+    #region Input
 
     // TODO: Move this out of this class. Instead, have OnInput(inputId, data), and have something else push to this indicator
     public override async Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
@@ -84,146 +41,94 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
         return data.Items.ToArray(); // COPY
     }
 
-    public override ValueTask<IValuesResult<TOutput>> TryGetReverseOutput(DateTimeOffset start, DateTimeOffset endExclusive)
+    #endregion
+
+    #region Output
+
+    DateTimeOffset nextExpectedStart = default;
+
+    public override async ValueTask<IValuesResult<TOutput>> GetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[] outputBuffer, out ArraySegment<TOutput> outputArraySegment)
     {
-        if(endExclusive > DateTimeOffset.UtcNow)
+        // TOTELEMETRY - invocation, to help assess percentages of key events
+
+        #region Output Buffer
+
+        var outputCount = GetOutputCount(start, endExclusive);
+
+        if (outputBuffer == null || outputBuffer.Length < outputCount)
         {
-            // ENH: Also Throw/warn if the current bar isn't ready/finalized yet
-            throw new ArgumentOutOfRangeException(nameof(endExclusive));
+            outputBuffer = new TOutput[outputCount];
+            // TOTELEMETRY - recreate larger buffer
         }
-            
-        return _TryGetReverseOutput(new TimeFrameRange(TimeFrame, start, endExclusive));
-    }
-
-    private async ValueTask<IValuesResult<TOutput>> _TryGetReverseOutput(
-        TimeFrameRange range,
-        //TValue parameters,
-        uint? maxFastForwardBars = null, // If memory.LastOpenTime is within this many bars from inputStart, calculate to bring memory up to speed with desired range.EndExclusive
-        TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null,
-        bool skipAhead = false,
-        bool noCopy = true,
-        HistoricalDataChunkRangeProvider? historicalDataChunkRangeProvider = null
-        )
-    {
-
-        #region outputCount
-
-        var outputCount = (uint)range.TimeFrame.GetExpectedBarCount(range.Start, range.EndExclusive)!.Value;
-        if (outputCount < 0) throw new ArgumentOutOfRangeException(nameof(range), "Invalid date range");
+        // TOTELEMETRY - buffer is too big by a large amount, e.g. > 40% (may indicate excess/abnormal memory use, or maybe it's just a dead time in the market and it has no data but it will pick up again soon.)
 
         #endregion
 
-        OutputBuffer = new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, TimeFrame, range.Start - range.TimeFrame.TimeSpan);
 
-        //if (range.TimeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException("Irregular TimeFrames"); // This exception is getting moved into TimeFrame date calculation methods
+        #region Determine start point
 
-        #region Init actualMemory, inputStart
+        var reuseIndicatorState = nextExpectedStart == start;
+        var lookbackAmount = reuseIndicatorState ? 0 : Math.Max(0, Indicator.MaxLookback - 1);
+        var inputStart = reuseIndicatorState 
+            ? start
+            : TimeFrame.AddBars(start, -lookbackAmount);
 
-        TimeFrameValuesWindowWithGaps<TOutput> actualMemory;
-        bool reusingMemory;
+        if(!reuseIndicatorState) Indicator.Clear();
 
-        var inputStart = range.TimeFrame.AddBars(range.Start, -(Math.Max(0, Indicator.MaxLookback - 1)));
-
-        if (outputBuffer == null)
-        {
-            reusingMemory = false;
-        }
-        else if (range.Start < outputBuffer.FirstOpenTime)
-        {
-            // Scenario: start < memory.Start: create own memory, create own indicator (which has its own buffer)
-            reusingMemory = false;
-        }
-        else if (range.Start > outputBuffer.LastOpenTime) // Possibly fast-forward
-        {
-            #region (local)
-
-            uint ComputeActualMaxFastForwardBars() // Called in one place
-                => maxFastForwardBars ?? Indicator.DefaultMaxFastForwardBars ?? MaxFastForwardBars;
-
-            #endregion
-
-            if (range.Start > range.TimeFrame.AddBars(outputBuffer.LastOpenTime, ComputeActualMaxFastForwardBars()))
-            {
-                // No fast-forward, because we would have to fast-forward too much
-
-                if (skipAhead) // Use the memory buffer, but reset state
-                {
-                    // Scenario: lastOpenTime < inputStart: send full input to flush the buffer.
-                    // Call clear here to notify subscribers,
-                    //   - (though in theory, if we are pumping the memory and buffer full again past the Lookback amount,
-                    //     it should be unnecessary to actually delete existing data.)
-                    outputBuffer.Clear();
-                    Indicator.Clear();
-                    reusingMemory = true;
-                }
-                else
-                {
-                    reusingMemory = false;
-                }
-            }
-            else
-            {
-                reusingMemory = true;
-                inputStart = range.TimeFrame.AddBar(outputBuffer.LastOpenTime); // Fast-forward existing memory and buffer
-            }
-        }
-        else
-        {
-            reusingMemory = true;
-            inputStart = range.TimeFrame.AddBar(outputBuffer.LastOpenTime); // Continue where memory left off
-        }
-
-        actualMemory = reusingMemory ? outputBuffer! : new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, range.TimeFrame, range.Start - range.TimeFrame.TimeSpan);
-
-        #endregion
-
-        #region separateOutputBuffer
-
-        // Condition: when reusing memory, memory capacity is lower than outputCount:
-        List<TOutput>? separateOutputBuffer = reusingMemory && actualMemory.Capacity < outputCount
-            ? new List<TOutput>((int)outputCount)
-            : null;
+        // TOTELEMETRY - reuseIndicatorState
 
         #endregion
 
         #region Input sources
 
-        TInput[] inputData = await this.GetInputData(Inputs, inputStart, range.EndExclusive).ConfigureAwait(false);
+        TInput[] inputData = await this.GetInputData(Inputs, inputStart, endExclusive).ConfigureAwait(false);
 
         #endregion
 
-        var subscription = Indicator.Subscribe(o => actualMemory.PushFront(o)); // OPTIMIZE: Avoid subscription, and return TOutput from OnNextFromArray
+        //// OPTIMIZE: Avoid subscription, and return TOutput from OnNextFromArray
+        //var lookbackAmountRemaining = lookbackAmount;
+        //int outputIndex = 0;
+
+        //IDisposable subscription = Indicator.Subscribe(o =>
+        //{
+        //    if (lookbackAmountRemaining-- > 0) return;
+        //    outputBuffer[outputIndex++] = o;
+        //});
 
         #region Calculate   
 
-
         for (int i = 0; i < inputData.Length; i++)
         {
-            Indicator.OnNextFromArray(inputData, i); // OPTIMIZE - send entire array
+            //Indicator.OnNextFromArray(inputData, i);
+
+            Indicator.OnNext(inputData, outputBuffer);
+
+            // OPTIMIZE:
+            // - send entire array, and
+            // -  have indicator write into the buffer,
+            // - either skipping lookbackAmount,
+            //   - or keeping track of whether it's ready to write real values, and returning the total amount of valid values returned
+            if(i >= lookbackAmount)
+            {
+                outputBuffer[i - lookbackAmount] = result;
+            }
         }
 
         #endregion
 
-        subscription.Dispose();
 
-        #region return result
+        #region Finalize, and results
 
-        if (separateOutputBuffer != null)
-        {
-            return new ListValueResult<TOutput>(separateOutputBuffer);
-        }
-        else if (noCopy)
-        {
-            return new ArraySegmentsValueResult<TOutput>(actualMemory.ReversedValuesBuffer);
-        }
-        else
-        {
-            return new ListValueResult<TOutput>(actualMemory.ToReverseArray(outputCount));
-        }
+        nextExpectedStart = endExclusive;
+        outputArraySegment = new ArraySegment<TOutput>(outputBuffer, 0, (int) outputCount);
+        return new ArraySegmentValueResult<TOutput>(outputArraySegment);
 
         #endregion
-
     }
+
+    #endregion
+
+    #endregion
 
 }
 

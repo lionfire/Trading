@@ -7,6 +7,7 @@ public interface IIndicator2
 {
     uint MaxLookback { get; }
     uint? DefaultMaxFastForwardBars => 5;
+    bool IsReady { get; }
 }
 
 
@@ -39,9 +40,17 @@ public interface IIndicator2<TParameters, TInput, TOutput>
 
     #region Input Handling
 
-  
-
     void OnNextFromArray(IReadOnlyList<TInput> inputData, int index);
+
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="outputBuffer"></param>
+    /// <param name="outputIndex"></param>
+    /// <param name="publishOutput"></param>
+    /// <returns>Number of values written</returns>
+    int OnNext(IReadOnlyList<TInput> input, TOutput[] outputBuffer, int outputIndex = 0, int outputSkip = 0);
 
     #endregion
 

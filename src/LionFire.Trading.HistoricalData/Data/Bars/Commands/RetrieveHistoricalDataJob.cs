@@ -86,14 +86,14 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
     public IBinanceRestClient? BinanceClient { get; set; }
 
     BarsFileSource BarsFileSource { get; set; }
-    HistoricalDataChunkRangeProvider RangeProvider { get; set; }
+    DateChunker RangeProvider { get; set; }
 
     #endregion
 
     #region Lifecycle
 
     //public RetrieveHistoricalDataJob() { }
-    public RetrieveHistoricalDataJob(IBinanceRestClient? binanceClient, ILogger<RetrieveHistoricalDataJob>? logger, KlineArrayFileProvider? klineArrayFileProvider, BarsFileSource barsFileSource, HistoricalDataChunkRangeProvider historicalDataChunkRangeProvider)
+    public RetrieveHistoricalDataJob(IBinanceRestClient? binanceClient, ILogger<RetrieveHistoricalDataJob>? logger, KlineArrayFileProvider? klineArrayFileProvider, BarsFileSource barsFileSource, DateChunker historicalDataChunkRangeProvider)
     {
         BinanceClient = binanceClient;
         Logger = logger;
@@ -224,7 +224,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
         var host = input.BuildHost();
         BarsFileSource = host.Services.GetRequiredService<BarsFileSource>();
-        RangeProvider = host.Services.GetRequiredService<HistoricalDataChunkRangeProvider>();
+        RangeProvider = host.Services.GetRequiredService<DateChunker>();
         KlineArrayFileProvider = host.Services.GetService<KlineArrayFileProvider>() ?? throw new ArgumentNullException();
         Logger = host.Services.GetService<ILogger<RetrieveHistoricalDataJob>>() ?? throw new ArgumentNullException();
 

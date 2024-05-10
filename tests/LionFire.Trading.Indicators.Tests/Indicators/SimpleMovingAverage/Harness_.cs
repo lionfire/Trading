@@ -9,14 +9,14 @@ public class Harness_ : BinanceDataTest
     [Fact]
     public async void _()
     {
-        var h = new HistoricalIndicatorHarness<SimpleMovingAverage, uint, double, double>(ServiceProvider, new()
+        var h = new BufferingIndicatorHarness<SimpleMovingAverage, uint, double, double>(ServiceProvider, new()
         {
             Parameters = 3,
             TimeFrame = TimeFrame.m1,
             InputReferences = new[] { new SymbolValueAspect("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close) }
         });
 
-        var result = await h.GetReverseOutput(new DateTimeOffset(2024, 1, 1, 0, 2, 0, TimeSpan.Zero),
+        var result = await h.GetReverseValues(new DateTimeOffset(2024, 1, 1, 0, 2, 0, TimeSpan.Zero),
             new DateTimeOffset(2024, 1, 1, 0, 10, 0, TimeSpan.Zero));
 
         Assert.True(result.IsSuccess);

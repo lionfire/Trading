@@ -1,14 +1,22 @@
 ﻿using LionFire.Execution;
 using LionFire.Structures;
 using LionFire.Threading;
+using LionFire.Trading.Data;
+using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Indicators.Harnesses;
+using LionFire.Trading.Indicators.Inputs;
+using LionFire.Trading.ValueWindows;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Automation;
 
 public class BacktestTask2 : IStartable
     , IStoppable
     , IPausable
+    , IRunnable
 //, IProgress<double>  // ENH, find another interface?  Rx?
 {
     #region Dependencies
@@ -28,29 +36,52 @@ public class BacktestTask2 : IStartable
     #region Parameters
 
     public IPBacktestTask2 Parameters { get; }
+    public DateChunker DateChunker { get; }
+
+    #region Derived
+
+    public IEnumerable<((DateTimeOffset start, DateTimeOffset endExclusive), bool isLong)> Chunks;
+
+    #endregion
 
     #endregion
 
     #region Lifecycle
 
-    public BacktestTask2(IServiceProvider serviceProvider, IPBacktestTask2 parameters)
+    public BacktestTask2(IServiceProvider serviceProvider, IPBacktestTask2 parameters, DateChunker? dateChunker = null)
     {
         ServiceProvider = serviceProvider;
         Parameters = parameters;
+        DateChunker = dateChunker ?? ServiceProvider.GetRequiredService<DateChunker>();
+
+        Chunks = DateChunker.GetBarChunks(Parameters.Start, Parameters.EndExclusive, Parameters.TimeFrame, shortOnly: Parameters.ShortChunks);
+        chunks = DateChunker.GetBarChunks(Parameters.Start, Parameters.EndExclusive, Parameters.TimeFrame, Parameters.ShortChunks);
+        chunkEnumerator = chunks.GetEnumerator();
+        inputs = InitInputs();
     }
 
     #endregion
 
     #region State Machine
 
-    CancellationTokenSource cts;
+    //public CancellationToken Terminated => cancelledSource?.Token ?? CancellationToken.None;
+    CancellationTokenSource? cancelledSource;
+
+    public Task<bool> RunTask => resetEvent.WaitOneAsync();
+    ManualResetEvent resetEvent = new(false);
+
+    IEnumerable<((DateTimeOffset start, DateTimeOffset endExclusive) range, bool isLong)> chunks;
+    IEnumerator<((DateTimeOffset start, DateTimeOffset endExclusive) range, bool isLong)> chunkEnumerator;
+
+    #region (Public)
 
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
-        cts = new CancellationTokenSource();
+        cancelledSource = new CancellationTokenSource();
+        resetEvent.Reset();
         BacktestDate = Parameters.Start;
 
-        if (Parameters.TicksEnabled)
+        if (Parameters.TicksEnabled())
         {
             RunTicks().FireAndForget();
         }
@@ -58,10 +89,42 @@ public class BacktestTask2 : IStartable
         {
             RunBars().FireAndForget();
         }
+
         return Task.CompletedTask;
     }
 
+    public Task StopAsync(CancellationToken cancellationToken = default)
+    {
+        resetEvent.Set();
+        return Task.CompletedTask;
+    }
+
+    #region Pause and Continue
+
+    // TODO - implement this
+
     public bool Paused { get; protected set; }
+
+    /// <summary>
+    /// For multi-backtest runs, wait for all to finish a certain date range before moving to the next.
+    /// </summary>
+    public DateTimeOffset PauseAtDate
+    {
+        get => pauseAtDate;
+        set
+        {
+            pauseAtDate = value;
+            if (pauseAtDate > BacktestDate)
+            {
+                Continue();
+            }
+            else
+            {
+                Pause();
+            }
+        }
+    }
+    private DateTimeOffset pauseAtDate;
 
     public Task Pause()
     {
@@ -75,27 +138,207 @@ public class BacktestTask2 : IStartable
         return Task.CompletedTask;
     }
 
-    public Task StopAsync(CancellationToken cancellationToken = default)
+    #endregion
+
+    #endregion
+
+    #endregion
+
+    #region Inputs
+
+    List<InputEnumeratorBase> inputs;
+    List<AsyncInputEnumerator>? asyncInputs;
+
+    //private void GetInputsChunk((DateTimeOffset start, DateTimeOffset endExclusive)
+    //{
+    //}
+
+    /// <summary>
+    /// Gather all inputs including derived ones for the inputs
+    /// </summary>
+    private List<InputEnumeratorBase> InitInputs()
     {
-        cts.Cancel();
-        return Task.CompletedTask;
+        var list = new List<InputEnumeratorBase>();
+
+        var ir = ServiceProvider.GetRequiredService<IMarketDataResolver>();
+
+        if (Parameters.Bot.Inputs != null)
+        {
+            int i = 0;
+            foreach (var input in Parameters.Bot.Inputs)
+            {
+                IHistoricalTimeSeries series = ir.Resolve(input);
+
+                int memory = Parameters.Bot.InputMemories == null ? 0 : Parameters.Bot.InputMemories[i];
+
+                if (memory == 0) { memory = 1; }
+
+                InputEnumeratorBase inputEnumerator;
+
+                if (memory <= 1)
+                {
+                    inputEnumerator = (InputEnumeratorBase)
+                    typeof(SingleValueInputEnumerator<>)
+                    .MakeGenericType(series.ValueType)
+                    .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType)])!
+                    .Invoke(new object[] { series });
+                }
+                else
+                {
+                    inputEnumerator = (InputEnumeratorBase)
+                        typeof(WindowedInputEnumerator<>)
+                        .MakeGenericType(series.ValueType)
+                        .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType), typeof(int)])!
+                        .Invoke(new object[] { series, memory });
+                }
+
+                list.Add(inputEnumerator);
+
+                //if (input is IHistoricalTimeSeries<T> series)
+                //{
+                //    list.Add(new WindowedInputEnumerator<T>(series));
+                //}
+                //else if (input is IIndicatorHarness<T> indicator)
+                //{
+                //    list.Add(new IndicatorInputProcessor<T>(indicator));
+                //}
+                //else
+                //{
+                //    throw new NotImplementedException();
+                //}
+            }
+        }
+        return list;
     }
+
+    private void InitBot()
+    {
+        Bot = (IPBot2)ActivatorUtilities.CreateInstance(ServiceProvider, Parameters.Bot.InstanceType, Parameters.Bot);
+
+
+        InitBotIndicators();
+
+
+    }
+
+    private void InitBotIndicators()
+    {
+        //throw new NotImplementedException();
+
+        foreach (var pIndicator in Bot.Indicators)
+        {
+#error NEXT: resolve via IMarketDataResolver to a IHistoricalSeries?
+
+            var h = new BufferingIndicatorHarness<TIndicator, TParameters, IKline, decimal>(ServiceProvider, new()
+            {
+                Parameters = new TParameters
+                {
+                    //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
+                    MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
+                    Period = 14,
+
+                    //Source = 
+
+                },
+                TimeFrame = TimeFrame.h1,
+                InputReferences = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC
+            });
+
+            var result = await h.GetReverseValues(new DateTimeOffset(2024, 4, 1, 13, 0, 0, TimeSpan.Zero),
+                new DateTimeOffset(2024, 4, 1, 18, 0, 0, TimeSpan.Zero));
+
+        }
+    }
+
+    protected IPBot2 Bot { get; private set; }
+
+    #endregion
+
+    #region Outputs
+
+    private void InitOutputs()
+    {
+        // Outputs need to be calculated in a certain order
+
+        var list = new List<object>();
+
+        outputs = list;
+    }
+    List<object> outputs = new();
 
     #endregion
 
     #region Loop
 
-    private async Task RunBars()
+    DateTimeOffset chunkStart;
+    DateTimeOffset chunkEndExclusive;
+
+
+    private async Task AdvanceInputChunk()
     {
-        while (BacktestDate < Parameters.EndExclusive && !cts.IsCancellationRequested)
+        if (!chunkEnumerator.MoveNext())
         {
-            await NextBar();
+            await StopAsync().ConfigureAwait(false);
+            return;
+        }
+
+        var chunk = chunkEnumerator.Current;
+        chunkStart = chunk.range.start;
+        chunkEndExclusive = chunk.range.endExclusive;
+        long chunkSize = TimeFrame.GetExpectedBarCount(chunkStart, chunkEndExclusive) ?? throw new NotSupportedException(nameof(TimeFrame));
+
+        await Task.WhenAll(inputs.Select(input =>
+                 input.PreloadRange(chunkStart, chunkEndExclusive, (uint)chunkSize)
+             )).ConfigureAwait(false);
+
+    }
+
+    public TimeFrame TimeFrame => Parameters.TimeFrame;
+    private async ValueTask AdvanceInputsByOneBar()
+    {
+        if (chunkStart == default || BacktestDate >= chunkEndExclusive)
+        {
+            await AdvanceInputChunk().ConfigureAwait(false);
+        }
+
+        var asyncTasks = asyncInputs?.Select(i => i.MoveNextAsync());
+
+        foreach (InputEnumeratorBase input in inputs)
+        {
+            input.MoveNext();
+        }
+
+        if (asyncTasks != null)
+        {
+            await Task.WhenAll(asyncTasks).ConfigureAwait(false);
         }
     }
 
-    private Task RunTicks()
+    private async Task RunBars()
     {
-        throw new NotImplementedException();
+        TimeSpan timeSpan = Parameters.TimeFrame.TimeSpan;
+
+        while (BacktestDate < Parameters.EndExclusive
+            && (false == cancelledSource?.IsCancellationRequested)
+            )
+        {
+            await AdvanceInputsByOneBar().ConfigureAwait(false);
+            await NextBar().ConfigureAwait(false);
+            BacktestDate += timeSpan;
+        }
+        await StopAsync().ConfigureAwait(false);
+    }
+
+    private async Task RunTicks()
+    {
+        while (BacktestDate < Parameters.EndExclusive && (false == cancelledSource?.IsCancellationRequested)
+            )
+        {
+            await NextTick();
+            throw new NotImplementedException("advance one tick");
+            //BacktestDate += Parameters.TimeFrame.TimeSpan;
+        }
+
     }
 
     #endregion
@@ -109,8 +352,32 @@ public class BacktestTask2 : IStartable
 
     #region Methods
 
+    public async Task NextTick()
+    {
+    }
+
+    static int NextBarModulus = 0;
     public async Task NextBar()
     {
+#if false && TRACE
+        if (NextBarModulus++ > 100)
+        {
+            NextBarModulus = 0;
+
+            if (inputs[0] is InputEnumerator<double> doubleValues)
+            {
+                Debug.WriteLine($"NextBar: {BacktestDate} Input[0] double: {doubleValues.CurrentValue}");
+            }
+            else if (inputs[0] is InputEnumerator<decimal> decimalValues)
+            {
+                //Debug.WriteLine($"NextBar: {BacktestDate} Input[0] decimal: {decimalValues.CurrentValue}");
+            }
+            else
+            {
+                Debug.WriteLine($"NextBar: {BacktestDate} Input[0]: {inputs[0].GetType()}");
+            }
+        }
+#endif
     }
 
     #endregion
@@ -120,7 +387,7 @@ public class BacktestTask2 : IStartable
 /// How to do this?
 /// - 
 /// </summary>
-public class BacktestHarness 
+public class BacktestHarness
 {
     List<IIndicatorHarness> indicatorHarnesses;
     List<BacktestBotHarness> backtestBotHarnesses;
@@ -197,7 +464,7 @@ public class BacktestTask2<TParameters> : BacktestTask2
 {
     IBot2 Bot { get; }
 
-    public BacktestTask2(IServiceProvider serviceProvider, TParameters parameters):base(serviceProvider, parameters)
+    public BacktestTask2(IServiceProvider serviceProvider, TParameters parameters) : base(serviceProvider, parameters)
     {
         if (typeof(TParameters) is IFactory<IBot2> factory)
         {

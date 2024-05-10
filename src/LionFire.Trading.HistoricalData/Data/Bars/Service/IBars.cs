@@ -8,7 +8,7 @@ public interface IChunkedBars : IBars
 {
     // TODO: Instead of null IBarsResult, return a persistence flag code to indicate NotFound, etc.
 
-    HistoricalDataChunkRangeProvider HistoricalDataChunkRangeProvider { get; }
+    DateChunker HistoricalDataChunkRangeProvider { get; }
     //Task<IEnumerable<IBarsResult>> ChunkedBars(SymbolBarsRange barsRangeReference, QueryOptions? options = null);
     //    //Task<IEnumerable<BarsChunkInfo>> LocalBarsAvailable(SymbolReference symbolReference); // TODO?
     Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null);

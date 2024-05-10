@@ -5,6 +5,8 @@ using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.IO;
 using Microsoft.Extensions.Options;
 using System.Threading.Channels;
+using TInput = System.Double;
+using TOutput = System.Double;
 
 namespace LionFire.Trading.Indicators;
 
@@ -78,24 +80,16 @@ public class SimpleMovingAverage
 
     CircularBuffer<double> buffer;
     double sum = 0.0;
+    public override bool IsReady => buffer.IsFull;
 
     #endregion
 
-    public override void OnNext(IReadOnlyList<double> inputs)
-    {
-        var s = subject;
-        List<double>? output;
-        if (s != null && !s.HasObservers)
-        {
-            subject = null;
-            s = null;
-            output = null;
-        }
-        else
-        {
-            output = new List<double>(inputs.Count);
-        }
+    // MOVE to base class
+  
 
+    public override int OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
+    {
+        int outputCount = 0;
         foreach (var input in inputs)
         {
             if (buffer.IsFull) { sum -= buffer.Back(); }
@@ -105,20 +99,15 @@ public class SimpleMovingAverage
 
             if (output != null)
             {
-                if (buffer.IsFull)
-                {
-                    output.Add(sum / Period);
-                }
+                if (outputSkip > 0) { outputSkip--; }
                 else
                 {
-                    output.Add(double.NaN);
+                    output[outputIndex] = buffer.IsFull ? sum / Period : double.NaN;
+                    outputCount++;
                 }
             }
         }
-        if (output != null && s != null)
-        {
-            s.OnNext(output);
-        }
+        return outputCount;
     }
 
     #region Methods

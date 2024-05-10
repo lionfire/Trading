@@ -7,3 +7,4 @@ global using LionFire.Trading;
 global using LionFire.Trading.Indicators;
 global using LionFire.Trading.Indicators.Harnesses;
 global using Xunit;
+global using Microsoft.Extensions.DependencyInjection;

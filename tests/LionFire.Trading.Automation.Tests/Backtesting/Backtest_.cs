@@ -13,31 +13,115 @@ using Microsoft.Extensions.DependencyInjection;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading;
-using Xunit;
+using Microsoft.CodeAnalysis.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
+using LionFire.Trading.HistoricalData.Retrieval;
+using LionFire.Execution;
+using System.Diagnostics;
 
 namespace Backtesting_;
 
 public static class BacktestX
 {
-    public static BacktestTask2 Backtest(this PAtrBot<decimal> bot, IServiceProvider serviceProvider, DateTimeOffset start, DateTimeOffset end, ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
+    //public static BacktestTask2 Backtest(this PAtrBot<decimal> bot, IServiceProvider serviceProvider, DateTimeOffset start, DateTimeOffset endExclusive, ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
+    //{
+    //    return new BacktestTask2(serviceProvider, new PBacktestTask2<PAtrBot<decimal>>
+    //    {
+    //        Bot = bot,
+    //        Start = start,
+    //        EndExclusive = endExclusive,
+    //        ExchangeSymbol = exchangeSymbolTimeFrame,
+    //        //TimeFrame = exchangeSymbolTimeFrame.TimeFrame,
+    //    });
+    //}
+}
+
+public class BacktestTheoryData : TheoryData<IPBacktestTask2>
+{
+    public IEnumerable<TimeFrame> TimeFrames
     {
-        return new BacktestTask2(serviceProvider, new PBacktestTask2<PAtrBot<decimal>>
+        get
         {
-            Bot = bot,
-            Start = start,
-            End = end,
-            ExchangeSymbolTimeFrame = exchangeSymbolTimeFrame,
-        });
+            yield return TimeFrame.h1;
+            yield return TimeFrame.m1;
+            // TODO: More timeframes
+            //yield return TimeFrame.m5;
+            //yield return TimeFrame.m15;
+            //yield return TimeFrame.t1;
+        }
+    }
+    public IEnumerable<string> Symbols { get; set; } = new[] {
+        "BTCUSDT",
+        "ETHUSDT"
+        // FUTURE: Add forex pairs (that close on weekends)
+    };
+
+    public string Exchange = "Binance";
+    public string ExchangeArea = "futures";
+
+    public BacktestTheoryData()
+    {
+        foreach (var timeFrame in TimeFrames)
+        {
+            foreach (var symbol in Symbols)
+            {
+                createBotParameters<decimal>(timeFrame, symbol);
+                createBotParameters<double>(timeFrame, symbol);
+                createBotParameters<float>(timeFrame, symbol);
+            }
+        }
+        void createBotParameters<T>(TimeFrame timeFrame, string symbol)
+        {
+            var pBot = new PAtrBot<T>(14)
+            {
+                //ATR = new PAverageTrueRange<T>
+                //{
+                //    Period = 14,
+                //    MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
+                //},
+                //Points = new PPointsBot
+                //{
+                //},
+                TimeFrame = timeFrame,
+                Inputs = [new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close)],
+                //Inputs = new object[]{
+                //    new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close)
+                //},
+            };
+
+            Add(new PBacktestTask2<PAtrBot<T>>
+            {
+                Bot = pBot,
+                Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                Features = BotHarnessFeatures.Bars,
+            });
+
+        }
     }
 }
 
 public class Backtest_ : BinanceDataTest
 {
+    [Theory]
+    [ClassData(typeof(BacktestTheoryData))]
+    public async Task Execute_(IPBacktestTask2 parameters)
+    {
+        var t = new BacktestTask2(ServiceProvider, parameters, dateChunker: HistoricalDataChunkRangeProvider);
+        await t.Run();
+    }
+
+#if RunViaExtensionMethod
+
     [Fact]
     public async void _()
     {
 
-        var backtest = new PAtrBot<decimal>(14).Backtest(ServiceProvider,
+        var backtest = new PAtrBot<decimal>(14)
+        {
+            TimeFrame = TimeFrame.m1,
+
+        }.Backtest(ServiceProvider,
             new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
             new DateTimeOffset(2024, 1, 2, 0, 0, 0, TimeSpan.Zero),
             TimeFrame.m1,
@@ -80,6 +164,7 @@ public class Backtest_ : BinanceDataTest
         //});
 
     }
+#endif
 }
 
 

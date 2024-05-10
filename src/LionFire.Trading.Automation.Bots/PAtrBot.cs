@@ -2,65 +2,48 @@
 using QuantConnect.Securities;
 using LionFire.Trading.ValueWindows;
 using LionFire.Trading.Indicators.Harnesses;
+using System.Collections.Concurrent;
 
 namespace LionFire.Trading.Automation.Bots;
 
-public class PStandardBot : PBot2<PStandardBot>
+public static class BotParametersTypeInfo
 {
+    public static IEnumerable<object> GetPIndicators(IPBot2 pBot)
+    {
 
-    #region Common for points systems
+    }
 
-    [Parameter(DefaultValue = 1, MinValue = 1, MaxValue = int.MaxValue, DefaultMax = 30)]
-    public int OpenThreshold { get; set; } = 3;
-
-    [Parameter(DefaultValue = 1, MinValue = 1, MaxValue = int.MaxValue, DefaultMax = 30)]
-    public int CloseThreshold { get; set; } = 2;
-
-    #endregion
-
-    #region Standard
-
-    [Parameter("Reverse open and close operations", DefaultValue = false)]
-    public bool ReverseOpenClose { get; set; }
-    [Parameter("Reverse open and close operations", DefaultValue = false)]
-    public bool Long { get; set; }
-
-    /// <summary>
-    /// If 1.0f, open all
-    /// </summary>
-    public float IncrementalOpenAmount { get; set; } = 1.0f;
-
-    /// <summary>
-    /// If 1.0f, close all
-    /// </summary>
-    public float IncrementalCloseAmount { get; set; } = 1.0f;
-
-    #endregion
+    ConcurrentDictionary<Type, IEnumerable<>>
 }
 
 public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
 {
-    public required PAverageTrueRange<TValue> ATR { get; init; }
+    public PAverageTrueRange<TValue>? ATR { get; set; }
 
-    public required PStandardBot Standard { get; set; }
-    public static PStandardBot StandardDefaults { get; set; } = new PStandardBot
-    {
-        //OpenThreshold
-    };
+    public PUnidirectionalBot? Unidirectional { get; set; }
+    public PPointsBot? Points { get; set; }
+    //public static PPointsBot StandardDefaults { get; set; } = new PPointsBot
+    //{
+    //    //OpenThreshold
+    //};
 
     public PAtrBot() { }
-    public PAtrBot(uint period) 
+    public PAtrBot(uint period)
     {
         ATR = new PAverageTrueRange<TValue>
         {
-            Period = period,
+            Period = (int)period,
+            Memory = 2,
         };
+        InputMemories = [(int)period];
     }
+    public override Type InstanceType => typeof(AtrBot<TValue>);
+
 }
 
-#if TODO
+//#if TODO
 [Bot(Direction = BotDirection.Unidirectional)]
-public class AtrBot : StandardBot2<PAtrBot>
+public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
 {
     #region Static
 
@@ -104,7 +87,7 @@ public class AtrBot : StandardBot2<PAtrBot>
     public AtrBot(IServiceProvider serviceProvider, PAtrBot parameters) : base(parameters)
     {
         // TODO: Live Indicator harness if live
-        var eATR = new HistoricalIndicatorHarness<AverageTrueRange, PAverageTrueRange, IKline, double>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange>
+        var eATR = new BufferingIndicatorHarness<AverageTrueRange, PAverageTrueRange, IKline, double>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange>
         {
 
             Parameters = parameters.ATR,
@@ -137,4 +120,4 @@ public class AtrBot : StandardBot2<PAtrBot>
     }
 
 }
-#endif
+//#endif

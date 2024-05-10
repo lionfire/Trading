@@ -1,6 +1,7 @@
 ﻿using Baseline;
 using LionFire.Trading.Data;
 using System.Diagnostics;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Indicators;
@@ -38,8 +39,17 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
     #region Derived
 
     public abstract uint MaxLookback { get; }
-    
+
     #endregion
+
+    #endregion
+
+    #region Lifecycle
+
+    public IndicatorBase()
+    {
+        InitState();
+    }
 
     #endregion
 
@@ -52,6 +62,9 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     protected Subject<IReadOnlyList<TOutput>>? subject;
 
+    //public uint InputsNeededToBecomeReady { get; set; }
+    public abstract bool IsReady { get; }// => InputsNeededToBecomeReady > 0;
+
     #endregion
 
     #region IObservable
@@ -62,8 +75,59 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
         return subject.Subscribe(observer);
     }
 
-    public abstract void OnNext(IReadOnlyList<TInput> value);
+
     public virtual void OnNext(TInput value) => OnNext([value]);
+    public void OnNext(IReadOnlyList<TInput> inputs)
+    {
+        TOutput[]? output;
+        var s = subject;
+        if (s != null && !s.HasObservers)
+        {
+            subject = null;
+            s = null;
+            output = null;
+        }
+        else
+        {
+            output = new TOutput[inputs.Count];
+        }
+
+        _ = OnNext(inputs, output, 0, 0);
+
+        // OLD
+        //foreach (var input in inputs)
+        //{
+        //    if (buffer.IsFull) { sum -= buffer.Back(); }
+        //    sum += input;
+        //    buffer.PushFront(input);
+        //    if (output != null)
+        //    {
+        //        if (buffer.IsFull)
+        //        {
+        //            output.Add(sum / Period);
+        //        }
+        //        else
+        //        {
+        //            output.Add(double.NaN);
+        //        }
+        //    }
+        //}
+
+        if (s != null
+            //&& output != null  // Redundant
+            )
+        {
+#if DEBUG
+            if (output!.Length != inputs.Count) { ThrowUnreachable(); }
+#endif
+            s.OnNext(output!);
+        }
+    }
+
+    public static void ThrowUnreachable() => throw new UnreachableCodeException();
+
+    // ENH: consider replacing parameters with a struct for better DX
+    public abstract int OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0);
 
     public virtual void OnCompleted() { }
 
@@ -76,10 +140,16 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #region Methods
 
+    public void InitState()
+    {
+        //InputsNeededToBecomeReady = MaxLookback;
+    }
+
     public virtual void Clear()
     {
         subject?.OnCompleted();
         subject = null;
+        InitState();
     }
 
     #region Input Handling

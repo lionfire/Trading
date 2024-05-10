@@ -5,24 +5,6 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
-public interface IIndicatorHarness
-{
-    TimeFrame TimeFrame { get; }
-
-}
-public interface IIndicatorHarness<TOutput> : IIndicatorHarness
-{
-    ValueTask<IValuesResult<TOutput>> GetReverseOutput(DateTimeOffset start, DateTimeOffset endExclusive);
-    ValueTask<IValuesResult<TOutput>> TryGetReverseOutput(DateTimeOffset start, DateTimeOffset endExclusive);
-}
-public interface IIndicatorHarness<TParameters, TInput, TOutput> : IIndicatorHarness<TOutput>
-{
-    TParameters Parameters { get; }
-    IServiceProvider ServiceProvider { get; }
-
-    Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
-}
-
 public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IIndicatorHarness<TParameters, TInput, TOutput> where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 {
     #region Dependencies
@@ -63,14 +45,14 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
             inputs.Add(marketDataResolver.Resolve(input));
         }
         Inputs = inputs;
-       
+
     }
 
     TIndicator CreateIndicator()
     {
         // OPTIMIZE
         //if(Indicator needs ServiceProvider){
-            //return TIndicator.Create<TIndicator>(Parameters);
+        //return TIndicator.Create<TIndicator>(Parameters);
         //} else
         //{
         return ActivatorUtilities.CreateInstance<TIndicator>(ServiceProvider, Parameters!);
@@ -84,45 +66,15 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     protected TIndicator Indicator { get; init; }
     protected IReadOnlyList<IHistoricalTimeSeries> Inputs { get; init; }
 
-
-    /// <summary>
-    /// (optional) A common output buffer for the indicator.
-    /// If not present, the harness will have no memory of recently computed values.
-    /// </summary>
-    /// <remarks>
-    /// Output buffering scenarios:
-    /// - Real-time: the last several bars may be desired
-    /// - Historical (backtesting): we will be backtesting large chunks of data, and returning chunks.  There will be no need for a separate buffer.
-    /// 
-    /// Implications:
-    /// - random access: the common buffer will be bypassed if it doesn't align
-    /// - chaotic fast forward: the common buffer will be either fast-forwarded, or restarted at some point in the future
-    /// 
-    /// Suggestions:
-    /// - Backtesting: do not set a buffer.  Have a chunk cache manager that retains chunks, accommodating large lookback requirements if necessary.
-    /// - Real-time: set a buffer according to what the attached bot needs.
-    /// - Visual: set a buffer according to what the user's screen typically displays.
-    /// </remarks>
-    public TimeFrameValuesWindowWithGaps<TOutput> OutputBuffer { get; protected set; }
-
     #endregion
 
     #region Methods
 
-    public virtual async ValueTask<IValuesResult<TOutput>> GetReverseOutput(DateTimeOffset start, DateTimeOffset endExclusive)
-    {
-        var result = await TryGetReverseOutput(start, endExclusive);
-        if (result == null)
-        {
-            throw new Exception("Failed to get output");
-        }
-        return result;
-    }
-
-    public abstract ValueTask<IValuesResult<TOutput>> TryGetReverseOutput(DateTimeOffset start, DateTimeOffset endExclusive);
+    #region Input
 
     //public abstract Task<(object, int)> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
     public abstract Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
+
     //public override async Task<(IReadOnlyList<InputSlot>, int)> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
     //{
     //    var d1 = GetData<TInput1>(sources[0], start, endExclusive);
@@ -134,6 +86,23 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
     //    return (new object[] { d1.Result.data, d2.Result.data }, count);
     //}
+
+    #endregion
+
+    #region Output
+
+    //public abstract ValueTask<IValuesResult<TOutput>> TryGetValues(bool reverse, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null);
+    public abstract ValueTask<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[] outputBuffer);
+
+    protected uint GetOutputCount(DateTimeOffset start, DateTimeOffset endExclusive)
+    {
+        var outputCount = (uint)TimeFrame.GetExpectedBarCount(start, endExclusive)!.Value;
+        if (outputCount < 0) throw new ArgumentOutOfRangeException(nameof(endExclusive), "Invalid date range");
+        return outputCount;
+    }
+
+    #endregion
+
 
     #endregion
 }

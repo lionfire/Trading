@@ -57,6 +57,8 @@ public interface IParametersFor<T> { }
 
 public class IndicatorParameters<TIndicator> : IParametersFor<TIndicator>
 {
+    public int Memory { get; set; } = 1;
+
 }
 
 
