@@ -3,6 +3,7 @@ using CircularBuffer;
 using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.IO;
+using Microsoft.CodeAnalysis.Editing;
 using Microsoft.Extensions.Options;
 using System.Threading.Channels;
 using TInput = System.Double;
@@ -10,9 +11,24 @@ using TOutput = System.Double;
 
 namespace LionFire.Trading.Indicators;
 
+public class PSimpleMovingAverage<TOutput> : IndicatorParameters<SimpleMovingAverage, TOutput>
+{
+    public int Period { get; set; }
+
+    public PSimpleMovingAverage()
+    {
+        if (typeof(TOutput) != typeof(double)) throw new NotImplementedException("TOutput must be double"); // TODO - remove this limitation
+    }
+    public static implicit operator PSimpleMovingAverage<TOutput>(int period)
+    {
+        return new PSimpleMovingAverage<TOutput> { Period = period };
+    }
+}
+
+// TODO: Generic TOutput
 public class SimpleMovingAverage
-    : SingleInputIndicatorBase<SimpleMovingAverage, uint, double, double>
-    , IIndicator2<SimpleMovingAverage, uint, double, double>
+    : SingleInputIndicatorBase<SimpleMovingAverage, PSimpleMovingAverage<double>, double, double>
+    , IIndicator2<SimpleMovingAverage, PSimpleMovingAverage<double>, double, double>
 {
     #region Static
 
@@ -52,14 +68,14 @@ public class SimpleMovingAverage
 
     #endregion
 
-    public uint Options { get; init; }
+    public int Options { get; init; }
 
     #region Parameters
 
     #region Derived
 
-    public uint Period => Options;
-    public override uint MaxLookback => Options;
+    public int Period => Options;
+    public override int MaxLookback => Options;
 
     #endregion
 
@@ -67,12 +83,13 @@ public class SimpleMovingAverage
 
     #region Lifecycle
 
-    public SimpleMovingAverage(uint period)
+    public SimpleMovingAverage(PSimpleMovingAverage<double> parameters)
     {
-        Options = period;
-        buffer = new((int)period);
+        Options = parameters.Period;
+        buffer = new(parameters.Period);
     }
-    public static SimpleMovingAverage Create(uint p) => new SimpleMovingAverage(p);
+
+    public static SimpleMovingAverage Create(PSimpleMovingAverage<double> p) => new SimpleMovingAverage(p.Period);
 
     #endregion
 
@@ -85,11 +102,14 @@ public class SimpleMovingAverage
     #endregion
 
     // MOVE to base class
-  
 
-    public override int OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
+
+    public override void OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
     {
-        int outputCount = 0;
+        // OPTIMIZE - is there a way to avoid repeated bounds checking on the output array?
+        // var maxOutputIndex = outputIndex + inputs.Count - outputSkip;
+        // https://blog.tedd.no/2020/06/01/faster-c-array-access/
+
         foreach (var input in inputs)
         {
             if (buffer.IsFull) { sum -= buffer.Back(); }
@@ -102,12 +122,10 @@ public class SimpleMovingAverage
                 if (outputSkip > 0) { outputSkip--; }
                 else
                 {
-                    output[outputIndex] = buffer.IsFull ? sum / Period : double.NaN;
-                    outputCount++;
+                    output[outputIndex++] = buffer.IsFull ? sum / Period : double.NaN;
                 }
             }
         }
-        return outputCount;
     }
 
     #region Methods

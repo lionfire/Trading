@@ -18,7 +18,8 @@ namespace LionFire.Trading.Indicators.Harnesses;
 /// <typeparam name="TInput"></typeparam>
 /// <typeparam name="TOutput"></typeparam>
 public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
-where TIndicator : IIndicator2<TParameters, TInput, TOutput>
+    where TIndicator : IIndicator2<TParameters, TInput, TOutput>
+    where TParameters : IIndicatorParameters
 {
     #region Configuration
 
@@ -63,18 +64,15 @@ where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 
     #endregion
 
-    public override ValueTask<IValuesResult<TOutput>> TryGetValues(bool reverse, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null)
+    public Task<IValuesResult<TOutput>> TryGetReverseValues(DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null)
     {
-        if (endExclusive > DateTimeOffset.UtcNow)
-        {
-            // ENH: Also Throw/warn if the current bar isn't ready/finalized yet
-            throw new ArgumentOutOfRangeException(nameof(endExclusive));
-        }
+        // ENH: Also Throw/warn if the current bar isn't ready/finalized yet, which may take about 5 seconds to be confident of.
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(endExclusive, DateTimeOffset.UtcNow);
 
-        return _TryGetValues(start, endExclusive, outputBuffer: outputBuffer, reverse: reverse);
+        return _TryGetValues(start, endExclusive, outputBuffer: outputBuffer, reverse: true);
     }
 
-    private async ValueTask<IValuesResult<TOutput>> _TryGetValues(
+    private async Task<IValuesResult<TOutput>> _TryGetValues(
         DateTimeOffset start, DateTimeOffset endExclusive,
         bool reverse,
         //TValue parameters,
@@ -91,39 +89,53 @@ where TIndicator : IIndicator2<TParameters, TInput, TOutput>
         var outputCount = GetOutputCount(start, endExclusive);
 
         TimeFrameRange range = new TimeFrameRange(TimeFrame, start, endExclusive);
-        if (outputBuffer == null && allowCreateOwnBuffer)
-        {
-            outputBuffer = OutputBuffer = new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, TimeFrame, range.Start - range.TimeFrame.TimeSpan);
-        }
+
+        // Condition: when reusing memory, memory capacity is lower than outputCount:
+        if(outputBuffer != null && outputBuffer.Capacity < outputCount) { outputBuffer = null; }
 
         #endregion
 
         //if (range.TimeFrame.TimeSpan < TimeSpan.Zero) throw new NotImplementedException("Irregular TimeFrames"); // This exception is getting moved into TimeFrame date calculation methods
 
-        #region Init actualMemory, inputStart
+        #region Init outputBuffer, inputStart
 
-        TimeFrameValuesWindowWithGaps<TOutput>? actualMemory = null;
+        //TimeFrameValuesWindowWithGaps<TOutput>? actualMemory = null;
         bool reusingMemory;
 
         var inputStart = TimeFrame.AddBars(start, -(Math.Max(0, Indicator.MaxLookback - 1)));
 
+        // REVIEW: control paths for reusingMemory (UNUSED), outputBuffer != null and Indicator.Clear() are complicated and could perhaps be refactored
         if (outputBuffer == null)
         {
             reusingMemory = false;
+
+            if (allowCreateOwnBuffer)
+            {
+                outputBuffer = OutputBuffer = new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, TimeFrame, range.Start);
+            }
         }
         else
         {
-            var outputBufferNextStart = range.TimeFrame.AddBar(outputBuffer.LastOpenTime);
+            var outputBufferNextStart = outputBuffer.NextExpectedOpenTime;
 
             if (range.Start == outputBufferNextStart)
             {
                 reusingMemory = true;
-                inputStart = outputBufferNextStart; // Continue where memory left off
+
+                if (Indicator.IsReady)
+                {
+                    inputStart = outputBufferNextStart; // Continue where memory left off
+                }
+                else
+                {
+                    Indicator.Clear();
+                }
             }
             else if (range.Start < outputBuffer.FirstOpenTime)
             {
                 // Scenario: start < memory.Start: create own memory, create own indicator (which has its own buffer)
                 reusingMemory = false;
+                outputBuffer = null;
             }
             else if (range.Start > outputBufferNextStart) // Possibly fast-forward
             {
@@ -151,6 +163,7 @@ where TIndicator : IIndicator2<TParameters, TInput, TOutput>
                     else
                     {
                         reusingMemory = false;
+                        outputBuffer = null;
                     }
                 }
                 else
@@ -164,42 +177,33 @@ where TIndicator : IIndicator2<TParameters, TInput, TOutput>
                 reusingMemory = true;
                 inputStart = outputBufferNextStart;
             }
+
+            if(outputBuffer == null) { Indicator.Clear(); }
         }
 
-        // REVIEW - does Indicator.Clear() need to be called in more cases?
-
-        actualMemory = reusingMemory ? outputBuffer! : new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, range.TimeFrame, range.Start - range.TimeFrame.TimeSpan);
-
-        #endregion
-
-        #region separateOutputBuffer
-
-        // Condition: when reusing memory, memory capacity is lower than outputCount:
-        List<TOutput>? separateOutputBuffer = reusingMemory && actualMemory.Capacity < outputCount
-            ? new List<TOutput>((int)outputCount)
-            : null;
+        //actualMemory = reusingMemory ? outputBuffer! : new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, range.TimeFrame, range.Start - range.TimeFrame.TimeSpan);
+        outputBuffer ??= new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, range.TimeFrame, range.Start);
 
         #endregion
-
 
         #region Input sources
 
-        TInput[] inputData = await this.GetInputData(Inputs, inputStart, range.EndExclusive).ConfigureAwait(false);
+        ArraySegment<TInput> inputData = await this.GetInputData(Inputs, inputStart, range.EndExclusive).ConfigureAwait(false);
 
         #endregion
 
-        // OPTIMIZE: Avoid subscription, and return TOutput from OnNextFromArray
+        // OPTIMIZE: Avoid subscription, and have a callback in an OnNext overload
         IDisposable subscription = reverse
-            ? Indicator.Subscribe(o => actualMemory.PushFront(o))
-            : Indicator.Subscribe(o => actualMemory.PushBack(o));
+            ? Indicator.Subscribe(o => outputBuffer.PushFront(o))
+            : Indicator.Subscribe(o => outputBuffer.PushBack(o));
 
         #region Calculate   
 
-
-        for (int i = 0; i < inputData.Length; i++)
-        {
-            Indicator.OnNextFromArray(inputData, i); // OPTIMIZE - send entire array
-        }
+        Indicator.OnNext(inputData);
+        //for (int i = 0; i < inputData.Count; i++)
+        //{
+        //    Indicator.OnNextFromArray(inputData, i); // OPTIMIZE - send entire array
+        //}
 
         #endregion
 
@@ -207,23 +211,23 @@ where TIndicator : IIndicator2<TParameters, TInput, TOutput>
 
         #region return result
 
-        if (separateOutputBuffer != null)
+        //if (separateOutputBuffer != null)
+        //{
+        //    return new ListValueResult<TOutput>(separateOutputBuffer);
+        //}
+        //else
+        if (noCopy)
         {
-            return new ListValueResult<TOutput>(separateOutputBuffer);
-        }
-        else if (noCopy)
-        {
-            return new ArraySegmentsValueResult<TOutput>(actualMemory.ValuesBuffer);
+            return new ArraySegmentsValueResult<TOutput>(outputBuffer.ValuesBuffer);
         }
         else
         {
-            return new ListValueResult<TOutput>(actualMemory.ToArray(outputCount));
+            return new ListValueResult<TOutput>(outputBuffer.ToArray(outputCount));
         }
 
         #endregion
 
     }
-
 }
 
 #if false

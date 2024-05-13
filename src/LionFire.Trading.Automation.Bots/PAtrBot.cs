@@ -66,9 +66,9 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
                 //new InputSignal<decimal>() {
                 //    Name = "ATR",
                 //    Type = typeof(AverageTrueRange),
-                //    Lookback = Parameters.ATR.Period,
+                //    Lookback = IndicatorParameters.ATR.Period,
                 //    Phase = 0,
-                //    Source = Parameters.Input,
+                //    Source = IndicatorParameters.Input,
                 //}
                 ];
         }
@@ -90,8 +90,8 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
         var eATR = new BufferingIndicatorHarness<AverageTrueRange, PAverageTrueRange, IKline, double>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange>
         {
 
-            Parameters = parameters.ATR,
-            InputReferences = [parameters.Input],
+            IndicatorParameters = parameters.ATR,
+            Inputs = [parameters.Input],
             TimeFrame = parameters.TimeFrame,
         });
 

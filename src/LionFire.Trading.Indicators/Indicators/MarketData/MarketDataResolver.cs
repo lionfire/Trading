@@ -15,7 +15,7 @@ public interface IMarketDataResolver
         if (result == null) throw new ArgumentException("Failed to resolve: " + reference);
         return result;
     }
-    IHistoricalTimeSeries? TryResolve(object reference);
+    IHistoricalTimeSeries? TryResolve(object reference, Type? valueType = null);
     IHistoricalTimeSeries<TValue> Resolve<TValue>(object reference)
     {
         var result = TryResolve<TValue>(reference);
@@ -64,12 +64,71 @@ public class MarketDataResolver : IMarketDataResolver
         {
             return ActivatorUtilities.CreateInstance<BarSeries>(ServiceProvider, exchangeSymbolTimeFrame);
         }
-        else if (reference is IIndicatorHarnessOptions indicatorOptions)
+        else if (reference is IIndicatorHarnessOptions indicatorHarnessOptions)
         {
 
+            var timeSeries = (IHistoricalTimeSeries)Activator.CreateInstance(typeof(HistoricalTimeSeriesFromIndicatorHarness<,,,>).MakeGenericType(
+                    indicatorHarnessOptions.IndicatorParameters.IndicatorType,
+                    indicatorHarnessOptions.IndicatorParameters.GetType(),
+                    indicatorHarnessOptions.IndicatorParameters.InputType,
+                    indicatorHarnessOptions.IndicatorParameters.OutputType
+                ), 
+                ServiceProvider,
+                indicatorHarnessOptions // implicit cast to IndicatorHarnessOptions<TParameters>
+                )!;
+            return timeSeries;
         }
 
         return null;
     }
 }
 
+public class HistoricalTimeSeriesFromIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IHistoricalTimeSeries<TOutput>
+    where TIndicator : IIndicator2<TParameters, TInput, TOutput>
+  where TParameters : IIndicatorParameters
+{
+    #region Dependencies
+
+    public IServiceProvider ServiceProvider { get; }
+
+    #endregion
+
+    #region Parameters
+
+    public Type ValueType => typeof(TOutput);
+
+    #endregion
+
+    #region Lifecycle
+
+    public HistoricalTimeSeriesFromIndicatorHarness(IServiceProvider serviceProvider, IndicatorHarnessOptions<TParameters> indicatorHarnessOptions)
+    {
+        ServiceProvider = serviceProvider;
+        TParameters parameters = (TParameters)indicatorHarnessOptions.IndicatorParameters;
+
+        indicatorHarness = new HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>(ServiceProvider, indicatorHarnessOptions);
+    }
+
+    #endregion
+
+    TOutput[]? outputBuffer;
+    IIndicatorHarness<TParameters, TInput, TOutput> indicatorHarness;
+
+    #region Methods
+
+    public async ValueTask<HistoricalDataResult<TOutput>> Get(DateTimeOffset start, DateTimeOffset endExclusive)
+    {
+        var valuesResult = await indicatorHarness.TryGetValues(start, endExclusive, ref outputBuffer);
+
+        var result = new HistoricalDataResult<TOutput>
+        {
+            Items = valuesResult.Values?.ToArray() ?? [],
+            IsSuccess = valuesResult.IsSuccess,
+            FailReason = valuesResult.FailReason,
+        };
+        return result;
+    }
+
+    #endregion
+
+}

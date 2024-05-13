@@ -5,7 +5,7 @@ namespace LionFire.Trading.Indicators;
 
 public interface IIndicator2
 {
-    uint MaxLookback { get; }
+    int MaxLookback { get; }
     uint? DefaultMaxFastForwardBars => 5;
     bool IsReady { get; }
 }
@@ -40,7 +40,7 @@ public interface IIndicator2<TParameters, TInput, TOutput>
 
     #region Input Handling
 
-    void OnNextFromArray(IReadOnlyList<TInput> inputData, int index);
+    //void OnNextFromArray(IReadOnlyList<TInput> inputData, int index); // OLD - search code and remove all of these.
 
     /// <summary>
     /// 
@@ -50,7 +50,7 @@ public interface IIndicator2<TParameters, TInput, TOutput>
     /// <param name="outputIndex"></param>
     /// <param name="publishOutput"></param>
     /// <returns>Number of values written</returns>
-    int OnNext(IReadOnlyList<TInput> input, TOutput[] outputBuffer, int outputIndex = 0, int outputSkip = 0);
+    void OnNext(IReadOnlyList<TInput> input, TOutput[]? outputBuffer, int outputIndex = 0, int outputSkip = 0);
 
     #endregion
 

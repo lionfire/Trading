@@ -38,7 +38,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #region Derived
 
-    public abstract uint MaxLookback { get; }
+    public abstract int MaxLookback { get; }
 
     #endregion
 
@@ -91,8 +91,8 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
         {
             output = new TOutput[inputs.Count];
         }
+         OnNext(inputs, output, 0, 0);
 
-        _ = OnNext(inputs, output, 0, 0);
 
         // OLD
         //foreach (var input in inputs)
@@ -127,7 +127,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
     public static void ThrowUnreachable() => throw new UnreachableCodeException();
 
     // ENH: consider replacing parameters with a struct for better DX
-    public abstract int OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0);
+    public abstract void OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0);
 
     public virtual void OnCompleted() { }
 
@@ -154,7 +154,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #region Input Handling
 
-    public void OnNextFromArray(IReadOnlyList<TInput> inputData, int index) => OnNext(inputData[index]);
+    //public void OnNextFromArray(IReadOnlyList<TInput> inputData, int index) => OnNext(inputData[index]);
 
     #endregion
 

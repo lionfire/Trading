@@ -106,7 +106,7 @@ public abstract class InputEnumerator<T> : InputEnumeratorBase
 
     #region Input
 
-    protected T[] InputBuffer = Array.Empty<T>();
+    protected ArraySegment<T> InputBuffer = ArraySegment<T>.Empty;
     protected int InputBufferIndex = 0;
 
     #region Derived
@@ -128,7 +128,7 @@ public abstract class InputEnumerator<T> : InputEnumeratorBase
     protected override async Task _PreloadRange(DateTimeOffset start, DateTimeOffset endExclusive, uint _)
     {
         var result = await Series.Get(start, endExclusive);
-        if (!result.IsSuccess || result.Items == null) { throw new Exception("Failed to get historical data"); }
+        if (!result.IsSuccess) { throw new Exception("Failed to get historical data"); }
         InputBuffer = result.Items;
         InputBufferIndex = 0;
     }

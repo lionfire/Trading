@@ -1,14 +1,12 @@
 ﻿using LionFire.Trading.Data;
-//using LionFire.Trading.Indicators.InputSignals;
 using LionFire.Trading.ValueWindows;
-
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
-
-
-public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
+public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
+    : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
+    where TParameters : IIndicatorParameters
 {
     #region Lifecycle
 
@@ -23,7 +21,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
     #region Input
 
     // TODO: Move this out of this class. Instead, have OnInput(inputId, data), and have something else push to this indicator
-    public override async Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
+    public override async Task<ArraySegment<TInput>> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
     {
         IHistoricalTimeSeries<TInput> source;
         if (sources[0].GetType().IsAssignableTo(typeof(IHistoricalTimeSeries<TInput>)))
@@ -34,11 +32,12 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
         {
             source = (IHistoricalTimeSeries<TInput>)Activator.CreateInstance(typeof(HistoricalTimeSeriesTypeAdapter<,>).MakeGenericType(sources[0].ValueType, typeof(TOutput)), sources[0])!;
         }
+
         var data = await source.Get(start, endExclusive).ConfigureAwait(false);
 
-        if (!data.IsSuccess || data.Items?.Any() != true) throw new Exception("Failed to get data");
+        if (!data.IsSuccess || data.Items.Any() != true) throw new Exception("Failed to get data");
 
-        return data.Items.ToArray(); // COPY
+        return data.Items;
     }
 
     #endregion
@@ -47,8 +46,17 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
     DateTimeOffset nextExpectedStart = default;
 
-    public override async ValueTask<IValuesResult<TOutput>> GetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[] outputBuffer, out ArraySegment<TOutput> outputArraySegment)
+    /// <summary>
+    /// </summary>
+    /// <param name="start"></param>
+    /// <param name="endExclusive"></param>
+    /// <param name="outputBuffer"></param>
+    /// <returns></returns>
+    public override Task<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer)
     {
+        // OLD docs, if there's no ref outputBuffer:
+        // Caller should check the ArraySegment's array: if it's different than outputBuffer, then it may be a new larger buffer that the caller may want to hold onto for future use
+
         // TOTELEMETRY - invocation, to help assess percentages of key events
 
         #region Output Buffer
@@ -64,66 +72,70 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
         #endregion
 
-
         #region Determine start point
 
         var reuseIndicatorState = nextExpectedStart == start;
         var lookbackAmount = reuseIndicatorState ? 0 : Math.Max(0, Indicator.MaxLookback - 1);
-        var inputStart = reuseIndicatorState 
+        var inputStart = reuseIndicatorState
             ? start
             : TimeFrame.AddBars(start, -lookbackAmount);
 
-        if(!reuseIndicatorState) Indicator.Clear();
+        if (!reuseIndicatorState) Indicator.Clear();
 
         // TOTELEMETRY - reuseIndicatorState
 
         #endregion
 
-        #region Input sources
+        var outputBufferCopy = outputBuffer;
+        return Task.Run<IValuesResult<TOutput>>(async () =>
+        {
+            #region Input sources
 
-        TInput[] inputData = await this.GetInputData(Inputs, inputStart, endExclusive).ConfigureAwait(false);
+            ArraySegment<TInput> inputData = await this.GetInputData(Inputs, inputStart, endExclusive).ConfigureAwait(false);
 
-        #endregion
+            #endregion
 
-        //// OPTIMIZE: Avoid subscription, and return TOutput from OnNextFromArray
-        //var lookbackAmountRemaining = lookbackAmount;
-        //int outputIndex = 0;
+            //// OPTIMIZE: Avoid subscription, and return TOutput from OnNextFromArray
+            //var lookbackAmountRemaining = lookbackAmount;
+            //int outputIndex = 0;
 
-        //IDisposable subscription = Indicator.Subscribe(o =>
-        //{
-        //    if (lookbackAmountRemaining-- > 0) return;
-        //    outputBuffer[outputIndex++] = o;
-        //});
+            //IDisposable subscription = Indicator.Subscribe(o =>
+            //{
+            //    if (lookbackAmountRemaining-- > 0) return;
+            //    outputBuffer[outputIndex++] = o;
+            //});
 
-        #region Calculate   
+            #region Calculate   
 
+            await Task.Run(() => Indicator.OnNext(inputData, outputBufferCopy, outputSkip: lookbackAmount));
+
+#if OLD // one value at a time
         for (int i = 0; i < inputData.Length; i++)
         {
-            //Indicator.OnNextFromArray(inputData, i);
-
-            Indicator.OnNext(inputData, outputBuffer);
+            Indicator.OnNextFromArray(inputData, i);
 
             // OPTIMIZE:
             // - send entire array, and
             // -  have indicator write into the buffer,
             // - either skipping lookbackAmount,
             //   - or keeping track of whether it's ready to write real values, and returning the total amount of valid values returned
-            if(i >= lookbackAmount)
+            if (i >= lookbackAmount)
             {
                 outputBuffer[i - lookbackAmount] = result;
             }
         }
+#endif
 
-        #endregion
+            #endregion
 
+            #region Finalize, and results
 
-        #region Finalize, and results
+            nextExpectedStart = endExclusive;
+            var outputArraySegment = new ArraySegment<TOutput>(outputBufferCopy, 0, (int)outputCount);
+            return new ArraySegmentValueResult<TOutput>(outputArraySegment);
 
-        nextExpectedStart = endExclusive;
-        outputArraySegment = new ArraySegment<TOutput>(outputBuffer, 0, (int) outputCount);
-        return new ArraySegmentValueResult<TOutput>(outputArraySegment);
-
-        #endregion
+            #endregion
+        });
     }
 
     #endregion

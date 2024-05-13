@@ -35,11 +35,11 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
         var result = await Input.Get(start, endExclusive);
         if (!result.IsSuccess) return new HistoricalDataResult<TOutput> { IsSuccess = false, FailReason = result.FailReason };
 
-        var output = new TOutput[result.Items.Length];
+        var output = new TOutput[result.Items.Count];
         int i = 0;
         foreach (var item in result.Items)
         {
-            output[i] = Converter(item);
+            output[i++] = Converter(item);
         }
         return new HistoricalDataResult<TOutput> { IsSuccess = true, Items = output };
     }

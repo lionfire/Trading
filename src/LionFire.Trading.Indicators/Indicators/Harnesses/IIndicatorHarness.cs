@@ -9,11 +9,11 @@ public interface IIndicatorHarness
 }
 public interface IIndicatorHarness<TOutput> : IIndicatorHarness
 {
-    ValueTask<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[] outputBuffer);
+    Task<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer);
 
 }
 
-public interface IBufferingIndicatorHarness<TOutput> : IBufferingIndicatorHarness<TOutput>
+public interface IBufferingIndicatorHarness<TOutput> : IIndicatorHarness<TOutput>
 {
     ValueTask<IValuesResult<TOutput>> TryGetValues(bool reverse, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null);
 }
@@ -23,7 +23,7 @@ public interface IIndicatorHarness<TParameters, TInput, TOutput> : IIndicatorHar
     TParameters Parameters { get; }
     IServiceProvider ServiceProvider { get; }
 
-    Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
+    Task<ArraySegment<TInput>> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
 }
 
 public static class IBufferingIndicatorHarnessX
@@ -36,23 +36,23 @@ public static class IBufferingIndicatorHarnessX
 
     #region Throw on fail
 
-    public static async ValueTask<IValuesResult<TOutput>> GetReverseValues<TOutput>(this IBufferingIndicatorHarness<TOutput> @this, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null)
+    public static async ValueTask<IReadOnlyList<TOutput>> GetReverseValues<TOutput>(this IBufferingIndicatorHarness<TOutput> @this, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null)
     {
         var result = await @this.TryGetReverseValues(start, endExclusive, outputBuffer);
-        if (result == null)
+        if (result == null || result.IsSuccess == false || result.Values == null)
         {
             throw new Exception("Failed to get output");
         }
-        return result;
+        return result.Values;
     }
-    public static async ValueTask<IValuesResult<TOutput>> GetForwardValues<TOutput>(this IBufferingIndicatorHarness<TOutput> @this, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null)
+    public static async ValueTask<IReadOnlyList<TOutput>> GetForwardValues<TOutput>(this IBufferingIndicatorHarness<TOutput> @this, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null)
     {
         var result = await @this.TryGetForwardValues(start, endExclusive, outputBuffer);
-        if (result == null)
+        if (result == null || result.IsSuccess == false || result.Values == null)
         {
             throw new Exception("Failed to get output");
         }
-        return result;
+        return result.Values;
     }
 
     #endregion

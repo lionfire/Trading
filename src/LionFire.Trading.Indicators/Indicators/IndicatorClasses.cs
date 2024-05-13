@@ -15,7 +15,7 @@ namespace LionFire.Trading.Indicators;
 
 //public class IndicatorMachine
 //{
-//    #region Parameters
+//    #region IndicatorParameters
 
 //    public IndicatorMachineOptions? Options { get; }
 

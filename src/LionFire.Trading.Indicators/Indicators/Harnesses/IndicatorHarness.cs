@@ -5,7 +5,10 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
-public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput> : IIndicatorHarness<TParameters, TInput, TOutput> where TIndicator : IIndicator2<TParameters, TInput, TOutput>
+public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
+    : IIndicatorHarness<TParameters, TInput, TOutput> 
+    where TIndicator : IIndicator2<TParameters, TInput, TOutput>
+    where TParameters : IIndicatorParameters
 {
     #region Dependencies
 
@@ -33,14 +36,14 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         ServiceProvider = serviceProvider;
         OutputExecutionOptions = outputOptions ?? new();
         OutputComponentOptions.FallbackToDefaults(OutputExecutionOptions);
-        Parameters = options.Parameters;
+        Parameters = options.IndicatorParameters;
         TimeFrame = options.TimeFrame;
         Indicator = CreateIndicator();
 
-        List<IHistoricalTimeSeries> inputs = new(options.InputReferences.Length);
+        List<IHistoricalTimeSeries> inputs = new(options.Inputs.Length);
 
         var marketDataResolver = ServiceProvider.GetRequiredService<IMarketDataResolver>();
-        foreach (var input in options.InputReferences)
+        foreach (var input in options.Inputs)
         {
             inputs.Add(marketDataResolver.Resolve(input));
         }
@@ -52,7 +55,7 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     {
         // OPTIMIZE
         //if(Indicator needs ServiceProvider){
-        //return TIndicator.Create<TIndicator>(Parameters);
+        //return TIndicator.Create<TIndicator>(IndicatorParameters);
         //} else
         //{
         return ActivatorUtilities.CreateInstance<TIndicator>(ServiceProvider, Parameters!);
@@ -73,7 +76,7 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     #region Input
 
     //public abstract Task<(object, int)> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
-    public abstract Task<TInput[]> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
+    public abstract Task<ArraySegment<TInput>> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive);
 
     //public override async Task<(IReadOnlyList<InputSlot>, int)> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
     //{
@@ -92,7 +95,7 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     #region Output
 
     //public abstract ValueTask<IValuesResult<TOutput>> TryGetValues(bool reverse, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null);
-    public abstract ValueTask<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[] outputBuffer);
+    public abstract Task<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer);
 
     protected uint GetOutputCount(DateTimeOffset start, DateTimeOffset endExclusive)
     {

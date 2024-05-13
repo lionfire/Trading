@@ -2,18 +2,32 @@
 
 public interface IIndicatorHarnessOptions
 {
-     TimeFrame TimeFrame { get; }
-    object[] InputReferences { get; }
+   
+    IIndicatorParameters IndicatorParameters { get; }
+
+    TimeFrame TimeFrame { get; }
+    object[] Inputs { get; }
 }
 
-public record IndicatorHarnessOptions<TParameters>: IIndicatorHarnessOptions
+public class IndicatorHarnessOptions<TParameters> : IIndicatorHarnessOptions
+    where TParameters : IIndicatorParameters
 {
 
-    public required TParameters Parameters { get; init; }
+    public IndicatorHarnessOptions(TParameters indicatorParameters
+        //, TimeFrame timeFrame, object[] inputReferences
+        )
+    {
+        IndicatorParameters = indicatorParameters;
+        //TimeFrame = timeFrame;
+        //Inputs = inputReferences;
+    }
+
+    public TParameters IndicatorParameters { get; init; }
+    IIndicatorParameters IIndicatorHarnessOptions.IndicatorParameters => IndicatorParameters;
 
     public required TimeFrame TimeFrame { get; init; }
 
-    public required object[] InputReferences { get; init; }
+    public required object[] Inputs { get; init; }
 
 }
 
@@ -36,10 +50,5 @@ public record OutputComponentOptions
     /// If 0, the user should subscribe to output events.
     /// </summary>
     public int Memory { get; init; } = 1;
-}
-
-public class ValueWindow
-{
-
 }
 

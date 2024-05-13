@@ -231,7 +231,7 @@ public class BacktestTask2 : IStartable
 
             var h = new BufferingIndicatorHarness<TIndicator, TParameters, IKline, decimal>(ServiceProvider, new()
             {
-                Parameters = new TParameters
+                IndicatorParameters = new TParameters
                 {
                     //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
                     MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
@@ -241,7 +241,7 @@ public class BacktestTask2 : IStartable
 
                 },
                 TimeFrame = TimeFrame.h1,
-                InputReferences = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC
+                Inputs = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC
             });
 
             var result = await h.GetReverseValues(new DateTimeOffset(2024, 4, 1, 13, 0, 0, TimeSpan.Zero),
@@ -336,7 +336,7 @@ public class BacktestTask2 : IStartable
         {
             await NextTick();
             throw new NotImplementedException("advance one tick");
-            //BacktestDate += Parameters.TimeFrame.TimeSpan;
+            //BacktestDate += IndicatorParameters.TimeFrame.TimeSpan;
         }
 
     }
