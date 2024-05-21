@@ -66,7 +66,7 @@ public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
     public Task<IValuesResult<TOutput>> TryGetReverseValues(DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null)
     {
-        // ENH: Also Throw/warn if the current bar isn't ready/finalized yet, which may take about 5 seconds to be confident of.
+        // ENH: Also ThrowFailReason/warn if the current bar isn't ready/finalized yet, which may take about 5 seconds to be confident of.
         ArgumentOutOfRangeException.ThrowIfGreaterThan(endExclusive, DateTimeOffset.UtcNow);
 
         return _TryGetValues(start, endExclusive, outputBuffer: outputBuffer, reverse: true);

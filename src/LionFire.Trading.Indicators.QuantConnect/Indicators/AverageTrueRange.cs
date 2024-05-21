@@ -25,8 +25,8 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
       => [new InputSlot() {
                     Name = "Source",
                     Type = typeof(IKline<TOutput>),
-                //Lookback = Period, // Doesn't belong here
                     Aspects = DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close,
+                    DefaultSource = 0,
                 }];
     //public static List<InputSlot> InputSlots()
     //    => [new () {

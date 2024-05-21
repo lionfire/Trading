@@ -18,6 +18,8 @@ using System.Security.Cryptography.X509Certificates;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Execution;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using LionFire.Trading.Automation.Optimization;
 
 namespace Backtesting_;
 
@@ -84,9 +86,6 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
                 //},
                 TimeFrame = timeFrame,
                 Inputs = [new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close)],
-                //Inputs = new object[]{
-                //    new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close)
-                //},
             };
 
             Add(new PBacktestTask2<PAtrBot<T>>
@@ -96,8 +95,81 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
                 EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
                 Features = BotHarnessFeatures.Bars,
             });
-
         }
+    }
+}
+
+public class OptimizerOptions
+{
+
+}
+
+public class BatchBacktestParameters
+{
+    public DateTimeOffset Start { get; set; }
+    public DateTimeOffset EndExclusive { get; set; }
+
+    public IReadOnlyList<IPBacktestTask2> Backtests { get; } = new();
+
+    public void Add(IPBacktestTask2 backtest)
+    {
+        if (Start)
+        {
+        }
+        Backtests.Add(backtest);
+    }
+}
+
+public class Backtest_Optimize_ : BinanceDataTest
+{
+#if TODO
+    [Fact]
+    public async Task _()
+    {
+        var pOptimization = new POptimization
+        {
+            Parameters = new(),  // TODO
+            BotParametersType = typeof(PAtrBot<double>),
+            IsComprehensive = true,
+        };
+
+        var optimization = new OptimizationTask(ServiceProvider, pOptimization);
+        
+        await optimization.Run();
+    }
+#endif
+}
+
+
+public class Backtest_Batch_ : BinanceDataTest
+{
+    [Fact]
+    public async Task _()
+    {
+        var d = new BacktestTheoryData();
+
+        var pBatch = new BatchBacktestParameters()
+        {
+            
+        };
+
+        var batcher = ServiceProvider.GetService<BacktestBatcher>();
+
+
+        var p1 = new PBacktestTask2<AtrBot<double>>
+             (new PBacktestTask2<PAtrBot<double>>
+             {
+                 Bot = pBot,
+                 Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                 EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                 Features = BotHarnessFeatures.Bars,
+             });
+
+        var p = new BatchBacktestParameters()
+        {
+
+        };
+
     }
 }
 
@@ -107,8 +179,7 @@ public class Backtest_ : BinanceDataTest
     [ClassData(typeof(BacktestTheoryData))]
     public async Task Execute_(IPBacktestTask2 parameters)
     {
-        var t = new BacktestTask2(ServiceProvider, parameters, dateChunker: HistoricalDataChunkRangeProvider);
-        await t.Run();
+        await new BacktestTask2(ServiceProvider, parameters, dateChunker: HistoricalDataChunkRangeProvider).Run();
     }
 
 #if RunViaExtensionMethod

@@ -6,6 +6,7 @@ namespace LionFire.Trading.Data;
 public interface IHistoricalTimeSeries
 {
     Type ValueType { get; }
+    TimeFrame TimeFrame { get; }
 }
 
 public interface IHistoricalTimeSeries<TValue> : IHistoricalTimeSeries

@@ -147,8 +147,29 @@ public class BacktestTask2 : IStartable
     #region Inputs
 
     List<InputEnumeratorBase> inputs;
-    List<AsyncInputEnumerator>? asyncInputs;
+    //List<AsyncInputEnumerator>? asyncInputs;
+    List<InputEnumeratorBase> indicatorInputs;
 
+    IEnumerable<InputEnumeratorBase> AllInputEnumerators
+    {
+        get
+        {
+            if (inputs != null)
+            {
+                foreach (var input in inputs)
+                {
+                    yield return input;
+                }
+            }
+            if (indicatorInputs != null)
+            {
+                foreach (var input in indicatorInputs)
+                {
+                    yield return input;
+                }
+            }
+        }
+    }
     //private void GetInputsChunk((DateTimeOffset start, DateTimeOffset endExclusive)
     //{
     //}
@@ -169,13 +190,11 @@ public class BacktestTask2 : IStartable
             {
                 IHistoricalTimeSeries series = ir.Resolve(input);
 
-                int memory = Parameters.Bot.InputMemories == null ? 0 : Parameters.Bot.InputMemories[i];
-
-                if (memory == 0) { memory = 1; }
+                int lookback = Parameters.Bot.InputLookbacks == null ? 0 : Parameters.Bot.InputLookbacks[i];
 
                 InputEnumeratorBase inputEnumerator;
 
-                if (memory <= 1)
+                if (lookback == 0)
                 {
                     inputEnumerator = (InputEnumeratorBase)
                     typeof(SingleValueInputEnumerator<>)
@@ -183,13 +202,14 @@ public class BacktestTask2 : IStartable
                     .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType)])!
                     .Invoke(new object[] { series });
                 }
+                else if (lookback < 0) throw new ArgumentOutOfRangeException(nameof(lookback));
                 else
                 {
                     inputEnumerator = (InputEnumeratorBase)
-                        typeof(WindowedInputEnumerator<>)
+                        typeof(ChunkingInputEnumerator<>)
                         .MakeGenericType(series.ValueType)
                         .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType), typeof(int)])!
-                        .Invoke(new object[] { series, memory });
+                        .Invoke(new object[] { series, lookback });
                 }
 
                 list.Add(inputEnumerator);
@@ -213,44 +233,43 @@ public class BacktestTask2 : IStartable
 
     private void InitBot()
     {
-        Bot = (IPBot2)ActivatorUtilities.CreateInstance(ServiceProvider, Parameters.Bot.InstanceType, Parameters.Bot);
+        Bot = (IBot2)ActivatorUtilities.CreateInstance(ServiceProvider, Parameters.Bot.InstanceType, Parameters.Bot);
 
-
-        InitBotIndicators();
-
-
+        //InitBotIndicators();
     }
 
-    private void InitBotIndicators()
-    {
-        //throw new NotImplementedException();
+    //private void InitBotIndicators()
+    //{
+    //    var list = new List<InputEnumeratorBase>();
+    //    var ir = ServiceProvider.GetRequiredService<IMarketDataResolver>();
 
-        foreach (var pIndicator in Bot.Indicators)
-        {
-#error NEXT: resolve via IMarketDataResolver to a IHistoricalSeries?
 
-            var h = new BufferingIndicatorHarness<TIndicator, TParameters, IKline, decimal>(ServiceProvider, new()
-            {
-                IndicatorParameters = new TParameters
-                {
-                    //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
-                    MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
-                    Period = 14,
+    //    //throw new NotImplementedException();
 
-                    //Source = 
+    //    foreach (var pIndicator in Parameters.Bot.Indicators)
+    //    {
+    //        var h = new BufferingIndicatorHarness<TIndicator, TParameters, IKline, decimal>(ServiceProvider, new()
+    //        {
+    //            IndicatorParameters = new TParameters
+    //            {
+    //                //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
+    //                MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
+    //                Period = 14,
 
-                },
-                TimeFrame = TimeFrame.h1,
-                Inputs = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC
-            });
+    //                //Source = 
 
-            var result = await h.GetReverseValues(new DateTimeOffset(2024, 4, 1, 13, 0, 0, TimeSpan.Zero),
-                new DateTimeOffset(2024, 4, 1, 18, 0, 0, TimeSpan.Zero));
+    //            },
+    //            TimeFrame = TimeFrame.h1,
+    //            Inputs = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC
+    //        });
 
-        }
-    }
+    //        var result = await h.GetReverseValues(new DateTimeOffset(2024, 4, 1, 13, 0, 0, TimeSpan.Zero),
+    //            new DateTimeOffset(2024, 4, 1, 18, 0, 0, TimeSpan.Zero));
 
-    protected IPBot2 Bot { get; private set; }
+    //    }
+    //}
+
+    protected IBot2 Bot { get; private set; }
 
     #endregion
 
@@ -285,11 +304,11 @@ public class BacktestTask2 : IStartable
         var chunk = chunkEnumerator.Current;
         chunkStart = chunk.range.start;
         chunkEndExclusive = chunk.range.endExclusive;
-        long chunkSize = TimeFrame.GetExpectedBarCount(chunkStart, chunkEndExclusive) ?? throw new NotSupportedException(nameof(TimeFrame));
+        //long chunkSize = TimeFrame.GetExpectedBarCount(chunkStart, chunkEndExclusive) ?? throw new NotSupportedException(nameof(TimeFrame));
 
-        await Task.WhenAll(inputs.Select(input =>
-                 input.PreloadRange(chunkStart, chunkEndExclusive, (uint)chunkSize)
-             )).ConfigureAwait(false);
+        await Task.WhenAll(AllInputEnumerators
+            .Select(input => input.PreloadRange(chunkStart, chunkEndExclusive)
+             ).Where(t => !t.IsCompletedSuccessfully).Select(t => t.AsTask())).ConfigureAwait(false);
 
     }
 
@@ -301,17 +320,17 @@ public class BacktestTask2 : IStartable
             await AdvanceInputChunk().ConfigureAwait(false);
         }
 
-        var asyncTasks = asyncInputs?.Select(i => i.MoveNextAsync());
+        //var asyncTasks = asyncInputs?.Select(i => i.MoveNextAsync());
 
-        foreach (InputEnumeratorBase input in inputs)
+        foreach (InputEnumeratorBase input in AllInputEnumerators)
         {
             input.MoveNext();
         }
 
-        if (asyncTasks != null)
-        {
-            await Task.WhenAll(asyncTasks).ConfigureAwait(false);
-        }
+        //if (asyncTasks != null)
+        //{
+        //    await Task.WhenAll(asyncTasks).ConfigureAwait(false);
+        //}
     }
 
     private async Task RunBars()

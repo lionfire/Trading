@@ -3,21 +3,33 @@ using QuantConnect.Securities;
 using LionFire.Trading.ValueWindows;
 using LionFire.Trading.Indicators.Harnesses;
 using System.Collections.Concurrent;
+using QuantConnect.Indicators;
 
 namespace LionFire.Trading.Automation.Bots;
 
 public static class BotParametersTypeInfo
 {
-    public static IEnumerable<object> GetPIndicators(IPBot2 pBot)
-    {
+    //public static IEnumerable<object> GetPIndicators(IPBot2 pBot)
+    //{
+    //}
 
-    }
-
-    ConcurrentDictionary<Type, IEnumerable<>>
+    //ConcurrentDictionary<Type, IEnumerable<>>
 }
 
 public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
 {
+    #region Static
+
+    //public static IReadOnlyList<InputSlot> InputSlots() => GetInputSlots();
+      
+    //public static IReadOnlyList<InputSlot> InputSlots()
+    //  => [new InputSlot() {
+    //                Name = "ATR",
+    //                Type = typeof(AverageTrueRange),
+    //            }];
+
+    #endregion
+
     public PAverageTrueRange<TValue>? ATR { get; set; }
 
     public PUnidirectionalBot? Unidirectional { get; set; }
@@ -35,26 +47,22 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
             Period = (int)period,
             Memory = 2,
         };
-        InputMemories = [(int)period];
+        InputLookbacks = [(int)period];
     }
     public override Type InstanceType => typeof(AtrBot<TValue>);
 
+    public void ThrowIfInvalid()
+    {
+        ArgumentNullException.ThrowIfNull(ATR, nameof(ATR));
+        ArgumentNullException.ThrowIfNull(Points, nameof(Points));
+        ArgumentNullException.ThrowIfNull(Unidirectional, nameof(Unidirectional));
+    }
 }
 
 //#if TODO
 [Bot(Direction = BotDirection.Unidirectional)]
 public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
 {
-    #region Static
-
-    public static IReadOnlyList<InputSlot> TInputs()
-      => [new InputSlot() {
-                    Name = "ATR",
-                    Type = typeof(AverageTrueRange),
-                }];
-
-    #endregion
-
     #region Inputs
 
     public IReadOnlyList<IInputSignal> Inputs
@@ -74,32 +82,31 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
         }
     }
 
+    public override IReadOnlyList<IInputSignal> InputSignals { get; } = new List<IInputSignal>(); // TODO
+
     #endregion
 
     //private AverageTrueRange ATR { get; init; }
-    TimeFrameValuesWindow<double> ATR { get; init; }
+    public IReadOnlyValuesWindow<double> ATR { get; set; }
 
-    public OutputComponentOptions OutputExecutionOptions { get; } = new
+    public OutputComponentOptions OutputExecutionOptions { get; } = new OutputComponentOptions
     {
         Memory = 2,
     };
 
-    public AtrBot(IServiceProvider serviceProvider, PAtrBot parameters) : base(parameters)
+    public AtrBot()
     {
         // TODO: Live Indicator harness if live
-        var eATR = new BufferingIndicatorHarness<AverageTrueRange, PAverageTrueRange, IKline, double>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange>
-        {
+        //var eATR = new BufferingIndicatorHarness<AverageTrueRange<TValue>, PAverageTrueRange<TValue>, IKline, TValue>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange<TValue>>(parameters.ATR!)
+        //{
+        //    Inputs = parameters.Inputs == null ? [] : [parameters.Inputs],
+        //    TimeFrame = parameters.TimeFrame,
+        //});
 
-            IndicatorParameters = parameters.ATR,
-            Inputs = [parameters.Input],
-            TimeFrame = parameters.TimeFrame,
-        });
-
-        eATR.GetWindow(OutputExecutionOptions.Memory);
+        //eATR.GetWindow(OutputExecutionOptions.Memory);
 
         //ATR = eATR.Memory;
     }
-
 
     #region State
 
@@ -113,10 +120,10 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
         if (ATR[0] > ATR[1]) OpenScore++;
         if (ATR[0] < ATR[1]) CloseScore++;
 
-        if (OpenScore >= Parameters.Standard.OpenThreshold) { Open(); }
-        if (CloseScore >= Parameters.Standard.CloseThreshold) { Close(); }
+        if (OpenScore >= Parameters.Points!.OpenThreshold) { Open(); }
+        if (CloseScore >= Parameters.Points.CloseThreshold) { Close(); }
 
-        long s;
+        //long s;
     }
 
 }

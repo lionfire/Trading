@@ -2,11 +2,10 @@
 
 public interface IIndicatorHarnessOptions
 {
-   
     IIndicatorParameters IndicatorParameters { get; }
 
-    TimeFrame TimeFrame { get; }
-    object[] Inputs { get; }
+    TimeFrame TimeFrame { get; set; }
+    object[] Inputs { get; set; }
 }
 
 public class IndicatorHarnessOptions<TParameters> : IIndicatorHarnessOptions
@@ -25,9 +24,9 @@ public class IndicatorHarnessOptions<TParameters> : IIndicatorHarnessOptions
     public TParameters IndicatorParameters { get; init; }
     IIndicatorParameters IIndicatorHarnessOptions.IndicatorParameters => IndicatorParameters;
 
-    public required TimeFrame TimeFrame { get; init; }
+    public  TimeFrame TimeFrame { get; set; }
 
-    public required object[] Inputs { get; init; }
+    public  object[] Inputs { get; set; }
 
 }
 

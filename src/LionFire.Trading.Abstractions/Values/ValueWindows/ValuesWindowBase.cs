@@ -2,8 +2,9 @@
 
 namespace LionFire.Trading.ValueWindows;
 
+
 // REVIEW - not sure this class needs to exist: just use CircularBuffer directly
-public abstract class ValuesWindowBase<T>
+public abstract class ValuesWindowBase<T> : IValuesWindow<T>
 {
     #region Parameters
 
@@ -29,12 +30,17 @@ public abstract class ValuesWindowBase<T>
 
     protected CircularBuffer<T> values;
 
-    public uint ValueCount { get; protected set; }
+    /// <summary>
+    /// A counter representing the total number of values seen.
+    /// For example, if Capacity is 3 and 100 values are pushed through this class, this will return 100.
+    /// This counter can be reset using Clear().
+    /// </summary>
+    public uint TotalValuesSeen { get; protected set; }
 
     #region Derived
 
     public uint Capacity => (uint)values.Capacity;
-    public bool IsFull => ValueCount >= values.Capacity;
+    public bool IsFull => values.IsFull;
 
     #endregion
 
@@ -68,7 +74,7 @@ public abstract class ValuesWindowBase<T>
     public void Clear()
     {
         values.Clear();
-        ValueCount = 0;
+        TotalValuesSeen = 0;
     }
 
     #endregion

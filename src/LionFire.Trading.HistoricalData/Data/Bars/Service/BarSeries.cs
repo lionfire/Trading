@@ -10,6 +10,8 @@ public class BarSeries : IHistoricalTimeSeries<IKline>
     public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
     public Type ValueType => typeof(IKline);
 
+    public TimeFrame TimeFrame => ExchangeSymbolTimeFrame.TimeFrame;
+    
     #endregion
 
     #region Dependencies

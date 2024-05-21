@@ -18,6 +18,7 @@ public abstract class IndicatorParameters<TIndicator, TOutput> : IndicatorParame
     public override Type InputType => typeof(TOutput);
     public override Type OutputType => typeof(TOutput);
 }
+
 public abstract class IndicatorParameters<TIndicator, TInput, TOutput> : IndicatorParameters<TIndicator>
 {
     /// <summary>

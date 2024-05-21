@@ -3,9 +3,8 @@ using System.Linq;
 
 namespace LionFire.Trading.ValueWindows;
 
-public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
+public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>, ITimeFrameValuesWindow<T>
 {
-
     #region Parameters
 
     public TimeSpan TimeSpan { get; }
@@ -34,7 +33,7 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
 
     #region Derived
 
-    public DateTimeOffset FirstOpenTime => LastOpenTime - TimeSpan * Math.Min(ValueCount, values.Capacity);
+    public DateTimeOffset FirstOpenTime => LastOpenTime - TimeSpan * Math.Min(TotalValuesSeen, values.Capacity);
     public DateTimeOffset NextExpectedOpenTime => LastOpenTime + TimeSpan;
     public bool HasNextExpectedOpenTime => LastOpenTime != DateTimeOffset.MinValue;
 
@@ -148,14 +147,13 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>
         if (front) values.PushFront(value);
         else values.PushBack(value);
 
-        ValueCount += newBars;
+        TotalValuesSeen += newBars;
         return newBars;
     }
 
     public T PopBack()
     {
         var value = values.Back();
-        ValueCount--;
         return value;
     }
     // ENH: PopFront for completeness, but we currently have no use case for popping with forward mode.

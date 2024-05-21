@@ -25,6 +25,8 @@ public static class ServiceProviderProvider
             .AddQuantConnectIndicators()
 
             .AddBinance()
+
+            .AddAutomation()
             ;
 
         return services.BuildServiceProvider();

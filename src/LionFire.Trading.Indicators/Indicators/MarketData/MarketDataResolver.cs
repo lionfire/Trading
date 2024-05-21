@@ -16,6 +16,9 @@ public interface IMarketDataResolver
         return result;
     }
     IHistoricalTimeSeries? TryResolve(object reference, Type? valueType = null);
+    IHistoricalTimeSeries Resolve(Type valueType, object reference)
+        => (IHistoricalTimeSeries)(this.GetType().GetMethod(nameof(Resolve))!.MakeGenericMethod(valueType).Invoke(this, [reference])!);
+
     IHistoricalTimeSeries<TValue> Resolve<TValue>(object reference)
     {
         var result = TryResolve<TValue>(reference);
@@ -96,6 +99,7 @@ public class HistoricalTimeSeriesFromIndicatorHarness<TIndicator, TParameters, T
     #region Parameters
 
     public Type ValueType => typeof(TOutput);
+    public TimeFrame TimeFrame => indicatorHarness.TimeFrame;
 
     #endregion
 

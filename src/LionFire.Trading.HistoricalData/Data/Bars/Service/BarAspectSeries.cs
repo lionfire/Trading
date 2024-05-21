@@ -10,6 +10,7 @@ public class BarAspectSeries<TValue> : IHistoricalTimeSeries<TValue>
     #region Identity
 
     public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
+    public TimeFrame TimeFrame => ExchangeSymbolTimeFrame.TimeFrame;
     public DataPointAspect Aspect { get; }
 
     public Type ValueType => typeof(TValue);

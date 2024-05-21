@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.HistoricalData;
+﻿#if UNUSED
+using LionFire.Trading.HistoricalData;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -27,3 +28,4 @@ public class InputStaging<TInput1, TInput2>
     //}
 }
 
+#endif

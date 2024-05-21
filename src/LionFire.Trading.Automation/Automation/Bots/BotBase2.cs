@@ -1,20 +1,7 @@
 ﻿
+using LionFire.Ontology;
+
 namespace LionFire.Trading.Automation;
-
-public interface IBotController
-{
-
-}
-
-public class LiveBotController
-{
-
-}
-public class BacktestBotController
-{
-
-}
-
 
 // TODO?
 //public abstract class BotBase2<TConcrete, TParameters>
@@ -22,34 +9,48 @@ public class BacktestBotController
 //{
 //}
 
-public abstract class BotBase2<TParameters> 
+public abstract class BotBase2<TParameters>
+    : IBot2<TParameters>
     where TParameters : PBot2<TParameters>
 {
-    public TParameters Parameters => parameters;
-
     public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
 
-    private TParameters parameters;
+    #region IBotController
 
-    private IBotController controller;
+    public IBotController Controller { get => controller; set => controller = value; }
+    private IBotController controller = null!; // OnBar, OnTick are guaranteed to have Parameters set
 
-    public BotBase2(TParameters parameters, IBotController botController)
-    {
-        this.parameters = parameters;
-        controller = botController;
+    #endregion
 
-        if(parameters is IPTimeFrameBot2 ptf)
-        {
+    #region TParameters
 
-        }
-    }
+    public TParameters Parameters { get => parameters; set => parameters = value; }
+    private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have Parameters set
+    object IBot2.Parameters => parameters;
+
+    #endregion
+
+    #region Lifecycle
+
+    //public BotBase2(TParameters parameters, IBotController? botController = null)
+    //{
+    //    this.parameters = parameters;
+    //    controller = botController;
+
+    //    if (parameters is IPTimeFrameBot2 ptf)
+    //    {
+
+    //    }
+    //}
+
+    #endregion
 
     public virtual void OnBar(IKline kline) { }
 
-    public static IReadOnlyList<InputSlot> InputSlots()
-    {
-        throw new NotImplementedException();
-    }
+    //public static IReadOnlyList<InputSlot> InputSlots()
+    //{
+    //    throw new NotImplementedException();
+    //}
 
 
     #region Controlling the bot

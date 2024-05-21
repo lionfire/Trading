@@ -9,6 +9,7 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
     public Type ValueType => throw new NotImplementedException();
 
     public IHistoricalTimeSeries<TInput> Input { get; }
+    public TimeFrame TimeFrame => Input.TimeFrame;
 
     public HistoricalTimeSeriesTypeAdapter(IHistoricalTimeSeries<TInput> input)
     {

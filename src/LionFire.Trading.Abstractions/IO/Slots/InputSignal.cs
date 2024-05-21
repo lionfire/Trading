@@ -5,9 +5,7 @@ namespace LionFire.Trading; // TODO: Move to .Components or .Slots namespace
 
 public interface IInputSignal : IInstanceFor<InputSlot>
 {
-
 }
-
 
 /// <typeparam name="TValue"></typeparam>
 /// <remarks>
@@ -38,4 +36,7 @@ public class InputSignal<TValue> : IInputSignal
     #endregion
 }
 
-
+public class HistoricalTimeSeriesInputSignal<TValue> : InputSignal<TValue>
+{
+    public required IHistoricalTimeSeries HistoricalTimeSeries { get; init; }
+}

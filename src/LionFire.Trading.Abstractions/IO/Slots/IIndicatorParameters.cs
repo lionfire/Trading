@@ -7,6 +7,8 @@ public interface IIndicatorParameters
     Type IndicatorType { get; }
     Type InputType { get; }
     Type OutputType { get; }
+    int Memory { get; }
+    int Lookback => Memory - 1;
 }
 
 
@@ -21,8 +23,5 @@ public interface IIndicatorParameters
 //    Type IndicatorType { get; set; }
 
 //}
-
-
-
 
 

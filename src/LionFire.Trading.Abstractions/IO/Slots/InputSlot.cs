@@ -5,6 +5,7 @@ namespace LionFire.Trading; // TODO: Move to .Components or .Slots namespace
 
 public class InputSlot : Slot
 {
+    public int DefaultSource { get; set; }
 }
 
 public interface IInputParameters

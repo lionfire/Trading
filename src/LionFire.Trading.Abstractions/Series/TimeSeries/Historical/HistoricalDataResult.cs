@@ -41,5 +41,11 @@ public readonly record struct HistoricalDataResult<TValue> : IHistoricalDataResu
     public bool IsSuccess { get; init; }
     public string? FailReason { get; init; }
     public ArraySegment<TValue> Items { get; init; }
+
+    public void ThrowFailReason()
+    {
+        if (IsSuccess) { throw new InvalidOperationException(); }
+        throw new Exception(FailReason ?? "Unspecified failure");
+    }
 }
 
