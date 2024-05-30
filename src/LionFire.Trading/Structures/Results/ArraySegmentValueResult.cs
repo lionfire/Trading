@@ -2,6 +2,8 @@
 
 namespace LionFire.Trading;
 
+#if UNUSED // See HistoricalDataResult<T>
+
 public class ArraySegmentValueResult<T> : IValuesResult<T>, IArraySegmentsValuesResult<T>
 {
     #region Parameter (wrapped data)
@@ -41,3 +43,5 @@ public class ArraySegmentValueResult<T> : IValuesResult<T>, IArraySegmentsValues
     //}
 
 }
+
+#endif

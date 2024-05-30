@@ -67,6 +67,10 @@ public class MarketDataResolver : IMarketDataResolver
         {
             return ActivatorUtilities.CreateInstance<BarSeries>(ServiceProvider, exchangeSymbolTimeFrame);
         }
+        else if (reference is PBoundInput pBoundInput)
+        {
+            
+        }
         else if (reference is IIndicatorHarnessOptions indicatorHarnessOptions)
         {
 
@@ -126,7 +130,7 @@ public class HistoricalTimeSeriesFromIndicatorHarness<TIndicator, TParameters, T
 
         var result = new HistoricalDataResult<TOutput>
         {
-            Items = valuesResult.Values?.ToArray() ?? [],
+            Values = valuesResult.Values.ToArray() ?? [],
             IsSuccess = valuesResult.IsSuccess,
             FailReason = valuesResult.FailReason,
         };

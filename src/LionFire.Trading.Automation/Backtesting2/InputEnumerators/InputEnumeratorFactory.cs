@@ -9,7 +9,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using static LionFire.Trading.Automation.BacktestTask2;
+using static LionFire.Trading.Automation.BacktestBatchTask2;
 
 namespace LionFire.Trading.Automation;
 

@@ -17,7 +17,8 @@ namespace LionFire.Trading.Indicators.Harnesses;
 /// <typeparam name="TParameters"></typeparam>
 /// <typeparam name="TInput"></typeparam>
 /// <typeparam name="TOutput"></typeparam>
-public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput> : HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
+public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
+    : HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
     where TParameters : IIndicatorParameters
 {
@@ -72,6 +73,7 @@ public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         return _TryGetValues(start, endExclusive, outputBuffer: outputBuffer, reverse: true);
     }
 
+    // TODO: Return HistoricalDataResult<TOutput>?
     private async Task<IValuesResult<TOutput>> _TryGetValues(
         DateTimeOffset start, DateTimeOffset endExclusive,
         bool reverse,
@@ -218,10 +220,12 @@ public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         //else
         if (noCopy)
         {
+            // TODO: Use HistoricalDataResult?
             return new ArraySegmentsValueResult<TOutput>(outputBuffer.ValuesBuffer);
         }
         else
         {
+            // TODO: Use HistoricalDataResult?
             return new ListValueResult<TOutput>(outputBuffer.ToArray(outputCount));
         }
 

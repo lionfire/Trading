@@ -1,4 +1,5 @@
 ﻿using LionFire.Trading.Data;
+using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Automation;
 
@@ -11,6 +12,12 @@ namespace LionFire.Trading.Automation;
 /// </summary>
 public abstract class InputEnumeratorBase
 {
+    #region Identity
+
+    public Type ValueType { get; }
+
+    #endregion
+
     #region State
 
     #region Input
@@ -20,6 +27,8 @@ public abstract class InputEnumeratorBase
     #endregion
 
     #endregion
+
+    public abstract IReadOnlyValuesWindow Values { get; }
 
     #region Methods
 
@@ -57,13 +66,15 @@ public abstract class InputEnumeratorBase
 
 
 
-public abstract class InputEnumeratorBase<T> : InputEnumeratorBase
+public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyValuesWindow<T>
 {
     #region Dependencies
 
     public IHistoricalTimeSeries<T> Series { get; }
 
     #endregion
+
+    public override IReadOnlyValuesWindow Values => this;
 
     #region Characteristics
 
@@ -99,6 +110,16 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase
 
     public T CurrentValue => InputBuffer[InputBufferIndex - 1];
 
+    #region IReadOnlyValuesWindow<T>
+
+    public abstract uint Capacity { get; }
+    public abstract bool IsFull { get; }
+    public abstract uint Size { get; }
+
+    public abstract T this[int index] { get; }
+
+    #endregion
+
     #region Methods
 
     #region Input
@@ -107,7 +128,7 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase
     {
         var result = await Series.Get(start, endExclusive);
         if (!result.IsSuccess) { throw new Exception("Failed to get historical data"); }
-        InputBuffer = result.Items;
+        InputBuffer = result.Values;
         InputBufferIndex = 0;
     }
 

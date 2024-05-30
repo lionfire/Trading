@@ -1,4 +1,5 @@
-﻿using LionFire.ExtensionMethods;
+﻿using LionFire.Execution;
+using LionFire.ExtensionMethods;
 using LionFire.Trading.Data;
 using LionFire.Trading.Indicators.Harnesses;
 using LionFire.Trading.Indicators.Inputs;
@@ -11,18 +12,13 @@ using System.Runtime.InteropServices;
 
 namespace LionFire.Trading.Automation;
 
-//public class BotControllerBotState
-//{
-//    // Harnesses 
-//}
-
 /// <summary>
 /// Batch processing of multiple bots:
 /// - InputEnumerators are enumerated in lock step
 /// </summary>
 /// <remarks>
 /// </remarks>
-public abstract class BatchBotControllerBase : IBotController
+public abstract class BotControllerBase : IBotController
 {
     #region Identity
 
@@ -38,11 +34,17 @@ public abstract class BatchBotControllerBase : IBotController
 
     #region Parameters
 
-    public IPBacktestTask2 Parameters { get; }
+    public IEnumerable<IPBacktestTask2> PBacktests { get; }
 
     #region Derived
 
-    public TimeFrame TimeFrame => Parameters.TimeFrame;
+    // Must match across all parameters
+
+    public TimeFrame TimeFrame { get; }
+    public DateTimeOffset Start { get; }
+    public DateTimeOffset EndExclusive { get; }
+
+    public bool TicksEnabled { get; }
 
     #endregion
 
@@ -50,11 +52,28 @@ public abstract class BatchBotControllerBase : IBotController
 
     #region Lifecycle
 
-    public BatchBotControllerBase(IServiceProvider serviceProvider, IPBacktestTask2 parameters)
+    public BotControllerBase(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters)
     {
         ServiceProvider = serviceProvider;
-        Parameters = parameters;
+        PBacktests = parameters;
+
+        var first = parameters.FirstOrDefault();
+        if (first == null) throw new ArgumentException("batch empty");
+
+        TimeFrame = first.TimeFrame;
+        Start = first.Start;
+        EndExclusive = first.EndExclusive;
+
+        foreach (var p in parameters)
+        {
+            if (p.TimeFrame != TimeFrame) throw new ArgumentException("TimeFrame mismatch");
+            if (p.Start != Start) throw new ArgumentException("Start mismatch");
+            if (p.EndExclusive != EndExclusive) throw new ArgumentException("EndExclusive mismatch");
+            TicksEnabled |= p.TicksEnabled();
+        }
     }
+
+    public abstract Task StartAsync(CancellationToken cancellationToken = default);
 
     #endregion
 
@@ -76,16 +95,16 @@ public abstract class BatchBotControllerBase : IBotController
 
     #region Init
 
-    public void Init(params IBot2[] bots)
-    {
-        if (Bots != null) throw new AlreadyException();
-        Bots = bots.ToList();
+    //public void Init(params IBot2[] bots)
+    //{
+    //    if (Bots != null) throw new AlreadyException();
+    //    Bots = bots.ToList();
 
-        foreach (var bot in bots)
-        {
-            InitBot(bot);
-        }
-    }
+    //    foreach (var bot in bots)
+    //    {
+    //        InitBot(bot);
+    //    }
+    //}
 
     public IHistoricalTimeSeries Resolve(Type outputType, object source) => ServiceProvider.GetRequiredService<IMarketDataResolver>().Resolve(outputType, source);
 
@@ -135,38 +154,39 @@ public abstract class BatchBotControllerBase : IBotController
         throw new NotImplementedException();
     }
 
-    protected async void InitBot(IBot2 bot)
-    {
-        var info = BotInitializationInfo.GetFor(bot);
+    // OLD UNUSED
+    //protected async void InitBot(IBot2 bot)
+    //{
+    //    var info = BotInitializationInfo.GetFor(bot);
 
-        if (info.BotWindowsToParameterIndicators != null)
-        {
-            foreach (var kvp in info.BotWindowsToParameterIndicators)
-            {
-                InitBotIndicator(bot, kvp.Key, kvp.Value);
-            }
-        }
+    //    if (info.BotWindowsToParameterIndicators != null)
+    //    {
+    //        foreach (var kvp in info.BotWindowsToParameterIndicators)
+    //        {
+    //            InitBotIndicator(bot, kvp.Key, kvp.Value);
+    //        }
+    //    }
 
-        List<Task>? tasks = null;
-        foreach (var kvp in InputEnumerators)
-        {
-            var inputEnumerator = kvp.Value;
-            if (inputEnumerator is IChunkingInputEnumerator chunking && chunking.LookbackRequired > 0)
-            {
-                tasks ??= new();
-                var preloadStart = TimeFrame.AddBars(Parameters.Start, -chunking.LookbackRequired);
-                var preloadEndExclusive = Parameters.Start;
+    //    List<Task>? tasks = null;
+    //    foreach (var kvp in InputEnumerators)
+    //    {
+    //        var inputEnumerator = kvp.Value;
+    //        if (inputEnumerator is IChunkingInputEnumerator chunking && chunking.LookbackRequired > 0)
+    //        {
+    //            tasks ??= new();
+    //            var preloadStart = TimeFrame.AddBars(Start, -chunking.LookbackRequired);
+    //            var preloadEndExclusive = Start;
 
-                tasks.Add(Task.Run(async () =>
-                {
-                    await inputEnumerator.PreloadRange(preloadStart, preloadEndExclusive).ConfigureAwait(false);
-                    inputEnumerator.MoveNext(chunking.LookbackRequired);
-                }));
-            }
-        }
-        if (tasks != null) { await tasks.WhenAll().ConfigureAwait(false); }
+    //            tasks.Add(Task.Run(async () =>
+    //            {
+    //                await inputEnumerator.PreloadRange(preloadStart, preloadEndExclusive).ConfigureAwait(false);
+    //                inputEnumerator.MoveNext(chunking.LookbackRequired);
+    //            }));
+    //        }
+    //    }
+    //    if (tasks != null) { await tasks.WhenAll().ConfigureAwait(false); }
 
-    }
+    //}
 
 
     private class BotInitializationInfo
@@ -216,7 +236,7 @@ public abstract class BatchBotControllerBase : IBotController
                 }
                 else
                 {
-                    throw new ArgumentException($"{nameof(IReadOnlyValuesWindow)} '{window.Name}' in bot has a matching property in Parameters, but wiring up Type of {p.PropertyType.FullName} is not supported.");
+                    throw new ArgumentException($"{nameof(IReadOnlyValuesWindow)} '{window.Name}' in bot has a matching property in PBacktests, but wiring up Type of {p.PropertyType.FullName} is not supported.");
                 }
             }
         }

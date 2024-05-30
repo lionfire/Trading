@@ -20,6 +20,7 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
     public TParameters Parameters { get; }
     public TimeFrame TimeFrame { get; }
+    public Type ValueType => typeof(TOutput);
 
     #endregion
 
@@ -95,7 +96,15 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     #region Output
 
     //public abstract ValueTask<IValuesResult<TOutput>> TryGetValues(bool reverse, DateTimeOffset start, DateTimeOffset endExclusive, TimeFrameValuesWindowWithGaps<TOutput>? outputBuffer = null);
-    public abstract Task<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer);
+
+    public virtual ValueTask<HistoricalDataResult<TOutput>> Get(DateTimeOffset start, DateTimeOffset endExclusive)
+    {
+
+        TOutput[]? o = null;
+        return TryGetValues(start, endExclusive, ref o); 
+    }
+
+    public abstract ValueTask<HistoricalDataResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer);
 
     protected uint GetOutputCount(DateTimeOffset start, DateTimeOffset endExclusive)
     {

@@ -1,9 +1,9 @@
 ﻿using LionFire.Applications;
 using LionFire.Execution;
 using LionFire.Instantiating;
+using LionFire.Trading.Automation.Optimization.Enumerators;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,7 +49,7 @@ public class POptimization
     public required Type BotParametersType { get; set; }
 
     /// <summary>
-    /// If default, it will use the unkeyed Singleton for BacktestBatcher
+    /// If default, it will use the unkeyed Singleton for BacktestBatchQueue
     /// </summary>
     public object? BacktestBatcherName { get; set; }
 }
@@ -109,7 +109,7 @@ public class OptimizationTask : IRunnable //: AppTask
 
     public IServiceProvider ServiceProvider { get; }
 
-    public BacktestBatcher BacktestBatcher { get; }
+    public BacktestQueue BacktestBatcher { get; }
 
     #endregion
 
@@ -125,18 +125,23 @@ public class OptimizationTask : IRunnable //: AppTask
     {
         ServiceProvider = serviceProvider;
         Parameters = parameters;
-        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestBatcher>() : ServiceProvider.GetRequiredKeyedService<BacktestBatcher>(Parameters.BacktestBatcherName);
+        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
 
         if (Parameters.SearchSeed != 0) throw new NotImplementedException();
     }
 
+    IBacktestBatchJob batchJob;
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
         IOptimizerEnumerable optimizerEnumerable = Parameters.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this);
 
-        var job = BacktestBatcher.EnqueueJob(job =>
+        if(batchJob != null)
         {
-            job.Backtests = optimizerEnumerable,
+            throw new AlreadyException();
+        }
+        batchJob = BacktestBatcher.EnqueueJob(batchJob =>
+        {
+            batchJob.BacktestBatches = optimizerEnumerable;
         }, cancellationToken);
 
         return Task.CompletedTask;
@@ -146,37 +151,11 @@ public class OptimizationTask : IRunnable //: AppTask
 
     #region State
 
-    public Task<bool> RunTask { get; private set; }
+    public Task RunTask { get; private set; }
 
-    IEnumerable<IPBacktestTask2> CurrentEnumerable { get; private set; }
+    protected IEnumerable<IPBacktestTask2> CurrentEnumerable { get; private set; }
 
     #endregion
 
     //List<> parameterSpaces;
-}
-
-public class ComprehensiveEnumerable : OptimizerEnumerableBase, IEnumerable<IEnumerable<IPBacktestTask2>>, IEnumerable<IPBacktestTask2>, IOptimizerEnumerable
-{
-    #region Lifecycle
-
-    public ComprehensiveEnumerable(OptimizationTask optimizationTask)
-    {
-        OptimizationTask = optimizationTask;
-    }
-
-    public OptimizationTask OptimizationTask { get; }
-
-    #endregion
-
-    public IEnumerator<IPBacktestTask2> GetEnumerator()
-    {
-        throw new NotImplementedException();
-    }
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    IEnumerator<IEnumerable<IPBacktestTask2>> IEnumerable<IEnumerable<IPBacktestTask2>>.GetEnumerator()
-    {
-        yield return this;
-    }
 }

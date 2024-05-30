@@ -3,7 +3,7 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
-public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
+public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
     where TParameters : IIndicatorParameters
@@ -35,9 +35,9 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
         var data = await source.Get(start, endExclusive).ConfigureAwait(false);
 
-        if (!data.IsSuccess || data.Items.Any() != true) throw new Exception("Failed to get data");
+        if (!data.IsSuccess || data.Values.Any() != true) throw new Exception("Failed to get data");
 
-        return data.Items;
+        return data.Values;
     }
 
     #endregion
@@ -52,7 +52,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
     /// <param name="endExclusive"></param>
     /// <param name="outputBuffer"></param>
     /// <returns></returns>
-    public override Task<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer)
+    public override ValueTask<HistoricalDataResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer)
     {
         // OLD docs, if there's no ref outputBuffer:
         // Caller should check the ArraySegment's array: if it's different than outputBuffer, then it may be a new larger buffer that the caller may want to hold onto for future use
@@ -87,7 +87,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
         #endregion
 
         var outputBufferCopy = outputBuffer;
-        return Task.Run<IValuesResult<TOutput>>(async () =>
+        return new ValueTask<HistoricalDataResult<TOutput>>(Task.Run<HistoricalDataResult<TOutput>>(async () =>
         {
             #region Input sources
 
@@ -132,10 +132,11 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
             nextExpectedStart = endExclusive;
             var outputArraySegment = new ArraySegment<TOutput>(outputBufferCopy, 0, (int)outputCount);
-            return new ArraySegmentValueResult<TOutput>(outputArraySegment);
+            //return new ArraySegmentValueResult<TOutput>(outputArraySegment);
+            return new HistoricalDataResult<TOutput>(outputArraySegment);
 
             #endregion
-        });
+        }));
     }
 
     #endregion

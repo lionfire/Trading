@@ -13,12 +13,6 @@ public interface IPBacktestTask2
     TimeFrame TimeFrame { get; }
     DateTimeOffset Start { get; }
     DateTimeOffset EndExclusive { get; }
-
-    /// <summary>
-    /// Backtest optimization: use short Chunks instead of long
-    /// </summary>
-    bool ShortChunks { get; }
-
 }
 
 [Flags]

@@ -25,6 +25,13 @@ public enum DataPointAspect
     //VolumeWeightedClose,
     //WeightedClose ,
     //BidderVolume, // etc.
+
+    /// <summary>
+    /// An aspect of the price.  
+    /// Typically Close, Open, WeightedClose, VolumeWeightedClose, but could also be High, or Low
+    /// </summary>
+    //Price = 1 << 15,
+    //Any = 0xFFFF,
 }
 
 public static class DataPointAspectX

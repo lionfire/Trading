@@ -13,20 +13,21 @@ public abstract class BotBase2<TParameters>
     : IBot2<TParameters>
     where TParameters : PBot2<TParameters>
 {
-    public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
+    //public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
 
     #region IBotController
 
     public IBotController Controller { get => controller; set => controller = value; }
-    private IBotController controller = null!; // OnBar, OnTick are guaranteed to have Parameters set
+    private IBotController controller = null!; // OnBar, OnTick are guaranteed to have PBacktests set
 
     #endregion
 
     #region TParameters
 
     public TParameters Parameters { get => parameters; set => parameters = value; }
-    private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have Parameters set
-    object IBot2.Parameters => parameters;
+    private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    object IBot2.Parameters { get => parameters; set=>parameters = (TParameters)value; }
+
 
     #endregion
 
@@ -45,7 +46,7 @@ public abstract class BotBase2<TParameters>
 
     #endregion
 
-    public virtual void OnBar(IKline kline) { }
+    public virtual void OnBar() { }
 
     //public static IReadOnlyList<InputSlot> InputSlots()
     //{

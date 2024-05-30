@@ -27,14 +27,14 @@ public class Indicator_from_MarketData : BinanceDataTest
     new DateTimeOffset(2024, 4, 1, 18, 0, 0, TimeSpan.Zero));
 
         Assert.True(result.IsSuccess);
-        Assert.NotNull(result.Items);
-        Assert.Equal(5, result.Items.Count);
+        Assert.NotNull(result.Values);
+        Assert.Equal(5, result.Values.Count);
 
         // 2024.04.01 h1 14 Simple - verified to 0.1 via TradingView
-        Assert.Equal(466.84285714285714285714285714M, result.Items[0]);
-        Assert.Equal(529.78571428571428571428571429M, result.Items[1]);
-        Assert.Equal(562.53571428571428571428571429M, result.Items[2]);
-        Assert.Equal(605.25714285714285714285714286M, result.Items[3]);
-        Assert.Equal(619.87142857142857142857142857M, result.Items[4]);
+        Assert.Equal(466.84285714285714285714285714M, result.Values[0]);
+        Assert.Equal(529.78571428571428571428571429M, result.Values[1]);
+        Assert.Equal(562.53571428571428571428571429M, result.Values[2]);
+        Assert.Equal(605.25714285714285714285714286M, result.Values[3]);
+        Assert.Equal(619.87142857142857142857142857M, result.Values[4]);
     }
 }

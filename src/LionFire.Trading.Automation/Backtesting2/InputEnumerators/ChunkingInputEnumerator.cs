@@ -10,7 +10,8 @@ public interface IChunkingInputEnumerator
     int LookbackRequired { get; }
     void GrowLookback(int minimumLookback);
 }
-public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IReadOnlyValuesWindow<T>
+
+public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>
 {
     // OPTIMIZE idea: see if reversing the array at load time is faster.
     // OPTIMIZE idea: benchmark different chunk sizes (i.e. short vs long chunk, and a portion of those chunks.)
@@ -37,7 +38,9 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IReadOnlyValue
         }
     }
 
-    public uint Capacity
+    #region IReadOnlyValuesWindow<T>
+
+    public override uint Capacity
     {
         get
         {
@@ -48,10 +51,10 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IReadOnlyValue
         }
     }
 
-    public bool IsFull => InputBuffer.Array != null && PreviousChunk.Array != null;
-    public uint Size => Capacity - (uint)InputBufferIndex;
+    public override bool IsFull => InputBuffer.Array != null && PreviousChunk.Array != null;
+    public override uint Size => Capacity - (uint)InputBufferIndex;
 
-    public T this[int index]
+    public override T this[int index]
     {
         get
         {
@@ -72,6 +75,8 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IReadOnlyValue
             }
         }
     }
+
+    #endregion
 
     public override void MoveNext()
     {

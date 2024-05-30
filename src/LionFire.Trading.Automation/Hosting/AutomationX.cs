@@ -13,11 +13,11 @@ public static class AutomationX
     public static IServiceCollection AddAutomation(this IServiceCollection services)
     {
         return services
-            .AddSingleton<BacktestBatcher>()
+            .AddSingleton<BacktestQueue>()
 
             // Example of named singleton (REVIEW)
-            //.AddKeyedSingleton<BacktestBatcher>("test", (sp, key) =>
-            //     new BacktestBatcher(sp.GetOptionsByName<PBacktestBatcher>(key as string ?? throw new NotSupportedException("non-string key")))
+            //.AddKeyedSingleton<BacktestBatchQueue>("test", (sp, key) =>
+            //     new BacktestBatchQueue(sp.GetOptionsByName<PBacktestBatchQueue>(key as string ?? throw new NotSupportedException("non-string key")))
             //    )
             ;
     }

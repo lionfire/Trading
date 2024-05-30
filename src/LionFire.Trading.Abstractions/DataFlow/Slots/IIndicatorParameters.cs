@@ -2,7 +2,11 @@
 
 namespace LionFire.Trading;
 
-public interface IIndicatorParameters
+
+
+// TODO: RENAME to something more generic than Indicator.  For example, it could be a processor.
+
+public interface IIndicatorParameters : IPInput
 {
     Type IndicatorType { get; }
     Type InputType { get; }

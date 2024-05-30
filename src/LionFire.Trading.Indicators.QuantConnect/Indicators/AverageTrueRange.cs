@@ -8,6 +8,12 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 
 public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<TOutput>, IKline, TOutput>
 {
+    public override IReadOnlyList<InputSlot> InputSlots => [
+        InputSlot.SymbolAspect<TOutput>()
+        ];
+
+    public override string Key => $"ATR({Period})";
+
     public int Period { get; set; }
     public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
 

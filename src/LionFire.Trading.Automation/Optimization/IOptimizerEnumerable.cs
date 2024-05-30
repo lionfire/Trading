@@ -1,6 +1,7 @@
-﻿namespace LionFire.Trading.Automation.Optimization;
+﻿
+namespace LionFire.Trading.Automation.Optimization.Enumerators;
 
-public interface IOptimizerEnumerable : IEnumerable<IEnumerable<IPBacktestTask2>>>
+public interface IOptimizerEnumerable : IEnumerable<IEnumerable<IPBacktestTask2>>
 {
     IObservable<OptimizerProgress> Progress { get; }
 }

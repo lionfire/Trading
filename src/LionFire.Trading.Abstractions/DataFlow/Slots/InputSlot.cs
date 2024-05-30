@@ -6,6 +6,16 @@ namespace LionFire.Trading; // TODO: Move to .Components or .Slots namespace
 public class InputSlot : Slot
 {
     public int DefaultSource { get; set; }
+
+    public static InputSlot SymbolAspect<T>()
+    {
+        return new InputSlot
+        {
+            Name = "Symbol",
+            Type = typeof(T),
+            Aspects = DataPointAspect.Unspecified,
+        };
+    }
 }
 
 public interface IInputParameters

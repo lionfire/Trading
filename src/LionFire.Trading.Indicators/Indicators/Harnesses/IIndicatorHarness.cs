@@ -3,14 +3,12 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
-public interface IIndicatorHarness
+public interface IIndicatorHarness: IHistoricalTimeSeries
 {
-    TimeFrame TimeFrame { get; }
 }
-public interface IIndicatorHarness<TOutput> : IIndicatorHarness
+public interface IIndicatorHarness<TOutput> : IIndicatorHarness, IHistoricalTimeSeries<TOutput>
 {
-    Task<IValuesResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer);
-
+    ValueTask<HistoricalDataResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer);
 }
 
 public interface IBufferingIndicatorHarness<TOutput> : IIndicatorHarness<TOutput>

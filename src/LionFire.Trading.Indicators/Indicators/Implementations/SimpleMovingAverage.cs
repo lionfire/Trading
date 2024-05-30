@@ -1,16 +1,19 @@
 ﻿using Baseline.Dates;
 using CircularBuffer;
+using LionFire.Structures;
 using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.IO;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.Extensions.Options;
+using System.Diagnostics.Contracts;
 using System.Threading.Channels;
 using TInput = System.Double;
 using TOutput = System.Double;
 
 namespace LionFire.Trading.Indicators;
 
+[KeyName("SMA")]
 public class PSimpleMovingAverage<TOutput> : IndicatorParameters<SimpleMovingAverage, TOutput>
 {
     public int Period { get; set; }

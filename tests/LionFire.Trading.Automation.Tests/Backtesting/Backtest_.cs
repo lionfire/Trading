@@ -85,7 +85,8 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
                 //{
                 //},
                 TimeFrame = timeFrame,
-                Inputs = [new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close)],
+                //Inputs = [new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close)],
+                Bars = new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close),
             };
 
             Add(new PBacktestTask2<PAtrBot<T>>
@@ -99,24 +100,104 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
     }
 }
 
-public class OptimizerOptions
+//public class BatchBacktestParameters
+//{
+//    public DateTimeOffset Start { get; set; }
+//    public DateTimeOffset EndExclusive { get; set; }
+
+//    public IReadOnlyList<IPBacktestTask2> BacktestBatches { get; } 
+
+//    public void Add(IPBacktestTask2 backtest)
+//    {
+//        if (Start)
+//        {
+//        }
+//        BacktestBatches.Add(backtest);
+//    }
+//}
+
+
+public class Backtest_Batch_ : BinanceDataTest
 {
-
-}
-
-public class BatchBacktestParameters
-{
-    public DateTimeOffset Start { get; set; }
-    public DateTimeOffset EndExclusive { get; set; }
-
-    public IReadOnlyList<IPBacktestTask2> Backtests { get; } = new();
-
-    public void Add(IPBacktestTask2 backtest)
+    [Fact]
+    public async Task _()
     {
-        if (Start)
+        //var d = new BacktestTheoryData();
+
+        var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
+
+        var job = batchQueue.EnqueueJob(batch =>
         {
-        }
-        Backtests.Add(backtest);
+            batch.BacktestBatches = [[
+                        new PBacktestTask2<PAtrBot<double>>
+                         {
+                             Bot = new PAtrBot<double>(14)
+                                {
+                                    TimeFrame = TimeFrame.m1,
+                                    Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                                    //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                                },
+                             Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                             EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                             Features = BotHarnessFeatures.Bars,
+                         },
+                        new PBacktestTask2<PAtrBot<double>>
+                         {
+                             Bot = new PAtrBot<double>(15)
+                                {
+                                    TimeFrame = TimeFrame.m1,
+                                    Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                                    //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                                },
+                             Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                             EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                             Features = BotHarnessFeatures.Bars,
+                         },
+                    ]];
+        });
+
+        await job.Task;
+
+    }
+
+    [Fact]
+    public void fail_DifferentDateRanges()
+    {
+        var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
+
+        Assert.Throws<ArgumentException>(() =>
+        {
+            var job = batchQueue.EnqueueJob(batch =>
+            {
+                batch.BacktestBatches = [[
+                new PBacktestTask2<PAtrBot<double>>
+                 {
+                     Bot = new PAtrBot<double>(14)
+                        {
+                            TimeFrame = TimeFrame.m1,
+                            Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                            //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                        },
+                     Start = new DateTimeOffset(2020, 9, 9, 9, 9, 9, TimeSpan.Zero),
+                     EndExclusive = new DateTimeOffset(2020, 11,11, 11, 11, 11, TimeSpan.Zero),
+                     Features = BotHarnessFeatures.Bars,
+                 },
+                new PBacktestTask2<PAtrBot<double>>
+                 {
+                     Bot = new PAtrBot<double>(15)
+                        {
+                            TimeFrame = TimeFrame.m1,
+                            Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                            //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                        },
+                     Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                     EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                     Features = BotHarnessFeatures.Bars,
+                 },
+                    ]];
+            });
+        });
+
     }
 }
 
@@ -140,46 +221,14 @@ public class Backtest_Optimize_ : BinanceDataTest
 #endif
 }
 
-
-public class Backtest_Batch_ : BinanceDataTest
-{
-    [Fact]
-    public async Task _()
-    {
-        var d = new BacktestTheoryData();
-
-        var pBatch = new BatchBacktestParameters()
-        {
-            
-        };
-
-        var batcher = ServiceProvider.GetService<BacktestBatcher>();
-
-
-        var p1 = new PBacktestTask2<AtrBot<double>>
-             (new PBacktestTask2<PAtrBot<double>>
-             {
-                 Bot = pBot,
-                 Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                 EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
-                 Features = BotHarnessFeatures.Bars,
-             });
-
-        var p = new BatchBacktestParameters()
-        {
-
-        };
-
-    }
-}
-
 public class Backtest_ : BinanceDataTest
 {
+    // TODO - FIXME
     [Theory]
     [ClassData(typeof(BacktestTheoryData))]
     public async Task Execute_(IPBacktestTask2 parameters)
     {
-        await new BacktestTask2(ServiceProvider, parameters, dateChunker: HistoricalDataChunkRangeProvider).Run();
+        await new BacktestBatchTask2(ServiceProvider, [parameters], dateChunker: HistoricalDataChunkRangeProvider).Run();
     }
 
 #if RunViaExtensionMethod
