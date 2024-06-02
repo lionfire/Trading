@@ -6,10 +6,15 @@ using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Indicators;
 
+// REVIEW - make more generic to a BatchMarketProcessor or BatchProcessor?
+
+//#error NEXT: Make indicators optionally implement IHTS<TOutput>?
+
 public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
     : IObservable<IReadOnlyList<TOutput>>
     , IObserver<IReadOnlyList<TInput>>
     , IObserver<TInput>
+    //, IHistoricalTimeSeries<TOutput>
 
     where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator2<TConcrete, TParameters, TInput, TOutput>
 {
@@ -93,7 +98,6 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
         }
          OnNext(inputs, output, 0, 0);
 
-
         // OLD
         //foreach (var input in inputs)
         //{
@@ -152,6 +156,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
         InitState();
     }
 
+
     #region Input Handling
 
     //public void OnNextFromArray(IReadOnlyList<TInput> inputData, int index) => OnNext(inputData[index]);
@@ -173,6 +178,14 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
     //}
 
     //#endregion
+
+    #endregion
+
+    #region IHistoricalTimeSeries
+
+    //public abstract ValueTask<HistoricalDataResult<TOutput>> Get(DateTimeOffset start, DateTimeOffset endExclusive);
+    //public abstract TimeFrame TimeFrame { get; }
+    //public Type ValueType => typeof(TOutput);
 
     #endregion
 }

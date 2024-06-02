@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Execution;
 using LionFire.Trading.Indicators.Harnesses;
+using LionFire.Trading.DataFlow;
 namespace LionFire.Trading.Indicators.Inputs;
 
 
@@ -69,7 +70,7 @@ public class MarketDataResolver : IMarketDataResolver
         }
         else if (reference is PBoundInput pBoundInput)
         {
-            
+            throw new NotImplementedException("NEXT"); 
         }
         else if (reference is IIndicatorHarnessOptions indicatorHarnessOptions)
         {

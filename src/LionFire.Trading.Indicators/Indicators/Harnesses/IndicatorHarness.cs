@@ -5,14 +5,17 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
-public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
-    : IIndicatorHarness<TParameters, TInput, TOutput> 
+public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
+    : IIndicatorHarness<TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
     where TParameters : IIndicatorParameters
 {
     #region Dependencies
 
-    public IServiceProvider ServiceProvider { get; }
+    // TODO: Make ServiceProvider optional from ctor.  If not present:
+    // - Inputs must be provided in ctor
+    // - Indicator must be created with Activator.CreateInstance
+    public IServiceProvider? ServiceProvider { get; }
 
     #endregion
 
@@ -41,6 +44,8 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         TimeFrame = options.TimeFrame;
         Indicator = CreateIndicator();
 
+        #region Inputs
+
         List<IHistoricalTimeSeries> inputs = new(options.Inputs.Length);
 
         var marketDataResolver = ServiceProvider.GetRequiredService<IMarketDataResolver>();
@@ -50,6 +55,24 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         }
         Inputs = inputs;
 
+        #endregion
+    }
+
+    public IndicatorHarness(IReadOnlyList<IHistoricalTimeSeries> inputs, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions? outputOptions = null)
+    {
+        ServiceProvider = null;
+
+        #region DUPE of other ctor
+
+        OutputExecutionOptions = outputOptions ?? new();
+        OutputComponentOptions.FallbackToDefaults(OutputExecutionOptions);
+        Parameters = options.IndicatorParameters;
+        TimeFrame = options.TimeFrame;
+        Indicator = CreateIndicator();
+
+        #endregion
+
+        Inputs = inputs;
     }
 
     TIndicator CreateIndicator()
@@ -59,8 +82,16 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         //return TIndicator.Create<TIndicator>(IndicatorParameters);
         //} else
         //{
-        return ActivatorUtilities.CreateInstance<TIndicator>(ServiceProvider, Parameters!);
         //}
+
+        if (ServiceProvider != null)
+        {
+            return ActivatorUtilities.CreateInstance<TIndicator>(ServiceProvider, Parameters!);
+        }
+        else
+        {
+            return (TIndicator)Activator.CreateInstance(typeof(TIndicator), [Parameters])!;
+        }
     }
 
     #endregion
@@ -101,7 +132,7 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     {
 
         TOutput[]? o = null;
-        return TryGetValues(start, endExclusive, ref o); 
+        return TryGetValues(start, endExclusive, ref o);
     }
 
     public abstract ValueTask<HistoricalDataResult<TOutput>> TryGetValues(DateTimeOffset start, DateTimeOffset endExclusive, ref TOutput[]? outputBuffer);

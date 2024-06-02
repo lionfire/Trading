@@ -55,7 +55,7 @@ public interface IBars : ITradingDataSource
         }
         else
         {
-            throw new NotImplementedException("IBars.Get must be implemented if this is not IChunkedBars");
+            throw new NotImplementedException("IBars.GetSourcesInfo must be implemented if this is not IChunkedBars");
         }
     }
 

@@ -2,5 +2,4 @@
 
 public interface IPBot2 : IPMarketProcessor
 {
-
 }

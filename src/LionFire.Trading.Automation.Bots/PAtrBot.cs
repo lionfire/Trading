@@ -46,7 +46,7 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
     /// <summary>
     /// Convention: match parameter name
     /// Can be get only, derived on other parameters.
-    /// - if false, the ATR ITmieValueSeries{TValue} won't receive any values.
+    /// - if false, the ATR ITimeValueSeries{TValue} won't receive any values.
     /// </summary>
     //public bool UseAtr { get; set; } = true; 
 

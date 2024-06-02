@@ -26,20 +26,25 @@ public class PBoundInput : IPInput
         PUnboundInput = unboundInput;
         Signals = ResolveSignals(unboundInput, root);
 
+        #region Validation
+
         if (unboundInput.InputSlots.Count != Signals.Count)
         {
             throw new UnreachableCodeException($"Mismatched number of upstream inputs for {unboundInput}");
         }
+
+        #endregion
     }
 
     List<IPInput> ResolveSignals(IPUnboundInput pUnboundInput, IPMarketProcessor root)
     {
         List<IPInput> signals = new();
 
-        var rootInfo = PMarketProcessorInfo.Get(root.GetType());
+        var sourcesInfo = SourcesInfo.GetSourcesInfo(root.GetType());
+        var slotsInfo = SlotsInfo.GetSlotsInfo(pUnboundInput.GetType());
 
         int i = 0;
-        foreach (var slot in parent.InputSlots)
+        foreach (var slot in pUnboundInput.InputSlots)
         {
             var signal = Signals[i];
 
@@ -52,8 +57,6 @@ public class PBoundInput : IPInput
             {
                 throw new NotImplementedException($"{nameof(signal)}.{nameof(signal.ValueType)} does not match {nameof(PUnboundInput)}.{nameof(ValueType)} and no adapter is available");
             }
-
-
             
 
             i++;

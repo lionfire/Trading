@@ -10,6 +10,8 @@ public record ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, stri
 {
     //public string ToGrainId() => $"{Exchange}}";
 
+    public virtual string Key => $"{Exchange}.{ExchangeArea}:{Symbol}/{TimeFrame}";
+
     public static ExchangeSymbolTimeFrame Parse(string id, ISymbolIdParser symbolIdParser)
     {
         Exception InvalidFormat() => new ArgumentException("Invalid key format.  Expected: <exchange>.<area>:<symbol> <tf>");

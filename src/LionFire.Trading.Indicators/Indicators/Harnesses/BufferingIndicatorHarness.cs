@@ -202,10 +202,6 @@ public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         #region Calculate   
 
         Indicator.OnNext(inputData);
-        //for (int i = 0; i < inputData.Count; i++)
-        //{
-        //    Indicator.OnNextFromArray(inputData, i); // OPTIMIZE - send entire array
-        //}
 
         #endregion
 

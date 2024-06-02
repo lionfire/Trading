@@ -16,6 +16,15 @@ public class InputSlot : Slot
             Aspects = DataPointAspect.Unspecified,
         };
     }
+    public static InputSlot BarMultiAspect<T>(DataPointAspect aspects)
+    {
+        return new InputSlot
+        {
+            Name = "Symbol",
+            Type = typeof(T),
+            Aspects = aspects,
+        };
+    }
 }
 
 public interface IInputParameters

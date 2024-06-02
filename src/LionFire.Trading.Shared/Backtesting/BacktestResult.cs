@@ -208,7 +208,7 @@ public class BacktestResult : IDisposable
 #if NewtonsoftJson
                 tBot = (TBot)((JObject)backtestResult.Config).ToObject(templateType);
 #else
-                throw new NotImplementedException("TODO: Get TBot from backtestResult.Config");
+                throw new NotImplementedException("TODO: GetSourcesInfo TBot from backtestResult.Config");
 #endif
             }
             return tBot;

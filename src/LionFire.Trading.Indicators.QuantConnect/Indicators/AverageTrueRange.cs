@@ -1,25 +1,54 @@
-﻿
-using LionFire.Assets;
-using LionFire.Trading.HistoricalData.Retrieval;
-using QuantConnect.Data.Market;
-using System;
+﻿using QuantConnect.Data.Market;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
+public record HLCReference<TValue> : ExchangeSymbolTimeFrame, IPInput
+{
+    public HLCReference(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : base(Exchange, ExchangeArea, Symbol, TimeFrame) { }
+
+    public Type ValueType => typeof(HLC<TValue>);
+    public override string Key => base.Key + SymbolValueAspect.AspectSeparator + "HLC";
+}
+
+public struct HLC<T>
+{
+    public T High { get; set; }
+    public T Low { get; set; }
+    public T Close { get; set; }
+}
+
+// Input: IKline aspects: High, Low, Close
 public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<TOutput>, IKline, TOutput>
 {
-    public override IReadOnlyList<InputSlot> InputSlots => [
-        InputSlot.SymbolAspect<TOutput>()
-        ];
+    #region Identity
 
     public override string Key => $"ATR({Period})";
+
+    #endregion
+
+    #region Type Info
+
+    public override IReadOnlyList<InputSlot> InputSlots => [
+        //InputSlot.BarMultiAspect<TOutput>( DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close)
+        ];
+
+    #endregion
+
+    #region Parameters
 
     public int Period { get; set; }
     public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
 
-    //public required InputSignal<TOutput> Source { get; set; }
+    #endregion
+
+    #region Inputs
+
+    public HLCReference<TOutput>? Bars { get; set; }
+
+    #endregion
 
     // TODO: Move this to InputSignal?
+    // TODO: Is there a better way to standardize this by interface or convention?
     public int LookbackForInputSlot(InputSlot inputSlot) => Period;
 }
 
@@ -76,8 +105,19 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
 
     #endregion
 
+    #region Parameters
+
+    public readonly PAverageTrueRange<TOutput> Parameters;
+
+    #region Derived
+
     public override int MaxLookback => Parameters.Period;
-    PAverageTrueRange<TOutput> Parameters;
+
+    #endregion
+
+    #endregion
+
+    #region Lifecycle
 
     public static AverageTrueRange<TOutput> Create(PAverageTrueRange<TOutput> p) => new AverageTrueRange<TOutput>(p);
     public AverageTrueRange(PAverageTrueRange<TOutput> parameters) : base(new global::QuantConnect.Indicators.AverageTrueRange(parameters.Period, parameters.MovingAverageType))
@@ -85,7 +125,17 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
         Parameters = parameters;
     }
 
+    #endregion
+
+    #region State
+
     public override bool IsReady => throw new NotImplementedException();
+
+    #endregion
+
+    #region Event Handling
+
+    // Process a Batch of Inputs
     public override void OnNext(IReadOnlyList<IKline> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
     {
 
@@ -106,14 +156,19 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
             OnNext_PopulateOutput(ConvertToOutput(WrappedIndicator.Current.Price), output, ref outputIndex, ref outputSkip);
         }
     }
-
-    public override void Clear() { base.Clear(); WrappedIndicator.Reset(); }
-
-    public static void OnNext_PopulateOutput(TOutput value, TOutput[]? outputBuffer, ref int outputIndex, ref int outputSkip)
+    private static void OnNext_PopulateOutput(TOutput value, TOutput[]? outputBuffer, ref int outputIndex, ref int outputSkip)
     {
         if (outputSkip > 0) { outputSkip--; }
         else if (outputBuffer != null) outputBuffer[outputIndex++] = value;
     }
+
+    #endregion
+
+    #region Methods
+
+    public override void Clear() { base.Clear(); WrappedIndicator.Reset(); }
+
+    #endregion
 
 }
 

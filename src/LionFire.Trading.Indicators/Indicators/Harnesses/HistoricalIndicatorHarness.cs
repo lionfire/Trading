@@ -14,6 +14,10 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
     {
     }
 
+    public HistoricalIndicatorHarness(IReadOnlyList<IHistoricalTimeSeries> inputs, IndicatorHarnessOptions<TParameters> options,  OutputComponentOptions? outputExecutionOptions = null) : base(inputs, options, outputExecutionOptions)
+    {
+    }
+
     #endregion
 
     #region Methods
@@ -132,7 +136,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
             nextExpectedStart = endExclusive;
             var outputArraySegment = new ArraySegment<TOutput>(outputBufferCopy, 0, (int)outputCount);
-            //return new ArraySegmentValueResult<TOutput>(outputArraySegment);
+            //return new ArraySegmentValueResult<TOutput>(outputArraySegment); // OLD
             return new HistoricalDataResult<TOutput>(outputArraySegment);
 
             #endregion
