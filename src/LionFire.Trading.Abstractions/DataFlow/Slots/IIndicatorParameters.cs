@@ -8,11 +8,25 @@ namespace LionFire.Trading;
 
 public interface IIndicatorParameters : IPInput
 {
+    IReadOnlyList<InputSlot> Slots { get; }
+
+    static abstract IReadOnlyList<OutputSlot> Outputs(); // Should this be Signal instead of Slot?
+
     Type IndicatorType { get; }
+
+    /// <summary>
+    /// Aggregate of all Inputs
+    /// </summary>
     Type InputType { get; }
+    IReadOnlyList<Type> SlotTypes { get; }
     Type OutputType { get; }
     int Memory { get; }
     int Lookback => Memory - 1;
+
+    /// <summary>
+    /// Number of (resolvable) components of InputType
+    /// </summary>
+    int InputCount { get; }
 }
 
 

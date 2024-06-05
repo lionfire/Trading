@@ -8,3 +8,12 @@ public interface IPMarketProcessor : IParameters
     Type InstanceType { get; }
 
 }
+
+/// <summary>
+/// A market processor that iterates at the interval of a particular TimeFrame. (i.e. Bar duration.)
+/// </summary>
+public interface IPTimeFrameMarketProcessor : IPMarketProcessor
+{
+    TimeFrame TimeFrame { get; }
+
+}

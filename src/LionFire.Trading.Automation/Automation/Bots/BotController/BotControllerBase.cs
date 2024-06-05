@@ -236,7 +236,7 @@ public abstract class BotControllerBase : IBotController
                 }
                 else
                 {
-                    throw new ArgumentException($"{nameof(IReadOnlyValuesWindow)} '{window.Name}' in bot has a matching property in PBacktests, but wiring up Type of {p.PropertyType.FullName} is not supported.");
+                    throw new ArgumentException($"{nameof(IReadOnlyValuesWindow)} '{window.Name}' in bot has a matching property in PBacktests, but wiring up ValueType of {p.PropertyType.FullName} is not supported.");
                 }
             }
         }

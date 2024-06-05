@@ -33,8 +33,7 @@ public interface IIndicator2<TParameters, TInput, TOutput>
     //    new HistoricalIndicatorExecutorX<ITIndicator, >
     //}
     //static abstract IOComponent Characteristics(TValue parameter);
-    static abstract IReadOnlyList<InputSlot> InputSlots();
-    static abstract IReadOnlyList<OutputSlot> Outputs();
+
 
     void Clear();
 

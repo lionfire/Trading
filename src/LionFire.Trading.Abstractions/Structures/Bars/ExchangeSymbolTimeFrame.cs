@@ -4,13 +4,16 @@ using System.Text;
 
 namespace LionFire.Trading;
 
+public interface IPKlineInput : IPInput { }
+
 [GenerateSerializer]
 [Alias("exchange-symbol-timeframe")]
-public record ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol)
+public record ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol) , IPKlineInput
 {
     //public string ToGrainId() => $"{Exchange}}";
 
-    public virtual string Key => $"{Exchange}.{ExchangeArea}:{Symbol}/{TimeFrame}";
+    public override string Key => $"{Exchange}.{ExchangeArea}:{Symbol}/{TimeFrame}";
+    public virtual Type ValueType => typeof(IKline);
 
     public static ExchangeSymbolTimeFrame Parse(string id, ISymbolIdParser symbolIdParser)
     {
@@ -55,4 +58,3 @@ public static class ExchangeSymbolTimeFrameX
     }
 
 }
-

@@ -39,6 +39,7 @@
 
   <ItemGroup>
     <Folder Include="Bots\Backtesting\" />
+    <Folder Include="DataFlow\Signals\" />
     <Folder Include="Portfolios\" />
   </ItemGroup>
 

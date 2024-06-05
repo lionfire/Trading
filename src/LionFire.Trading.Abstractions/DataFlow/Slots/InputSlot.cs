@@ -7,24 +7,29 @@ public class InputSlot : Slot
 {
     public int DefaultSource { get; set; }
 
+    #region Construction
+
     public static InputSlot SymbolAspect<T>()
     {
         return new InputSlot
         {
             Name = "Symbol",
-            Type = typeof(T),
+            ValueType = typeof(T),
             Aspects = DataPointAspect.Unspecified,
         };
     }
+
     public static InputSlot BarMultiAspect<T>(DataPointAspect aspects)
     {
         return new InputSlot
         {
             Name = "Symbol",
-            Type = typeof(T),
+            ValueType = typeof(T),
             Aspects = aspects,
         };
     }
+
+    #endregion
 }
 
 public interface IInputParameters

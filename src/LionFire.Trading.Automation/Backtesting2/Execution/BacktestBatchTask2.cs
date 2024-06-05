@@ -71,6 +71,7 @@ public class BacktestBatchTask2
         catch (Exception ex)
         {
             tcs.SetException(ex);
+            throw;
         }
     }
 
@@ -242,6 +243,7 @@ public class BacktestBatchTask2
 
         Dictionary<string, InputItem> inputEnumerators = new();
 
+
         #region Determine max lookback for each input
 
         foreach (var backtest in backtests)
@@ -278,7 +280,8 @@ public class BacktestBatchTask2
                 {
                     inputEnumerators.Add(key, new InputItem
                     {
-                        PInput = (IPInput)typeInputInfo.Parameter.GetValue(backtest.PBacktest.Bot, null)!,
+                        PInput = pHydratedInput,
+                        //PInput = (IPInput)typeInputInfo.Parameter.GetValue(backtest.PBacktest.Bot, null)!,
                         Lookback = lookback
                     });
                 }
@@ -291,6 +294,12 @@ public class BacktestBatchTask2
 
         foreach (var (key, value) in inputEnumerators)
         {
+            //var pInput = value.PInput;
+            //if(pInput is IPUnboundInput unboundInput)
+            //{
+
+            //}
+
             IHistoricalTimeSeries series = ir.Resolve(value.PInput);
 
             if (value.Lookback == 0)

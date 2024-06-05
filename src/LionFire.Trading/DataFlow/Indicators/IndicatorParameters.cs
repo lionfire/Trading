@@ -53,7 +53,6 @@ public abstract class IndicatorParameters<TIndicator> : IIndicatorParameters, IP
         }
     }
 
-#error NEXT:
     public virtual IReadOnlyList<InputSlot> Slots => SlotsInfo.GetSlotsInfo(this.GetType()).Slots;
 
     public abstract Type OutputType { get; }

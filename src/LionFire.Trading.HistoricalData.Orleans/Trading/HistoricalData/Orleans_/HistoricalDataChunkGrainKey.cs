@@ -28,7 +28,7 @@ public class HistoricalDataChunkGrainKey
             EndExclusive = DateTime.FromBinary(long.Parse(chunks[3])),
             Exchange = chunks[4],
             ExchangeArea = chunks[5],
-            Type = Type.GetType(chunks[6]) ?? throw new ArgumentException($"Failed to resolve Type '{chunks[6]}'"),
+            Type = Type.GetType(chunks[6]) ?? throw new ArgumentException($"Failed to resolve ValueType '{chunks[6]}'"),
         };
     }
 }

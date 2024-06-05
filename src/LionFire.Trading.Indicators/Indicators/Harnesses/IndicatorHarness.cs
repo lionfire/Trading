@@ -75,6 +75,28 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         Inputs = inputs;
     }
 
+    // REVIEW - New constructor. Deprecate others?
+    public IndicatorHarness(TParameters parameters,
+        TimeFrame timeFrame,
+                IReadOnlyList<IHistoricalTimeSeries> inputs,
+                OutputComponentOptions? outputOptions = null)
+    {
+        ServiceProvider = null;
+
+        #region DUPE of other ctor
+
+        OutputExecutionOptions = outputOptions ?? new();
+        OutputComponentOptions.FallbackToDefaults(OutputExecutionOptions);
+        Parameters = parameters;
+        TimeFrame = timeFrame;
+        Indicator = CreateIndicator();
+
+        #endregion
+
+        Inputs = inputs;
+    }
+
+
     TIndicator CreateIndicator()
     {
         // OPTIMIZE

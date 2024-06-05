@@ -12,7 +12,7 @@ public abstract record SymbolValueAspect(string Exchange, string ExchangeArea, s
     //    return new SymbolBarsRange(Exchange, ExchangeArea, Symbol, TimeFrame, start, endExclusive);
     //    //return SymbolBarsRange.FromExchangeSymbolTimeFrame(this, start, endExclusive); // base
     //}
-    public virtual string Key => $"{base.Key}{(Aspect == DataPointAspect.Unspecified ? "" : "#" + Aspect)}"; // TODO: creative output for Aspect
+    public override string Key => $"{base.Key}{(Aspect == DataPointAspect.Unspecified ? "" : "#" + Aspect)}"; // TODO: creative output for Aspect
 
     public const char AspectSeparator = '#';
     public abstract Type ValueType { get; }
@@ -20,6 +20,7 @@ public abstract record SymbolValueAspect(string Exchange, string ExchangeArea, s
 
 public record SymbolValueAspect<TValue>(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DataPointAspect Aspect) 
     : SymbolValueAspect(Exchange, ExchangeArea, Symbol, TimeFrame, Aspect)
+    , IReferenceTo<TValue>
 {
     public override Type ValueType => typeof(TValue);
     public override string Key => $"{Exchange}.{ExchangeArea}:{Symbol}/{TimeFrame}{(Aspect == DataPointAspect.Unspecified ? "" : "#")}{Aspect}{(typeof(TValue) == typeof(double) ? "" : $"<{typeof(TValue).Name}>")}";

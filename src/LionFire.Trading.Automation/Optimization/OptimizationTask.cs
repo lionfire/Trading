@@ -62,7 +62,7 @@ public class BotInfo
 {
     public IReadOnlyList<InputInfo> GetInputs(Type botType)
     {
-        if (!botType.IsAssignableTo(typeof(IBot2))) throw new ArgumentException($"Type {botType} is not an IBot2.");
+        if (!botType.IsAssignableTo(typeof(IBot2))) throw new ArgumentException($"ValueType {botType} is not an IBot2.");
 
         var inputSlots = (List<InputSlot>)botType.GetMethod("InputSignals")!.Invoke(null, null)!;
 

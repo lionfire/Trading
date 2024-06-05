@@ -18,6 +18,8 @@ public class PSimpleMovingAverage<TOutput> : IndicatorParameters<SimpleMovingAve
 {
     public int Period { get; set; }
 
+    #region Lifecycle
+
     public PSimpleMovingAverage()
     {
         if (typeof(TOutput) != typeof(double)) throw new NotImplementedException("TOutput must be double"); // TODO - remove this limitation
@@ -26,6 +28,8 @@ public class PSimpleMovingAverage<TOutput> : IndicatorParameters<SimpleMovingAve
     {
         return new PSimpleMovingAverage<TOutput> { Period = period };
     }
+
+    #endregion
 }
 
 // TODO: Generic TOutput
@@ -38,12 +42,12 @@ public class SimpleMovingAverage
     public static IReadOnlyList<InputSlot> InputSlots()
         => [new () {
                     Name = "Source",
-                    Type = typeof(double),
+                    ValueType = typeof(double),
                 }];
     public static IReadOnlyList<OutputSlot> Outputs()
             => [new () {
                      Name = "Average",
-                    Type = typeof(double),
+                    ValueType = typeof(double),
                 }];
 
     //public static IOComponent Characteristics(uint parameter)

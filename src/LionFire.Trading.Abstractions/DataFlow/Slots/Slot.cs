@@ -8,7 +8,7 @@
 public class Slot
 {
     public required string Name { get; init; }
-    public required Type Type { get; init; }
+    public required Type ValueType { get; init; }
 
     /// <summary>
     /// If Type is a Bar (IKline) this specifies which aspect(s) of the bar is needed. 

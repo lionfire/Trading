@@ -1,23 +1,21 @@
-﻿using QuantConnect.Data.Market;
+﻿using LionFire.Trading.ValueWindows;
+using QuantConnect.Data.Market;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
-public record HLCReference<TValue> : ExchangeSymbolTimeFrame, IPInput
-{
-    public HLCReference(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : base(Exchange, ExchangeArea, Symbol, TimeFrame) { }
+#error NEXT: 
+// Consider unifying Indicators with Bots somehow, by having a common resolution mechanism, while still keeping the possibility of Indicators not having to own their own sources.
+// Maybe Indicators are exactly like bots, and a Bot harness (BotsController) executes them as well
 
-    public Type ValueType => typeof(HLC<TValue>);
-    public override string Key => base.Key + SymbolValueAspect.AspectSeparator + "HLC";
-}
 
-public struct HLC<T>
+#error NEXT: Maybe?
+public interface ISlotsInfo
 {
-    public T High { get; set; }
-    public T Low { get; set; }
-    public T Close { get; set; }
+    static IReadOnlyList<InputSlot> InputSlots { get; }
 }
 
 // Input: IKline aspects: High, Low, Close
+// TODO: Use HLC<TOutput> instead of IKline as the TInput
 public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<TOutput>, IKline, TOutput>
 {
     #region Identity
@@ -28,9 +26,16 @@ public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<T
 
     #region Type Info
 
-    public override IReadOnlyList<InputSlot> InputSlots => [
-        //InputSlot.BarMultiAspect<TOutput>( DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close)
-        ];
+    //public override IReadOnlyList<InputSlot> InputSlots => [
+    //    //InputSlot.BarMultiAspect<TOutput>( DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close)
+    //    ];
+    public static IReadOnlyList<InputSlot> InputSlots()
+      => [new InputSlot() {
+                    Name = "Source",
+                    ValueType = typeof(IKline<TOutput>),
+                    Aspects = DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close,
+                    DefaultSource = 0,
+                }];
 
     #endregion
 
@@ -52,17 +57,12 @@ public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<T
     public int LookbackForInputSlot(InputSlot inputSlot) => Period;
 }
 
+// TODO: Use HLC<TOutput> instead of IKline as the TInput
 public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTrueRange<TOutput>, global::QuantConnect.Indicators.AverageTrueRange, PAverageTrueRange<TOutput>, IKline, TOutput>, IIndicator2<AverageTrueRange<TOutput>, PAverageTrueRange<TOutput>, IKline, TOutput>
 {
     #region Static
 
-    public static IReadOnlyList<InputSlot> InputSlots()
-      => [new InputSlot() {
-                    Name = "Source",
-                    Type = typeof(IKline<TOutput>),
-                    Aspects = DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close,
-                    DefaultSource = 0,
-                }];
+    
     //public static List<InputSlot> InputSlots()
     //    => [new () {
     //                Name = "Source",
@@ -71,14 +71,14 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
     public static IReadOnlyList<OutputSlot> Outputs()
             => [new () {
                      Name = "Average True Range",
-                    Type = typeof(TOutput),
+                    ValueType = typeof(TOutput),
                 }];
 
 
     public static List<OutputSlot> Outputs(PAverageTrueRange<TOutput> p)
             => [new () {
                      Name = "Average True Range",
-                    Type = typeof(TOutput),
+                    ValueType = typeof(TOutput),
                 }];
     //public static IOComponent Characteristics(PAverageTrueRange parameter)
     //{
@@ -127,6 +127,12 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
 
     #endregion
 
+    //#region Inputs (REVIEW - if this was like a bot)
+
+    //public IReadOnlyValuesWindow<IKline> Bars { get; set; }
+    
+    //#endregion
+
     #region State
 
     public override bool IsReady => throw new NotImplementedException();
@@ -134,6 +140,7 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
     #endregion
 
     #region Event Handling
+
 
     // Process a Batch of Inputs
     public override void OnNext(IReadOnlyList<IKline> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
@@ -145,10 +152,18 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
 
         foreach (var input in inputs)
         {
-            var bar = new TradeBar(time: endTime, symbol: QuantConnect.Symbol.None, open: default /* UNUSED for ATR */, input.HighPrice, input.LowPrice, input.ClosePrice, volume: default, period: period);
+            WrappedIndicator.Update(new TradeBar(
+                time: endTime, 
+                symbol: QuantConnect.Symbol.None, 
+                open: default /* UNUSED for ATR */, 
+                input.HighPrice, 
+                input.LowPrice, 
+                input.ClosePrice, 
+                volume: default, 
+                period: period));
 
-            WrappedIndicator.Update(bar);
             endTime += period;
+
             if (WrappedIndicator.IsReady && subject != null)
             {
                 subject.OnNext(new List<TOutput> { ConvertToOutput(WrappedIndicator.Current.Price) });

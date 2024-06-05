@@ -1,8 +1,43 @@
 ﻿using LionFire.Trading.Data;
+using LionFire.Trading.DataFlow;
 using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
+public static class HistoricalIndicatorHarness
+{
+    public static IHistoricalTimeSeries Create(
+        IIndicatorParameters pIndicator,
+        TimeFrame timeFrame,
+        IReadOnlyList<IHistoricalTimeSeries> signals,
+        OutputComponentOptions? outputExecutionOptions = null
+        )
+    {
+        var type = typeof(HistoricalIndicatorHarness<,,,>).MakeGenericType(
+                                                pIndicator.IndicatorType,
+                                                pIndicator.GetType(),
+                                                pIndicator.InputType,
+                                                pIndicator.OutputType
+                                            );
+
+        return (IHistoricalTimeSeries)Activator.CreateInstance(type, pIndicator,
+                                    timeFrame,
+                                    signals,
+                                    outputExecutionOptions)!;
+    }
+}
+
+/// <summary>
+/// 
+/// </summary>
+/// <remarks>
+/// Ignored:
+/// - IndicatorHarnessOptions.Memory
+/// </remarks>
+/// <typeparam name="TIndicator"></typeparam>
+/// <typeparam name="TParameters"></typeparam>
+/// <typeparam name="TInput"></typeparam>
+/// <typeparam name="TOutput"></typeparam>
 public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     : IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
@@ -14,7 +49,11 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
     {
     }
 
-    public HistoricalIndicatorHarness(IReadOnlyList<IHistoricalTimeSeries> inputs, IndicatorHarnessOptions<TParameters> options,  OutputComponentOptions? outputExecutionOptions = null) : base(inputs, options, outputExecutionOptions)
+    public HistoricalIndicatorHarness(
+        TParameters parameters,
+        TimeFrame timeFrame,
+        IReadOnlyList<IHistoricalTimeSeries> inputs,
+        OutputComponentOptions? outputExecutionOptions = null) : base(parameters, timeFrame, inputs, outputExecutionOptions)
     {
     }
 
@@ -34,7 +73,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
         }
         else
         {
-            source = (IHistoricalTimeSeries<TInput>)Activator.CreateInstance(typeof(HistoricalTimeSeriesTypeAdapter<,>).MakeGenericType(sources[0].ValueType, typeof(TOutput)), sources[0])!;
+            source = (IHistoricalTimeSeries<TInput>)Activator.CreateInstance(typeof(HistoricalTimeSeriesTypeAdapter<,>).MakeGenericType(sources[0].ValueType, typeof(TInput)), sources[0])!;
         }
 
         var data = await source.Get(start, endExclusive).ConfigureAwait(false);

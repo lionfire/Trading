@@ -19,7 +19,7 @@ public class HistoricalDataChunkGrain : Grain, IGrainWithStringKey
     {
         var k = DataKey;
 
-        if (k.Type != typeof(T)) { throw new ArgumentException($"Generic Type parameter ({typeof(T).FullName}) must match Grain key ({k.Type.FullName})"); }
+        if (k.Type != typeof(T)) { throw new ArgumentException($"Generic ValueType parameter ({typeof(T).FullName}) must match Grain key ({k.Type.FullName})"); }
 
         options = QueryOptions.Default;
         

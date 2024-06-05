@@ -1,8 +1,8 @@
 ﻿namespace LionFire.Trading.Automation;
 
-public interface IPTimeFrameBot2 : IPBot2
+
+public interface IPTimeFrameBot2 : IPBot2, IPTimeFrameMarketProcessor
 {
-    TimeFrame TimeFrame { get; }
 }
 
 public abstract class PTimeFrameBot2<TConcrete> : PBot2<TConcrete>, IPTimeFrameBot2
