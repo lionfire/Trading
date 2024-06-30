@@ -111,7 +111,7 @@ public class SimpleMovingAverage
     // MOVE to base class
 
 
-    public override void OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
+    public override void OnBarBatch(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
     {
         // OPTIMIZE - is there a way to avoid repeated bounds checking on the output array?
         // var maxOutputIndex = outputIndex + inputs.Count - outputSkip;

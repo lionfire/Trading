@@ -10,111 +10,108 @@ using LionFire.Trading.Workspaces;
 using LionFire.Trading.Statistics;
 using System.Threading;
 
-namespace LionFire.Trading
+namespace LionFire.Trading;
+
+
+public interface IAccount : IFeed
+//: ITemplateInstance<TAccount>
 {
-  
-    public interface IAccount : IFeed
-    //: ITemplateInstance<TAccount>
-    {
-        #region Identity
+    #region Identity
 
-        public string Key { get; } // => $"{Exchange}:{AccountId}";
+    public string Key { get; } // => $"{Exchange}:{AccountId}";
 
-        #endregion
+    #endregion
 
-        AccountStats AccountStats { get; }
+    AccountStats AccountStats { get; }
 
-        #region Relationships
+    #region Relationships
 
-        new TAccount Template { get; }
+    new TAccount Template { get; }
 
-        #endregion
+    #endregion
 
-        #region From cTrader  - REVIEW
+    #region From cTrader  - REVIEW
 
-         bool IsLive { get; }
+     bool IsLive { get; }
 
-        string AccountId { get; }
+    string AccountId { get; }
 
-        #endregion
+    #endregion
 
-        #region State
+    #region State
 
-        double Equity { get; }
-        double Balance { get; }
-        decimal EquityDecimal { get; }
-        decimal BalanceDecimal { get; }
-        string Currency { get; }
-        double Margin { get; }
-        double MarginLevel { get; }
+    double Equity { get; }
+    double Balance { get; }
+    decimal EquityDecimal { get; }
+    decimal BalanceDecimal { get; }
+    string Currency { get; }
+    double Margin { get; }
+    double MarginLevel { get; }
 
-        IPositionsDouble Positions { get; }
-        IPositions Positions2 { get; }
-        Task<IPositions> RefreshPositions(CancellationToken cancellationToken = default);
+    IPositionsDouble Positions { get; }
+    IPositions Positions2 { get; }
+    Task<IPositions> RefreshPositions(CancellationToken cancellationToken = default);
 
-        IPendingOrders PendingOrders { get; }
-        IPendingOrders2 PendingOrders2 { get; }
+    IPendingOrders PendingOrders { get; }
+    IPendingOrders2 PendingOrders2 { get; }
 
-        PositionStats PositionStats { get; }
+    PositionStats PositionStats { get; }
 
-        string StatusText { get; }
-        event Action StatusTextChanged;
+    string StatusText { get; }
+    event Action StatusTextChanged;
 
-        Task RefreshState();
+    Task RefreshState();
 
-        #endregion
+    #endregion
 
 
-        #region Informational Properties
+    #region Informational Properties
 
-        double StopOutLevel { get; }
+    double StopOutLevel { get; }
 
-        bool IsDemo { get; }
+    bool IsDemo { get; }
 
-        bool IsBacktesting { get; }
-        DateTime BacktestEndDate { get; }
+    bool IsBacktesting { get; }
+    DateTime BacktestEndDate { get; }
 
-        bool IsSimulation { get; }
-        bool IsRealMoney { get; }
+    bool IsSimulation { get; }
+    bool IsRealMoney { get; }
 
-        string ExchangeName { get; } // RENAME ExchangeName
-        //string Platform { get; }
-        //string AccountMode { get; }
-        /// <summary>
-        /// TODO: What should this be?  What does cTrader return?  Hedged/netting?
-        /// </summary>
-        string AccountType { get; }
+    string ExchangeName { get; } // RENAME ExchangeName
+    //string Platform { get; }
+    //string AccountMode { get; }
+    /// <summary>
+    /// TODO: What should this be?  What does cTrader return?  Hedged/netting?
+    /// </summary>
+    string AccountType { get; }
 
-        #endregion
+    #endregion
 
-        #region Methods
+    #region Methods
 
-        TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
-        Task<TradeResult> ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal quantity, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null);
+    TradeResult ExecuteMarketOrder(TradeType tradeType, Symbol symbol, double volume, string label = null, double? stopLossPips = null, double? takeProfitPips = null, double? marketRangePips = null, string comment = null);
+    Task<TradeResult> ExecuteMarketOrder(TradeType tradeType, string symbolCode, decimal quantity, string? label = null, decimal? stopLossPrice = null, decimal? takeProfitPrice = null, decimal? marketRangePrice = null, string comment = null);
 
-        TradeResult ClosePosition(PositionDouble position);
-        TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);
+    TradeResult ClosePosition(PositionDouble position);
+    TradeResult ModifyPosition(PositionDouble position, double? stopLoss, double? takeProfit);
 
-        #endregion
+    #endregion
 
 #if !cAlgo
-        Server Server { get; }
-        Task AddAccountParticipant(IAccountParticipant participant);
-        bool IsTradeApiEnabled { get; set; }
+    Server Server { get; }
+    Task AddAccountParticipant(IAccountParticipant participant);
+    bool IsTradeApiEnabled { get; set; }
 #endif
 
 
-        #region Symbol Query Methods
+    #region Symbol Query Methods
 
-        double UnrealizedGrossProfit(string symbol);
+    double UnrealizedGrossProfit(string symbol);
 
-        double UnrealizedNetProfit(string symbol);
+    double UnrealizedNetProfit(string symbol);
 
-        #endregion
-
-    }
-
-    
-
+    #endregion
 
 }
+
+

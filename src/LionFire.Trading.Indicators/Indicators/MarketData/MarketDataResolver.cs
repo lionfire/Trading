@@ -5,18 +5,20 @@ using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Execution;
 using LionFire.Trading.Indicators.Harnesses;
 using LionFire.Trading.DataFlow;
+using System.Diagnostics;
+using System.Reflection;
+using LionFire.Metadata;
 namespace LionFire.Trading.Indicators.Inputs;
-
 
 public interface IMarketDataResolver
 {
-    IHistoricalTimeSeries Resolve(object reference, Slot? slot = null)
+    IHistoricalTimeSeries Resolve(object reference, SlotInfo? slotInfo = null)
     {
-        var result = TryResolve(reference, slot);
+        var result = TryResolve(reference, slotInfo);
         if (result == null) throw new ArgumentException("Failed to resolve: " + reference);
         return result;
     }
-    IHistoricalTimeSeries? TryResolve(object reference, Slot? slot = null);
+    IHistoricalTimeSeries? TryResolve(object reference, SlotInfo? slotInfo = null, Type? valueType = null);
     IHistoricalTimeSeries Resolve(Type valueType, object reference)
         => (IHistoricalTimeSeries)(this.GetType().GetMethod(nameof(Resolve))!.MakeGenericMethod(valueType).Invoke(this, [reference])!);
 
@@ -40,19 +42,55 @@ public class MarketDataResolver : IMarketDataResolver
 
     public IHistoricalTimeSeries<TValue>? TryResolve<TValue>(object reference)
     {
-        return (IHistoricalTimeSeries<TValue>?)TryResolve(reference, typeof(TValue));
+        return (IHistoricalTimeSeries<TValue>?)TryResolve(reference, valueType: typeof(TValue));
     }
 
-    public IHistoricalTimeSeries? TryResolve(object reference, Slot? slot = null)
+    public IPKlineInput GetPKlineInputForValueType(IPKlineInput pKlineInput, Type valueType)
     {
+        Type? PInputType = valueType.GetCustomAttribute<ReferenceTypeAttribute>()?.Type;
+
+        if (PInputType != null)
+        {
+            if (pKlineInput is ExchangeSymbolTimeFrame estf)
+            {
+
+                if (PInputType.IsGenericTypeDefinition)
+                {
+                    PInputType = PInputType.MakeGenericType(valueType.GetGenericArguments());
+                }
+                // Assumes constructor:
+                return (IPKlineInput)Activator.CreateInstance(PInputType, estf.Exchange, estf.ExchangeArea, estf.Symbol, estf.TimeFrame)!;
+            }
+        }
+        else
+        {
+            throw new NotImplementedException($"Type {valueType.FullName} has unknown reference type.  Add a [ReferenceType()] attribute (or TODO: another way to specify the reference type).");
+        }
+        throw new NotSupportedException();
+    }
+
+    public IHistoricalTimeSeries? TryResolve(object reference, SlotInfo? slotInfo = null, Type? valueType = null)
+    {
+        valueType ??= slotInfo?.ValueType;
         IHistoricalTimeSeries _Preliminary(object reference)
         {
             // FUTURE ENH: IInputResolver<T> where T is SymbolValueAspect, etc.
 
+            if (valueType != null)
+            {
+                if (valueType.IsAssignableTo(typeof(IKlineMarker)))
+                {
+                    if (reference is IPKlineInput pKlineInput)
+                    {
+                        reference = GetPKlineInputForValueType(pKlineInput, valueType);
+                    }
+                }
+            }
+
             if (reference is SymbolValueAspect sva)
             {
                 ExchangeSymbolTimeFrame exchangeSymbolTimeFrame = sva;
-#error NEXT: Change valueType parameter to some sort of IValueCoerce, with CoerceKline providing its own DataPointAspect, Volume rules, etc.  Also do this for ExchangeSymbolTimeFrame and perhaps elsewhere.
+                //#error NEXT: Change valueType parameter to some sort of IValueCoerce, with CoerceKline providing its own DataPointAspect, Volume rules, etc.  Also do this for ExchangeSymbolTimeFrame and perhaps elsewhere.
                 DataPointAspect aspect = sva.Aspect;
 
                 if (sva is IValueType vt)
@@ -60,7 +98,6 @@ public class MarketDataResolver : IMarketDataResolver
                     return (IHistoricalTimeSeries)ActivatorUtilities.CreateInstance(ServiceProvider,
                         typeof(BarAspectSeries<>).MakeGenericType(vt.ValueType),
                         exchangeSymbolTimeFrame, aspect);
-
                 }
                 else
                 {
@@ -69,7 +106,14 @@ public class MarketDataResolver : IMarketDataResolver
             }
             else if (reference is ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
             {
-                return ActivatorUtilities.CreateInstance<BarSeries>(ServiceProvider, exchangeSymbolTimeFrame);
+                if (valueType != null)
+                {
+                    return (IHistoricalTimeSeries) ActivatorUtilities.CreateInstance(ServiceProvider, typeof(BarSeries<>).MakeGenericType(valueType), exchangeSymbolTimeFrame);
+                }
+                else
+                {
+                    return ActivatorUtilities.CreateInstance<BarSeries>(ServiceProvider, exchangeSymbolTimeFrame);
+                }
             }
             else if (reference is PBoundInput pBoundInput) // TODO - should test for IIndicatorParameters here, in a pass-through fashion, without having to worry about PBoundInput
             {
@@ -80,14 +124,14 @@ public class MarketDataResolver : IMarketDataResolver
                     var signals = new List<IHistoricalTimeSeries>();
                     foreach (var signal in pBoundInput.Signals)
                     {
-                        var resolved = ((IMarketDataResolver)this).Resolve(signal, slots[slotIndex++]);
+                        var resolved = ((IMarketDataResolver)this).Resolve(signal, slots.Slots[slotIndex++]);
                         signals.Add(resolved);
                     }
 
                     if (signals.Count != pIndicator.InputCount)
                     {
                         //#error NEXT: provide the inputs
-                        throw new ArgumentException($"Indicator {pIndicator.GetType().Name}.{pIndicator.InputCount} = {pIndicator.InputCount}, but {signals.Count} Inputs were provided.");
+                        throw new ArgumentException($"Indicator {pIndicator.GetType().Name}.{pIndicator.InputCount} = {pIndicator.InputCount}, but {signals.Count} Signals were provided.");
                     }
 
                     // We handle the memory in the iterator instead of the harness.  REVIEW - Is or can Memory be obsolete here?
@@ -149,7 +193,7 @@ public class MarketDataResolver : IMarketDataResolver
             return null;
         }
         var hts = _Preliminary(reference);
-        if(valueType != null && valueType != hts.ValueType)
+        if (valueType != null && valueType != hts.ValueType)
         {
             throw new NotImplementedException("NEXT: convert");
         }

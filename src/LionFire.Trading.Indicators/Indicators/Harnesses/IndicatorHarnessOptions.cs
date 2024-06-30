@@ -5,10 +5,11 @@ public interface IIndicatorHarnessOptions
     IIndicatorParameters IndicatorParameters { get; }
 
     TimeFrame TimeFrame { get; set; }
-    object[] Inputs { get; set; }
+    IPInput[] Signals { get; set; }
 }
 
-public class IndicatorHarnessOptions<TParameters> : IIndicatorHarnessOptions
+public class IndicatorHarnessOptions<TParameters> 
+    : IIndicatorHarnessOptions
     where TParameters : IIndicatorParameters
 {
 
@@ -26,7 +27,7 @@ public class IndicatorHarnessOptions<TParameters> : IIndicatorHarnessOptions
 
     public  TimeFrame TimeFrame { get; set; }
 
-    public  object[] Inputs { get; set; }
+    public  IPInput[] Signals { get; set; }
 
 }
 

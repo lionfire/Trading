@@ -2,6 +2,16 @@
 
 namespace LionFire.Trading;
 
+public interface IKlineMarker { }
+
+public interface IKlineWithOpenTime
+{
+    /// <summary>
+    /// The time this candlestick opened
+    /// </summary>
+    DateTime OpenTime { get; }
+}
+
 /// <summary>
 /// Kline data
 /// </summary>
@@ -9,12 +19,19 @@ namespace LionFire.Trading;
 /// Based on IBinanceKline
 /// </remarks>
 /// <typeparam name="T">Typically supported: decimal, double, float</typeparam>
-public interface IKline<T>
+public interface IKline<T> : IKlineMarker, IKlineWithOpenTime
 {
+
+
     /// <summary>
-    /// The time this candlestick opened
+    /// The close time of this candlestick
     /// </summary>
-    DateTime OpenTime { get; }
+    DateTime CloseTime { get; }
+
+    /// <summary>
+    /// The amount of trades in this candlestick
+    /// </summary>
+    int TradeCount { get; }
 
     /// <summary>
     /// The price at which this candlestick opened
@@ -41,20 +58,11 @@ public interface IKline<T>
     /// </summary>
     T Volume { get; }
 
-    /// <summary>
-    /// The close time of this candlestick
-    /// </summary>
-    DateTime CloseTime { get; }
 
     /// <summary>
     /// The volume traded during this candlestick in the asset form
     /// </summary>
     T QuoteVolume { get; }
-
-    /// <summary>
-    /// The amount of trades in this candlestick
-    /// </summary>
-    int TradeCount { get; }
 
     /// <summary>
     /// Taker buy base asset volume
@@ -87,7 +95,8 @@ public static class IKlineX
                 {
                     return false;
                 }
-            }else
+            }
+            else
             {
                 if (bar.OpenTime < last)
                 {

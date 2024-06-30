@@ -74,7 +74,7 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
         }
         void createBotParameters<T>(TimeFrame timeFrame, string symbol)
         {
-            var pBot = new PAtrBot<T>(14)
+            var pBot = new PAtrBot<T>(new ExchangeSymbolTimeFrame(Exchange, ExchangeArea, symbol, timeFrame), 14)
             {
                 //ATR = new PAverageTrueRange<T>
                 //{
@@ -84,9 +84,9 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
                 //Points = new PPointsBot
                 //{
                 //},
-                TimeFrame = timeFrame,
+                //TimeFrame = timeFrame,
                 //Inputs = [new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close)],
-                Bars = new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close),
+                //Bars = new SymbolValueAspect<T>(Exchange, ExchangeArea, symbol, timeFrame, DataPointAspect.Close),
             };
 
             Add(new PBacktestTask2<PAtrBot<T>>
@@ -128,31 +128,53 @@ public class Backtest_Batch_ : BinanceDataTest
 
         var job = batchQueue.EnqueueJob(batch =>
         {
+
+            PBacktestTask2<PAtrBot<double>> createBacktest(string symbol, uint atrPeriod)
+            {
+                return new PBacktestTask2<PAtrBot<double>>
+                {
+                    Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1), atrPeriod)
+                    {
+                        //TimeFrame = TimeFrame.m1,
+                        //Bars = new SymbolValueAspect<double>("Binance", "futures", symbol, TimeFrame.m1, DataPointAspect.Close),
+                        //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                    },
+                    Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                    EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                    Features = BotHarnessFeatures.Bars,
+                };
+            }
+
+
             batch.BacktestBatches = [[
-                        new PBacktestTask2<PAtrBot<double>>
-                         {
-                             Bot = new PAtrBot<double>(14)
-                                {
-                                    TimeFrame = TimeFrame.m1,
-                                    Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
-                                    //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
-                                },
-                             Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                             EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
-                             Features = BotHarnessFeatures.Bars,
-                         },
-                        new PBacktestTask2<PAtrBot<double>>
-                         {
-                             Bot = new PAtrBot<double>(15)
-                                {
-                                    TimeFrame = TimeFrame.m1,
-                                    Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
-                                    //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
-                                },
-                             Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                             EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
-                             Features = BotHarnessFeatures.Bars,
-                         },
+                    createBacktest("BTCUSDT", 14),
+                    createBacktest("BTCUSDT", 15),
+                    createBacktest("ETHUSDT", 14),
+                    createBacktest("ETHUSDT", 15)
+                        //new PBacktestTask2<PAtrBot<double>>
+                        // {
+                        //     Bot = new PAtrBot<double>(14)
+                        //        {
+                        //            TimeFrame = TimeFrame.m1,
+                        //            Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                        //            //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                        //        },
+                        //     Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                        //     EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                        //     Features = BotHarnessFeatures.Bars,
+                        // },
+                        //new PBacktestTask2<PAtrBot<double>>
+                        // {
+                        //     Bot = new PAtrBot<double>(15)
+                        //        {
+                        //            TimeFrame = TimeFrame.m1,
+                        //            Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                        //            //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                        //        },
+                        //     Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                        //     EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                        //     Features = BotHarnessFeatures.Bars,
+                        // },
                     ]];
         });
 
@@ -172,10 +194,10 @@ public class Backtest_Batch_ : BinanceDataTest
                 batch.BacktestBatches = [[
                 new PBacktestTask2<PAtrBot<double>>
                  {
-                     Bot = new PAtrBot<double>(14)
+                     Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 14)
                         {
-                            TimeFrame = TimeFrame.m1,
-                            Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                            //TimeFrame = TimeFrame.m1,
+                            //Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
                             //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
                         },
                      Start = new DateTimeOffset(2020, 9, 9, 9, 9, 9, TimeSpan.Zero),
@@ -184,10 +206,10 @@ public class Backtest_Batch_ : BinanceDataTest
                  },
                 new PBacktestTask2<PAtrBot<double>>
                  {
-                     Bot = new PAtrBot<double>(15)
+                     Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 15)
                         {
-                            TimeFrame = TimeFrame.m1,
-                            Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
+                            //TimeFrame = TimeFrame.m1,
+                            //Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
                             //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
                         },
                      Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),

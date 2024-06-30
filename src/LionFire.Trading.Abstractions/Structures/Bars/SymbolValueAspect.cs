@@ -5,7 +5,7 @@ namespace LionFire.Trading;
 
 [GenerateSerializer]
 [Alias("exchange-symbol-timeframe-aspect")]
-public abstract record SymbolValueAspect(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DataPointAspect Aspect) : ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame), IPInput
+public abstract record SymbolValueAspect(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame, DataPointAspect Aspect) : ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame), IPKlineInput
 {
     //public SymbolBarsRange ToRange(DateTimeOffset start, DateTimeOffset endExclusive)
     //{

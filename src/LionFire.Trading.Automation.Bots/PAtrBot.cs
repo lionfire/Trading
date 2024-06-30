@@ -11,11 +11,6 @@ namespace LionFire.Trading.Automation.Bots;
 
 public static class BotParametersTypeInfo
 {
-    //public static IEnumerable<object> GetPIndicators(IPBot2 pBot)
-    //{
-    //}
-
-    //ConcurrentDictionary<Type, IEnumerable<>>
 }
 
 public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
@@ -35,10 +30,9 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
 
     #endregion
 
-    [Source(0)]
-    public PAverageTrueRange<TValue>? ATR { get; set; }
-    public SlotSource ATRSource { get; set; }  // Optional: will fall back to first input if not set or this property doesn't exist
-    //public IReadOnlyList<SlotSource> ATRSources { get; set; }  // Hypothetical, for other situations
+    [Signal(0)]
+    public PAverageTrueRange<double, TValue>? ATR { get; set; }
+
 
     //[Signal(0)]
     public SymbolValueAspect<TValue>? Bars { get; set; }
@@ -57,15 +51,16 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
     //    //OpenThreshold
     //};
 
-    public PAtrBot() { }
-    public PAtrBot(uint period)
+    //public PAtrBot() { }
+    public PAtrBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, uint period) : base(exchangeSymbolTimeFrame)
     {
-        ATR = new PAverageTrueRange<TValue>
+        ATR = new PAverageTrueRange<double, TValue>
         {
             Period = (int)period,
             Memory = 2, // Change to lookback = 1?
         };
         InputLookbacks = [(int)period]; // REVIEW - does InputLookbacks make sense?  REVIEW - period
+        InitFromDefault();
     }
     public override Type InstanceType => typeof(AtrBot<TValue>);
 
@@ -77,7 +72,6 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
     }
 }
 
-//#if TODO
 [Bot(Direction = BotDirection.Unidirectional)]
 public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
 {
@@ -118,7 +112,7 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
     //public AtrBot()
     //{
     //    // TODO: Live Indicator harness if live
-    //    //var eATR = new BufferingIndicatorHarness<AverageTrueRange<TValue>, PAverageTrueRange<TValue>, IKline, TValue>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange<TValue>>(parameters.ATR!)
+    //    //var eATR = new BufferingIndicatorHarness<AverageTrueRange<TValue>, PAverageTrueRange<double. TValue>, IKline, TValue>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange<TValue>>(parameters.ATR!)
     //    //{
     //    //    Inputs = parameters.Inputs == null ? [] : [parameters.Inputs],
     //    //    TimeFrame = parameters.TimeFrame,
@@ -154,4 +148,3 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
     #endregion
 
 }
-//#endif

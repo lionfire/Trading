@@ -1,7 +1,9 @@
 ﻿#nullable enable
+
 namespace LionFire.Trading;
 
-public struct HLC<T>
+[ReferenceType(typeof(HLCReference<>))]
+public struct HLC<T> : IKlineMarker
 {
     public T High { get; set; }
     public T Low { get; set; }

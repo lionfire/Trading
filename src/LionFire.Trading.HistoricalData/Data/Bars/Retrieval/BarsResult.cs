@@ -8,28 +8,30 @@ namespace LionFire.Trading.HistoricalData.Retrieval;
 
 // TODO CLEANUP and REVIEW
 
-public interface IBarsResult : ITimeSeriesResult<IKline>
+public interface IBarsResult : IBarsResult<IKline> { }
+
+public interface IBarsResult<TValue> : ITimeSeriesResult<TValue>
 {
     //    string Name { get; }
     //    HistoricalDataSourceKind2 SourceType { get; }
 
-    IReadOnlyList<IKline>? Bars => Values;
+    IReadOnlyList<TValue>? Bars => Values;
     Type NativeType { get; }
 
     bool IsUpToDate { get; }
 
-    IBarsResult Trim(DateTimeOffset start, DateTimeOffset endExclusive);
+    IBarsResult<TValue> Trim(DateTimeOffset start, DateTimeOffset endExclusive);
 }
 
-public sealed class BarsResult<TKline> : IBarsResult
-    where TKline : IKline
+public sealed class BarsResult<TKline> : IBarsResult<TKline>
+    where TKline : IKlineMarker
 {
 
     #region Values
 
     //public IReadOnlyList<IReadOnlyList<TKline>>? Chunks { get; init; }
     public required IReadOnlyList<TKline> Values { get; init; }
-    IReadOnlyList<IKline>? IValuesResult<IKline>.Values => (IReadOnlyList<IKline>?)Values;
+    IReadOnlyList<TKline>? IValuesResult<TKline>.Values => (IReadOnlyList<TKline>?)Values;
 
     #endregion
 
@@ -38,7 +40,7 @@ public sealed class BarsResult<TKline> : IBarsResult
 
     #region Constructors
 
-    private BarsResult<TKline> CloneWithBars(IBarsResult barsResult, IReadOnlyList<TKline> bars)
+    private BarsResult<TKline> CloneWithBars(IBarsResult<TKline> barsResult, IReadOnlyList<TKline> bars)
     {
         return new BarsResult<TKline>
         {
@@ -111,7 +113,7 @@ public sealed class BarsResult<TKline> : IBarsResult
 
         return CloneWithBars(this, Values.Skip(newStartIndex).Take(newEndIndexExclusive - newStartIndex).ToList());
     }
-    IBarsResult IBarsResult.Trim(DateTimeOffset start, DateTimeOffset endExclusive) => Trim(start, endExclusive);
+    IBarsResult<TKline> IBarsResult<TKline>.Trim(DateTimeOffset start, DateTimeOffset endExclusive) => Trim(start, endExclusive);
 
     #endregion
 

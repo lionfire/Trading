@@ -64,19 +64,19 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
     #region Input
 
     // TODO: Move this out of this class. Instead, have OnInput(inputId, data), and have something else push to this indicator
-    public override async Task<ArraySegment<TInput>> GetInputData(IReadOnlyList<IHistoricalTimeSeries> sources, DateTimeOffset start, DateTimeOffset endExclusive)
+    public override async Task<ArraySegment<TInput>> GetInputData(IReadOnlyList<IHistoricalTimeSeries> inputs, DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        IHistoricalTimeSeries<TInput> source;
-        if (sources[0].GetType().IsAssignableTo(typeof(IHistoricalTimeSeries<TInput>)))
+        IHistoricalTimeSeries<TInput> input;
+        if (inputs[0].GetType().IsAssignableTo(typeof(IHistoricalTimeSeries<TInput>)))
         {
-            source = (IHistoricalTimeSeries<TInput>)sources[0];
+            input = (IHistoricalTimeSeries<TInput>)inputs[0];
         }
         else
         {
-            source = (IHistoricalTimeSeries<TInput>)Activator.CreateInstance(typeof(HistoricalTimeSeriesTypeAdapter<,>).MakeGenericType(sources[0].ValueType, typeof(TInput)), sources[0])!;
+            input = (IHistoricalTimeSeries<TInput>)Activator.CreateInstance(typeof(HistoricalTimeSeriesTypeAdapter<,>).MakeGenericType(inputs[0].ValueType, typeof(TInput)), inputs[0])!;
         }
 
-        var data = await source.Get(start, endExclusive).ConfigureAwait(false);
+        var data = await input.Get(start, endExclusive).ConfigureAwait(false);
 
         if (!data.IsSuccess || data.Values.Any() != true) throw new Exception("Failed to get data");
 
@@ -150,7 +150,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
             #region Calculate   
 
-            await Task.Run(() => Indicator.OnNext(inputData, outputBufferCopy, outputSkip: lookbackAmount));
+            await Task.Run(() => Indicator.OnBarBatch(inputData, outputBufferCopy, outputSkip: lookbackAmount));
 
 #if OLD // one value at a time
         for (int i = 0; i < inputData.Length; i++)

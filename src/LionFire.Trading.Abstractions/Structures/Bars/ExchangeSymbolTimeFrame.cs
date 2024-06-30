@@ -4,11 +4,9 @@ using System.Text;
 
 namespace LionFire.Trading;
 
-public interface IPKlineInput : IPInput { }
-
 [GenerateSerializer]
 [Alias("exchange-symbol-timeframe")]
-public record ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol) , IPKlineInput
+public record  ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol), IPKlineInput
 {
     //public string ToGrainId() => $"{Exchange}}";
 

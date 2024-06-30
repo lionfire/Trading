@@ -4,6 +4,18 @@ using System.Reflection;
 
 namespace LionFire.Trading.DataFlow;
 
+//public class SourceInfo
+//{
+//    public required PropertyInfo SourceProperty { get; init; }
+//}
+
+/// <summary>
+/// A source is a potential input to a child's Slot.
+/// For example, a Bot may have a primary and secondary source of bars for two different symbols.
+/// Most indicators will operate on a single source, and will default to the first Source.
+/// Some indicators may operate on multiple sources.
+/// Some indicators may select a particular source by index or by name, via a BarsSource Property of type SlotSource in the Parameters object.
+/// </summary>
 public class SourcesInfo
 {
     #region (static)

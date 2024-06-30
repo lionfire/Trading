@@ -83,6 +83,7 @@
     <Folder Include="Backtesting\Optimization\" />
     <Folder Include="Contexts\Harnesses\" />
     <Folder Include="DataFlow\Processors\" />
+    <Folder Include="DataFlow\Slots\" />
     <Folder Include="Data\TimeSeries\" />
     <Folder Include="HistoricalData\Chunking\" />
     <Folder Include="Symbols\Info\" />

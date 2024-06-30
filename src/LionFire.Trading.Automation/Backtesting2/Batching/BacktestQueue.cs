@@ -53,6 +53,7 @@ public partial class BacktestQueue
     ConcurrentQueue<BacktestBatchesJob> QueuedJobs { get; } = new();
     ConcurrentDictionary<Guid, BacktestBatchesJob> RunningJobs { get; } = new();
     ConcurrentDictionary<Guid, BacktestBatchesJob> FinishedJobs { get; } = new();
+    ConcurrentDictionary<Guid, BacktestBatchesJob> FaultedJobs { get; } = new();
     ConcurrentDictionary<Guid, BacktestBatchesJob> Jobs { get; } = new();
 
     TaskCompletionSource tcs;
@@ -113,19 +114,29 @@ public partial class BacktestQueue
     {
         Task.Run(async () =>
         {
-            var sw = Stopwatch.StartNew();
-            int count = 0;
-            foreach (var batch in job.BacktestBatches)
+            try
             {
-                var batchBacktest = new BacktestBatchTask2(ServiceProvider, batch);
-                await batchBacktest.Run();
-                count++;
+                var sw = Stopwatch.StartNew();
+                int count = 0;
+                foreach (var batch in job.BacktestBatches)
+                {
+                    var batchBacktest = new BacktestBatchTask2(ServiceProvider, batch);
+                    await batchBacktest.Run();
+                    count++;
+                }
+                sw.Stop();
+                job.OnFinished();
+                Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed}");
             }
-            sw.Stop();
-            job.OnFinished();
-            Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed}");
+            catch(Exception ex)
+            {
+                job.OnFaulted(ex);
+                RunningJobs.Remove(job.Guid, out var _);
+                FaultedJobs.AddOrThrow(job.Guid, job);
+            }
         }).ContinueWith(t =>
         {
+
             RunningJobs.Remove(job.Guid, out var _);
             FinishedJobs.AddOrThrow(job.Guid, job);
             TryStartNextJobs();
@@ -133,7 +144,6 @@ public partial class BacktestQueue
     }
 
     #endregion
-
 
     AsyncManualResetEvent readyToBatchMore = new AsyncManualResetEvent();
 

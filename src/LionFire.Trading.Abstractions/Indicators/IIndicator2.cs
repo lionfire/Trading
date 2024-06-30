@@ -49,7 +49,7 @@ public interface IIndicator2<TParameters, TInput, TOutput>
     /// <param name="outputIndex"></param>
     /// <param name="publishOutput"></param>
     /// <returns>Number of values written</returns>
-    void OnNext(IReadOnlyList<TInput> input, TOutput[]? outputBuffer, int outputIndex = 0, int outputSkip = 0);
+    void OnBarBatch(IReadOnlyList<TInput> input, TOutput[]? outputBuffer, int outputIndex = 0, int outputSkip = 0);
 
     #endregion
 

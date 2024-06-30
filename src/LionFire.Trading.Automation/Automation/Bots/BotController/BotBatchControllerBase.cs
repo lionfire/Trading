@@ -18,7 +18,7 @@ namespace LionFire.Trading.Automation;
 /// </summary>
 /// <remarks>
 /// </remarks>
-public abstract class BotControllerBase : IBotController
+public abstract class BotBatchControllerBase : IBotBatchController
 {
     #region Identity
 
@@ -52,7 +52,7 @@ public abstract class BotControllerBase : IBotController
 
     #region Lifecycle
 
-    public BotControllerBase(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters)
+    public BotBatchControllerBase(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters)
     {
         ServiceProvider = serviceProvider;
         PBacktests = parameters;
@@ -78,12 +78,6 @@ public abstract class BotControllerBase : IBotController
     #endregion
 
     #region State
-
-    #region Bots
-
-    public List<IBot2>? Bots { get; private set; }
-
-    #endregion
 
     #region Enumerators
 
@@ -145,14 +139,6 @@ public abstract class BotControllerBase : IBotController
         botWindowProperty.SetValue(bot, inputEnumerator);
     }
 
-    private void ResolveIndicatorInputs(IIndicatorHarnessOptions harnessOptions, IIndicatorParameters parameters)
-    {
-        //Inputs = new[] {
-        //            new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1)
-        //             } // OPTIMIZE - Aspect: HLC
-
-        throw new NotImplementedException();
-    }
 
     // OLD UNUSED
     //protected async void InitBot(IBot2 bot)
@@ -246,6 +232,19 @@ public abstract class BotControllerBase : IBotController
         //public IEnumerable<PropertyInfo> ReverseValuesWindow { get; private init; }
 
         //public (int source, PropertyInfo) Indicators { get; set; }
+    }
+
+    #endregion
+
+    #region Inputs
+
+    private void ResolveIndicatorInputs(IIndicatorHarnessOptions harnessOptions, IIndicatorParameters parameters)
+    {
+        //Inputs = new[] {
+        //            new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1)
+        //             } // OPTIMIZE - Aspect: HLC
+
+        throw new NotImplementedException();
     }
 
     #endregion

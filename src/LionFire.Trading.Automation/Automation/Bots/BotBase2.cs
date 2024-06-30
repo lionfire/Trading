@@ -9,26 +9,63 @@ namespace LionFire.Trading.Automation;
 //{
 //}
 
+public interface IBotContext
+{
+
+}
+
+public class BotContext
+{
+    public IAccount2 Account { get; set; }
+
+}
+
 public abstract class BotBase2<TParameters>
     : IBot2<TParameters>
     where TParameters : PBot2<TParameters>
 {
     //public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
 
+    #region Dependencies
+
+    #endregion
+
+    #region Relationships
+
     #region IBotController
 
-    public IBotController Controller { get => controller; set => controller = value; }
-    private IBotController controller = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    public IBotController? Controller
+    {
+        get => controller;
+        set
+        {
+            if (controller != null && controller != value) throw new AlreadySetException();
+            controller = value;
+        }
+    }
+    private IBotController? controller = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+
+    #endregion
 
     #endregion
 
     #region TParameters
 
-    public TParameters Parameters { get => parameters; set => parameters = value; }
+    public TParameters Parameters
+    {
+        get => parameters;
+        set
+        {
+            parameters = value;
+            OnParametersSet();
+        }
+    }
     private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have PBacktests set
-    object IBot2.Parameters { get => parameters; set=>parameters = (TParameters)value; }
+    object IBot2.Parameters { get => parameters; set => parameters = (TParameters)value; }
 
-
+    protected virtual void OnParametersSet()
+    {
+    }
     #endregion
 
     #region Lifecycle
@@ -43,6 +80,8 @@ public abstract class BotBase2<TParameters>
 
     //    }
     //}
+
+    public virtual void Init() { }
 
     #endregion
 

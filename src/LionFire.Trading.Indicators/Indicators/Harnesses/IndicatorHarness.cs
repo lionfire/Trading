@@ -5,6 +5,47 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
+//public readonly ref struct SlotActivation<TIndicator, TParameters, TInput>
+//{
+//    private readonly TParameters parameters;
+//    private readonly SlotInfo slotInfo;
+//    private readonly TIndicator indicator;
+
+//    public SlotActivation(TParameters Parameters, SlotInfo SlotInfo, TIndicator Indicator)
+//    {
+//        parameters = Parameters;
+//        slotInfo = SlotInfo;
+//        indicator = Indicator;
+//    }
+
+//    public bool TryResolve()
+//    {
+//        if(slotInfo.Kind switch
+//        {
+//            SlotKind.ProcessorValuesWindow => ResolveProcessorValuesWindow(),
+//            SlotKind.InputComponent => ResolveInputComponent(),
+//            _ => throw new NotImplementedException(),
+//        })
+//        {
+//            return true;
+//        }
+//        throw new NotImplementedException();
+//    }
+
+//    private bool ResolveInputComponent()
+//    {
+//        throw new NotImplementedException();
+//    }
+
+//    private bool ResolveProcessorValuesWindow()
+//    {
+
+//    }
+
+//    //public readonly object? Value { get; set; }
+
+//}
+
 public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     : IIndicatorHarness<TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
@@ -27,6 +68,12 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
     #endregion
 
+    #region Reflection
+
+    public SlotsInfo SlotsInfo { get; }
+
+    #endregion
+
     #region Parameters
 
     public OutputComponentOptions OutputExecutionOptions { get; }
@@ -46,19 +93,21 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
         #region Inputs
 
-        List<IHistoricalTimeSeries> inputs = new(options.Inputs.Length);
+        List<IHistoricalTimeSeries> signals = new(options.Signals.Length);
 
         var marketDataResolver = ServiceProvider.GetRequiredService<IMarketDataResolver>();
-        foreach (var input in options.Inputs)
+        foreach (var input in options.Signals)
         {
-            inputs.Add(marketDataResolver.Resolve(input));
+            signals.Add(marketDataResolver.Resolve(input));
         }
-        Inputs = inputs;
+        Inputs = signals;
 
         #endregion
+
+        SlotsInfo = SlotsInfo.GetSlotsInfo(options.IndicatorParameters.GetType());
     }
 
-    public IndicatorHarness(IReadOnlyList<IHistoricalTimeSeries> inputs, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions? outputOptions = null)
+    public IndicatorHarness(IReadOnlyList<IHistoricalTimeSeries> signals, IndicatorHarnessOptions<TParameters> options, OutputComponentOptions? outputOptions = null)
     {
         ServiceProvider = null;
 
@@ -72,7 +121,9 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
         #endregion
 
-        Inputs = inputs;
+        Inputs = signals;
+
+        SlotsInfo = SlotsInfo.GetSlotsInfo(options.IndicatorParameters.GetType());
     }
 
     // REVIEW - New constructor. Deprecate others?
@@ -83,17 +134,15 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     {
         ServiceProvider = null;
 
-        #region DUPE of other ctor
-
         OutputExecutionOptions = outputOptions ?? new();
         OutputComponentOptions.FallbackToDefaults(OutputExecutionOptions);
         Parameters = parameters;
         TimeFrame = timeFrame;
         Indicator = CreateIndicator();
 
-        #endregion
-
         Inputs = inputs;
+
+        SlotsInfo = SlotsInfo.GetSlotsInfo(parameters.GetType());
     }
 
 
@@ -120,8 +169,15 @@ public abstract class IndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
     #region State
 
+    // OLD Idea: probably a bad one
+    ///// <summary>
+    ///// If true, do not omit output when new input is available
+    ///// </summary>
+    //public bool IsPaused { get; set; }
+
     protected TIndicator Indicator { get; init; }
     protected IReadOnlyList<IHistoricalTimeSeries> Inputs { get; init; }
+
 
     #endregion
 

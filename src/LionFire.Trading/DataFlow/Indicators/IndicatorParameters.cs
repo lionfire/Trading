@@ -1,30 +1,7 @@
-﻿using LionFire.Trading;
-using LionFire.Trading.Data;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text;
 
 namespace LionFire.Trading.DataFlow; // TODO: Move to .DataFlow namespace
-
-public readonly record struct SlotSource(IPInput? Input, int ParentInputIndex);
-
-[AttributeUsage(AttributeTargets.Property)]
-public class SourceAttribute : Attribute
-{
-    public int Index { get; }
-
-    public SourceAttribute(int index) { Index = index; }
-    public SourceAttribute(string sourceUri)
-    {
-
-        // SourceUri:
-        // - no scheme (no colon): PropertyName
-        // - scheme "s": 
-        // -  "s": symbol
-        // - "i": indicator
-    }
-}
 
 public abstract class IndicatorParameters<TIndicator> : IIndicatorParameters, IParametersFor<TIndicator>, IPUnboundInput
 {
@@ -53,7 +30,7 @@ public abstract class IndicatorParameters<TIndicator> : IIndicatorParameters, IP
         }
     }
 
-    public virtual IReadOnlyList<InputSlot> Slots => SlotsInfo.GetSlotsInfo(this.GetType()).Slots;
+    public virtual SlotsInfo Slots => SlotsInfo.GetSlotsInfo(this.GetType());
 
     public abstract Type OutputType { get; }
 
@@ -126,6 +103,3 @@ public abstract class IndicatorParameters<TIndicator, TInput, TOutput> : Indicat
     public override Type OutputType => typeof(TOutput);
     public override Type ValueType => typeof(TOutput);
 }
-
-public interface IParametersFor<T> { }
-

@@ -13,4 +13,6 @@ public abstract class PMarketProcessor : IPMarketProcessor
 
     public abstract Type InstanceType { get; }
     public abstract Type MaterializedType { get; }
+
+
 }

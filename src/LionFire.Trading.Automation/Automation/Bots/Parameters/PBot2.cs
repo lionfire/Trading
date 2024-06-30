@@ -45,7 +45,7 @@ public abstract class PBot2<TConcrete> : PMarketProcessor, IPBotHierarchical2
 #endif
         #endregion
     }
-    #endregion
     static Func<PBot2<TConcrete>, IEnumerable<IPBotHierarchical2>> getChildren;
+    #endregion
 
 }

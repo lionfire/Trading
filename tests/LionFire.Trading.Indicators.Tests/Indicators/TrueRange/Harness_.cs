@@ -10,7 +10,7 @@ public class Harness_ : BinanceDataTest
         var h = new BufferingIndicatorHarness<SimpleMovingAverage, PSimpleMovingAverage<double>, double, double>(ServiceProvider, new(3)
         {
             TimeFrame = TimeFrame.m1,
-            Inputs = new[] { new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close) }
+            Signals = new[] { new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close) }
         });
 
         var result = await h.TryGetReverseValues(

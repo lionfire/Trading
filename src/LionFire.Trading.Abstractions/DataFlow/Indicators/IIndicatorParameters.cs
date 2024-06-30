@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.IO;
+﻿using LionFire.Trading.DataFlow;
+using LionFire.Trading.IO;
 
 namespace LionFire.Trading;
 
@@ -8,9 +9,9 @@ namespace LionFire.Trading;
 
 public interface IIndicatorParameters : IPInput
 {
-    IReadOnlyList<InputSlot> Slots { get; }
+    SlotsInfo Slots { get; }
 
-    static abstract IReadOnlyList<OutputSlot> Outputs(); // Should this be Signal instead of Slot?
+    //static abstract IReadOnlyList<OutputSlot> Outputs(); // Should this be Signal instead of Slot?
 
     Type IndicatorType { get; }
 

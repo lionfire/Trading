@@ -28,7 +28,7 @@ namespace LionFire.Trading.Automation;
 /// - inputs (such as indicators, even if they have different lookback requirements)
 /// </summary>
 public class BacktestBatchTask2
-    : BotControllerBase
+    : BotBatchControllerBase
     , IBacktestBatch
 {
     #region Identity
@@ -36,15 +36,7 @@ public class BacktestBatchTask2
     public override BotExecutionMode BotExecutionMode => BotExecutionMode.Backtest;
 
     #endregion
-
-    #region Input
-
-    #endregion
-
-    #region Output
-
-    #endregion
-
+    
     #region Parameters
 
     public BacktestExecutionOptions? ExecutionOptions { get; }
@@ -66,43 +58,44 @@ public class BacktestBatchTask2
         {
             ExecutionOptions = executionOptions ?? ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
             DateChunker = dateChunker ?? ServiceProvider.GetRequiredService<DateChunker>();
-            Init();
+
+            Chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, shortOnly: ExecutionOptions.ShortChunks);
+            chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, ExecutionOptions.ShortChunks);
+            chunkEnumerator = chunks.GetEnumerator();
+
+            foreach (var p in PBacktests)
+            {
+                CreateBot(p);
+            }
+
+            InitInputs();
         }
         catch (Exception ex)
         {
-            tcs.SetException(ex);
+            runTaskCompletionSource.SetException(ex);
             throw;
         }
     }
 
-    private void Init()
+    private void CreateBot(IPBacktestTask2 p)
     {
-        Chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, shortOnly: ExecutionOptions.ShortChunks);
-        chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, ExecutionOptions.ShortChunks);
-        chunkEnumerator = chunks.GetEnumerator();
+        var bot = (IBot2)(Activator.CreateInstance(p.Bot.InstanceType) 
+            ?? throw new Exception("Failed to create bot: " + p.Bot.InstanceType));
+        bot.Parameters = p.Bot;
 
-        foreach (var p in PBacktests)
-        {
-            var bot = (IBot2)(Activator.CreateInstance(p.Bot.InstanceType) ?? throw new Exception("Failed to create bot: " + p.Bot.InstanceType));
-            //InitBot(bot);
-            bot.Parameters = p.Bot;
-            backtests.Add(new BacktestState(p, bot));
-        }
-
-        InitInputs();
+        var controller = new BotController(this, bot);
+        bot.Controller = controller;
+        bot.Init();
+        backtests.Add(new BacktestState(p, bot, controller));
     }
 
     #endregion
 
     #region State Machine
 
-    //public CancellationToken Terminated => cancelledSource?.Token ?? CancellationToken.None;
     readonly CancellationTokenSource cancelledSource = new();
 
-    //public Task RunTask => resetEvent.WaitOneAsync();
-    public Task RunTask => tcs == null ? Task.CompletedTask : tcs.Task;
-
-    //ManualResetEvent resetEvent = new(false);
+    public Task RunTask => runTaskCompletionSource == null ? Task.CompletedTask : runTaskCompletionSource.Task;
 
     IEnumerable<((DateTimeOffset start, DateTimeOffset endExclusive) range, bool isLong)> chunks;
     IEnumerator<((DateTimeOffset start, DateTimeOffset endExclusive) range, bool isLong)> chunkEnumerator;
@@ -113,18 +106,7 @@ public class BacktestBatchTask2
     {
         BacktestDate = Start;
         if (backtests.Count == 0) throw new InvalidOperationException("No backtests");
-
-        Task.Run(async () =>
-        {
-            try
-            {
-                await (TicksEnabled ? RunTicks() : RunBars()).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                tcs.SetException(ex);
-            }
-        }, cancelledSource.Token).FireAndForget();
+        Run();
 
         return Task.CompletedTask;
     }
@@ -132,7 +114,7 @@ public class BacktestBatchTask2
     public async Task Cancel(CancellationToken cancellationToken = default)
     {
         cancelledSource.Cancel();
-        await tcs.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+        await runTaskCompletionSource.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
     //public async Task StopAsync(CancellationToken cancellationToken = default)
@@ -223,7 +205,7 @@ public class BacktestBatchTask2
         public InputEnumeratorBase? Enumerator { get; set; }
     }
 
-    List<InputEnumeratorBase> AllInputEnumerators2 { get; set; }
+    List<InputEnumeratorBase> AllInputEnumerators2 { get; set; } = default!; // Set by ctor
 
     private readonly record struct InstanceInputInfo(IPInput PInput, TypeInputInfo TypeInputInfo);
 
@@ -231,8 +213,6 @@ public class BacktestBatchTask2
     {
         bool TryFulfill(InputSlot inputSlot);
     }
- 
-   
 
     /// <summary>
     /// Gather all inputs including derived ones for the inputs
@@ -343,7 +323,7 @@ public class BacktestBatchTask2
     IEnumerable<IBot2> bots => backtests.Select(s => s.Bot);
     List<BacktestState> backtests = new();
 
-    private record struct BacktestState(IPBacktestTask2 PBacktest, IBot2 Bot)
+    private record struct BacktestState(IPBacktestTask2 PBacktest, IBot2 Bot, IBotController Controller)
     {
         internal List<InstanceInputInfo> InstanceInputInfos => instanceInputInfos;
         internal List<InstanceInputInfo> instanceInputInfos = new();
@@ -372,11 +352,66 @@ public class BacktestBatchTask2
 
     #endregion
 
-    #region Loop
+
+    #region (Private) Run
+
+    private void Run()
+    {
+        Task.Run(async () =>
+        {
+            try
+            {
+                await (TicksEnabled ? RunTicks() : RunBars()).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                runTaskCompletionSource.SetException(ex);
+            }
+        }, cancelledSource.Token).FireAndForget();
+
+        #region (local)
+
+        async Task RunBars()
+        {
+            TimeSpan timeSpan = TimeFrame.TimeSpan;
+
+            while (BacktestDate < EndExclusive
+                && (false == cancelledSource?.IsCancellationRequested)
+                )
+            {
+                await AdvanceInputsByOneBar().ConfigureAwait(false);
+                await NextBar().ConfigureAwait(false);
+                foreach (var b in backtests)
+                {
+                    b.Bot.OnBar();
+                }
+                BacktestDate += timeSpan;
+            }
+            runTaskCompletionSource.SetResult();
+            //await StopAsync().ConfigureAwait(false);
+        }
+
+        async Task RunTicks()
+        {
+            while (BacktestDate < EndExclusive && (false == cancelledSource?.IsCancellationRequested)
+                )
+            {
+                await NextTick();
+                throw new NotImplementedException("advance one tick");
+                //BacktestDate += IndicatorTimeFrame.TimeSpan;
+            }
+
+        }
+
+        #endregion
+    }
+
+    #endregion
+
+    #region Inputs
 
     DateTimeOffset chunkStart;
     DateTimeOffset chunkEndExclusive;
-
 
     private async Task AdvanceInputChunk()
     {
@@ -418,44 +453,11 @@ public class BacktestBatchTask2
         //}
     }
 
-    private async Task RunBars()
-    {
-        TimeSpan timeSpan = TimeFrame.TimeSpan;
-
-        while (BacktestDate < EndExclusive
-            && (false == cancelledSource?.IsCancellationRequested)
-            )
-        {
-            await AdvanceInputsByOneBar().ConfigureAwait(false);
-            await NextBar().ConfigureAwait(false);
-            foreach (var b in backtests)
-            {
-                b.Bot.OnBar();
-            }
-            BacktestDate += timeSpan;
-        }
-        tcs.SetResult();
-        //await StopAsync().ConfigureAwait(false);
-    }
-
-    readonly TaskCompletionSource tcs = new();
-    private async Task RunTicks()
-    {
-        while (BacktestDate < EndExclusive && (false == cancelledSource?.IsCancellationRequested)
-            )
-        {
-            await NextTick();
-            throw new NotImplementedException("advance one tick");
-            //BacktestDate += IndicatorTimeFrame.TimeSpan;
-        }
-
-    }
-
     #endregion
 
     #region State
 
-    public BacktestAccount2? BacktestAccount { get; private set; }
+    readonly TaskCompletionSource runTaskCompletionSource = new();
     public DateTimeOffset BacktestDate { get; protected set; } = DateTimeOffset.UtcNow;
 
     #endregion

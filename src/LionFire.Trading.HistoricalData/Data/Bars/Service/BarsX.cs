@@ -6,9 +6,9 @@ namespace LionFire.Trading;
 
 public static class BarsX
 {
-    public static async Task<IEnumerable<IBarsResult>> ChunkedBars(this IChunkedBars @this, SymbolBarsRange r, QueryOptions? options = null)
+    public static async Task<IEnumerable<IBarsResult<IKline>>> ChunkedBars(this IChunkedBars @this, SymbolBarsRange r, QueryOptions? options = null)
     {
-        var resultList = new List<IBarsResult>();
+        var resultList = new List<IBarsResult<IKline>>();
 
         foreach (var c in @this.HistoricalDataChunkRangeProvider.GetBarChunks(r))
         {
@@ -18,11 +18,11 @@ public static class BarsX
         }
         return resultList;
     }
-    public static async Task<IBarsResult> BarResults(this IChunkedBars bars, SymbolBarsRange barsRangeReference, QueryOptions? options = null)
+    public static async Task<IBarsResult<IKline>> BarResults(this IChunkedBars bars, SymbolBarsRange barsRangeReference, QueryOptions? options = null)
     {
         return (await bars.ChunkedBars(barsRangeReference, options)).AggregateResults();
     }
-    public static IBarsResult AggregateResults(this IEnumerable<IBarsResult> barsResults)
+    public static IBarsResult<TValue> AggregateResults<TValue>(this IEnumerable<IBarsResult<TValue>> barsResults)
     {
         throw new NotImplementedException();
         //return barsResults.SelectMany(r => r.Bars);
@@ -31,19 +31,27 @@ public static class BarsX
     {
         return (await bars.ChunkedBars(barsRangeReference, options)).AggregateBars(barsRangeReference.Start, barsRangeReference.EndExclusive);
     }
-    public static IEnumerable<IKline> AggregateBars(this IEnumerable<IBarsResult> barsResults, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
+    public static IEnumerable<TValue> AggregateBars<TValue>(this IEnumerable<IBarsResult<TValue>> barsResults, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
         var result = barsResults.SelectMany(r => r.Bars);
 
         // OPTIMIZE: use math to calculate index to skip:
-        if (start.HasValue)
+        if (typeof(TValue).IsAssignableTo(typeof(IKlineWithOpenTime)))
         {
-            result = result.SkipWhile(b => b.OpenTime < start.Value.UtcDateTime);
+            if (start.HasValue)
+            {
+                result = result.Cast<IKlineWithOpenTime>().SkipWhile(b => b.OpenTime < start.Value.UtcDateTime).Cast<TValue>();
+            }
+            if (endExclusive.HasValue)
+            {
+                result = result.Cast<IKlineWithOpenTime>().TakeWhile(b => b.OpenTime < endExclusive.Value.UtcDateTime).Cast<TValue>(); ;
+            }
         }
-        if(endExclusive.HasValue)
+        else if (start.HasValue || endExclusive.HasValue)
         {
-            result = result.TakeWhile(b => b.OpenTime < endExclusive.Value.UtcDateTime);
+            throw new NotSupportedException($"{nameof(start)} and {nameof(endExclusive)} not supported with this type of Kline");
         }
+
         return result;
     }
 }

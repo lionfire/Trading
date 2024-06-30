@@ -1,22 +1,14 @@
-﻿using LionFire.Trading.ValueWindows;
+﻿using LionFire.Structures;
+using LionFire.Trading.ValueWindows;
 using QuantConnect.Data.Market;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
-#error NEXT: 
-// Consider unifying Indicators with Bots somehow, by having a common resolution mechanism, while still keeping the possibility of Indicators not having to own their own sources.
-// Maybe Indicators are exactly like bots, and a Bot harness (BotsController) executes them as well
-
-
-#error NEXT: Maybe?
-public interface ISlotsInfo
-{
-    static IReadOnlyList<InputSlot> InputSlots { get; }
-}
 
 // Input: IKline aspects: High, Low, Close
 // TODO: Use HLC<TOutput> instead of IKline as the TInput
-public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<TOutput>, IKline, TOutput>
+public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTrueRange<TPrice, TOutput>, HLC<TPrice>, TOutput>
+     
 {
     #region Identity
 
@@ -49,6 +41,9 @@ public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<T
     #region Inputs
 
     public HLCReference<TOutput>? Bars { get; set; }
+    public SlotSource BarsSource { get; set; }  // Optional: will fall back to first input if not set or this property doesn't exist
+
+    //public IReadOnlyList<SlotSource> ATRSources { get; set; }  // Hypothetical, for other situations // OLD - not sure what this was for
 
     #endregion
 
@@ -58,11 +53,11 @@ public class PAverageTrueRange<TOutput> : IndicatorParameters<AverageTrueRange<T
 }
 
 // TODO: Use HLC<TOutput> instead of IKline as the TInput
-public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTrueRange<TOutput>, global::QuantConnect.Indicators.AverageTrueRange, PAverageTrueRange<TOutput>, IKline, TOutput>, IIndicator2<AverageTrueRange<TOutput>, PAverageTrueRange<TOutput>, IKline, TOutput>
+public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<AverageTrueRange<TPrice, TOutput>, global::QuantConnect.Indicators.AverageTrueRange, PAverageTrueRange<TPrice, TOutput>, HLC<TPrice>, TOutput>, IIndicator2<AverageTrueRange<TPrice, TOutput>, PAverageTrueRange<TPrice, TOutput>, HLC<TPrice>, TOutput>
 {
     #region Static
 
-    
+
     //public static List<InputSlot> InputSlots()
     //    => [new () {
     //                Name = "Source",
@@ -75,7 +70,7 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
                 }];
 
 
-    public static List<OutputSlot> Outputs(PAverageTrueRange<TOutput> p)
+    public static List<OutputSlot> Outputs(PAverageTrueRange<TPrice, TOutput> p)
             => [new () {
                      Name = "Average True Range",
                     ValueType = typeof(TOutput),
@@ -107,7 +102,7 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
 
     #region Parameters
 
-    public readonly PAverageTrueRange<TOutput> Parameters;
+    public readonly PAverageTrueRange<TPrice, TOutput> Parameters;
 
     #region Derived
 
@@ -119,19 +114,15 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
 
     #region Lifecycle
 
-    public static AverageTrueRange<TOutput> Create(PAverageTrueRange<TOutput> p) => new AverageTrueRange<TOutput>(p);
-    public AverageTrueRange(PAverageTrueRange<TOutput> parameters) : base(new global::QuantConnect.Indicators.AverageTrueRange(parameters.Period, parameters.MovingAverageType))
+    public static AverageTrueRange<TPrice, TOutput> Create(PAverageTrueRange<TPrice, TOutput> p) => new AverageTrueRange<TPrice, TOutput>(p);
+    public AverageTrueRange(PAverageTrueRange<TPrice, TOutput> parameters) : base(new global::QuantConnect.Indicators.AverageTrueRange(parameters.Period, parameters.MovingAverageType))
     {
         Parameters = parameters;
     }
 
     #endregion
 
-    //#region Inputs (REVIEW - if this was like a bot)
 
-    //public IReadOnlyValuesWindow<IKline> Bars { get; set; }
-    
-    //#endregion
 
     #region State
 
@@ -139,27 +130,65 @@ public class AverageTrueRange<TOutput> : QuantConnectIndicatorWrapper<AverageTru
 
     #endregion
 
+
+#if truex
+    #region Alternate style (bot style)
+
+    #region Inputs (REVIEW - if this was like a bot)
+
+    public IReadOnlyValuesWindow<IKline> Bars1 { get; set; }
+    public IReadOnlyValuesWindow<IKline> Bars2 { get; set; }
+
+    #endregion
+
+    TOutput[]? output;
+    int outputIndex = 0;
+    int outputSkip = 0;
+
     #region Event Handling
 
+    public override void OnBar()
+    {
+        var x = Bars2[0] - Bars1[0];
+    }
+
+    ProcessorMode Mode => ProcessorMode.Bar;
+
+    #endregion
+    
+    #endregion
+#else 
+    ProcessorMode Mode => ProcessorMode.BatchInput;
+#endif
+    public enum ProcessorMode
+    {
+        Unspecified = 0,
+        BatchInput = 1 << 0,
+        Bar = 1 << 1,
+        Tick = 1 << 2,
+    }
+
+    #region Event Handling
 
     // Process a Batch of Inputs
-    public override void OnNext(IReadOnlyList<IKline> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
+    public override void OnBarBatch(IReadOnlyList<HLC<TPrice>> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
     {
 
         DateTime endTime = new DateTime(2000, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
         // Stub time and period values.  QuantConnect checks the symbol ID and increasing end times.
         TimeSpan period = new TimeSpan(0, 1, 0);
 
+
         foreach (var input in inputs)
         {
             WrappedIndicator.Update(new TradeBar(
-                time: endTime, 
-                symbol: QuantConnect.Symbol.None, 
-                open: default /* UNUSED for ATR */, 
-                input.HighPrice, 
-                input.LowPrice, 
-                input.ClosePrice, 
-                volume: default, 
+                time: endTime,
+                symbol: QuantConnect.Symbol.None,
+                open: default /* UNUSED for ATR */,
+                high: Convert.ToDecimal(input.High),
+                low: Convert.ToDecimal(input.Low),
+                close: Convert.ToDecimal(input.Close),
+                volume: default,
                 period: period));
 
             endTime += period;

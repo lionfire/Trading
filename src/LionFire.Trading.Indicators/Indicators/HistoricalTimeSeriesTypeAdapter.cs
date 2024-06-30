@@ -13,13 +13,29 @@ public class HistoricalTimeSeriesTypeAdapter<TInput, TOutput> : IHistoricalTimeS
     {
         Input = input;
 
+
         if (typeof(TInput) == typeof(decimal) && typeof(TOutput) == typeof(double))
         {
             Converter = i => (TOutput)(object)decimal.ToDouble((decimal)(object)i!);
         }
         else
         {
-            Converter = i => (TOutput)(object)i!;
+            if (typeof(TInput).IsAssignableTo(typeof(IConvertible)))
+            {
+                if (typeof(TOutput) == typeof(double))
+                {
+                    Converter = i => (TOutput)(object)Convert.ToDouble((IConvertible)(object)i!);
+                }
+                else if (typeof(TOutput) == typeof(decimal))
+                {
+                    Converter = i => (TOutput)(object)Convert.ToDecimal((IConvertible)(object)i!);
+                }
+                else
+                {
+                    Converter = i => (TOutput)(object)i!;
+                    //throw new NotImplementedException();
+                }
+            }
         }
     }
     //public static HistoricalTimeSeriesTypeAdapter<InputSlot, TOutput> Create(IHistoricalTimeSeries input)

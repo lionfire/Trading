@@ -238,7 +238,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         return listResult != null && listResult.Count > 0;
     }
 
-    public async Task<List<IBarsResult>?> Execute2(RetrieveHistoricalDataParameters input)
+    public async Task<List<IBarsResult<IKline>>?> Execute2(RetrieveHistoricalDataParameters input)
     {
         #region Parameter Validation
 
@@ -269,7 +269,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
         bool retrievedSomething = false;
 
-        List<IBarsResult>? result = null;
+        List<IBarsResult<IKline>>? result = null;
         bool reverse = true;
         bool isLong;
         var NextDate = reverse ? (barsRangeReference.EndExclusive - TimeSpan.FromMilliseconds(1)) : barsRangeReference.Start;
@@ -359,7 +359,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         return result;
     }
 
-    private async Task<(IBarsResult barsResult, KlineArrayInfo info)> RetrieveForDate(DateTimeOffset date)
+    private async Task<(IBarsResult<IKline> barsResult, KlineArrayInfo info)> RetrieveForDate(DateTimeOffset date)
     {
         if (Input.VerboseFlag) { DumpParameters(); }
         ValidateAndParseOptions();
@@ -391,7 +391,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         var serializer = new SerializerBuilder().ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitDefaults).Build();
         //var serializer = new YamlDotNet.Serialization.Serializer();
 
-        IBarsResult barsResult;
+        IBarsResult<IKline> barsResult;
 
         var reference = new ExchangeSymbolTimeFrame(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame);
 

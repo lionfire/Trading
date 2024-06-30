@@ -46,7 +46,7 @@ public class BarsFileSource : IChunkedBars, IListableBarsSource
 
     #region Try Load Chunk
 
-    public async Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = false, QueryOptions? options = null)
+    public async Task<IBarsResult<IKline>?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = false, QueryOptions? options = null)
     {
         if (!HistoricalDataChunkRangeProvider.IsValidShortRange(range.TimeFrame, range.Start, range.EndExclusive)) throw new ArgumentException($"Invalid short range: {range}");
 
@@ -67,7 +67,7 @@ public class BarsFileSource : IChunkedBars, IListableBarsSource
         return chunk;
     }
 
-    public Task<IBarsResult?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null)
+    public Task<IBarsResult<IKline>?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null)
     {
         if (!HistoricalDataChunkRangeProvider.IsValidLongRange(range.TimeFrame, range.Start, range.EndExclusive)) throw new ArgumentException($"Invalid long range: {range}");
         return TryLoadChunk(range);
@@ -75,12 +75,12 @@ public class BarsFileSource : IChunkedBars, IListableBarsSource
 
     public static bool DeleteExceptionFiles = true;
 
-    private async Task<IBarsResult?> TryLoadChunk(SymbolBarsRange range)
+    private async Task<IBarsResult<IKline>?> TryLoadChunk(SymbolBarsRange range)
     {
         var path = HistoricalDataPaths.GetExistingPath(range);
         if (path == null) return null;
 
-        IBarsResult? result = await Task.Run(async () =>
+        IBarsResult<IKline>? result = await Task.Run(async () =>
         {
             try
             {

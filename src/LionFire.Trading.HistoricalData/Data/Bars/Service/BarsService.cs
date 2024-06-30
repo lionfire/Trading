@@ -71,7 +71,7 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
 
     #region IChunkedBars
 
-    public async Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true, QueryOptions? options = null)
+    public async Task<IBarsResult<IKline>?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true, QueryOptions? options = null)
     {
         options ??= QueryOptions.Default;
 
@@ -92,9 +92,9 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
         return chunk;
     }
 
-    public Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true) => ((IChunkedBars)BarsFileSource).GetShortChunk(range, fallbackToLongChunk);
+    public Task<IBarsResult<IKline>?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true) => ((IChunkedBars)BarsFileSource).GetShortChunk(range, fallbackToLongChunk);
 
-    public async Task<IBarsResult?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null)
+    public async Task<IBarsResult<IKline>?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null)
     {
         options ??= QueryOptions.Default;
 

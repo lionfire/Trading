@@ -1,6 +1,8 @@
 ﻿using LionFire.Trading.HistoricalData.Serialization;
 using LionFire.Trading.Data;
 using Microsoft.CodeAnalysis.Operations;
+using Microsoft.Extensions.Options;
+using System;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
@@ -11,16 +13,54 @@ public interface IChunkedBars : IBars
     DateChunker HistoricalDataChunkRangeProvider { get; }
     //Task<IEnumerable<IBarsResult>> ChunkedBars(SymbolBarsRange barsRangeReference, QueryOptions? options = null);
     //    //Task<IEnumerable<BarsChunkInfo>> LocalBarsAvailable(SymbolReference symbolReference); // TODO?
-    Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null);
+    Task<IBarsResult<IKline>?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null);
 
-    Task<IBarsResult?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null);
+    Task<IBarsResult<IKline>?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null);
+}
+
+public static class BarsConversion
+{
+    public static IBarsResult<TDestination> Convert<TDestination>(IBarsResult<IKline> barsResult)
+    {
+        if (typeof(TDestination) == typeof(HLC<double>))
+        {
+            return (IBarsResult<TDestination>)(object)(new BarsResult<HLC<double>>
+            {
+                TimeFrame = barsResult.TimeFrame,
+                Start = barsResult.Start,
+                EndExclusive = barsResult.EndExclusive,
+                Values = (IReadOnlyList<HLC<double>>)(object)barsResult.Values.Select(k => new HLC<double>
+                {
+                    High = (double)k.HighPrice,
+                    Low = (double)k.LowPrice,
+                    Close = (double)k.ClosePrice
+                }).ToList(), // ALLOC
+            });
+        }
+        else
+        {
+            throw new NotImplementedException();
+        }
+    }
 }
 
 // See also: BarsX for methods that are more useful than the ones on this interface.
 public interface IBars : ITradingDataSource
 {
 
-    async Task<IBarsResult> Get(SymbolBarsRange range, QueryOptions? options = null)
+    async Task<IBarsResult<TValue>> Get<TValue>(SymbolBarsRange range, QueryOptions? options = null)
+    {
+        if (typeof(TValue) == typeof(IKline))
+        {
+            return (IBarsResult<TValue>)(await Get(range, options));
+        }
+        else
+        {
+            return BarsConversion.Convert<TValue>(await Get(range, options));
+        }
+    }
+
+    async Task<IBarsResult<IKline>> Get(SymbolBarsRange range, QueryOptions? options = null)
     {
         if (options != null)
         {

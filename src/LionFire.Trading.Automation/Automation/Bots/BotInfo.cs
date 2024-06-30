@@ -23,8 +23,8 @@ public static class BotInfos
     {
         return dict.GetOrAdd(parameterType, t =>
         {
-        
-            if(!parameterType.IsAssignableTo(typeof(IPBot2))) throw new ArgumentException($"parameterType must be assignable to {typeof(IPBot2).FullName}.  parameterType: {parameterType.FullName}");
+
+            if (!parameterType.IsAssignableTo(typeof(IPBot2))) throw new ArgumentException($"parameterType must be assignable to {typeof(IPBot2).FullName}.  parameterType: {parameterType.FullName}");
 
             var result = new BotInfo();
             result.TypeInputInfos = new();
@@ -42,6 +42,30 @@ public static class BotInfos
 
                 result.TypeInputInfos.Add(new TypeInputInfo(parameterProperty, pi));
             }
+            return result;
+        });
+    }
+}
+
+public class PBotInfo
+{
+    public PropertyInfo? Bars { get; set; }
+
+}
+
+public static class PBotInfos
+{
+    static ConcurrentDictionary<Type, PBotInfo> dict = new();
+    public static PBotInfo Get(Type parameterType)
+    {
+        return dict.GetOrAdd(parameterType, t =>
+        {
+            if (!parameterType.IsAssignableTo(typeof(IPBot2))) throw new ArgumentException($"parameterType must be assignable to {typeof(IPBot2).FullName}.  parameterType: {parameterType.FullName}");
+
+            var result = new PBotInfo();
+
+            result.Bars = parameterType.GetProperty("Bars");
+
             return result;
         });
     }

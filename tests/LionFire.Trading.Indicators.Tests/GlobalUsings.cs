@@ -4,6 +4,7 @@ global using System.Linq;
 global using System.Text;
 global using System.Threading.Tasks;
 global using LionFire.Trading;
+global using LionFire.Structures;
 global using LionFire.Trading.Indicators;
 global using LionFire.Trading.Indicators.Harnesses;
 global using Xunit;

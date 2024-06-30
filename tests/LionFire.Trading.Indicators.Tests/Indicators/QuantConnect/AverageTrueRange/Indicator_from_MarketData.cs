@@ -15,7 +15,7 @@ public class Indicator_from_MarketData : BinanceDataTest
             })
             {
                 TimeFrame = TimeFrame.h1,
-                Inputs = new[] { 
+                Signals = new[] { 
                     new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) 
                 } // OPTIMIZE - Aspect: HLC
             });

@@ -7,7 +7,9 @@ public interface IBot2
     object Parameters { get; set; }
    
 
-    IBotController Controller { get; set; }
+    IBotController? Controller { get; set; }
+
+    void Init() { }
     void OnBar();
 }
 public interface IBot2<TParameters> : IBot2

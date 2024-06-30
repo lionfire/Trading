@@ -7,7 +7,13 @@ public interface IPTimeFrameBot2 : IPBot2, IPTimeFrameMarketProcessor
 
 public abstract class PTimeFrameBot2<TConcrete> : PBot2<TConcrete>, IPTimeFrameBot2
 {
-    public required TimeFrame TimeFrame { get; init; }
+    //public PTimeFrameBot2() { }
+    public PTimeFrameBot2(TimeFrame timeFrame)
+    {
+        TimeFrame = timeFrame;
+    }
+
+    public TimeFrame TimeFrame { get; init; }
 
 #if ENH
     /// <summary>

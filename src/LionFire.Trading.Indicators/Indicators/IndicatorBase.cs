@@ -1,5 +1,6 @@
 ﻿using Baseline;
 using LionFire.Trading.Data;
+using LionFire.Trading.ValueWindows;
 using System.Diagnostics;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
@@ -8,14 +9,62 @@ namespace LionFire.Trading.Indicators;
 
 // REVIEW - make more generic to a BatchMarketProcessor or BatchProcessor?
 
-//#error NEXT: Make indicators optionally implement IHTS<TOutput>?
+//public interface IBarProcessor
+//{
+//    void OnBar();
+//}
+public interface ITickProcessor
+{
+    void OnTick();
+}
+
+public abstract class BarProcessor<TInput>
+{
+
+    protected virtual void OnBar() => throw new NotImplementedException();
+}
+
+public abstract class BarBatchProcessor<TInput, TOutput> : BarProcessor<TInput>
+{
+    // ENH: consider replacing parameters with a struct for better DX
+    public virtual void OnBarBatch(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
+    {
+        for (int i = 0; i < inputs.Count; i++)
+        {
+            CurrentInput = inputs[i];
+            OnBar();
+            if (output != null)
+            {
+                if (!currentOutputWasSet) throw new InvalidOperationException($"{nameof(OnBar)} failed to assign a value to CurrentOutput");
+                output[outputIndex++] = CurrentOutput;
+                currentOutputWasSet = false;
+            }
+        }
+    }
+
+    TInput CurrentInput = default!;
+
+    /// <summary>
+    /// Value is only valid if currentOutputWasSet is true
+    /// </summary>
+    protected TOutput CurrentOutput
+    {
+        private get => currentOutput;
+        set
+        {
+            currentOutput = value;
+            currentOutputWasSet = true;
+        }
+    }
+    TOutput currentOutput = default!;
+    private bool currentOutputWasSet;
+}
 
 public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
-    : IObservable<IReadOnlyList<TOutput>>
-    , IObserver<IReadOnlyList<TInput>>
-    , IObserver<TInput>
-    //, IHistoricalTimeSeries<TOutput>
-
+    : BarBatchProcessor<TInput, TOutput>
+    //, IObservable<IReadOnlyList<TOutput>>
+    //, IObserver<IReadOnlyList<TInput>>
+    //, IObserver<TInput>
     where TConcrete : IndicatorBase<TConcrete, TParameters, TInput, TOutput>, IIndicator2<TConcrete, TParameters, TInput, TOutput>
 {
 
@@ -60,11 +109,6 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     #region State
 
-    /// <summary>
-    /// If true, do not omit output when new input is available
-    /// </summary>
-    public bool IsPaused { get; set; }
-
     protected Subject<IReadOnlyList<TOutput>>? subject;
 
     //public uint InputsNeededToBecomeReady { get; set; }
@@ -96,7 +140,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
         {
             output = new TOutput[inputs.Count];
         }
-         OnNext(inputs, output, 0, 0);
+        OnBarBatch(inputs, output, 0, 0);
 
         // OLD
         //foreach (var input in inputs)
@@ -130,8 +174,7 @@ public abstract class IndicatorBase<TConcrete, TParameters, TInput, TOutput>
 
     public static void ThrowUnreachable() => throw new UnreachableCodeException();
 
-    // ENH: consider replacing parameters with a struct for better DX
-    public abstract void OnNext(IReadOnlyList<TInput> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0);
+
 
     public virtual void OnCompleted() { }
 

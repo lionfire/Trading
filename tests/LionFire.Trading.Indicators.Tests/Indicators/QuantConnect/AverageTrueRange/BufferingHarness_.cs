@@ -19,7 +19,7 @@ public class BufferingHarness_ : BinanceDataTest
         })
         {
             TimeFrame = TimeFrame.h1,
-            Inputs = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC
+            Signals = new[] { new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1) } // OPTIMIZE - Aspect: HLC
         });
 
         var result = await h.TryGetReverseValues(
