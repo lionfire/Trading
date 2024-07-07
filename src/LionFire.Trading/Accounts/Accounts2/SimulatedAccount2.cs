@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using DynamicData;
+using System.Numerics;
 using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Automation;
@@ -16,6 +17,8 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
     public bool IsSimulation => true;
 
     public bool IsRealMoney => false;
+
+    public virtual bool IsHedging => false;
 
     #endregion
 
@@ -36,6 +39,9 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     #region State
 
+    public IEnumerable<IPosition> Positions => positions.Items;
+    protected SourceCache<IPosition, int> positions = new(p => p.Id);
+
     //public AccountState<TPrecision> State => stateJournal.Value;
     // How to do state? Event sourcing, or snapshots?
 
@@ -52,6 +58,15 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     #endregion
 
+    #region Methods
+
+    public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, double positionSize);
+    public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, double positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
+    public abstract ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize);
+    public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, decimal positionSize);
+    public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, decimal positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
+
+    #endregion
 }
 
 public class AccountStateJournal<TPrecision>

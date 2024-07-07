@@ -1,7 +1,7 @@
 ﻿namespace LionFire.Trading.Automation;
 
-public abstract class PStandardBot2<TParameters> : PBot2<TParameters>
-    where TParameters : PBot2<TParameters>
+public abstract class PStandardBot2<TConcrete> : PBot2<TConcrete>
+    where TConcrete : PStandardBot2<TConcrete>
 {
     public LongAndShort Direction { get; set; }
 
@@ -62,6 +62,16 @@ public abstract class StandardBot2<TParameters> : BasicBot2<TParameters>
         Symbol = PrimaryExchangeSymbol.Symbol ?? throw new InvalidOperationException($"Failed to resolve {nameof(Symbol)}"); ;
     }
 
+
+    public virtual void TryOpen(double? amount = null)
+    {
+        // TODO: Don't open if already too many positions open
+        OpenPositionPortion(amount);
+    }
+    public virtual void TryClose(double? amount = null)
+    {
+        ClosePositionPortion(amount);
+    }
     public virtual ValueTask<IOrderResult> OpenPositionPortion(double? amount = null)
     {
         return PrimaryAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value);
@@ -71,12 +81,13 @@ public abstract class StandardBot2<TParameters> : BasicBot2<TParameters>
     {
         if (Parameters.CloseAllAtOnce)
         {
-            PrimaryAccount.ClosePositionsForSymbol(Symbol, )
+            //PrimaryAccount.ClosePositionsForSymbol(Symbol, )
             throw new NotImplementedException();
 
         }
         else
         {
+
             throw new NotImplementedException();
 
         }

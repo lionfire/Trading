@@ -83,7 +83,7 @@ public class BacktestBatchTask2
             ?? throw new Exception("Failed to create bot: " + p.Bot.InstanceType));
         bot.Parameters = p.Bot;
 
-        var controller = new BotController(this, bot);
+        var controller = new BacktestBotController(this, bot);
         bot.Controller = controller;
         bot.Init();
         backtests.Add(new BacktestState(p, bot, controller));

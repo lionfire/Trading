@@ -8,8 +8,10 @@ public interface IPSymbolBarsBot2
 {
     ExchangeSymbol ExchangeSymbol { get; }
 }
-public abstract class PSymbolBarsBot2<TConcrete> : PTimeFrameBot2<TConcrete>,
-    IPSymbolBarsBot2
+public abstract class PSymbolBarsBot2<TConcrete> 
+    : PTimeFrameBot2<TConcrete>
+    , IPSymbolBarsBot2
+    where TConcrete : PSymbolBarsBot2<TConcrete>
 {
     public PSymbolBarsBot2(ExchangeSymbol e, TimeFrame timeFrame) : base(timeFrame)
     {

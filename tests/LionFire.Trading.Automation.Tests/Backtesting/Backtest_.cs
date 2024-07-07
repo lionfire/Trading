@@ -138,13 +138,17 @@ public class Backtest_Batch_ : BinanceDataTest
                         //TimeFrame = TimeFrame.m1,
                         //Bars = new SymbolValueAspect<double>("Binance", "futures", symbol, TimeFrame.m1, DataPointAspect.Close),
                         //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                        Points = new PPointsBot
+                        {
+                            
+                        }
                     },
+                    
                     Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
                     EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
                     Features = BotHarnessFeatures.Bars,
                 };
             }
-
 
             batch.BacktestBatches = [[
                     createBacktest("BTCUSDT", 14),

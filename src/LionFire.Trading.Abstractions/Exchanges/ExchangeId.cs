@@ -4,6 +4,8 @@ public readonly record struct ExchangeId(string Exchange, string ExchangeArea)
 {
     public const char Separator = '.';
 
+    public bool HasValue => !string.IsNullOrEmpty(Exchange);
+
     public string Id => string.IsNullOrEmpty(ExchangeArea) ? Exchange : $"{Exchange}{Separator}{ExchangeArea}";
 
     public static implicit operator ExchangeId(string exchangeId)

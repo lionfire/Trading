@@ -17,8 +17,6 @@ namespace LionFire.Trading
 
     public class PositionBase : IPosition
     {
-        
-
         public string Comment { get; set; }
 
         public decimal Commissions { get; set; }

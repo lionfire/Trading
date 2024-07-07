@@ -139,8 +139,8 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
         if (ATR[0] > ATR[1]) OpenScore++;
         if (ATR[0] < ATR[1]) CloseScore++;
 
-        if (OpenScore >= Parameters.Points!.OpenThreshold) { Open(); }
-        if (CloseScore >= Parameters.Points.CloseThreshold) { Close(); }
+        if (OpenScore >= Parameters.Points!.OpenThreshold) { TryOpen(); }
+        if (CloseScore >= Parameters.Points.CloseThreshold) { TryClose(); }
 
         //long s;
     }
