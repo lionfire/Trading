@@ -2,7 +2,7 @@
 
 public interface IAccountProvider2
 {
-    IAccount2 GetAccount(ExchangeId exchange);
+    //IAccount2 GetAccount(ExchangeId exchange);
 }
 
 

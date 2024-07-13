@@ -1,4 +1,5 @@
 ﻿
+using DynamicData;
 using LionFire.Ontology;
 
 namespace LionFire.Trading.Automation;
@@ -16,7 +17,7 @@ public interface IBotContext
 
 public class BotContext
 {
-    public IAccount2 Account { get; set; }
+    public required IAccount2 Account { get; set; }
 
 }
 
@@ -26,7 +27,9 @@ public abstract class BotBase2<TParameters>
 {
     //public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
 
-    #region Dependencies
+    #region Identity
+
+    public string BotId { get; set; } = Guid.NewGuid().ToString();
 
     #endregion
 
@@ -85,13 +88,22 @@ public abstract class BotBase2<TParameters>
 
     #endregion
 
+    #region State
+
+    public IObservableCache<IPosition, int> Positions => positions;
+    protected SourceCache<IPosition, int> positions = new(p => p.Id); // OPTIMIZE idea: if it has a dedicated SimulatedAccount, use its position list directly instead of this field.
+
+    //public IEnumerable<IPosition> CompatiblePositions => Positions.Items.Where(p => p.SymbolId.Symbol == Symbol);
+    //public IEnumerable<IPosition> BotPositions => CompatiblePositions.Where(p => p.SymbolId.Symbol == Symbol && p.Label == );
+
+    #endregion
+
     public virtual void OnBar() { }
 
     //public static IReadOnlyList<InputSlot> InputSlots()
     //{
     //    throw new NotImplementedException();
     //}
-
 
     #region Controlling the bot
 

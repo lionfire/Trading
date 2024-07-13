@@ -1,6 +1,8 @@
-﻿namespace LionFire.Trading.Automation;
+﻿using DynamicData;
 
-public abstract class PStandardBot2<TConcrete> : PBot2<TConcrete>
+namespace LionFire.Trading.Automation;
+
+public abstract class PStandardBot2<TConcrete> : PSymbolBot2<TConcrete>
     where TConcrete : PStandardBot2<TConcrete>
 {
     public LongAndShort Direction { get; set; }
@@ -12,56 +14,18 @@ public abstract class PStandardBot2<TConcrete> : PBot2<TConcrete>
     public bool CloseAllAtOnce { get; set; }
 }
 
-public class BasicBot2<TParameters> : Bot2<TParameters>
-      where TParameters : PBot2<TParameters>
-{
-
-    public BasicBot2()
-    {
-    }
-
-    public override void Init()
-    {
-        base.Init();
-        if (Controller == null) throw new ArgumentNullException(nameof(Controller));
-
-        //if(Parameters is IPTimeFrameMarketProcessor tf)
-        //{
-        //}
-        if (PrimaryExchangeSymbol == null && Parameters is IPSymbolBarsBot2 s)
-        {
-            PrimaryExchangeSymbol = s.ExchangeSymbol;
-        }
-
-        if (PrimaryAccount == null && PrimaryExchangeSymbol != null)
-        {
-            PrimaryAccount = Controller.GetAccount(PrimaryExchangeSymbol);
-        }
-
-        if (PrimaryExchangeSymbol == null) throw new InvalidOperationException($"Failed to resolve {nameof(PrimaryExchangeSymbol)}");
-        if (PrimaryAccount == null) throw new InvalidOperationException($"Failed to resolve {nameof(PrimaryAccount)}");
-    }
-
-    protected override void OnParametersSet()
-    {
-        base.OnParametersSet();
-    }
-
-    public ExchangeSymbol PrimaryExchangeSymbol { get; set; } = default!;
-    public IAccount2 PrimaryAccount { get; set; } = default!;
-}
-
-public abstract class StandardBot2<TParameters> : BasicBot2<TParameters>
+public abstract class StandardBot2<TParameters> : SymbolBot2<TParameters>
       where TParameters : PStandardBot2<TParameters>
 {
-    public string Symbol { get; protected set; } = default!;
+
+    #region Lifecycle
 
     public override void Init()
     {
         base.Init();
-        Symbol = PrimaryExchangeSymbol.Symbol ?? throw new InvalidOperationException($"Failed to resolve {nameof(Symbol)}"); ;
     }
 
+    #endregion
 
     public virtual void TryOpen(double? amount = null)
     {
@@ -74,11 +38,29 @@ public abstract class StandardBot2<TParameters> : BasicBot2<TParameters>
     }
     public virtual ValueTask<IOrderResult> OpenPositionPortion(double? amount = null)
     {
-        return PrimaryAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value);
+        return Account.ExecuteMarketOrder(Symbol, Parameters.Direction, amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value);
     }
 
-    public virtual ValueTask<bool> ClosePositionPortion(double? amount = null)
+    public virtual ValueTask<IOrderResult> ClosePositionPortion(double? amount = null)
     {
+        if (Positions.Count == 0) { return ValueTask.FromResult(OrderResult.NoopSuccess); }
+        double amountToClose = amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value;
+
+
+        foreach (var p in Positions.KeyValues)
+        {
+            if (p.Value.Volume == amountToClose)
+            {
+                Account.ClosePosition(p.Value);
+                return ValueTask.FromResult(OrderResult.Success);
+            }
+        }
+
+        foreach (var p in Positions.KeyValues)
+        {
+
+        }
+
         if (Parameters.CloseAllAtOnce)
         {
             //PrimaryAccount.ClosePositionsForSymbol(Symbol, )

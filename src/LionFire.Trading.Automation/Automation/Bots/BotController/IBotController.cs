@@ -5,8 +5,8 @@ public interface IBotController : IAccountProvider2
     IBot2 Bot { get; }
     IBotBatchController BotBatchController { get; }
 
-    SimulatedAccount2<double>? PrimaryAccount { get; }
+    IAccount2<double>? Account { get; }
 
-    IEnumerable<SimulatedAccount2<double>> Accounts => PrimaryAccount == null ? [] : [PrimaryAccount];
+    IEnumerable<IAccount2<double>> Accounts => Account == null ? [] : [Account];
 
 }

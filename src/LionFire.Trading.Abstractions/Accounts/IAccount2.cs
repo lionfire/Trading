@@ -34,6 +34,8 @@ public interface IAccount2<TPrecision>
 
     IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, TPrecision positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
 
+    ValueTask<IOrderResult> ClosePosition(IPosition position);
+
     ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize);
 }
 

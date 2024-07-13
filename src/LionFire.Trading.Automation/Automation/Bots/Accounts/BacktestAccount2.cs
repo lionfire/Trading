@@ -3,9 +3,57 @@ using System.Numerics;
 
 namespace LionFire.Trading.Automation;
 
-public class BacktestFuturesAccount2<TPrecision> : SimulatedAccount2<TPrecision>
+public class PBacktestAccount<T>
+    where T : INumber<T>
+{
+
+    #region (static)
+
+    public static PBacktestAccount<T> Default { get; }
+
+    static PBacktestAccount()
+    {
+        if (typeof(T) == typeof(double))
+        {
+            Default = (PBacktestAccount<T>)(object)new PBacktestAccount<double>()
+            {
+                StartingBalance = 10_000.0
+            };
+        }
+        else if (typeof(T) == typeof(decimal))
+        {
+            Default = (PBacktestAccount<T>)(object)new PBacktestAccount<decimal>()
+            {
+                StartingBalance = 10_000m
+            };
+        }
+        else
+        {
+            Default = (PBacktestAccount<T>)Activator.CreateInstance(typeof(PBacktestAccount<T>), [default(T)])!;
+        }
+    }
+
+    #endregion
+
+    #region Lifecycle
+
+    public PBacktestAccount() { }
+    public PBacktestAccount(T startingBalance)
+    {
+        StartingBalance = startingBalance;
+    }
+
+    #endregion
+
+    public required T StartingBalance { get; set; }
+}
+
+public class BacktestAccount2<TPrecision> : SimulatedAccount2<TPrecision>
     where TPrecision : INumber<TPrecision>
 {
+
+    public PBacktestAccount<TPrecision> Parameters => parameters ?? PBacktestAccount<TPrecision>.Default;
+    private PBacktestAccount<TPrecision>? parameters;
 
     #region Accounts
 
@@ -15,9 +63,10 @@ public class BacktestFuturesAccount2<TPrecision> : SimulatedAccount2<TPrecision>
 
     #region Lifecycle
 
-    public BacktestFuturesAccount2(BacktestBotController backtestBotController, string exchange, string exchangeArea) : base(exchange, exchangeArea)
+    public BacktestAccount2(BacktestBotController backtestBotController, string exchange, string exchangeArea, PBacktestAccount<TPrecision>? parameters = null) : base(exchange, exchangeArea)
     {
         BacktestBotController = backtestBotController;
+        this.parameters = parameters;
     }
 
     #endregion

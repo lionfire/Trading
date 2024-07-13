@@ -1,27 +1,11 @@
 ﻿
-using Binance.Net.Interfaces;
-using LionFire.Trading.HistoricalData.Binance;
+//using Binance.Net.Interfaces;
+//using LionFire.Trading.HistoricalData.Binance;
 using System.Collections;
 using System.Collections.Immutable;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-// TODO CLEANUP and REVIEW
-
-public interface IBarsResult : IBarsResult<IKline> { }
-
-public interface IBarsResult<TValue> : ITimeSeriesResult<TValue>
-{
-    //    string Name { get; }
-    //    HistoricalDataSourceKind2 SourceType { get; }
-
-    IReadOnlyList<TValue>? Bars => Values;
-    Type NativeType { get; }
-
-    bool IsUpToDate { get; }
-
-    IBarsResult<TValue> Trim(DateTimeOffset start, DateTimeOffset endExclusive);
-}
 
 public sealed class BarsResult<TKline> : IBarsResult<TKline>
     where TKline : IKlineMarker

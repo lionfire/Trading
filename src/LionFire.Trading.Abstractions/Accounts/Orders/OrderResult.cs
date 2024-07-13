@@ -3,12 +3,17 @@
 public class OrderResult : IOrderResult
 
 {
-    public bool IsSuccess { get; set; }
+    public static IOrderResult NoopSuccess { get; } = new OrderResult { Noop = true, IsSuccess = true };
+    public static IOrderResult Success { get; } = new OrderResult { IsSuccess = true };
 
-    //public bool IsComplete { get; set; }
+    public bool IsSuccess { get; init; }
 
-    public string? Error { get; set; }
+    //public bool IsComplete { get; init; }
 
-    public object? Data { get; set; }
+    public string? Error { get; init; }
+
+    public object? Data { get; init; }
+
+    public bool Noop { get; init; }
 }
 

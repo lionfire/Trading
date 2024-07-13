@@ -8,6 +8,7 @@ public interface IPSymbolBarsBot2
 {
     ExchangeSymbol ExchangeSymbol { get; }
 }
+
 public abstract class PSymbolBarsBot2<TConcrete> 
     : PTimeFrameBot2<TConcrete>
     , IPSymbolBarsBot2
@@ -22,8 +23,6 @@ public abstract class PSymbolBarsBot2<TConcrete>
     {
         ExchangeSymbol = e;
     }
-
-    public ExchangeSymbol ExchangeSymbol { get; init; }
 
 
     public void InitFromDefault()

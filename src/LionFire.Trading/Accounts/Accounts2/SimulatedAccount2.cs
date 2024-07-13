@@ -1,8 +1,23 @@
 ﻿using DynamicData;
+using LionFire.Trading.HistoricalData.Retrieval;
 using System.Numerics;
 using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Automation;
+
+public interface IPriceMonitorStateMachine
+{
+}
+
+public class PriceMonitorStateMachine : IPriceMonitorStateMachine
+{
+    public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
+
+    public PriceMonitorStateMachine(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
+    {
+        ExchangeSymbolTimeFrame = exchangeSymbolTimeFrame;
+    }
+}
 
 public abstract class SimulatedAccount2<TPrecision> : IAccount2
     where TPrecision : INumber<TPrecision>
@@ -13,6 +28,7 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
     public string Exchange { get; }
 
     public string ExchangeArea { get; }
+    //public IBars Bars { get; }
 
     public bool IsSimulation => true;
 
@@ -28,6 +44,7 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
     {
         Exchange = exchange;
         ExchangeArea = exchangeArea;
+        //Bars = bars;
     }
 
     #endregion
@@ -39,7 +56,10 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     #region State
 
-    public IEnumerable<IPosition> Positions => positions.Items;
+    public IObservableCache<IPosition, int> Positions => positions;
+
+    IEnumerable<IPosition> IAccount2.Positions => throw new NotImplementedException();
+
     protected SourceCache<IPosition, int> positions = new(p => p.Id);
 
     //public AccountState<TPrecision> State => stateJournal.Value;
@@ -61,10 +81,21 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
     #region Methods
 
     public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, double positionSize);
-    public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, double positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
     public abstract ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize);
     public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, decimal positionSize);
+
+    #region Close
+
+    public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, double positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
     public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, decimal positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
+
+    public ValueTask<IOrderResult> ClosePosition(IPosition position) // TODO: Execution options: PostOnly, etc.
+    {
+        positions.Remove(position);
+        return ValueTask.FromResult<IOrderResult>(new OrderResult { IsSuccess = true, Data = position }); // TODO: ClosePositionResult, with PnL
+    }
+
+    #endregion
 
     #endregion
 }
@@ -116,3 +147,4 @@ public readonly struct AccountState<TCurrency>
     //public TPrecision StopOutLevel { get; set; } = default!;
 
 }
+

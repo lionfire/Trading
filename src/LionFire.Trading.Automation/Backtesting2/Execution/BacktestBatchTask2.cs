@@ -39,6 +39,7 @@ public class BacktestBatchTask2
     
     #region Parameters
 
+
     public BacktestExecutionOptions? ExecutionOptions { get; }
     public DateChunker DateChunker { get; }
 
