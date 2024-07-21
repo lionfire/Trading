@@ -51,15 +51,21 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
     //    //OpenThreshold
     //};
 
+    const int Lookback = 1;
     //public PAtrBot() { }
     public PAtrBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, uint period) : base(exchangeSymbolTimeFrame)
     {
         ATR = new PAverageTrueRange<double, TValue>
         {
             Period = (int)period,
-            Memory = 2, // Change to lookback = 1?
+            Lookback = Lookback,
         };
-        InputLookbacks = [(int)period]; // REVIEW - does InputLookbacks make sense?  REVIEW - period
+
+        // REVIEW - does InputLookbacks make sense?
+        // ENH - automate setting this somehow
+        //InputLookbacks = [(int)period + Lookback];
+        InputLookbacks = [0, Lookback];
+
         InitFromDefault();
     }
     public override Type InstanceType => typeof(AtrBot<TValue>);
@@ -132,9 +138,21 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
 
     #region Event Handling
 
+    int barIndex = 0;
+
     public override void OnBar()
     {
-        Debug.WriteLine($"{this.GetType().Name}.OnBar Bar: {Bars[0]}");
+        if (barIndex++ % 100 == 0)
+        {
+            if (Bars.Size > 0)
+            {
+                Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: {Bars[0]}, bars available: {Bars.Size}");
+            }
+            else
+            {
+                Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A");
+            }
+        }
 
         if (ATR[0] > ATR[1]) OpenScore++;
         if (ATR[0] < ATR[1]) CloseScore++;

@@ -36,7 +36,7 @@ public class BacktestBatchTask2
     public override BotExecutionMode BotExecutionMode => BotExecutionMode.Backtest;
 
     #endregion
-    
+
     #region Parameters
 
 
@@ -80,7 +80,7 @@ public class BacktestBatchTask2
 
     private void CreateBot(IPBacktestTask2 p)
     {
-        var bot = (IBot2)(Activator.CreateInstance(p.Bot.InstanceType) 
+        var bot = (IBot2)(Activator.CreateInstance(p.Bot.InstanceType)
             ?? throw new Exception("Failed to create bot: " + p.Bot.InstanceType));
         bot.Parameters = p.Bot;
 
@@ -231,9 +231,10 @@ public class BacktestBatchTask2
         {
             var pBacktest = backtest.PBacktest;
 
-            int i = 0;
+            int i = -1;
             foreach (var typeInputInfo in backtest.BotInfo.TypeInputInfos ?? Enumerable.Empty<TypeInputInfo>())
             {
+                i++;
                 int lookback = pBacktest.Bot.InputLookbacks == null ? 0 : pBacktest.Bot.InputLookbacks[i];
 
                 IPInput pHydratedInput;
@@ -376,6 +377,10 @@ public class BacktestBatchTask2
         {
             TimeSpan timeSpan = TimeFrame.TimeSpan;
 
+            #region Load lookback data (inputs only, no bot)
+
+            #endregion
+
             while (BacktestDate < EndExclusive
                 && (false == cancelledSource?.IsCancellationRequested)
                 )
@@ -414,7 +419,7 @@ public class BacktestBatchTask2
     DateTimeOffset chunkStart;
     DateTimeOffset chunkEndExclusive;
 
-    private async Task AdvanceInputChunk()
+    private void AdvanceInputChunk()
     {
         if (!chunkEnumerator.MoveNext())
         {
@@ -426,19 +431,44 @@ public class BacktestBatchTask2
         var chunk = chunkEnumerator.Current;
         chunkStart = chunk.range.start;
         chunkEndExclusive = chunk.range.endExclusive;
+        if(EndExclusive < chunkEndExclusive) { chunkEndExclusive = EndExclusive; }
         //long chunkSize = TimeFrame.GetExpectedBarCount(chunkStart, chunkEndExclusive) ?? throw new NotSupportedException(nameof(TimeFrame));
-
+    }
+    private async Task PreloadInputChunk()
+    {
         await Task.WhenAll(AllInputEnumerators
             .Select(input => input.PreloadRange(chunkStart, chunkEndExclusive)
              ).Where(t => !t.IsCompletedSuccessfully).Select(t => t.AsTask())).ConfigureAwait(false);
 
     }
 
+
+    private async ValueTask LoadInputLookback()
+    {
+        foreach (InputEnumeratorBase input in AllInputEnumerators)
+        {
+            if (input.LookbackRequired > 0)
+            {
+                await input.PreloadRange(TimeFrame.AddBars(Start, -input.LookbackRequired), BacktestDate).ConfigureAwait(false);
+            }
+        }
+    }
+
     private async ValueTask AdvanceInputsByOneBar()
     {
+        bool first = chunkStart == default;
+
         if (chunkStart == default || BacktestDate >= chunkEndExclusive)
         {
-            await AdvanceInputChunk().ConfigureAwait(false);
+            AdvanceInputChunk();
+
+            if (first)
+            {
+                await LoadInputLookback().ConfigureAwait(false);
+                chunkStart = Start;
+            }
+
+            await PreloadInputChunk().ConfigureAwait(false);
         }
 
         //var asyncTasks = asyncInputs?.Select(i => i.MoveNextAsync());

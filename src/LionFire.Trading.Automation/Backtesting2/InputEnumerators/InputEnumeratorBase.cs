@@ -3,6 +3,11 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Automation;
 
+public interface IInputEnumerator
+{
+    int LookbackRequired { get; }
+}
+
 /// <summary>
 /// An enumerator of a series of input OutputBuffer, typically historical data for a Symbol, or Indicator output.
 /// 
@@ -10,11 +15,17 @@ namespace LionFire.Trading.Automation;
 /// - chunked loading
 /// - OutputBuffer buffer
 /// </summary>
-public abstract class InputEnumeratorBase
+public abstract class InputEnumeratorBase : IInputEnumerator
 {
     #region Identity
 
     public Type ValueType { get; }
+
+    #endregion
+
+    #region Parameters
+
+    public int LookbackRequired { get; protected set; }
 
     #endregion
 
@@ -42,13 +53,17 @@ public abstract class InputEnumeratorBase
     /// <param name="start"></param>
     /// <param name="endExclusive"></param>
     /// <returns></returns>
-    public ValueTask PreloadRange(DateTimeOffset start, DateTimeOffset endExclusive )
+    public ValueTask PreloadRange(DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        if (UnprocessedInputCount > 0) throw new InvalidOperationException("Buffer must be empty before PreloadRange");
+        if (HasPreviousChunk && UnprocessedInputCount  > 0) throw new InvalidOperationException("Buffer must be empty before PreloadRange");
+        //if (!HasPreviousChunk && LookbackRequired > 0 && UnprocessedInputCount > LookbackRequired) throw new InvalidOperationException("Buffer must be smaller than LookbackRequired on 2nd chunk load, before PreloadRange");
+
         // OPTIMIZE maybe: Allow _PreloadRange before current chunk is done.  Either have dual buffers, or a CircularBuffer of buffers.
         return _PreloadRange(start, endExclusive);
     }
     protected virtual ValueTask _PreloadRange(DateTimeOffset start, DateTimeOffset endExclusive) => ValueTask.CompletedTask;
+
+    protected virtual bool HasPreviousChunk => false;
 
     #endregion
 
@@ -84,9 +99,10 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
 
     #region Lifecycle
 
-    public InputEnumeratorBase(IHistoricalTimeSeries<T> series)
+    public InputEnumeratorBase(IHistoricalTimeSeries<T> series, int lookback)
     {
         Series = series;
+        LookbackRequired = lookback;
     }
 
     #endregion
@@ -96,7 +112,7 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
     #region Input
 
     protected ArraySegment<T> InputBuffer = ArraySegment<T>.Empty;
-    protected int InputBufferIndex = 0;
+    protected int InputBufferIndex = -1;
 
     #region Derived
 
@@ -129,7 +145,7 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
         var result = await Series.Get(start, endExclusive);
         if (!result.IsSuccess) { throw new Exception("Failed to get historical data"); }
         InputBuffer = result.Values;
-        InputBufferIndex = 0;
+        InputBufferIndex = -1; // MoveNext will bump it to 0
     }
 
     #endregion

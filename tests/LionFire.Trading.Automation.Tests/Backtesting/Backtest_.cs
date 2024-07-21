@@ -140,21 +140,31 @@ public class Backtest_Batch_ : BinanceDataTest
                         //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
                         Points = new PPointsBot
                         {
-                            
+
                         }
                     },
-                    
+
                     Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                    EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
+                    EndExclusive = new DateTimeOffset(2024, 3, 2, 0, 0, 0, TimeSpan.Zero),
                     Features = BotHarnessFeatures.Bars,
                 };
             }
 
-            batch.BacktestBatches = [[
-                    createBacktest("BTCUSDT", 14),
-                    createBacktest("BTCUSDT", 15),
-                    createBacktest("ETHUSDT", 14),
-                    createBacktest("ETHUSDT", 15)
+            var list = new List<IPBacktestTask2>();
+
+            var symbol = "BTCUSDT";
+            for (uint i = 14; i <= 16; i++)
+            {
+                list.Add(createBacktest(symbol, i));
+            }
+
+            batch.BacktestBatches = [
+                    list
+                    //[
+                    //createBacktest("BTCUSDT", 14),
+                    //createBacktest("BTCUSDT", 15),
+                    //createBacktest("ETHUSDT", 14),
+                    //createBacktest("ETHUSDT", 15)
                         //new PBacktestTask2<PAtrBot<double>>
                         // {
                         //     Bot = new PAtrBot<double>(14)
@@ -179,7 +189,8 @@ public class Backtest_Batch_ : BinanceDataTest
                         //     EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
                         //     Features = BotHarnessFeatures.Bars,
                         // },
-                    ]];
+                    //]
+                    ];
         });
 
         await job.Task;

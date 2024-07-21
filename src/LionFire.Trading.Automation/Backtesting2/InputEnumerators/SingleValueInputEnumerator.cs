@@ -7,7 +7,7 @@ public sealed class SingleValueInputEnumerator<T> : InputEnumeratorBase<T>
 {
     #region Lifecycle
 
-    public SingleValueInputEnumerator(IHistoricalTimeSeries<T> series) : base(series)
+    public SingleValueInputEnumerator(IHistoricalTimeSeries<T> series) : base(series, 0)
     {
     }
 
@@ -15,7 +15,7 @@ public sealed class SingleValueInputEnumerator<T> : InputEnumeratorBase<T>
 
     #region IReadOnlyValuesWindow<T>
 
-    public override T this[int index] => index == 0 ? InputBuffer[InputBufferIndex - 1] : throw new ArgumentOutOfRangeException();
+    public override T this[int index] => index == 0 ? InputBuffer[InputBufferIndex] : throw new ArgumentOutOfRangeException();
 
     public override uint Capacity => 1;
 

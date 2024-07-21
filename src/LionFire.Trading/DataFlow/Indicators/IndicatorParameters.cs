@@ -34,7 +34,9 @@ public abstract class IndicatorParameters<TIndicator> : IIndicatorParameters, IP
 
     public abstract Type OutputType { get; }
 
-    public int Memory { get; set; } = 1;
+    public int Memory { get => Lookback + 1; }
+    public int Lookback { get; set; } = 0;
+
     public abstract Type ValueType { get; }
     public virtual string Key
     {

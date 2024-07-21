@@ -4,32 +4,42 @@ using Serilog.Configuration;
 
 namespace LionFire.Trading.Automation;
 
-public interface IChunkingInputEnumerator
+public interface IChunkingInputEnumerator : IInputEnumerator
 {
+#if UNUSED
     int WindowSize { get; }
-    int LookbackRequired { get; }
+#endif
+
+    /// <summary>
+    /// Input enumerators are shared by consumers who require different lookback amounts.  Invoke this to ensure that the lookback is grown to accommodate any particular consumer. 
+    /// </summary>
+    /// <param name="minimumLookback"></param>
     void GrowLookback(int minimumLookback);
+
 }
 
-public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>
+public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IChunkingInputEnumerator
 {
     // OPTIMIZE idea: see if reversing the array at load time is faster.
     // OPTIMIZE idea: benchmark different chunk sizes (i.e. short vs long chunk, and a portion of those chunks.)
 
-    public ChunkingInputEnumerator(IHistoricalTimeSeries<T> series, int lookback) : base(series)
+    public ChunkingInputEnumerator(IHistoricalTimeSeries<T> series, int lookback) : base(series, lookback)
     {
-        LookbackRequired = lookback;
+
     }
 
     protected ArraySegment<T> PreviousChunk;
+    protected override bool HasPreviousChunk => PreviousChunk.Count > 0;
 
     public TimeFrame TimeFrame => Series.TimeFrame;
-    public int LookbackRequired { get; private set; }
+
+#if UNUSED
     public int WindowSize
     {
         get => LookbackRequired + 1;
         set => LookbackRequired = value - 1;
     }
+#endif
     public void GrowLookback(int minimumLookback)
     {
         if (LookbackRequired < minimumLookback)
@@ -59,13 +69,15 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>
         get
         {
             if (InputBuffer.Array == null) throw new InvalidOperationException("No data");
-            if (InputBufferIndex - index >= 0)
+            var inputBufferIndex = InputBufferIndex - index;
+            if (inputBufferIndex >= 0 && inputBufferIndex < InputBuffer.Count)
             {
-                return InputBuffer[InputBufferIndex - index];
+                return InputBuffer[inputBufferIndex];
             }
             else
             {
-                int previousChunkActualIndex = PreviousChunk.Count - 1 - index - InputBufferIndex - 1;
+                //int previousChunkActualIndex = PreviousChunk.Count - 1 - index - InputBufferIndex - 1;
+                int previousChunkActualIndex = PreviousChunk.Count + inputBufferIndex;
 
                 if (PreviousChunk.Array == null || previousChunkActualIndex > PreviousChunk.Count)
                 {

@@ -41,6 +41,7 @@ public abstract class BotBatchControllerBase : IBotBatchController
     // Must match across all parameters
 
     public TimeFrame TimeFrame { get; }
+    public DateTimeOffset InputStart { get; }
     public DateTimeOffset Start { get; }
     public DateTimeOffset EndExclusive { get; }
 
@@ -62,6 +63,7 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
         TimeFrame = first.TimeFrame;
         Start = first.Start;
+
         EndExclusive = first.EndExclusive;
 
         foreach (var p in parameters)
