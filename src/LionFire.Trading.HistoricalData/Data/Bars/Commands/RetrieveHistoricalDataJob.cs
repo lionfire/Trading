@@ -27,6 +27,7 @@ using LionFire.Trading.HistoricalData.Sources;
 using Baseline;
 using Binance.Net.Interfaces.Clients;
 using LionFire.Validation;
+using System.Diagnostics;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
@@ -238,6 +239,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         return listResult != null && listResult.Count > 0;
     }
 
+    public static int TotalFileDownloadedElsewhereRetries = 3;
     public async Task<List<IBarsResult<IKline>>?> Execute2(RetrieveHistoricalDataParameters input)
     {
         #region Parameter Validation
@@ -264,6 +266,8 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
         #endregion
 
+        int fileDownloadedElsewhereRetries = TotalFileDownloadedElsewhereRetries;
+    tryAgain:
         BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(barsRangeReference);
         var local = await BarsFileSource.List(barsRangeReference);
 
@@ -301,8 +305,43 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
             }
             else
             {
-                //(start, endExclusive, info) = await RetrieveForDate(NextDate);
-                (var barsResult, info) = await RetrieveForDate(NextDate);
+                IBarsResult<IKline>? barsResult;
+                (barsResult, info) = await RetrieveForDate(NextDate).ConfigureAwait(false);
+                if (barsResult == null)
+                {
+                    if (fileDownloadedElsewhereRetries-- > 0)
+                    {
+                        //int waitTime = 2000;
+                        Debug.WriteLine($"File was downloaded by something else and should be ready now.  {fileDownloadedElsewhereRetries} retry attempts remaining.");
+                        //Debug.WriteLine($"File was downloaded by something else and should be ready now.  {fileDownloadedElsewhereRetries} retry attempts remaining. Waiting {waitTime}ms and trying again: " + ex.Message);
+                        //await Task.Delay(2000).ConfigureAwait(false);
+                        goto tryAgain;
+                    }
+                    else // REVIEW - infinite loop bailout
+                    {
+                        throw new Exception("Too many attempts. Not trying again after file was downloaded elsewhere. " /*+ ioex.Message*/);
+                    }
+                }
+                // This logic has been encapsulated in callee
+                //catch (IOException ioex)
+                //{
+                //    if (ioex.Message.EndsWith("it is being used by another process."))
+                //    {
+                //        if (fileInUseRetries-- > 0)
+                //        {
+                //            int waitTime = 2000;
+                //            Debug.WriteLine($"File in use.  {fileInUseRetries} retry attempts remaining. Waiting {waitTime}ms and trying again: " + ioex.Message);
+                //            await Task.Delay(2000).ConfigureAwait(false);
+                //            goto tryAgain;
+                //        }
+                //        else
+                //        {
+                //            Debug.WriteLine("Too many attempts. Not trying again after file in use: " + ioex.Message);
+                //            throw;
+                //        }
+                //    }
+                //    else { throw; }
+                //}
                 result ??= new();
                 result.Add(barsResult);
 
@@ -359,7 +398,16 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         return result;
     }
 
-    private async Task<(IBarsResult<IKline> barsResult, KlineArrayInfo info)> RetrieveForDate(DateTimeOffset date)
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="date"></param>
+    /// <returns>Null if retrieved by another thread</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="Exception"></exception>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="NotImplementedException"></exception>
+    private async Task<(IBarsResult<IKline>? barsResult, KlineArrayInfo? info)> RetrieveForDate(DateTimeOffset date)
     {
         if (Input.VerboseFlag) { DumpParameters(); }
         ValidateAndParseOptions();
@@ -395,7 +443,10 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
         var reference = new ExchangeSymbolTimeFrame(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame);
 
-        using (var file = KlineArrayFileProvider.GetFile(reference, date, klineArrayFileOptions))
+        var file = await KlineArrayFileProvider!.TryCreateDownloadFile(reference, date, klineArrayFileOptions);
+        if (file == null) { return (null, null); }
+
+        using (file)
         {
             info = file.Info;
 

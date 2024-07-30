@@ -98,8 +98,14 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
     {
         options ??= QueryOptions.Default;
 
+        bool canTryAgain = true;
+    tryAgain:
         var chunk = await BarsFileSource.GetLongChunk(range);
-        if (chunk != null && chunk.IsUpToDate) { return chunk; }
+        if (chunk != null)
+        {
+            if (chunk.IsUpToDate) { return chunk; }
+            else { throw new NotImplementedException("TODO: Delete out of date chunk: " + range); }
+        }
 
         if (options.RetrieveSources.HasFlag(HistoricalDataSourceKind.Exchange))
         {
@@ -111,7 +117,13 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
                 if (resultList.Count != 1) throw new Exception("Expected exactly zero or one result.");
                 chunk = resultList.Single();
             }
+            if (chunk == null && canTryAgain)
+            {
+                canTryAgain = false;
+                goto tryAgain;
+            }
         }
+
         return chunk;
     }
 

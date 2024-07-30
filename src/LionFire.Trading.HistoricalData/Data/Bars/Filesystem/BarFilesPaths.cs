@@ -121,14 +121,14 @@ public class BarFilesPaths
 
 public static class HistoricalDataPathsX
 {
-    public static string GetFileName(this BarFilesPaths hdp, KlineArrayInfo info, KlineArrayFileOptions? options = null)
+    public static string GetDownloadingFileName(this BarFilesPaths hdp, KlineArrayInfo info, KlineArrayFileOptions? options = null)
     {
         return BarFilesPaths.GetFileName(info.Start, info.EndExclusive
             , KlineArrayFileConstants.DownloadingFileExtension // Always append this here and strip it out later
             );
     }
 
-    public static string GetPath(this BarFilesPaths hdp, ExchangeSymbolTimeFrame r, KlineArrayInfo info, KlineArrayFileOptions? options = null)
-        => Path.Combine(hdp.GetDataDir(r), hdp.GetFileName(info, options)) + options?.FileExtension;
+    public static string GetDownloadingPath(this BarFilesPaths hdp, ExchangeSymbolTimeFrame r, KlineArrayInfo info, KlineArrayFileOptions? options = null)
+        => Path.Combine(hdp.GetDataDir(r), hdp.GetDownloadingFileName(info, options)) + options?.FileExtension;
 
 }
