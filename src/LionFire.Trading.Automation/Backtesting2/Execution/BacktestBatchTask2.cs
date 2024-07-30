@@ -201,8 +201,9 @@ public class BacktestBatchTask2
 
     private class InputItem
     {
-        public required IPInput PInput { get; init; }
+        public int Index { get;  set; }
         public int Lookback { get; set; }
+        public required IPInput PInput { get; init; }
         public InputEnumeratorBase? Enumerator { get; set; }
     }
 
@@ -225,10 +226,11 @@ public class BacktestBatchTask2
         Dictionary<string, InputItem> inputEnumerators = new();
 
 
-        #region Determine max lookback for each input
+        #region InputItem creation, and determine max lookback for each input
 
         foreach (var backtest in backtests)
         {
+            //backtest.Controller.Account
             var pBacktest = backtest.PBacktest;
 
             int i = -1;
@@ -264,7 +266,9 @@ public class BacktestBatchTask2
                     {
                         PInput = pHydratedInput,
                         //PInput = (IPInput)typeInputInfo.Parameter.GetValue(backtest.PBacktest.Bot, null)!,
-                        Lookback = lookback
+                        Lookback = lookback,
+                        Index = i,
+
                     });
                 }
             }
@@ -389,6 +393,12 @@ public class BacktestBatchTask2
                 await NextBar().ConfigureAwait(false);
                 foreach (var b in backtests)
                 {
+                    var account = b.Controller.Account;
+                    if(account != null) account.OnBar();
+                    else
+                    {
+                        foreach(var account2 in b.Controller.Accounts) { account2.OnBar(); }
+                    }
                     b.Bot.OnBar();
                 }
                 BacktestDate += timeSpan;
@@ -406,7 +416,6 @@ public class BacktestBatchTask2
                 throw new NotImplementedException("advance one tick");
                 //BacktestDate += IndicatorTimeFrame.TimeSpan;
             }
-
         }
 
         #endregion
@@ -434,14 +443,13 @@ public class BacktestBatchTask2
         if(EndExclusive < chunkEndExclusive) { chunkEndExclusive = EndExclusive; }
         //long chunkSize = TimeFrame.GetExpectedBarCount(chunkStart, chunkEndExclusive) ?? throw new NotSupportedException(nameof(TimeFrame));
     }
+
     private async Task PreloadInputChunk()
     {
         await Task.WhenAll(AllInputEnumerators
             .Select(input => input.PreloadRange(chunkStart, chunkEndExclusive)
              ).Where(t => !t.IsCompletedSuccessfully).Select(t => t.AsTask())).ConfigureAwait(false);
-
     }
-
 
     private async ValueTask LoadInputLookback()
     {
@@ -504,7 +512,7 @@ public class BacktestBatchTask2
     public async Task NextBar()
     {
 #if true && TRACE
-        if (NextBarModulus++ > 100)
+        if (NextBarModulus++ > 50000)
         {
             NextBarModulus = 0;
 

@@ -2,6 +2,12 @@
 
 namespace LionFire.Trading;
 
+public interface IMarketParticipant2
+{
+    void OnBar();
+
+}
+
 public interface IAccount2 : IAccount2<double>, IAccount2<decimal>
 {
     #region Identity
@@ -27,7 +33,7 @@ public interface IAccount2 : IAccount2<double>, IAccount2<decimal>
     IEnumerable<IPosition> Positions { get; }
 }
 
-public interface IAccount2<TPrecision>
+public interface IAccount2<TPrecision> : IMarketParticipant2
     where TPrecision : INumber<TPrecision>
 {
     ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize);

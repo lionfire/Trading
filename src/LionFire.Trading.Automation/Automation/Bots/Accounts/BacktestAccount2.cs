@@ -1,4 +1,5 @@
 ﻿using DynamicData;
+using LionFire.Trading.ValueWindows;
 using System.Numerics;
 
 namespace LionFire.Trading.Automation;
@@ -55,7 +56,13 @@ public class BacktestAccount2<TPrecision> : SimulatedAccount2<TPrecision>
     public PBacktestAccount<TPrecision> Parameters => parameters ?? PBacktestAccount<TPrecision>.Default;
     private PBacktestAccount<TPrecision>? parameters;
 
-    #region Accounts
+    #region Inputs
+
+    public IReadOnlyValuesWindow<TPrecision> Bars { get; set; } = null!;
+    
+    #endregion
+
+    #region Relationships
 
     public BacktestBotController BacktestBotController { get; }
 
@@ -67,6 +74,7 @@ public class BacktestAccount2<TPrecision> : SimulatedAccount2<TPrecision>
     {
         BacktestBotController = backtestBotController;
         this.parameters = parameters;
+        DateTime = backtestBotController.BotBatchController.Start;
     }
 
     #endregion

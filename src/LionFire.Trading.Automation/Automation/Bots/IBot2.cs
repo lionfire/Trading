@@ -3,7 +3,7 @@ using LionFire.Trading.IO;
 
 namespace LionFire.Trading.Automation;
 
-public interface IBot2
+public interface IBot2 : IMarketParticipant2
 {
     string BotId { get; set; }
     object Parameters { get; set; }
@@ -12,7 +12,6 @@ public interface IBot2
     IBotController? Controller { get; set; }
 
     void Init() { }
-    void OnBar();
 
     IObservableCache<IPosition, int> Positions { get; }
 }

@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading.Automation;
+﻿using LionFire.Trading.ValueWindows;
+
+namespace LionFire.Trading.Automation;
 
 public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>, IPSymbolBarsBot2
     where TConcrete : PBot2<TConcrete>
@@ -6,7 +8,7 @@ public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>, IPSymbolBarsBot
     public ExchangeSymbol ExchangeSymbol { get; init; } = default!;
 }
 
-public class SymbolBot2<TParameters> : Bot2<TParameters>
+public class SymbolBot2<TParameters, TValue> : Bot2<TParameters>
       where TParameters : PSymbolBot2<TParameters>
 {
 
@@ -16,6 +18,13 @@ public class SymbolBot2<TParameters> : Bot2<TParameters>
     public string Symbol => ExchangeSymbol.Symbol!;
 
     public IAccount2<double> Account { get; set; } = default!;
+
+    #endregion
+
+    #region Injected
+
+    [Signal(-1000)]
+    public IReadOnlyValuesWindow<TValue> Bars { get; set; } = null!;
 
     #endregion
 

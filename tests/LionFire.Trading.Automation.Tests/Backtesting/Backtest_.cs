@@ -133,29 +133,36 @@ public class Backtest_Batch_ : BinanceDataTest
             {
                 return new PBacktestTask2<PAtrBot<double>>
                 {
-                    Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1), atrPeriod)
+                    Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1), atrPeriod, QuantConnect.Indicators.MovingAverageType.Simple)
                     {
                         //TimeFrame = TimeFrame.m1,
                         //Bars = new SymbolValueAspect<double>("Binance", "futures", symbol, TimeFrame.m1, DataPointAspect.Close),
                         //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+                        
                         Points = new PPointsBot
                         {
 
                         }
                     },
 
-                    Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                    EndExclusive = new DateTimeOffset(2024, 3, 2, 0, 0, 0, TimeSpan.Zero),
+                    Start = new DateTimeOffset(2023, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                    EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                    //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),
+                    //EndExclusive = new DateTimeOffset(2024, 7, 23, 0, 0, 0, TimeSpan.Zero),
                     Features = BotHarnessFeatures.Bars,
                 };
             }
 
-            var list = new List<IPBacktestTask2>();
+            List<string> symbols = [
+                    //"BTCUSDT",
+                    //"ETHUSDT",
+                    "LTCUSDT"
+                ];
 
-            var symbol = "BTCUSDT";
-            for (uint i = 14; i <= 16; i++)
+            var list = new List<IPBacktestTask2>();
+            foreach (var symbol in symbols)
             {
-                list.Add(createBacktest(symbol, i));
+                for (uint i = 14; i <= 34; i++) { list.Add(createBacktest(symbol, i)); }
             }
 
             batch.BacktestBatches = [

@@ -170,17 +170,36 @@ public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<Av
 
     #region Event Handling
 
+    #region State
+
+    // Stub time and period values.  QuantConnect checks the symbol ID and increasing end times.
+    static DateTime DefaultEndTime => new DateTime(2000, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+    static  TimeSpan period => new TimeSpan(0, 1, 0);
+
+    DateTime endTime = DefaultEndTime;
+    TradeBar tradeBar = new TradeBar(time: DefaultEndTime,
+                symbol: QuantConnect.Symbol.None,
+                open: default /* UNUSED for ATR */,
+                high: default,
+                low: default,
+                close: default,
+                volume: default,
+                period: period);
+
+    #endregion
+
+
     // Process a Batch of Inputs
     public override void OnBarBatch(IReadOnlyList<HLC<TPrice>> inputs, TOutput[]? output, int outputIndex = 0, int outputSkip = 0)
     {
-
-        DateTime endTime = new DateTime(2000, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-        // Stub time and period values.  QuantConnect checks the symbol ID and increasing end times.
-        TimeSpan period = new TimeSpan(0, 1, 0);
-
-
         foreach (var input in inputs)
         {
+            //tradeBar.EndTime = endTime;
+            //tradeBar.High = Convert.ToDecimal(input.High);
+            //tradeBar.Low = Convert.ToDecimal(input.Low);
+            //tradeBar.Close= Convert.ToDecimal(input.Close);
+            //WrappedIndicator.Update(tradeBar); // Can't reuse tradeBars since WrappedIndicator stores as is
+
             WrappedIndicator.Update(new TradeBar(
                 time: endTime,
                 symbol: QuantConnect.Symbol.None,

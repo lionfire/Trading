@@ -17,7 +17,6 @@ public class BacktestBotController : IBotController
 
     #endregion
 
-
     #endregion
 
     #region Lifecycle
@@ -28,7 +27,7 @@ public class BacktestBotController : IBotController
         Bot = bot;
         if (Bot.Parameters is IPSymbolBarsBot2 s)
         {
-            account = GetAccount(s.ExchangeSymbol);
+            account = CreateAccount(s.ExchangeSymbol);
         }
     }
 
@@ -39,11 +38,8 @@ public class BacktestBotController : IBotController
     public IAccount2<double>? Account => account;
     private readonly BacktestAccount2<double>? account;
 
-    protected BacktestAccount2<double> GetAccount(ExchangeId exchange)
-    {
-        var account = new BacktestAccount2<double>(this, exchange.Exchange, exchange.ExchangeArea);
-        return account;
-    }
+    protected BacktestAccount2<double> CreateAccount(ExchangeId exchange)
+        => new BacktestAccount2<double>(this, exchange.Exchange, exchange.ExchangeArea);
 
     #endregion
 

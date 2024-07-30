@@ -29,7 +29,12 @@ public static class BotInfos
             var result = new BotInfo();
             result.TypeInputInfos = new();
 
-            var botProperties = botType.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Where(pi => pi.PropertyType.IsAssignableTo(typeof(IReadOnlyValuesWindow)));
+            var botProperties = botType
+                .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                .Where(pi => pi.PropertyType.IsAssignableTo(typeof(IReadOnlyValuesWindow)))
+                .OrderBy(pi => pi.GetCustomAttribute<SignalAttribute>()?.Index ?? 0)
+                .ThenBy(pi => pi.Name)
+                ;
 
             foreach (var pi in botProperties)
             {

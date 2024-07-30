@@ -13,7 +13,7 @@ public static class BotParametersTypeInfo
 {
 }
 
-public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
+public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>, TValue>
 {
 
     #region Static
@@ -33,10 +33,6 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
     [Signal(0)]
     public PAverageTrueRange<double, TValue>? ATR { get; set; }
 
-
-    //[Signal(0)]
-    public SymbolValueAspect<TValue>? Bars { get; set; }
-
     /// <summary>
     /// Convention: match parameter name
     /// Can be get only, derived on other parameters.
@@ -53,12 +49,14 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
 
     const int Lookback = 1;
     //public PAtrBot() { }
-    public PAtrBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, uint period) : base(exchangeSymbolTimeFrame)
+    public PAtrBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, uint period, QuantConnect.Indicators.MovingAverageType movingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders) : base(exchangeSymbolTimeFrame)
     {
         ATR = new PAverageTrueRange<double, TValue>
         {
             Period = (int)period,
             Lookback = Lookback,
+            MovingAverageType = movingAverageType,
+            //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
         };
 
         // REVIEW - does InputLookbacks make sense?
@@ -79,11 +77,10 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>>
 }
 
 [Bot(Direction = BotDirection.Unidirectional)]
-public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
+public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 {
     #region Inputs
 
-    public IReadOnlyValuesWindow<TValue> Bars { get; set; } = null!;
     public IReadOnlyValuesWindow<double> ATR { get; set; } = null!;
 
     #region OLD
@@ -142,16 +139,20 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>>
 
     public override void OnBar()
     {
-        if (barIndex++ % 100 == 0)
+        if (barIndex++ % 50000 == 0)
         {
-            if (Bars.Size > 0)
-            {
-                Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: {Bars[0]}, bars available: {Bars.Size}");
-            }
-            else
-            {
-                Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A");
-            }
+            if (ATR.Size > 0) {
+                Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar ATR: {ATR[0]}, bars available: {ATR.Size}"); }
+            else { Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A"); }
+            
+            //if (Bars.Size > 0)
+            //{
+            //    Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: {Bars[0]}, bars available: {Bars.Size}");
+            //}
+            //else
+            //{
+            //    Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A");
+            //}
         }
 
         if (ATR[0] > ATR[1]) OpenScore++;

@@ -1,4 +1,5 @@
 ﻿using DynamicData;
+using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Automation;
 
@@ -14,9 +15,11 @@ public abstract class PStandardBot2<TConcrete> : PSymbolBot2<TConcrete>
     public bool CloseAllAtOnce { get; set; }
 }
 
-public abstract class StandardBot2<TParameters> : SymbolBot2<TParameters>
+public abstract class StandardBot2<TParameters, TValue> : SymbolBot2<TParameters, TValue>
       where TParameters : PStandardBot2<TParameters>
 {
+
+
 
     #region Lifecycle
 
@@ -26,6 +29,8 @@ public abstract class StandardBot2<TParameters> : SymbolBot2<TParameters>
     }
 
     #endregion
+
+    #region Methods
 
     public virtual void TryOpen(double? amount = null)
     {
@@ -74,4 +79,6 @@ public abstract class StandardBot2<TParameters> : SymbolBot2<TParameters>
 
         }
     }
+
+    #endregion
 }

@@ -56,6 +56,8 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     #region State
 
+    public DateTimeOffset DateTime { get; protected set; }
+
     public IObservableCache<IPosition, int> Positions => positions;
 
     IEnumerable<IPosition> IAccount2.Positions => throw new NotImplementedException();
@@ -78,6 +80,12 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     #endregion
 
+    #region Event Handlers
+
+    public virtual void OnBar() { }
+
+    #endregion
+
     #region Methods
 
     public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, double positionSize);
@@ -94,6 +102,7 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
         positions.Remove(position);
         return ValueTask.FromResult<IOrderResult>(new OrderResult { IsSuccess = true, Data = position }); // TODO: ClosePositionResult, with PnL
     }
+
 
     #endregion
 
