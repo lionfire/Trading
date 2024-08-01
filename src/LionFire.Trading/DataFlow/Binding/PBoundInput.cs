@@ -7,19 +7,118 @@ public interface IPHydratedInput : IPInput
     TimeFrame TimeFrame { get; }
 }
 
-public class PBoundInput : IPInput
+// TODO REVIEW - this class can be replaced by the static method ResolveSlotValues
+public class PBoundSlots
+// Must not implement IPMayHaveUnboundInputSlots
+{
+    public IPMayHaveUnboundInputSlots Parent { get; }
+
+    public PBoundSlots(IPMayHaveUnboundInputSlots unboundInput, IPTimeFrameMarketProcessor root)
+    {
+        Parent = unboundInput;
+        Signals = ResolveSlotValues(unboundInput, root);
+
+        #region Validation
+
+        if (unboundInput.InputSlots.Count != Signals.Count)
+        {
+            throw new UnreachableCodeException($"Mismatched number of upstream inputs for {unboundInput}.  Expected {unboundInput.InputSlots.Count}, got {Signals.Count}");
+        }
+
+        #endregion
+    }
+
+    #region Relationships
+
+    public IReadOnlyList<IPInput?> Signals { get; }
+
+    #endregion
+
+    public const bool SkipNullSourceSignals = true;
+
+    /// <summary>
+    /// Use the source's signals to resolve the unbound input's slots.
+    /// </summary>
+    /// <param name="hasUnboundSlots"></param>
+    /// <param name="source"></param>
+    /// <returns></returns>
+    /// <exception cref="UnreachableCodeException"></exception>
+    /// <exception cref="NotImplementedException"></exception>
+    /// <exception cref="ArgumentException"></exception>
+    public static List<IPInput?> ResolveSlotValues(IPMayHaveUnboundInputSlots hasUnboundSlots, IPMarketProcessor source)
+    {
+        var signalInfos = SignalInfoReflection.GetSignalInfos(source.GetType());
+        var slotInfos = SlotsInfo.GetSlotsInfo(hasUnboundSlots.GetType());
+
+        #region Validation
+        if (signalInfos.Count < hasUnboundSlots.InputSlots.Count)
+        {
+            throw new UnreachableCodeException($"Mismatched number of inputs for {source}.  Expected at least {hasUnboundSlots.InputSlots.Count}, got {signalInfos.Count}");
+        }
+        #endregion
+
+        List<IPInput> valuesForSlots = new();
+
+        int sourceIndex = 0;
+        foreach (var slot in hasUnboundSlots.InputSlots)
+        {
+        // TODO: Only get values for Slots that currently are unset, and return null for ones that are.
+        //var slotInfo = slotInfos.Slots.Where(s => s.ParameterProperty!.Name == slot.Name).Single();
+        //if (slotInfo.ParameterProperty!.GetValue(hasUnboundSlots) != null) valuesForSlots.Add(null);
+
+        nextSourceSignal:
+            var signalInfo = signalInfos[sourceIndex++];
+
+            #region Validation/Coerce: ValueType compatibility
+
+            var signalValueType = IReferenceToX.GetTypeOfReferenced(signalInfo.PropertyInfo.PropertyType);
+            if (signalValueType != slot.ValueType) // OLD: was  valueType but that looks wrong (parent)
+            //if (signalValueType != IReferenceToX.GetTypeOfReferenced(slot.ValueType)) // OLD: was  valueType but that looks wrong (parent)
+            {
+                throw new NotImplementedException($"Signal value type '{signalValueType}' does not match {nameof(slot)}.{nameof(slot.ValueType)} and no adapter has been implemented"); // FUTURE: Adapter
+            }
+
+            #endregion
+
+            var signalPInput = (IPInput?)signalInfo.PropertyInfo.GetValue(source);
+
+            if (signalPInput == null)
+            {
+                if (SkipNullSourceSignals)
+                {
+                    // REVIEW idea: allow null Signals, and fall back to the next one, allowing for sparsely defined signals in the Source.
+                    goto nextSourceSignal;
+                }
+                else
+                {
+                    throw new ArgumentException($"Signal {signalInfo.PropertyInfo.Name} is null and {SkipNullSourceSignals} so resolution fails.");
+                }
+            }
+
+            if (signalPInput is IPMayHaveUnboundInputSlots unbound)
+            {
+                throw new NotImplementedException($"Potentially Unbound input '{unbound}' is not supported yet as a signalInfo. TODO: Support if slots have values.");
+            }
+
+            valuesForSlots.Add(signalPInput);
+        }
+
+        return valuesForSlots;
+    }
+}
+
+public class PBoundInput : PBoundSlots, IPInput
 {
     #region Relationships
 
-    public IPUnboundInput PUnboundInput { get; }
-    
-    public IReadOnlyList<IPInput> Signals { get; }
+    public IPInputThatSupportsUnboundInputs PUnboundInput => (IPInputThatSupportsUnboundInputs)Parent;
 
     #endregion
 
     #region Identity
 
     public Type ValueType => PUnboundInput.ValueType;
+
     public string Key => Signals?.Count switch
     {
         null => PUnboundInput.Key,
@@ -45,83 +144,12 @@ public class PBoundInput : IPInput
     #region Lifecycle
 
     // REVIEW - can there be multiple upstream Inputs that are adapted to match the parent's exected Input type?
-    public PBoundInput(IPUnboundInput unboundInput, IPTimeFrameMarketProcessor root)
+    public PBoundInput(IPInputThatSupportsUnboundInputs unboundInput, IPTimeFrameMarketProcessor root) : base(unboundInput, root)
     {
-        
-        PUnboundInput = unboundInput;
-
-        Signals = ResolveSignals(unboundInput, root);
         TimeFrame = root.TimeFrame;
-
-        #region Validation
-
-        if (unboundInput.InputSlots.Count != Signals.Count)
-        {
-            throw new UnreachableCodeException($"Mismatched number of upstream inputs for {unboundInput}.  Expected {unboundInput.InputSlots.Count}, got {Signals.Count}");
-        }
-
-        #endregion
-    }
-
-    public const bool SkipNullSourceSignals = true;
-
-    List<IPInput> ResolveSignals(IPUnboundInput pUnboundInput, IPMarketProcessor source)
-    {
-        List<IPInput> signals = new();
-
-        var sourcesInfo = SourcesInfo.GetSourcesInfo(source.GetType());
-        var slotsInfo = SlotsInfo.GetSlotsInfo(pUnboundInput.GetType());
-
-        var signalInfos = InputSlotsReflection.GetSignalInfos(source.GetType());
-
-        if(signalInfos.Count < pUnboundInput.InputSlots.Count)
-        {
-            throw new UnreachableCodeException($"Mismatched number of inputs for {source}.  Expected at least {pUnboundInput.InputSlots.Count}, got {signalInfos.Count}");
-        }
-
-        int sourceIndex = 0;
-
-        foreach (var slot in pUnboundInput.InputSlots)
-        {
-            nextSourceSignal:
-            var signalInfo = signalInfos[sourceIndex++];
-
-            var signalValueType = IReferenceToX.GetTypeOfReferenced(signalInfo.PropertyInfo.PropertyType);
-
-            if (signalValueType != ValueType)
-            {
-                throw new NotImplementedException($"Signal value type '{signalValueType}' does not match {nameof(PUnboundInput)}.{nameof(ValueType)} and no adapter has been implemented");
-            }
-
-            var signalPInput = (IPInput?) signalInfo.PropertyInfo.GetValue(source);
-
-            if (signalPInput == null)
-            {
-                if (SkipNullSourceSignals)
-                {
-                    // REVIEW idea: allow null Signals, and fall back to the next one, allowing for sparsely defined signals in the Source.
-                    goto nextSourceSignal;
-                }
-                else
-                {
-                    throw new ArgumentException($"Signal {signalInfo.PropertyInfo.Name} is null");
-                }
-            }
-            if (signalPInput is IPUnboundInput unbound)
-            {
-                throw new NotImplementedException($"Unbound input {unbound} is not allowed as a signalInfo");
-            }
-
-            signals.Add(signalPInput);
-
-        }
-
-        return signals;
     }
 
     #endregion
-
-
 }
 
 

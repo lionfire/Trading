@@ -23,7 +23,7 @@ public class BotContext
 
 public abstract class BotBase2<TParameters>
     : IBot2<TParameters>
-    where TParameters : PBot2<TParameters>
+    where TParameters : PBot2<TParameters>, IPMarketProcessor
 {
     //public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
 
@@ -64,7 +64,7 @@ public abstract class BotBase2<TParameters>
         }
     }
     private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have PBacktests set
-    object IBot2.Parameters { get => parameters; set => parameters = (TParameters)value; }
+    IPMarketProcessor IBot2.Parameters { get => parameters; set => parameters = (TParameters)value; }
 
     protected virtual void OnParametersSet()
     {
@@ -98,7 +98,34 @@ public abstract class BotBase2<TParameters>
 
     #endregion
 
+    #region Methods
+
+    #region Positions
+
+    public async ValueTask CloseAllPositions()
+    {
+        await Task.WhenAll(Positions.Items.Select(p => p.Account.ClosePosition(p).AsTask())).ConfigureAwait(false);
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Event Handlers
+
     public virtual void OnBar() { }
+    public virtual async ValueTask Stop()
+    {
+        await CloseAllPositions();
+    }
+    public virtual async ValueTask OnBacktestFinished()
+    {
+        await Stop();
+
+    }
+
+    #endregion
+
 
     //public static IReadOnlyList<InputSlot> InputSlots()
     //{

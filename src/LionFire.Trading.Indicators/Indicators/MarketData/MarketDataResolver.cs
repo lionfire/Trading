@@ -106,9 +106,10 @@ public class MarketDataResolver : IMarketDataResolver
             }
             else if (reference is ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
             {
+                valueType ??= (reference as IValueType)?.ValueType;
                 if (valueType != null)
                 {
-                    return (IHistoricalTimeSeries) ActivatorUtilities.CreateInstance(ServiceProvider, typeof(BarSeries<>).MakeGenericType(valueType), exchangeSymbolTimeFrame);
+                    return (IHistoricalTimeSeries)ActivatorUtilities.CreateInstance(ServiceProvider, typeof(BarSeries<>).MakeGenericType(valueType), exchangeSymbolTimeFrame);
                 }
                 else
                 {
@@ -142,13 +143,13 @@ public class MarketDataResolver : IMarketDataResolver
 
                     if (pBoundInput.PUnboundInput.TimeFrame != null && pBoundInput.PUnboundInput.TimeFrame != pBoundInput.TimeFrame)
                     {
-                        // FUTURE:
-                        //  - PUnboundInput is more granular: either
-                        //     - roll-up bars from a more granular indicator (pointless/impossible?), or
-                        //     - just use the same TimeFrame
-                        // - PUnboundInput is more coarse
-                        //   - repeat the same value for all granular bars within the coarse bar
-                        throw new NotImplementedException("Not implemented yet: PUnboundInput.TimeFrame that is different than PBoundInput.TimeFrame");
+                        //    // FUTURE:
+                        //    //  - PUnboundInput is more granular: either
+                        //    //     - roll-up bars from a more granular indicator (pointless/impossible?), or
+                        //    //     - just use the same TimeFrame
+                        //    // - PUnboundInput is more coarse
+                        //    //   - repeat the same value for all granular bars within the coarse bar
+                        //    throw new NotImplementedException("Not implemented yet: PUnboundInput.TimeFrame that is different than PBoundInput.TimeFrame");
                     }
                     else
                     {
@@ -175,7 +176,7 @@ public class MarketDataResolver : IMarketDataResolver
             {
                 // OLD
                 var timeSeries = (IHistoricalTimeSeries)Activator.CreateInstance(typeof(HistoricalTimeSeriesFromIndicatorHarness<,,,>).MakeGenericType(
-                        indicatorHarnessOptions.IndicatorParameters.IndicatorType,
+                        indicatorHarnessOptions.IndicatorParameters.InstanceType,
                         indicatorHarnessOptions.IndicatorParameters.GetType(),
                         indicatorHarnessOptions.IndicatorParameters.InputType,
                         indicatorHarnessOptions.IndicatorParameters.OutputType
@@ -185,9 +186,9 @@ public class MarketDataResolver : IMarketDataResolver
                     )!;
                 return timeSeries;
             }
-            else if (reference is IPUnboundInput _)
+            else if (reference is IPInputThatSupportsUnboundInputs _)
             {
-                throw new ArgumentException($"{typeof(IPUnboundInput).FullName} must be bound before resolving");
+                throw new ArgumentException($"{typeof(IPInputThatSupportsUnboundInputs).FullName} must be bound before resolving");
             }
 
             return null;

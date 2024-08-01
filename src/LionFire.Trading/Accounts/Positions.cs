@@ -24,7 +24,7 @@ namespace LionFire.Trading
 
         public IPosition Find(string label, Symbol symbol)
         {
-            return this.Where(p => p.Label == label && p.SymbolCode == symbol.Code).FirstOrDefault();
+            return this.Where(p => p.Label == label && p.Symbol == symbol.Code).FirstOrDefault();
         }
     }
 }

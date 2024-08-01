@@ -162,7 +162,7 @@ public class Backtest_Batch_ : BinanceDataTest
             var list = new List<IPBacktestTask2>();
             foreach (var symbol in symbols)
             {
-                for (uint i = 14; i <= 34; i++) { list.Add(createBacktest(symbol, i)); }
+                for (uint i = 14; i <= 14; i++) { list.Add(createBacktest(symbol, i)); }
             }
 
             batch.BacktestBatches = [

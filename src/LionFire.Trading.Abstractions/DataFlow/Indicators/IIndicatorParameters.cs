@@ -13,7 +13,7 @@ public interface IIndicatorParameters : IPInput
 
     //static abstract IReadOnlyList<OutputSlot> Outputs(); // Should this be Signal instead of Slot?
 
-    Type IndicatorType { get; }
+    Type InstanceType { get; }
 
     /// <summary>
     /// Aggregate of all Inputs

@@ -3,9 +3,13 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Automation;
 
-public abstract class PStandardBot2<TConcrete> : PSymbolBot2<TConcrete>
-    where TConcrete : PStandardBot2<TConcrete>
+public abstract class PStandardBot2<TConcrete, TValue> : PBarsBot2<TConcrete, TValue>
+    where TConcrete : PStandardBot2<TConcrete, TValue>
 {
+    protected PStandardBot2(ExchangeSymbolTimeFrame e) : base(e)
+    {
+    }
+
     public LongAndShort Direction { get; set; }
 
     public double PositionSize { get; set; } = 1;
@@ -15,11 +19,9 @@ public abstract class PStandardBot2<TConcrete> : PSymbolBot2<TConcrete>
     public bool CloseAllAtOnce { get; set; }
 }
 
-public abstract class StandardBot2<TParameters, TValue> : SymbolBot2<TParameters, TValue>
-      where TParameters : PStandardBot2<TParameters>
+public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, TValue>
+      where TParameters : PStandardBot2<TParameters, TValue>
 {
-
-
 
     #region Lifecycle
 

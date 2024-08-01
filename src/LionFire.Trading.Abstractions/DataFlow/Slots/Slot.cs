@@ -1,6 +1,7 @@
 ﻿namespace LionFire.Trading;
 
 // REVIEW: Make Slot this generic, with ISlot interface?
+// REVIEW: Separate into different classes?
 
 /// <summary>
 /// An input or output slot for a component

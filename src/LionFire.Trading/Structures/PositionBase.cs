@@ -11,13 +11,24 @@ namespace LionFire.Trading
     }
     public class FuturesPositionBase : PositionBase, IFuturesPosition
     {
+        public FuturesPositionBase(IAccount2 account, string symbol) : base(account, symbol)
+        {
+        }
+
         public int Leverage { get; set; }
         public bool Isolated { get; set; }
     }
 
     public class PositionBase : IPosition
     {
-        public string Comment { get; set; }
+        public PositionBase(IAccount2 account, string symbol)
+        {
+            Account = account;
+            Symbol = symbol;
+        }
+
+        public IAccount2 Account { get; set; }
+        public string? Comment { get; set; }
 
         public decimal Commissions { get; set; }
 
@@ -32,7 +43,7 @@ namespace LionFire.Trading
 
         public int Id { get; set; }
 
-        public string Label { get; set; }
+        public string? Label { get; set; }
 
         public decimal NetProfit { get; set; }
 
@@ -45,16 +56,12 @@ namespace LionFire.Trading
 
         public decimal Swap { get; set; }
 
-        public string SymbolCode
-        {
-            get => SymbolId?.Symbol; 
-            set
-            {
-                if(SymbolId== null) { SymbolId = new SymbolId(); }
-                SymbolId.Symbol = value;   
-            }
-        }
-        public SymbolId SymbolId { get; set; }
+        public string Symbol { get; set; }
+        //{
+        //    get => SymbolId.Symbol;
+        //    set => SymbolId.Symbol = new SymbolId { Symbol = value };
+        //}
+        public SymbolId? SymbolId { get; set; }
 
         public decimal? TakeProfit { get; set; }
 
@@ -64,6 +71,6 @@ namespace LionFire.Trading
 
         public decimal? UsdEquivalentQuantity { get; set; }
 
-        public override string ToString() => $"{TradeType} {SymbolCode}: {GrossProfit}";
+        public override string ToString() => $"{TradeType} {Symbol}: {GrossProfit}";
     }
 }

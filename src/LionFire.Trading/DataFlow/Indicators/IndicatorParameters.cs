@@ -3,21 +3,30 @@ using System.Text;
 
 namespace LionFire.Trading.DataFlow; // TODO: Move to .DataFlow namespace
 
-public abstract class IndicatorParameters<TIndicator> : IIndicatorParameters, IParametersFor<TIndicator>, IPUnboundInput
+public class SlottedParameters<TInstance>
 {
+    #region Identity
+
+    public Type InstanceType => typeof(TInstance);
+
+    #endregion
+
     #region Unbound
 
     public virtual IReadOnlyList<InputSlot> InputSlots => InputSlotsReflection.GetInputSlots(this.GetType());
 
     #endregion
+}
 
+// TODO: Move more members into base class
+public abstract class IndicatorParameters<TInstance> : SlottedParameters<TInstance>, IIndicatorParameters, IParametersFor<TInstance>, IPInputThatSupportsUnboundInputs
+{
     #region Unbound, potentially
 
     public TimeFrame? TimeFrame { get; set; }
 
     #endregion
 
-    public Type IndicatorType => typeof(TIndicator);
     public abstract Type InputType { get; }
     public virtual IReadOnlyList<Type> SlotTypes
     {

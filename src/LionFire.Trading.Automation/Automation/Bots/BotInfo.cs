@@ -9,47 +9,206 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Bots;
 
-public readonly record struct TypeInputInfo(PropertyInfo Parameter, PropertyInfo Values);
+public readonly record struct InputInjectionInfo(PropertyInfo Parameter, PropertyInfo Values);
 
 public class BotInfo
 {
-    public List<TypeInputInfo>? TypeInputInfos { get; set; }
+    public List<InputInjectionInfo>? InputInjectionInfos { get; set; }
 }
 
 public static class BotInfos
 {
+    #region State
+
     static ConcurrentDictionary<Type, BotInfo> dict = new();
+
+    #endregion
+
+    #region Methods
+
     public static BotInfo Get(Type parameterType, Type botType)
     {
         return dict.GetOrAdd(parameterType, t =>
         {
 
-            if (!parameterType.IsAssignableTo(typeof(IPBot2))) throw new ArgumentException($"parameterType must be assignable to {typeof(IPBot2).FullName}.  parameterType: {parameterType.FullName}");
+            if (!parameterType.IsAssignableTo(typeof(IPMarketProcessor))) throw new ArgumentException($"parameterType must be assignable to {typeof(IPMarketProcessor).FullName}.  parameterType: {parameterType.FullName}");
 
             var result = new BotInfo();
-            result.TypeInputInfos = new();
+            result.InputInjectionInfos = new();
 
-            var botProperties = botType
+            var botSignals = botType
                 .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
                 .Where(pi => pi.PropertyType.IsAssignableTo(typeof(IReadOnlyValuesWindow)))
                 .OrderBy(pi => pi.GetCustomAttribute<SignalAttribute>()?.Index ?? 0)
                 .ThenBy(pi => pi.Name)
                 ;
 
-            foreach (var pi in botProperties)
+            foreach (var propertyInfo in botSignals)
             {
-                var parameterProperty = parameterType.GetProperty(pi.Name);
+                var parameterProperty = parameterType.GetProperty(propertyInfo.Name);
 
                 if (parameterProperty == null)
                 {
-                    throw new ArgumentException($"Could not find matching Property {pi.Name} on {parameterType.FullName}");
+                    throw new ArgumentException($"Could not find matching Property {propertyInfo.Name} on {parameterType.FullName}");
                 }
 
-                result.TypeInputInfos.Add(new TypeInputInfo(parameterProperty, pi));
+                result.InputInjectionInfos.Add(new InputInjectionInfo(parameterProperty, propertyInfo));
             }
             return result;
         });
     }
+    
+    #endregion
+
+#if UNUSED // OLD From BotBatchControllerBase
+    public partial class BotBatchControllerBase
+    {
+
+#if UNUSED
+        private void InitBotIndicator(IBot2 bot, PropertyInfo botWindowProperty, PropertyInfo indicatorParametersProperty)
+        {
+            var parameters = (IIndicatorParameters)(indicatorParametersProperty.GetValue(bot.Parameters)
+                           ?? throw new ArgumentNullException($"Bot parameters of type {indicatorParametersProperty.PropertyType.FullName} is null for bot of type {bot.GetType().FullName}"));
+
+            var indicatorHarnessOptions = (IIndicatorHarnessOptions)typeof(IndicatorHarnessOptions<>).MakeGenericType(parameters.GetType()).GetConstructor([parameters.GetType()])!.Invoke([parameters]);
+            indicatorHarnessOptions.TimeFrame = TimeFrame.h1;
+
+            ResolveIndicatorInputs(indicatorHarnessOptions, parameters);
+
+            var historicalTimeSeries = () => Resolve(parameters.OutputType, indicatorHarnessOptions);
+
+            int lookback = parameters.Lookback;
+
+            var inputEnumeratorKey = "";
+            var inputEnumerator = InputEnumerators.TryGetValue(inputEnumeratorKey);
+
+            if (InputEnumeratorFactory.CreateOrGrow(botWindowProperty.PropertyType, historicalTimeSeries, lookback, ref inputEnumerator))
+            {
+                InputEnumerators[inputEnumeratorKey] = inputEnumerator!;
+            }
+
+            switch (BotExecutionMode)
+            {
+                case BotExecutionMode.Backtest:
+                    // Create Historical Indicator Harness
+                    break;
+                case BotExecutionMode.Live:
+                    // Create Live Indicator Harness
+                    break;
+                default:
+                    throw new UnreachableCodeException();
+            }
+
+            botWindowProperty.SetValue(bot, inputEnumerator);
+        }
+
+
+        #region Inputs
+
+        private void ResolveIndicatorInputs(IIndicatorHarnessOptions harnessOptions, IIndicatorParameters parameters)
+        {
+            //Inputs = new[] {
+            //            new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.h1)
+            //             } // OPTIMIZE - Aspect: HLC
+
+            throw new NotImplementedException();
+        }
+
+        #endregion
+#endif
+
+        // OLD UNUSED
+        //protected async void InitBot(IBot2 bot)
+        //{
+        //    var info = BotInitializationInfo.GetFor(bot);
+
+        //    if (info.BotWindowsToParameterIndicators != null)
+        //    {
+        //        foreach (var kvp in info.BotWindowsToParameterIndicators)
+        //        {
+        //            InitBotIndicator(bot, kvp.Key, kvp.Value);
+        //        }
+        //    }
+
+        //    List<Task>? tasks = null;
+        //    foreach (var kvp in InputEnumerators)
+        //    {
+        //        var inputEnumerator = kvp.Value;
+        //        if (inputEnumerator is IChunkingInputEnumerator chunking && chunking.LookbackRequired > 0)
+        //        {
+        //            tasks ??= new();
+        //            var preloadStart = TimeFrame.AddBars(Start, -chunking.LookbackRequired);
+        //            var preloadEndExclusive = Start;
+
+        //            tasks.Add(Task.Run(async () =>
+        //            {
+        //                await inputEnumerator.PreloadRange(preloadStart, preloadEndExclusive).ConfigureAwait(false);
+        //                inputEnumerator.MoveNext(chunking.LookbackRequired);
+        //            }));
+        //        }
+        //    }
+        //    if (tasks != null) { await tasks.WhenAll().ConfigureAwait(false); }
+
+        //}
+
+        private class BotInitializationInfo
+        {
+            #region (static)
+
+            internal static BotInitializationInfo GetFor(IBot2 bot)
+            {
+                return initInfos.GetOrAdd(bot.GetType(), type =>
+                {
+                    var info = new BotInitializationInfo(bot);
+                    return info;
+                });
+            }
+
+            static readonly ConcurrentDictionary<Type, BotInitializationInfo> initInfos = new();
+
+            #endregion
+
+            IEnumerable<PropertyInfo> GetReverseValuesWindowsPropertyInfos(Type type) => type
+                    .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)
+                    .Where(pi => pi.PropertyType.IsAssignableTo(typeof(IReadOnlyValuesWindow)));
+
+            public BotInitializationInfo(IBot2 bot)
+            {
+                Type parametersType = bot.Parameters.GetType();
+
+                // TODO: Determine the sources for these windows
+                // Eg:
+                // - Window property name: "ATR"
+                // - Bot parameter name: "ATR" or (FUTURE:) Bot parameter attribute [RuntimeProperty("ATR")]
+
+                foreach (var window in GetReverseValuesWindowsPropertyInfos(bot.GetType()))
+                {
+                    var p = parametersType.GetProperty(window.Name);
+                    if (p == null)
+                    {
+                        throw new ArgumentException($"No parameter found for window {window.Name}");
+                    }
+
+                    if (p.PropertyType.IsAssignableTo(typeof(IIndicatorParameters)))
+                    {
+                        BotWindowsToParameterIndicators ??= new();
+                        BotWindowsToParameterIndicators.Add(window, p);
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"{nameof(IReadOnlyValuesWindow)} '{window.Name}' in bot has a matching property in PBacktests, but wiring up ValueType of {p.PropertyType.FullName} is not supported.");
+                    }
+                }
+            }
+
+            // Input could be 
+            public Dictionary<PropertyInfo, PropertyInfo>? BotWindowsToParameterIndicators { get; private set; }
+            //public IEnumerable<PropertyInfo> ReverseValuesWindow { get; private init; }
+
+            //public (int source, PropertyInfo) Indicators { get; set; }
+        }
+    }
+#endif
 }
 
 public class PBotInfo

@@ -32,6 +32,8 @@ public enum DataPointAspect
     /// </summary>
     //Price = 1 << 15,
     //Any = 0xFFFF,
+    HLC = High | Low | Close,
+    OHLC = Open | High | Low | Close,
 }
 
 public static class DataPointAspectX
@@ -55,6 +57,13 @@ public static class DataPointAspectX
             DataPointAspect.Low => kline.LowPrice,
             DataPointAspect.Close => kline.ClosePrice,
             DataPointAspect.Volume => kline.Volume,
+            //DataPointAspect.HLC => new HLC<decimal>
+            //{
+            //    High = kline.HighPrice,
+            //    Low = kline.LowPrice,
+            //    Close = kline.ClosePrice,
+            //},
+
             // TODO: More aspects
             _ => throw new NotImplementedException(),
         };

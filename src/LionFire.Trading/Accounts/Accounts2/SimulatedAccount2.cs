@@ -1,5 +1,6 @@
 ﻿using DynamicData;
 using LionFire.Trading.HistoricalData.Retrieval;
+using LionFire.Trading.ValueWindows;
 using System.Numerics;
 using System.Reactive.Subjects;
 
@@ -23,11 +24,15 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
     where TPrecision : INumber<TPrecision>
 {
 
+    public IPAccount2 Parameters { get; }
+
     #region Identity
 
     public string Exchange { get; }
 
     public string ExchangeArea { get; }
+    public string? DefaultSymbol { get; }
+
     //public IBars Bars { get; }
 
     public bool IsSimulation => true;
@@ -40,10 +45,12 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     #region Lifecycle
 
-    protected SimulatedAccount2(string exchange, string exchangeArea)
+    protected SimulatedAccount2(IPAccount2 parameters, string exchange, string exchangeArea, string? defaultSymbol = null)
     {
+        Parameters = parameters;
         Exchange = exchange;
         ExchangeArea = exchangeArea;
+        DefaultSymbol = defaultSymbol;
         //Bars = bars;
     }
 

@@ -5,7 +5,7 @@ public interface IPTimeFrameBot2 : IPBot2, IPTimeFrameMarketProcessor
 {
 }
 
-public abstract class PTimeFrameBot2<TConcrete> : PStandardBot2<TConcrete>, IPTimeFrameBot2
+public abstract class PTimeFrameBot2<TConcrete> : PSymbolBot2<TConcrete>, IPTimeFrameBot2
     where TConcrete : PTimeFrameBot2<TConcrete>
 {
     //public PTimeFrameBot2() { }

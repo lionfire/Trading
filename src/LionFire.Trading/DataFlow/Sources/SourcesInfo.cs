@@ -35,7 +35,7 @@ public class SourcesInfo
             .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
             .Where(p =>
                 p.PropertyType.IsAssignableTo(typeof(IPInput))
-                && !p.PropertyType.IsAssignableTo(typeof(IPUnboundInput))
+                && !p.PropertyType.IsAssignableTo(typeof(IPInputThatSupportsUnboundInputs))
                 )
             )
         {

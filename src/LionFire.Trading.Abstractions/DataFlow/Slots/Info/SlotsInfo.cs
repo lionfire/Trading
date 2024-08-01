@@ -8,8 +8,9 @@ public class SlotsInfo
 {
     #region (static)
 
-    public static SlotsInfo GetSlotsInfo(Type type) => dict.GetOrAdd(type, t => new SlotsInfo(t));
 
+    // REVIEW: Reconcile with InputSlotsReflection.GetInputSlots
+    public static SlotsInfo GetSlotsInfo(Type parametersType) => dict.GetOrAdd(parametersType, t => new SlotsInfo(t));
     static ConcurrentDictionary<Type, SlotsInfo> dict = new();
 
     #endregion
@@ -27,7 +28,7 @@ public class SlotsInfo
             .GetProperties(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public)
             .Where(p =>
                 p.PropertyType.IsAssignableTo(typeof(IPInput))
-                && !p.PropertyType.IsAssignableTo(typeof(IPUnboundInput))
+                && !p.PropertyType.IsAssignableTo(typeof(IPInputThatSupportsUnboundInputs))
                 )
             )
         {

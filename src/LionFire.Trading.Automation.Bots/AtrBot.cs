@@ -9,11 +9,7 @@ using System.Reflection;
 
 namespace LionFire.Trading.Automation.Bots;
 
-public static class BotParametersTypeInfo
-{
-}
-
-public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>, TValue>
+public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 {
 
     #region Static
@@ -66,7 +62,7 @@ public class PAtrBot<TValue> : PSymbolBarsBot2<PAtrBot<TValue>, TValue>
 
         InitFromDefault();
     }
-    public override Type InstanceType => typeof(AtrBot<TValue>);
+    
 
     public void ThrowIfInvalid()
     {
@@ -139,27 +135,29 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
     public override void OnBar()
     {
-        if (barIndex++ % 50000 == 0)
-        {
-            if (ATR.Size > 0) {
-                Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar ATR: {ATR[0]}, bars available: {ATR.Size}"); }
-            else { Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A"); }
+        //if (barIndex++ % 50000 == 0)
+        //{
+        //    if (ATR.Size > 0) {
+        //        Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar ATR: {ATR[0]}, bars available: {ATR.Size}"); }
+        //    else { Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A"); }
             
-            //if (Bars.Size > 0)
-            //{
-            //    Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: {Bars[0]}, bars available: {Bars.Size}");
-            //}
-            //else
-            //{
-            //    Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A");
-            //}
-        }
+        //    //if (Bars.Size > 0)
+        //    //{
+        //    //    Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: {Bars[0]}, bars available: {Bars.Size}");
+        //    //}
+        //    //else
+        //    //{
+        //    //    Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A");
+        //    //}
+        //}
 
         if (ATR[0] > ATR[1]) OpenScore++;
         if (ATR[0] < ATR[1]) CloseScore++;
 
-        if (OpenScore >= Parameters.Points!.OpenThreshold) { TryOpen(); }
-        if (CloseScore >= Parameters.Points.CloseThreshold) { TryClose(); }
+        //Thread.SpinWait(150);
+        //Thread.SpinWait(50);
+        //if (OpenScore >= Parameters.Points!.OpenThreshold) { TryOpen(); }
+        //if (CloseScore >= Parameters.Points.CloseThreshold) { TryClose(); }
 
         //long s;
     }

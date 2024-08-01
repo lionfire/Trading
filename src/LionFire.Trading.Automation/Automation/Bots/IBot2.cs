@@ -6,12 +6,15 @@ namespace LionFire.Trading.Automation;
 public interface IBot2 : IMarketParticipant2
 {
     string BotId { get; set; }
-    object Parameters { get; set; }
+    IPMarketProcessor Parameters { get; set; }
 
 
     IBotController? Controller { get; set; }
 
     void Init() { }
+
+    ValueTask Stop();
+    ValueTask OnBacktestFinished();
 
     IObservableCache<IPosition, int> Positions { get; }
 }

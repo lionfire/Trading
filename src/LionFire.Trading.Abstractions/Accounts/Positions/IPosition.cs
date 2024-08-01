@@ -22,7 +22,7 @@ public interface IPosition
     decimal Swap { get; }
 
     SymbolId SymbolId { get; }
-    string SymbolCode { get; }
+    string Symbol { get; }
     decimal? TakeProfit { get; }
     TradeKind TradeType { get; }
     long Volume { get; }
@@ -33,5 +33,5 @@ public interface IPosition
     decimal? LiqPrice { get; set; }
     decimal? MarkPrice { get; set; }
     decimal? UsdEquivalentQuantity { get; set; }
-
+    IAccount2 Account { get; }
 }

@@ -68,7 +68,7 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IChunkingInput
     {
         get
         {
-            if (InputBuffer.Array == null) throw new InvalidOperationException("No data");
+            //if (InputBuffer.Array == null) throw new InvalidOperationException("No data"); // OPTIMIZE HOTSPOT - commented this
             var inputBufferIndex = InputBufferIndex - index;
             if (inputBufferIndex >= 0 && inputBufferIndex < InputBuffer.Count)
             {

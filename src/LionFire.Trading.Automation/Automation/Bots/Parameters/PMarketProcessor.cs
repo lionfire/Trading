@@ -11,8 +11,8 @@ public abstract class PMarketProcessor : IPMarketProcessor
 
     public int[]? InputLookbacks { get; set; }
 
-    public abstract Type InstanceType { get; }
     public abstract Type MaterializedType { get; }
+    //public abstract Type MaterializedType { get; }
 
 
 }

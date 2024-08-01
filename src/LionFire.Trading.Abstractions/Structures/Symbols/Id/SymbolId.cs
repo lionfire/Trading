@@ -23,6 +23,7 @@ public class SymbolId : IEquatable<SymbolId>
     #endregion
 
     public SymbolId() { }
+    public SymbolId(string symbol) { Symbol = symbol; }
 
     public string Exchange { get; set; }
     public string ExchangeArea { get; set; }
@@ -127,9 +128,9 @@ public class SymbolId : IEquatable<SymbolId>
 
     #region Misc
 
-    public override bool Equals(object obj) => Equals(obj as SymbolId);
+    public override bool Equals(object? obj) => Equals(obj as SymbolId);
 
-    public bool Equals(SymbolId other)
+    public bool Equals(SymbolId? other)
         => other is not null &&
                Exchange == other.Exchange &&
                ExchangeArea == other.ExchangeArea &&

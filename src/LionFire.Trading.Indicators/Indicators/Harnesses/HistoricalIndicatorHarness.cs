@@ -14,7 +14,7 @@ public static class HistoricalIndicatorHarness
         )
     {
         var type = typeof(HistoricalIndicatorHarness<,,,>).MakeGenericType(
-                                                pIndicator.IndicatorType,
+                                                pIndicator.InstanceType,
                                                 pIndicator.GetType(),
                                                 pIndicator.InputType,
                                                 pIndicator.OutputType

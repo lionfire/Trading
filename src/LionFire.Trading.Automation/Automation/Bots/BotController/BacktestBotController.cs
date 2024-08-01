@@ -1,8 +1,5 @@
-﻿using System.Numerics;
-
+﻿
 namespace LionFire.Trading.Automation;
-
-
 
 public class BacktestBotController : IBotController
 {
@@ -10,10 +7,11 @@ public class BacktestBotController : IBotController
 
     public IBotBatchController BotBatchController { get; }
     public IBot2 Bot { get; }
+    public PBacktestAccount<double> PBacktestAccount { get; }
 
     #region Derived
 
-    public ExchangeSymbol? ExchangeSymbol => (Bot as IPSymbolBarsBot2)?.ExchangeSymbol;
+    public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame => (Bot.Parameters as IPBarsBot2)?.ExchangeSymbolTimeFrame;
 
     #endregion
 
@@ -21,13 +19,19 @@ public class BacktestBotController : IBotController
 
     #region Lifecycle
 
-    public BacktestBotController(IBotBatchController botBatchController, IBot2 bot)
+    public BacktestBotController(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<double> pBacktestAccount)
     {
         BotBatchController = botBatchController;
         Bot = bot;
-        if (Bot.Parameters is IPSymbolBarsBot2 s)
+        PBacktestAccount = pBacktestAccount;
+        var e = ExchangeSymbolTimeFrame;
+        if (e != null)
         {
-            account = CreateAccount(s.ExchangeSymbol);
+            account = CreateAccount(e);
+        }
+        else
+        {
+            throw new NotImplementedException("TODO: How do we know which Exchange the account is on?");
         }
     }
 
@@ -35,17 +39,14 @@ public class BacktestBotController : IBotController
 
     #region State
 
-    public IAccount2<double>? Account => account;
-    private readonly BacktestAccount2<double>? account;
+    public IAccount2 Account => account;
+    private readonly BacktestAccount2<double> account;
 
-    protected BacktestAccount2<double> CreateAccount(ExchangeId exchange)
-        => new BacktestAccount2<double>(this, exchange.Exchange, exchange.ExchangeArea);
+
+    protected BacktestAccount2<double> CreateAccount(ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame)
+        => new BacktestAccount2<double>(PBacktestAccount, this, ExchangeSymbolTimeFrame.Exchange, ExchangeSymbolTimeFrame.ExchangeArea, ExchangeSymbolTimeFrame.Symbol);
 
     #endregion
-
-    //public ExchangeSymbol? PrimaryExchangeSymbol
-    //{
-    //}
 
 }
 
