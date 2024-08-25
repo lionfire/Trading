@@ -3,7 +3,8 @@
 namespace LionFire.Trading;
 
 [ReferenceType(typeof(OHLCReference<>))]
-public struct OHLC<T> : IKlineMarker
+public struct OHLC<T> : IKlineMarker, IOpenPrice<T>, IClosePrice<T>, IHighLowPrice<T>
+    , IPrecision<T>
 {
     public T Open { get; set; }
     public T High { get; set; }

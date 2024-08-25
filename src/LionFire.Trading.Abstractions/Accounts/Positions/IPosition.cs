@@ -1,37 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading;
 
-public interface IPosition
+public interface IPosition 
 {
-    string Comment { get; }
-    decimal Commissions { get; }
-    decimal EntryPrice { get; }
-    DateTime EntryTime { get; }
-    decimal GrossProfit { get; }
     int Id { get; }
-    string Label { get; }
-    decimal NetProfit { get; }
-    decimal Pips { get; }
-    decimal Quantity { get; }
-    decimal? StopLoss { get; }
+    string? Label { get; }
+    string? Comment { get; }
     string? StopLossWorkingType { get; set; }
-    decimal Swap { get; }
-
     SymbolId SymbolId { get; }
     string Symbol { get; }
-    decimal? TakeProfit { get; }
-    TradeKind TradeType { get; }
     long Volume { get; }
+}
 
+public interface IPosition<TPrecision> : IPosition
+    where TPrecision : struct, INumber<TPrecision>
+{
+    TPrecision Commissions { get; }
+    TPrecision EntryPrice { get; }
+    DateTime EntryTime { get; }
+    TPrecision GrossProfit { get; }
+    TPrecision NetProfit { get; }
+    TPrecision Pips { get; }
+    TPrecision Quantity { get; }
+    TPrecision? StopLoss { get; }
+    TPrecision Swap { get; }
 
+    TPrecision? TakeProfit { get; }
+    TradeKind TradeType { get; }
 
-    decimal? LastPrice { get; set; }
-    decimal? LiqPrice { get; set; }
-    decimal? MarkPrice { get; set; }
-    decimal? UsdEquivalentQuantity { get; set; }
-    IAccount2 Account { get; }
+    TPrecision? LastPrice { get; set; }
+    TPrecision? LiqPrice { get; set; }
+    TPrecision? MarkPrice { get; set; }
+    TPrecision? UsdEquivalentQuantity { get; set; }
+    IAccount2<TPrecision> Account { get; }
 }

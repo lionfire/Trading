@@ -1,13 +1,16 @@
 ﻿using LionFire.Trading.Data;
 using LionFire.Trading.ValueWindows;
+using System.Numerics;
 
 namespace LionFire.Trading.Automation;
 
-public sealed class SingleValueInputEnumerator<T> : InputEnumeratorBase<T>
+public sealed class SingleValueInputEnumerator<TValue, TPrecision> : InputEnumeratorBase<TValue, TPrecision>
+    where TValue : notnull
+    where TPrecision : struct, INumber<TPrecision>
 {
     #region Lifecycle
 
-    public SingleValueInputEnumerator(IHistoricalTimeSeries<T> series) : base(series, 0)
+    public SingleValueInputEnumerator(IHistoricalTimeSeries<TValue> series) : base(series, 0)
     {
     }
 
@@ -15,7 +18,7 @@ public sealed class SingleValueInputEnumerator<T> : InputEnumeratorBase<T>
 
     #region IReadOnlyValuesWindow<T>
 
-    public override T this[int index] => index == 0 ? InputBuffer[InputBufferIndex] : throw new ArgumentOutOfRangeException();
+    public override TValue this[int index] => index == 0 ? InputBuffer[InputBufferCursorIndex] : throw new ArgumentOutOfRangeException();
 
     public override uint Capacity => 1;
 

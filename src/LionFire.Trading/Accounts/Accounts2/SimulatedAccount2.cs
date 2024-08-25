@@ -20,8 +20,8 @@ public class PriceMonitorStateMachine : IPriceMonitorStateMachine
     }
 }
 
-public abstract class SimulatedAccount2<TPrecision> : IAccount2
-    where TPrecision : INumber<TPrecision>
+public abstract class SimulatedAccount2<TPrecision> : IAccount2<TPrecision>
+    where TPrecision : struct, INumber<TPrecision>
 {
 
     public IPAccount2 Parameters { get; }
@@ -67,7 +67,7 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     public IObservableCache<IPosition, int> Positions => positions;
 
-    IEnumerable<IPosition> IAccount2.Positions => throw new NotImplementedException();
+    IEnumerable<IPosition<TPrecision>> IAccount2<TPrecision>.Positions => throw new NotImplementedException();
 
     protected SourceCache<IPosition, int> positions = new(p => p.Id);
 
@@ -95,13 +95,16 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 
     #region Methods
 
-    public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, double positionSize);
+    public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize);
+
     public abstract ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize);
-    public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, decimal positionSize);
 
     #region Close
 
-    public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, double positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
+    // TODO: Change decimal to TPrecision
+    public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, TPrecision positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
+
+    // TODO: Change decimal to TPrecision
     public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, decimal positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
 
     public ValueTask<IOrderResult> ClosePosition(IPosition position) // TODO: Execution options: PostOnly, etc.
@@ -117,7 +120,7 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2
 }
 
 public class AccountStateJournal<TPrecision>
-    where TPrecision : INumber<TPrecision>
+    where TPrecision : struct, INumber<TPrecision>
 {
     public List<(DateTimeOffset time, AccountState<TPrecision> state)> States { get; set; } = new();
 }

@@ -102,7 +102,7 @@ public class BacktestBatchTask2
             });
         }
 
-        var controller = new BacktestBotController(this, bot, pAccount);
+        var controller = new BacktestBotController<double>(this, bot, pAccount);
         bot.Controller = controller;
         bot.Init();
         backtests.Add(new BacktestState(p, bot, controller));
@@ -378,16 +378,16 @@ public class BacktestBatchTask2
 
             if (value.Lookback == 0)
             {
-                inputEnumerators[key].Enumerator = (InputEnumeratorBase)typeof(SingleValueInputEnumerator<>)
-                   .MakeGenericType(series.ValueType)
+                inputEnumerators[key].Enumerator = (InputEnumeratorBase)typeof(SingleValueInputEnumerator<,>)
+                   .MakeGenericType(series.ValueType, series.PrecisionType)
                    .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType)])!
                    .Invoke([series]);
             }
             else if (value.Lookback < 0) throw new ArgumentOutOfRangeException(nameof(value.Lookback));
             else
             {
-                inputEnumerators[key].Enumerator = (InputEnumeratorBase)typeof(ChunkingInputEnumerator<>)
-                    .MakeGenericType(series.ValueType)
+                inputEnumerators[key].Enumerator = (InputEnumeratorBase)typeof(ChunkingInputEnumerator<,>)
+                    .MakeGenericType(series.ValueType, series.PrecisionType)
                     .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType), typeof(int)])!
                     .Invoke([series, value.Lookback]);
             }
@@ -446,7 +446,7 @@ public class BacktestBatchTask2
     IEnumerable<IBot2> bots => backtests.Select(s => s.Bot);
     List<BacktestState> backtests = new();
 
-    private record struct BacktestState(IPBacktestTask2 PBacktest, IBot2 Bot, IBotController Controller) : IHasInstanceInputInfos
+    private record struct BacktestState(IPBacktestTask2 PBacktest, IBot2 Bot, IBotController<double> Controller) : IHasInstanceInputInfos
     {
         internal List<InstanceInputInfo> InstanceInputInfos => instanceInputInfos;
         internal List<InstanceInputInfo> instanceInputInfos = new();

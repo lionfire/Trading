@@ -21,9 +21,10 @@ public class BotContext
 
 }
 
-public abstract class BotBase2<TParameters>
-    : IBot2<TParameters>
+public abstract class BotBase2<TParameters, TPrecision>
+    : IBot2<TParameters, TPrecision>
     where TParameters : PBot2<TParameters>, IPMarketProcessor
+    where TPrecision : struct, INumber<TPrecision>
 {
     //public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
 
@@ -37,7 +38,7 @@ public abstract class BotBase2<TParameters>
 
     #region IBotController
 
-    public IBotController? Controller
+    public IBotController<TPrecision>? Controller
     {
         get => controller;
         set
@@ -46,7 +47,7 @@ public abstract class BotBase2<TParameters>
             controller = value;
         }
     }
-    private IBotController? controller = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    private IBotController<TPrecision>? controller = null!; // OnBar, OnTick are guaranteed to have PBacktests set
 
     #endregion
 

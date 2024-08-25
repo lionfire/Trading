@@ -2,7 +2,7 @@
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-public class BarSeries : BarSeries<IKline>
+public class BarSeries : BarSeries<IKline<decimal>>, IPrecision<decimal>
 {
     public BarSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, IBars barsService) : base(exchangeSymbolTimeFrame, barsService)
     {
@@ -17,7 +17,7 @@ public class BarSeries<TValue> : IHistoricalTimeSeries<TValue>
     public Type ValueType => typeof(TValue);
 
     public TimeFrame TimeFrame => ExchangeSymbolTimeFrame.TimeFrame;
-    
+
     #endregion
 
     #region Dependencies

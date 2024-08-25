@@ -3,6 +3,7 @@ using LionFire.Threading;
 using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Indicators.Harnesses;
+using Microsoft.CodeAnalysis.Operations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,10 +48,10 @@ public static class InputEnumeratorFactory
             }
             // else if lookback == 1, we're ok since existing inputEnumerator must already have at least 1.
         }
-
-        inputEnumerator = lookback == 1
-            ? (InputEnumeratorBase)Activator.CreateInstance(typeof(SingleValueInputEnumerator<>).MakeGenericType(type), series())!
-            : (InputEnumeratorBase)Activator.CreateInstance(typeof(ChunkingInputEnumerator<>).MakeGenericType(type), series(), lookback)!;
+        throw new NotImplementedException("TPrecision");
+        //inputEnumerator = lookback == 1
+        //    ? (InputEnumeratorBase)Activator.CreateInstance(typeof(SingleValueInputEnumerator<,>).MakeGenericType(type, ______FIXME_______ ), series())!
+        //    : (InputEnumeratorBase)Activator.CreateInstance(typeof(ChunkingInputEnumerator<,>).MakeGenericType(type, ______FIXME_______), series(), lookback)!;
         return true;
     }
 }

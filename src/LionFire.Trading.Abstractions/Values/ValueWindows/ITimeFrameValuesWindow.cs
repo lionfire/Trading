@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading.ValueWindows;
+﻿using System.Numerics;
+
+namespace LionFire.Trading.ValueWindows;
 
 public interface ITimeFrameValuesWindow : IValuesWindow
 {
@@ -10,12 +12,32 @@ public interface ITimeFrameValuesWindow : IValuesWindow
     TimeSpan TimeSpan { get; }
 }
 
-public interface IReadOnlyValuesWindow<T> : IReadOnlyValuesWindow
+public enum PriceSubscriptionDirection
 {
-    T this[int index] { get; }
+    Unspecified = 0,
+    Up = 1 << 0,
+    Down = 1 << 1,
+    UpOrDown = Up | Down,
 }
 
-public interface IReadOnlyTimeFrameValuesWindow<T>: IReadOnlyValuesWindow<T>
+public interface IReadOnlyValuesWindow<TValue> : IReadOnlyValuesWindow
+{
+    TValue this[int index] { get; }
+
+}
+public interface IReadOnlyValuesWindow<TValue, TPrecision> : IReadOnlyValuesWindow<TValue>
+    where TPrecision : struct, INumber<TPrecision>
+{
+    void SubscribeToPrice(TPrecision triggerValue, Action<TValue> onReached, PriceSubscriptionDirection direction = PriceSubscriptionDirection.UpOrDown);
+}
+
+//public interface IReadOnlyValuesWindow<T, TPrecision> : IReadOnlyValuesWindow<T>
+//    where T : IHasPrecision
+//{
+//    IDisposable SubscribeToPrice(TPrecision triggerValue, Action<(TPrecision oldValue, TPrecision newValue)> onReached);
+//}
+
+public interface IReadOnlyTimeFrameValuesWindow<T> : IReadOnlyValuesWindow<T>
 {
     (DateTimeOffset lastOpenTime, IList<ArraySegment<T>> arraySegments) ReversedValuesBufferWithTime { get; }
     (DateTimeOffset firstOpenTime, DateTimeOffset lastOpenTime, T[] reverseValues) Values { get; }

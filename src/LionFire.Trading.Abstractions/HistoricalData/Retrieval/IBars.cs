@@ -105,7 +105,7 @@ public interface IBars : ITradingDataSource
 
     // OPTIMIZE: Cache rather than recreate, for these methods
 
-    IHistoricalTimeSeries<IKline> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
+    IHistoricalTimeSeries<IKline<decimal>> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
         => new BarSeries(exchangeSymbolTimeFrame, this);
 
     IHistoricalTimeSeries<decimal> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, DataPointAspect aspect)

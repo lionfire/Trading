@@ -1,6 +1,7 @@
 ﻿using LionFire.Trading.Data;
 using LionFire.Trading.ValueWindows;
 using Serilog.Configuration;
+using System.Numerics;
 
 namespace LionFire.Trading.Automation;
 
@@ -18,17 +19,19 @@ public interface IChunkingInputEnumerator : IInputEnumerator
 
 }
 
-public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IChunkingInputEnumerator
+public class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumeratorBase<TValue, TPrecision>, IChunkingInputEnumerator
+    where TValue : notnull
+    where TPrecision : struct, INumber<TPrecision>
 {
     // OPTIMIZE idea: see if reversing the array at load time is faster.
     // OPTIMIZE idea: benchmark different chunk sizes (i.e. short vs long chunk, and a portion of those chunks.)
 
-    public ChunkingInputEnumerator(IHistoricalTimeSeries<T> series, int lookback) : base(series, lookback)
+    public ChunkingInputEnumerator(IHistoricalTimeSeries<TValue> series, int lookback) : base(series, lookback)
     {
 
     }
 
-    protected ArraySegment<T> PreviousChunk;
+    protected ArraySegment<TValue> PreviousChunk;
     protected override bool HasPreviousChunk => PreviousChunk.Count > 0;
 
     public TimeFrame TimeFrame => Series.TimeFrame;
@@ -49,6 +52,30 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IChunkingInput
     }
 
     #region IReadOnlyValuesWindow<T>
+    public override TValue this[int index]
+    {
+        get
+        {
+            //if (InputBuffer.Array == null) throw new InvalidOperationException("No data"); // OPTIMIZE HOTSPOT - commented this
+            var requestedIndex = InputBufferCursorIndex - index;
+            if (requestedIndex >= 0 && requestedIndex < InputBuffer.Count)
+            {
+                return InputBuffer[requestedIndex];
+            }
+            else
+            {
+                int previousChunkRequestedIndex = PreviousChunk.Count + /* negative number */ requestedIndex;
+
+                if (PreviousChunk.Array == null || previousChunkRequestedIndex > PreviousChunk.Count)
+                {
+                    throw new ArgumentOutOfRangeException();
+                }
+                return PreviousChunk[previousChunkRequestedIndex];
+            }
+        }
+    }
+
+    #region Derived
 
     public override uint Capacity
     {
@@ -60,33 +87,12 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IChunkingInput
             return count;
         }
     }
-
     public override bool IsFull => InputBuffer.Array != null && PreviousChunk.Array != null;
-    public override uint Size => Capacity - (uint)InputBufferIndex;
+    public override uint Size => (uint)InputBuffer.Count;
+    /// <seealso cref="UnprocessedInputCount"/>
+    public int ItemsViewable => InputBufferCursorIndex + Math.Min(1, InputBuffer.Count) + PreviousChunk.Count;
 
-    public override T this[int index]
-    {
-        get
-        {
-            //if (InputBuffer.Array == null) throw new InvalidOperationException("No data"); // OPTIMIZE HOTSPOT - commented this
-            var inputBufferIndex = InputBufferIndex - index;
-            if (inputBufferIndex >= 0 && inputBufferIndex < InputBuffer.Count)
-            {
-                return InputBuffer[inputBufferIndex];
-            }
-            else
-            {
-                //int previousChunkActualIndex = PreviousChunk.Count - 1 - index - InputBufferIndex - 1;
-                int previousChunkActualIndex = PreviousChunk.Count + inputBufferIndex;
-
-                if (PreviousChunk.Array == null || previousChunkActualIndex > PreviousChunk.Count)
-                {
-                    throw new ArgumentOutOfRangeException();
-                }
-                return PreviousChunk[previousChunkActualIndex];
-            }
-        }
-    }
+    #endregion
 
     #endregion
 
@@ -96,7 +102,7 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IChunkingInput
 
         #region MEMORY OPTIMIZATION - discard unneeded array
 
-        if (InputBufferIndex >= LookbackRequired)
+        if (InputBufferCursorIndex >= LookbackRequired)
         {
             PreviousChunk = default;
         }
@@ -109,7 +115,7 @@ public class ChunkingInputEnumerator<T> : InputEnumeratorBase<T>, IChunkingInput
 
         #region MEMORY OPTIMIZATION - discard unneeded array
 
-        if (InputBufferIndex >= LookbackRequired)
+        if (InputBufferCursorIndex >= LookbackRequired)
         {
             PreviousChunk = default;
         }

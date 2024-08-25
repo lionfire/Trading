@@ -3,7 +3,11 @@
 namespace LionFire.Trading.ValueWindows;
 
 
-// REVIEW - not sure this class needs to exist: just use CircularBuffer directly
+/// <summary>
+/// Based on CircularBuffer, and adds this capability:
+/// - Subscribe to value reached
+/// </summary>
+/// <typeparam name="T"></typeparam>
 public abstract class ValuesWindowBase<T> : IValuesWindow<T>
 {
     #region Parameters
@@ -78,5 +82,12 @@ public abstract class ValuesWindowBase<T> : IValuesWindow<T>
     }
 
     #endregion
-
+    public IDisposable SubscribeToPrice<TPrecision>(TPrecision triggerValue, Action<(TPrecision oldValue, TPrecision newValue, T value)> onReached)
+    {
+        throw new NotImplementedException();
+    }
+    //public IDisposable SubscribeToPrice(T triggerValue, Action<(T oldValue, T newValue)> onReached)
+    //{
+    //    throw new NotImplementedException();
+    //}
 }

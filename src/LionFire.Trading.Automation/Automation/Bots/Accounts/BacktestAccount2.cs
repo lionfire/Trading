@@ -29,7 +29,7 @@ public class PBacktestAccount<TPrecision>
     , IParametersFor<BacktestAccount2<TPrecision>>
     , IPAccount2
     , ICloneable
-    where TPrecision : INumber<TPrecision>
+    where TPrecision : struct, INumber<TPrecision>
 {
 
     #region (static)
@@ -79,7 +79,7 @@ public class PBacktestAccount<TPrecision>
     /// </summary>
     public HLCReference<TPrecision>? Bars { get; set; }
 
-    public TPrecision StartingBalance { get; set; } 
+    public TPrecision StartingBalance { get; set; }
 
     public TimeFrame TimeFrame { get; set; }
 
@@ -94,12 +94,11 @@ public class PBacktestAccount<TPrecision>
     }
 }
 
-public class BacktestAccount2<TPrecision> 
+public class BacktestAccount2<TPrecision>
     : SimulatedAccount2<TPrecision>
     , IHasSignalInfo
     , IHasInstanceInputInfos
-
-    where TPrecision : INumber<TPrecision>
+    where TPrecision : struct, INumber<TPrecision>
 {
 
     public new PBacktestAccount<TPrecision> Parameters => base.Parameters as PBacktestAccount<TPrecision> ?? PBacktestAccount<TPrecision>.Default;
@@ -116,13 +115,13 @@ public class BacktestAccount2<TPrecision>
 
     #region Relationships
 
-    public BacktestBotController BacktestBotController { get; }
+    public BacktestBotController<double> BacktestBotController { get; }
 
     static BotInfo BotInfo => BotInfos.Get(typeof(PBacktestAccount<TPrecision>), typeof(BacktestAccount2<TPrecision>));
 
     List<InstanceInputInfo> IHasInstanceInputInfos.InstanceInputInfos
 //=>        [];
-=>    [new (Parameters.Bars!, BotInfo.InputInjectionInfos![0])];
+=> [new(Parameters.Bars!, BotInfo.InputInjectionInfos![0])];
 
     object IHasInstanceInputInfos.Instance => this;
 
@@ -130,7 +129,7 @@ public class BacktestAccount2<TPrecision>
 
     #region Lifecycle
 
-    public BacktestAccount2(PBacktestAccount<TPrecision> parameters, BacktestBotController backtestBotController, string exchange, string exchangeArea, string? symbol = null) : base(parameters, exchange, exchangeArea, symbol)
+    public BacktestAccount2(PBacktestAccount<TPrecision> parameters, BacktestBotController<double> backtestBotController, string exchange, string exchangeArea, string? symbol = null) : base(parameters, exchange, exchangeArea, symbol)
     {
         BacktestBotController = backtestBotController;
 
@@ -143,33 +142,62 @@ public class BacktestAccount2<TPrecision>
 
     int positionIdCounter = 0;
 
-    public override ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, double positionSize)
+    TPrecision CurrentPrice(string symbol)
     {
-        var p = new PositionBase(this, symbol)
+        if (symbol == Parameters.Bars.Symbol)
+        {
+            return Bars[0].Close;
+        }
+        else
+        {
+            throw new NotImplementedException("symbol other than the default symbol: " + Parameters.Bars.Symbol);
+        }
+    }
+
+    public override ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize)
+    {
+        var p = new PositionBase<TPrecision>(this, symbol)
         {
             Id = positionIdCounter++,
             //EntryTime = ,            
-            EntryPrice = 0,
-            Quantity = (decimal)positionSize,
-            TakeProfit = null,
-            StopLoss = null,
+            EntryPrice = CurrentPrice(symbol),
+            Quantity = positionSize,
+            TakeProfit = default,
+            StopLoss = default,
         };
         positions.AddOrUpdate(p);
         return ValueTask.FromResult<IOrderResult>(new OrderResult { IsSuccess = true, Data = p });
     }
 
-    public override IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, double positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null) { throw new NotImplementedException(); }
+    public override IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, TPrecision positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null) { throw new NotImplementedException(); }
     public override ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize) { throw new NotImplementedException(); }
-    public override ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, decimal positionSize) { throw new NotImplementedException(); }
     public override IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, decimal positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null) { throw new NotImplementedException(); }
 
     #endregion
 
     #region Event Handlers
 
+    int x = 0;
     public override void OnBar()
     {
-        Debug.WriteLine($"Account: {Bars.Size}, {Bars[0]}");
+        if (x++ <= 0)
+        {
+            if (typeof(TPrecision) == typeof(double))
+            {
+                //double trigger = 100.0;
+                //double trigger = 68;
+                //var BarsCasted = (IReadOnlyValuesWindow<HLC<double>, double>)Bars;
+                //BarsCasted.SubscribeToPrice(trigger, (HLC<double> bar) =>
+                //{
+                //    Debug.WriteLine("----------------- Subscription triggered. Trigger: {0}, Bar: {1}", trigger, bar);
+                //}, PriceSubscriptionDirection.Up);
+            }
+        }
+        if (x % 10000 == 0)
+        {
+            Debug.WriteLine($"#{x} Account - {Bars.Size} bars, {Bars[0]}");
+        }
+
     }
     #endregion
 

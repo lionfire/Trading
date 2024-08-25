@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
-public class BarAspectSeries<TValue> : IHistoricalTimeSeries<TValue>
+public class BarAspectSeries<TValue> : IHistoricalTimeSeries<TValue>, IPrecision<TValue>
 {
     #region Identity
 
@@ -14,6 +14,7 @@ public class BarAspectSeries<TValue> : IHistoricalTimeSeries<TValue>
     public DataPointAspect Aspect { get; }
 
     public Type ValueType => typeof(TValue);
+    public Type PrecisionType => typeof(TValue);
 
     #endregion
 

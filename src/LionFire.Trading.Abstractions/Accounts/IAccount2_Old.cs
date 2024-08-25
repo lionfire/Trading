@@ -10,7 +10,8 @@ public interface IMarketParticipant2
 }
 
 public interface IPAccount2 { }
-public interface IAccount2 : IAccount2<double>, IAccount2<decimal>
+
+public interface IAccount2 : IMarketParticipant2
 {
     IPAccount2 Parameters { get; }
 
@@ -33,19 +34,17 @@ public interface IAccount2 : IAccount2<double>, IAccount2<decimal>
 
     MarketFeatures GetMarketFeatures(string symbol);
 
-
-    IEnumerable<IPosition> Positions { get; }
-
     ValueTask<IOrderResult> ClosePosition(IPosition position);
 }
 
-public interface IAccount2<TPrecision> : IMarketParticipant2
-    where TPrecision : INumber<TPrecision>
+public interface IAccount2<TPrecision> : IAccount2
+    where TPrecision : struct, INumber<TPrecision>
 {
     ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize);
 
     IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, TPrecision positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
 
+    IEnumerable<IPosition<TPrecision>> Positions { get; }
 
     ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize);
 }

@@ -1,7 +1,8 @@
 ﻿
 namespace LionFire.Trading.Automation;
 
-public class BacktestBotController : IBotController
+public class BacktestBotController<TPrecision> : IBotController<TPrecision>
+    where TPrecision : struct, INumber<TPrecision>
 {
     #region Relationships
 
@@ -19,7 +20,7 @@ public class BacktestBotController : IBotController
 
     #region Lifecycle
 
-    public BacktestBotController(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<double> pBacktestAccount)
+    public BacktestBotController(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<TPrecision> pBacktestAccount)
     {
         BotBatchController = botBatchController;
         Bot = bot;
@@ -39,12 +40,12 @@ public class BacktestBotController : IBotController
 
     #region State
 
-    public IAccount2 Account => account;
-    private readonly BacktestAccount2<double> account;
+    public IAccount2<TPrecision> Account => account;
+    private readonly BacktestAccount2<TPrecision> account;
 
 
-    protected BacktestAccount2<double> CreateAccount(ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame)
-        => new BacktestAccount2<double>(PBacktestAccount, this, ExchangeSymbolTimeFrame.Exchange, ExchangeSymbolTimeFrame.ExchangeArea, ExchangeSymbolTimeFrame.Symbol);
+    protected BacktestAccount2<TPrecision> CreateAccount(ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame)
+        => new BacktestAccount2<TPrecision>(PBacktestAccount, this, ExchangeSymbolTimeFrame.Exchange, ExchangeSymbolTimeFrame.ExchangeArea, ExchangeSymbolTimeFrame.Symbol);
 
     #endregion
 

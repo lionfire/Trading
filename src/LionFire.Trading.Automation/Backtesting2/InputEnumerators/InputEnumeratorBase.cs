@@ -1,5 +1,8 @@
-﻿using LionFire.Trading.Data;
+﻿using LionFire.Collections.Concurrent;
+using LionFire.Trading.Data;
 using LionFire.Trading.ValueWindows;
+using System.Numerics;
+using System.Reactive.Disposables;
 
 namespace LionFire.Trading.Automation;
 
@@ -55,7 +58,7 @@ public abstract class InputEnumeratorBase : IInputEnumerator
     /// <returns></returns>
     public ValueTask PreloadRange(DateTimeOffset start, DateTimeOffset endExclusive)
     {
-        if (HasPreviousChunk && UnprocessedInputCount  > 0) throw new InvalidOperationException("Buffer must be empty before PreloadRange");
+        if (HasPreviousChunk && UnprocessedInputCount > 0) throw new InvalidOperationException("Buffer must be empty before PreloadRange");
         //if (!HasPreviousChunk && LookbackRequired > 0 && UnprocessedInputCount > LookbackRequired) throw new InvalidOperationException("Buffer must be smaller than LookbackRequired on 2nd chunk load, before PreloadRange");
 
         // OPTIMIZE maybe: Allow _PreloadRange before current chunk is done.  Either have dual buffers, or a CircularBuffer of buffers.
@@ -79,13 +82,13 @@ public abstract class InputEnumeratorBase : IInputEnumerator
 
 }
 
-
-
-public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyValuesWindow<T>
+public abstract class InputEnumeratorBase<TValue, TPrecision> : InputEnumeratorBase, IReadOnlyValuesWindow<TValue, TPrecision>
+    where TValue : notnull
+    where TPrecision : struct, INumber<TPrecision>
 {
     #region Dependencies
 
-    public IHistoricalTimeSeries<T> Series { get; }
+    public IHistoricalTimeSeries<TValue> Series { get; }
 
     #endregion
 
@@ -99,7 +102,7 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
 
     #region Lifecycle
 
-    public InputEnumeratorBase(IHistoricalTimeSeries<T> series, int lookback)
+    public InputEnumeratorBase(IHistoricalTimeSeries<TValue> series, int lookback)
     {
         Series = series;
         LookbackRequired = lookback;
@@ -111,12 +114,12 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
 
     #region Input
 
-    protected ArraySegment<T> InputBuffer = ArraySegment<T>.Empty;
-    protected int InputBufferIndex = -1;
+    protected ArraySegment<TValue> InputBuffer = ArraySegment<TValue>.Empty;
+    protected int InputBufferCursorIndex = -1;
 
     #region Derived
 
-    public override int UnprocessedInputCount => InputBuffer.Count - InputBufferIndex;
+    public override int UnprocessedInputCount => Math.Max(0, InputBuffer.Count - InputBufferCursorIndex - 1);
 
     #endregion
 
@@ -124,7 +127,17 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
 
     #endregion
 
-    public T CurrentValue => InputBuffer[InputBufferIndex - 1];
+    public TValue CurrentValue => InputBuffer[InputBufferCursorIndex];
+    public bool HasCurrentValue => InputBufferCursorIndex >= 0 && InputBuffer.Count > 0;
+    public TPrecision? CurrentPrice => HasCurrentValue ? GetLastPrice(CurrentValue) : default;
+    public TPrecision GetLastPrice(TValue value)
+    {
+        if (typeof(TValue) == typeof(TPrecision)) return (TPrecision)(object)value!;
+
+        if (value is IClosePrice<TPrecision> closePrice) return closePrice.Close;
+
+        throw new NotSupportedException();
+    }
 
     #region IReadOnlyValuesWindow<T>
 
@@ -132,7 +145,7 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
     public abstract bool IsFull { get; }
     public abstract uint Size { get; }
 
-    public abstract T this[int index] { get; }
+    public abstract TValue this[int index] { get; }
 
     #endregion
 
@@ -145,7 +158,7 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
         var result = await Series.Get(start, endExclusive);
         if (!result.IsSuccess) { throw new Exception("Failed to get historical data"); }
         InputBuffer = result.Values;
-        InputBufferIndex = -1; // MoveNext will bump it to 0
+        InputBufferCursorIndex = -1; // MoveNext will bump it to 0
     }
 
     #endregion
@@ -153,8 +166,94 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
     #region Output
 
     //[MethodImpl(MethodImplOptions.AggressiveInlining)] 
-    public override void MoveNext() => InputBufferIndex++;
-    public override void MoveNext(int count) => InputBufferIndex += count;
+    public override void MoveNext()
+    {
+        bool checkPriceTriggers = (up != null || down != null);//&& InputBufferIndex >= 0;
+
+        var hasCurrentValue = HasCurrentValue;
+
+        if (checkPriceTriggers)
+        {
+            PreviousValue = hasCurrentValue ? CurrentValue : default;
+        }
+        InputBufferCursorIndex++;
+
+        if (checkPriceTriggers)
+        {
+            var newHighLow = CurrentValue as IHighLowPrice<TPrecision>;
+            var newOpen = CurrentValue as IOpenPrice<TPrecision>;
+            var newClose = CurrentValue as IClosePrice<TPrecision>;
+
+            TPrecision high;
+            // REFACTOR OPTIMIZE
+            {
+                if (newHighLow != null) high = newHighLow.High;
+                else if (newClose != null)
+                {
+                    if (newOpen != null) high = newOpen.Open > newClose.Close ? newOpen.Open : newClose.Close;
+                    else high = newClose.Close;
+                }
+                else if (CurrentValue is TPrecision number)
+                {
+                    high = number;
+                }
+                else { throw new NotSupportedException(); }
+            }
+
+            TPrecision low;
+            // REFACTOR OPTIMIZE
+            {
+                if (newHighLow != null) low = newHighLow.Low;
+                else if (newClose != null)
+                {
+                    if (newOpen != null) low = newOpen.Open < newClose.Close ? newOpen.Open : newClose.Close;
+                    else low = newClose.Close;
+                }
+                else if (CurrentValue is TPrecision number)
+                {
+                    low = number;
+                }
+                else { throw new NotSupportedException(); }
+            }
+
+            if (up != null)
+            {
+                while (true)
+                {
+                    var first = up.First();
+                    if (first.Key > high) break;
+                    first.Value(CurrentValue);
+                    up.RemoveAt(0);
+                    if (up.Count == 0)
+                    {
+                        up = null;
+                        break;
+                    }
+                }
+            }
+
+            if (down != null) // DUPLICATE of up logic
+            {
+                while (true)
+                {
+                    var first = down.First();
+                    if (first.Key < low) break;
+                    first.Value(CurrentValue);
+                    down.RemoveAt(0);
+                    if (down.Count == 0)
+                    {
+                        down = null;
+                        break;
+                    }
+                }
+            }
+
+            //var intersection = Intersector<TValue>.Get<TValue>(PreviousValue, CurrentValue);
+            //if(intersection.HasValue)
+
+        }
+    }
+    public override void MoveNext(int count) => InputBufferCursorIndex += count;
 
     //public override ValueTask MoveNextAsync() { InputBufferIndex++; return ValueTask.CompletedTask; }
     //public void ThrowMissingData() => throw new InvalidOperationException("Unexpected: no more data");
@@ -163,5 +262,111 @@ public abstract class InputEnumeratorBase<T> : InputEnumeratorBase, IReadOnlyVal
 
     #endregion
 
+    #region Events: Price Triggers
+
+#if OLD // Disposable subscriptions
+
+    //private class ValueTriggerSubscription : IDisposable
+    //{
+    //    public void Dispose()
+    //    {
+    //        throw new NotImplementedException();
+    //    }
+    //}
+    //ConcurrentHashSet<ValueTriggerSubscription> subscriptions = new();
+#endif
+
+    #region State
+
+    SortedList<TPrecision, Action<TValue>>? up;
+    SortedList<TPrecision, Action<TValue>>? down;
+    TValue? PreviousValue;
+
+    /// <summary>
+    /// Hackish way to alllow for duplicate keys in a SortedList which doesn't normally allow duplicates.
+    /// Warning: this can be dangerous in certain cases (i.e. infinite loops).
+    /// Assumptions:
+    /// - keys are never hull
+    /// </summary>
+    /// <typeparam name="TKey"></typeparam>
+    private class PriceTriggersDuplicateKeyComparer<TKey> : IComparer<TKey> where TKey : IComparable
+    {
+        internal static readonly PriceTriggersDuplicateKeyComparer<TKey> Default = new();
+        public int Compare(TKey? x, TKey? y)
+        {
+            int result = x!.CompareTo(y);
+            return result == 0
+                ? 1 // Equal? Pretend it's greater.  Breaks Remove(key) and IndexOfKey(key)
+                : result;
+        }
+    }
+
+    #endregion
+
+    public void SubscribeToPrice(TPrecision triggerValue, Action<TValue> onReached, PriceSubscriptionDirection direction = PriceSubscriptionDirection.UpOrDown)
+    {
+
+        SortedList<TPrecision, Action<TValue>> getSubscriptionList(bool isUp)
+        {
+            if (isUp) return up ??= new SortedList<TPrecision, Action<TValue>>(PriceTriggersDuplicateKeyComparer<TPrecision>.Default);
+            else return down ??= new SortedList<TPrecision, Action<TValue>>(PriceTriggersDuplicateKeyComparer<TPrecision>.Default);
+        }
+
+        var hasCurrentValue = HasCurrentValue;
+        var currentPrice = CurrentPrice;
+
+        switch (direction)
+        {
+            case PriceSubscriptionDirection.Up:
+                if (hasCurrentValue && triggerValue <= currentPrice!)
+                {
+                    onReached(CurrentValue);
+                    return;
+                }
+                getSubscriptionList(isUp: true).Add(triggerValue, onReached);
+                return;
+            case PriceSubscriptionDirection.Down:
+                if (hasCurrentValue && triggerValue >= currentPrice!)
+                //if (currentPrice is not null && triggerValue <= currentPrice)
+                {
+                    onReached(CurrentValue);
+                    return;
+                }
+                getSubscriptionList(false).Add(triggerValue, onReached);
+                return;
+            case PriceSubscriptionDirection.UpOrDown:
+                if (hasCurrentValue)
+                {
+                    if (triggerValue == currentPrice)
+                    {
+                        onReached(CurrentValue);
+                    }
+                    else
+                    {
+                        getSubscriptionList(triggerValue > currentPrice!).Add(triggerValue, onReached);
+                    }
+                    return;
+                }
+                else // currentPrice is not available
+                {
+                    // Add to both lists, so at least one will be triggered when the first value is available
+                    getSubscriptionList(true).Add(triggerValue, onReached);
+                    getSubscriptionList(false).Add(triggerValue, onReached);
+                    return;
+                }
+            //case PriceSubscriptionDirection.Unspecified:
+            default:
+                throw new ArgumentException();
+        }
+    }
+    #endregion
 }
+
+//public static class Intersector<T>
+//{
+//    public static (TPrecision oldValue, TPrecision newValue, T value)? Get<T>(T previous, T current)
+//    {
+//        throw new NotImplementedException();
+//    }
+//}
 

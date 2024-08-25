@@ -11,7 +11,7 @@ public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>
 
 
 
-public class SymbolBot2<TParameters, TValue> : Bot2<TParameters>
+public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
       where TParameters : PSymbolBot2<TParameters>
 {
 

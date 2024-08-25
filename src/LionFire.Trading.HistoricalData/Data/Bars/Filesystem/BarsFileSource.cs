@@ -262,14 +262,4 @@ public class BarsFileSource : IChunkedBars, IListableBarsSource
 
     #endregion
 
-    public IHistoricalTimeSeries<IKline> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
-    {
-        throw new NotImplementedException();
-    }
-
-    public IHistoricalTimeSeries<decimal> GetSeries(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, DataPointAspect aspect)
-    {
-        throw new NotImplementedException();
-    }
-
-}
+ }

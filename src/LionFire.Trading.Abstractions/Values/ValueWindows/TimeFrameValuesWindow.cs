@@ -156,8 +156,11 @@ public class TimeFrameValuesWindow<T> : ValuesWindowBase<T>, ITimeFrameValuesWin
         var value = values.Back();
         return value;
     }
+
     // ENH: PopFront for completeness, but we currently have no use case for popping with forward mode.
 
     #endregion
+
+    
 
 }
