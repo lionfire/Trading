@@ -81,6 +81,8 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
     #region State
 
+    public DateTimeOffset SimulatedCurrentDate { get; protected set; }
+
     #region Enumerators
 
     public Dictionary<string, InputEnumeratorBase> InputEnumerators { get; } = new();

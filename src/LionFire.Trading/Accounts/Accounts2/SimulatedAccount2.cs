@@ -1,6 +1,8 @@
 ﻿using DynamicData;
+using LionFire.Threading;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.ValueWindows;
+using System.CommandLine;
 using System.Numerics;
 using System.Reactive.Subjects;
 
@@ -23,8 +25,8 @@ public class PriceMonitorStateMachine : IPriceMonitorStateMachine
 public abstract class SimulatedAccount2<TPrecision> : IAccount2<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
-
-    public IPAccount2 Parameters { get; }
+    IPAccount2 IAccount2.Parameters => Parameters;
+    public IPAccount2<TPrecision> Parameters { get; }
 
     #region Identity
 
@@ -43,14 +45,22 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2<TPrecision>
 
     #endregion
 
+    #region Relationships
+
+    public ISimulationController<TPrecision> Controller { get; protected set; }
+
+    #endregion
+
     #region Lifecycle
 
-    protected SimulatedAccount2(IPAccount2 parameters, string exchange, string exchangeArea, string? defaultSymbol = null)
+    protected SimulatedAccount2(IPAccount2<TPrecision> parameters, ISimulationController<TPrecision> controller, string exchange, string exchangeArea, string? defaultSymbol = null)
     {
+        Controller = controller;
         Parameters = parameters;
         Exchange = exchange;
         ExchangeArea = exchangeArea;
         DefaultSymbol = defaultSymbol;
+        Balance = parameters.StartingBalance;
         //Bars = bars;
     }
 
@@ -63,11 +73,17 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2<TPrecision>
 
     #region State
 
-    public DateTimeOffset DateTime { get; protected set; }
+    public TPrecision Balance { get; protected set; }
+
+    public TPrecision HighestBalance { get; protected set; }
+    public TPrecision Equity { get; protected set; }
+    public TPrecision HighestEquity { get; protected set; }
+
+    public DateTimeOffset DateTime => Controller.SimulatedCurrentDate;
 
     public IObservableCache<IPosition, int> Positions => positions;
 
-    IEnumerable<IPosition<TPrecision>> IAccount2<TPrecision>.Positions => throw new NotImplementedException();
+    //IReadOnlyList<IPosition<TPrecision>> IAccount2<TPrecision>.Positions => throw new NotImplementedException();
 
     protected SourceCache<IPosition, int> positions = new(p => p.Id);
 
@@ -91,11 +107,16 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2<TPrecision>
 
     public virtual void OnBar() { }
 
+    public void OnRealizedProfit(TPrecision realizedGrossProfitDelta)
+    {
+        Balance += realizedGrossProfitDelta;
+    }
+
     #endregion
 
     #region Methods
 
-    public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize);
+    public abstract ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize, PositionOperationFlags increasePositionFlags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null);
 
     public abstract ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize);
 
@@ -107,10 +128,37 @@ public abstract class SimulatedAccount2<TPrecision> : IAccount2<TPrecision>
     // TODO: Change decimal to TPrecision
     public abstract IAsyncEnumerable<IOrderResult> ClosePositionsForSymbol(string symbol, LongAndShort longAndShort, decimal positionSize, bool postOnly = false, decimal? marketExecuteAtPrice = null, (decimal? stop, decimal? limit)? stopLimit = null);
 
-    public ValueTask<IOrderResult> ClosePosition(IPosition position) // TODO: Execution options: PostOnly, etc.
+
+    public long GetNextTransactionId() => nextTransactionId++;
+    private long nextTransactionId = 1;
+
+    protected virtual TPrecision CurrentPrice(string symbol)
+    {
+        throw new NotImplementedException("No way to get price for symbol: " + symbol);
+    }
+    public async ValueTask<IOrderResult> ClosePosition(IPosition position) // TODO: Execution options: PostOnly, etc.
     {
         positions.Remove(position);
-        return ValueTask.FromResult<IOrderResult>(new OrderResult { IsSuccess = true, Data = position }); // TODO: ClosePositionResult, with PnL
+
+        var casted = (IPosition<TPrecision>)position  ;
+
+        var ExitPrice = CurrentPrice(position.Symbol);
+
+        await Controller.Journal.Write(new JournalEntry<TPrecision>
+        {
+            Time = DateTime,
+            EntryType = JournalEntryType.ClosePosition,
+            Symbol = position.Symbol,
+            PositionId = position.Id,
+            TransactionId = nextTransactionId++,
+            Quantity = casted.Quantity,
+            Price = ExitPrice,
+        })
+            ;
+        //.FireAndForget();
+
+        //return ValueTask.FromResult<IOrderResult>(new OrderResult { IsSuccess = true, Data = position }); // TODO: ClosePositionResult, with PnL
+        return new OrderResult { IsSuccess = true, Data = position }; // TODO: ClosePositionResult, with PnL
     }
 
 
@@ -148,6 +196,7 @@ public readonly struct AccountState<TCurrency>
     #endregion
 
     public readonly required TCurrency Balance { get; init; }
+    
 
     public readonly required TCurrency Equity { get; init; }
 

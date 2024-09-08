@@ -16,12 +16,13 @@ public interface IBot2 : IMarketParticipant2
     IObservableCache<IPosition, int> Positions { get; }
 }
 
-public interface IBot2<TParameters> : IBot2
-{
-    new TParameters Parameters { get; set; }
-}
-public interface IBot2<TParameters, TPrecision> : IBot2<TParameters>
+public interface IBot2<TPrecision> : IBot2
     where TPrecision : struct, INumber<TPrecision>
 {
     IBotController<TPrecision>? Controller { get; set; }
+}
+public interface IBot2<TParameters, TPrecision> : IBot2<TPrecision>
+    where TPrecision : struct, INumber<TPrecision>
+{
+    new TParameters Parameters { get; set; }
 }

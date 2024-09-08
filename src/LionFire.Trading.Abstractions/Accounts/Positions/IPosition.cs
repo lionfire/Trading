@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading;
 
-public interface IPosition 
+public interface IPosition
 {
     int Id { get; }
     string? Label { get; }
@@ -15,18 +15,23 @@ public interface IPosition
     SymbolId SymbolId { get; }
     string Symbol { get; }
     long Volume { get; }
+
+
 }
 
 public interface IPosition<TPrecision> : IPosition
     where TPrecision : struct, INumber<TPrecision>
 {
     TPrecision Commissions { get; }
-    TPrecision EntryPrice { get; }
+    TPrecision? EntryAverage { get; }
+    TPrecision RealizedGrossProfit { get; }
     DateTime EntryTime { get; }
     TPrecision GrossProfit { get; }
     TPrecision NetProfit { get; }
     TPrecision Pips { get; }
     TPrecision Quantity { get; }
+    LongAndShort LongOrShort { get; }
+
     TPrecision? StopLoss { get; }
     TPrecision Swap { get; }
 

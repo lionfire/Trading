@@ -50,7 +50,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="CsvHelper" />
     <PackageReference Include="DeferredEvents" />
+    <PackageReference Include="MemoryPack" />
+    <PackageReference Include="MemoryPack.Streaming" />
     <PackageReference Include="Microsoft.CSharp" />
     <PackageReference Include="Oakton" />
     <!--<PackageReference Include="QuantConnect.Indicators" />-->

@@ -32,12 +32,14 @@
     <PackageVersion Include="CommandLineParser" Version="2.9.1" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageVersion Include="Consul" Version="1.7.14.1" />
+    <PackageVersion Include="CsvHelper" Version="33.0.1" />
     <PackageVersion Include="cTrader.Automate" Version="1.0.8" />
     <PackageVersion Include="coverlet.collector" Version="6.0.0" />
     <PackageVersion Include="DeepEqual" Version="4.2.1" />
     <PackageVersion Include="DeferredEvents" Version="1.0.5" />
     <PackageVersion Include="DotNetify.SignalR" Version="5.4.0" />
     <PackageVersion Include="DotNetProjects.Extended.Wpf.Toolkit" Version="4.6.97" />
+    <PackageVersion Include="DynamicData" Version="8.4.1" />
     <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="8.0.0" />
     <PackageVersion Include="FluentEmail.Mailgun" Version="3.0.2" />
     <PackageVersion Include="Flurl.Http" Version="4.0.2" />
@@ -54,6 +56,8 @@
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.0" />
     <PackageVersion Include="McMaster.Extensions.Hosting.CommandLine" Version="4.1.0" />
     <PackageVersion Include="MediatR" Version="12.1.1" />
+    <PackageVersion Include="MemoryPack" Version="1.21.1" />
+    <PackageVersion Include="MemoryPack.Streaming" Version="1.21.1" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="8.0.6" />
     <PackageVersion Include="Microsoft.AspNetCore.Connections.Abstractions" Version="8.0.6" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
@@ -81,7 +85,7 @@
     <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
-    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.CommandLine" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.FileExtensions" Version="8.0.0" />

@@ -8,6 +8,7 @@ using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Indicators.Harnesses;
 using LionFire.Trading.Indicators.Inputs;
+using LionFire.Trading.Journal;
 using LionFire.Trading.ValueWindows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,9 +30,10 @@ namespace LionFire.Trading.Automation;
 /// Reused:
 /// - inputs (such as indicators, even if they have different lookback requirements)
 /// </summary>
-public class BacktestBatchTask2
+public class BacktestBatchTask2<TPrecision>
     : BotBatchControllerBase
     , IBacktestBatch
+        where TPrecision : struct, INumber<TPrecision>
 {
     #region Identity
 
@@ -55,7 +57,14 @@ public class BacktestBatchTask2
 
     #region Lifecycle
 
-    public BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null) : base(serviceProvider, parameters)
+    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null)
+    {
+        var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, executionOptions, dateChunker);
+        await t.Init();
+        return t;
+    }
+
+    private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null) : base(serviceProvider, parameters)
     {
         try
         {
@@ -66,11 +75,21 @@ public class BacktestBatchTask2
             chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, ExecutionOptions.ShortChunks);
             chunkEnumerator = chunks.GetEnumerator();
 
+        }
+        catch (Exception ex)
+        {
+            runTaskCompletionSource.SetException(ex);
+            throw;
+        }
+    }
+    private async ValueTask Init()
+    {
+        try
+        {
             foreach (var p in PBacktests)
             {
-                CreateBot(p);
+                await CreateBot(p);
             }
-
             InitInputs();
         }
         catch (Exception ex)
@@ -80,29 +99,29 @@ public class BacktestBatchTask2
         }
     }
 
-    public PBacktestAccount<double> PBacktestAccountPrototype { get; set; } = PBacktestAccount<double>.Default;
+    public PBacktestAccount<TPrecision> PBacktestAccountPrototype { get; set; } = PBacktestAccount<TPrecision>.Default;
 
-    ConcurrentDictionary<string, PBacktestAccount<double>> SymbolPBacktestAccounts = new();
+    ConcurrentDictionary<string, PBacktestAccount<TPrecision>> SymbolPBacktestAccounts = new();
 
-    private void CreateBot(IPBacktestTask2 p)
+    private async ValueTask CreateBot(IPBacktestTask2 p)
     {
-        var bot = (IBot2)(Activator.CreateInstance(p.Bot.MaterializedType)
+        var bot = (IBot2<TPrecision>)(Activator.CreateInstance(p.Bot.MaterializedType)
             ?? throw new Exception("Failed to create bot: " + p.Bot.MaterializedType));
         bot.Parameters = p.Bot;
 
         var pAccount = PBacktestAccountPrototype;
 
-        if (bot is IBarsBot<double> barsBot)
+        if (bot is IBarsBot<TPrecision> barsBot)
         {
             pAccount = SymbolPBacktestAccounts.GetOrAdd(barsBot.Parameters.ExchangeSymbolTimeFrame.Symbol, _ =>
             {
-                var copy = (PBacktestAccount<double>)PBacktestAccountPrototype.Clone();
-                copy.Bars = new HLCReference<double>(barsBot.Parameters.ExchangeSymbolTimeFrame);
+                var copy = (PBacktestAccount<TPrecision>)PBacktestAccountPrototype.Clone();
+                copy.Bars = new HLCReference<TPrecision>(barsBot.Parameters.ExchangeSymbolTimeFrame);
                 return copy;
             });
         }
 
-        var controller = new BacktestBotController<double>(this, bot, pAccount);
+        var controller = await BacktestBotController<TPrecision>.Create(this, bot, pAccount, ServiceProvider.GetRequiredService<ITradeJournal<TPrecision>>());
         bot.Controller = controller;
         bot.Init();
         backtests.Add(new BacktestState(p, bot, controller));
@@ -123,7 +142,7 @@ public class BacktestBatchTask2
 
     public override Task StartAsync(CancellationToken cancellationToken = default)
     {
-        BacktestDate = Start;
+        SimulatedCurrentDate = Start;
         if (backtests.Count == 0) throw new InvalidOperationException("No backtests");
         Run();
 
@@ -157,7 +176,7 @@ public class BacktestBatchTask2
         set
         {
             pauseAtDate = value;
-            if (pauseAtDate > BacktestDate)
+            if (pauseAtDate > SimulatedCurrentDate)
             {
                 Continue();
             }
@@ -234,7 +253,7 @@ public class BacktestBatchTask2
     }
 
 #if BacktestAccountSlottedParameters
-    static InputInjectionInfo BacktestAccountSymbolInjectionInfo = new InputInjectionInfo(typeof(PBacktestAccount<double>).GetProperty(nameof(PBacktestAccount<double>.Bars))!, typeof(BacktestAccount2<double>).GetProperty(nameof(BacktestAccount2<double>.Bars))!);
+    static InputInjectionInfo BacktestAccountSymbolInjectionInfo = new InputInjectionInfo(typeof(PBacktestAccount<TPrecision>).GetProperty(nameof(PBacktestAccount<TPrecision>.Bars))!, typeof(BacktestAccount2<TPrecision>).GetProperty(nameof(BacktestAccount2<TPrecision>.Bars))!);
 #endif
 
     /// <summary>
@@ -298,7 +317,7 @@ public class BacktestBatchTask2
 
             // BacktestAccount
 #if BacktestAccountSlottedParameters
-            if (backtest.Controller.Account is BacktestAccount2<double> bta)
+            if (backtest.Controller.Account is BacktestAccount2<TPrecision> bta)
             {
                 if ()
                 {
@@ -352,12 +371,12 @@ public class BacktestBatchTask2
 
         //foreach (var backtest in backtests)
         //{
-        //    if (backtest.Bot is ISymbolBarsBot<double> symbolBot)
+        //    if (backtest.Bot is ISymbolBarsBot<TPrecision> symbolBot)
         //    {
         //        symbolBot.Bars = ir.Resolve(symbolBot.Parameters.ExchangeSymbol);
         //    }
 
-        //    //if (backtest.Controller.Account is BacktestAccount2<double> backtestAccount)
+        //    //if (backtest.Controller.Account is BacktestAccount2<TPrecision> backtestAccount)
         //    //{
         //    //    var barsReference = backtestAccount.Parameters.Bars;
 
@@ -441,12 +460,12 @@ public class BacktestBatchTask2
         }
     }
 
-    
+
 
     IEnumerable<IBot2> bots => backtests.Select(s => s.Bot);
     List<BacktestState> backtests = new();
 
-    private record struct BacktestState(IPBacktestTask2 PBacktest, IBot2 Bot, IBotController<double> Controller) : IHasInstanceInputInfos
+    private record struct BacktestState(IPBacktestTask2 PBacktest, IBot2 Bot, IBotController<TPrecision> Controller) : IHasInstanceInputInfos
     {
         internal List<InstanceInputInfo> InstanceInputInfos => instanceInputInfos;
         internal List<InstanceInputInfo> instanceInputInfos = new();
@@ -468,7 +487,7 @@ public class BacktestBatchTask2
 
         List<InstanceInputInfo> IHasInstanceInputInfos.InstanceInputInfos => InstanceInputInfos;
         object IHasInstanceInputInfos.Instance => Bot;
-        
+
         #endregion
     }
 
@@ -517,12 +536,13 @@ public class BacktestBatchTask2
 
             int counter = 0;
             var sw = Stopwatch.StartNew();
-            while (BacktestDate < EndExclusive
+            while (SimulatedCurrentDate < EndExclusive
                 && (false == cancelledSource?.IsCancellationRequested)
                 )
             {
                 counter++;
                 await AdvanceInputsByOneBar().ConfigureAwait(false);
+
                 //await NextBar().ConfigureAwait(false);
 #if truex
                 Parallel.ForEach(backtests, b =>
@@ -560,7 +580,7 @@ public class BacktestBatchTask2
                 }
 #else
 #endif
-                BacktestDate += timeSpan;
+                SimulatedCurrentDate += timeSpan;
             }
             Debug.WriteLine($"{counter} bars for {backtests.Count} backtests in {sw.Elapsed.TotalSeconds}s ({(backtests.Count * counter / sw.Elapsed.TotalSeconds).ToString("N0")}/s)");
 
@@ -573,7 +593,7 @@ public class BacktestBatchTask2
 
         async Task RunTicks()
         {
-            while (BacktestDate < EndExclusive && (false == cancelledSource?.IsCancellationRequested)
+            while (SimulatedCurrentDate < EndExclusive && (false == cancelledSource?.IsCancellationRequested)
                 )
             {
                 await NextTick();
@@ -630,7 +650,7 @@ public class BacktestBatchTask2
             if (input.LookbackRequired > 0)
             {
                 tasks ??= new();
-                tasks.Add(input.PreloadRange(TimeFrame.AddBars(Start, -input.LookbackRequired), BacktestDate).AsTask());
+                tasks.Add(input.PreloadRange(TimeFrame.AddBars(Start, -input.LookbackRequired), SimulatedCurrentDate).AsTask());
             }
         }
         if (tasks != null) { await Task.WhenAll(tasks).ConfigureAwait(false); }
@@ -640,7 +660,7 @@ public class BacktestBatchTask2
     {
         bool first = chunkStart == default;
 
-        if (chunkStart == default || BacktestDate >= chunkEndExclusive)
+        if (chunkStart == default || SimulatedCurrentDate >= chunkEndExclusive)
         {
             AdvanceInputChunk();
 
@@ -671,7 +691,7 @@ public class BacktestBatchTask2
     #region State
 
     readonly TaskCompletionSource runTaskCompletionSource = new();
-    public DateTimeOffset BacktestDate { get; protected set; } = DateTimeOffset.UtcNow;
+
 
     #endregion
 
@@ -690,9 +710,9 @@ public class BacktestBatchTask2
         {
             NextBarModulus = 0;
 
-            //if (inputs[0] is InputEnumerator<double> doubleValues)
+            //if (inputs[0] is InputEnumerator<TPrecision> TPrecisionValues)
             //{
-            //    Debug.WriteLine($"NextBar: {BacktestDate} Input[0] double: {doubleValues.CurrentValue}");
+            //    Debug.WriteLine($"NextBar: {BacktestDate} Input[0] TPrecision: {TPrecisionValues.CurrentValue}");
             //}
             //else if (inputs[0] is InputEnumerator<decimal> decimalValues)
             //{
@@ -700,7 +720,7 @@ public class BacktestBatchTask2
             //}
             //else
             {
-                Debug.WriteLine($"NextBar: {BacktestDate} Input[0]: {AllInputEnumerators2[0].GetType()}");
+                Debug.WriteLine($"NextBar: {SimulatedCurrentDate} Input[0]: {AllInputEnumerators2[0].GetType()}");
             }
         }
 #endif
@@ -710,6 +730,7 @@ public class BacktestBatchTask2
     #endregion
 }
 
+#if UNUSED
 /// <summary>
 /// How to do this?
 /// - 
@@ -779,6 +800,8 @@ public class BacktestHarness
     }
 
 }
+
+#endif
 
 //// Activating bots
 //// - Try ctor(TValue)

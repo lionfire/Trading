@@ -40,7 +40,8 @@ public class PositionBase<TPrecision> : IPosition<TPrecision>
 
     public TPrecision Commissions { get; set; }
 
-    public TPrecision EntryPrice { get; set; }
+    public TPrecision? EntryAverage { get; set; }
+    public TPrecision RealizedGrossProfit { get; set; }
     public TPrecision? LastPrice { get; set; }
     public TPrecision? MarkPrice { get; set; }
     public TPrecision? LiqPrice { get; set; }
@@ -58,6 +59,26 @@ public class PositionBase<TPrecision> : IPosition<TPrecision>
     public TPrecision Pips { get; set; }
 
     public TPrecision Quantity { get; set; }
+    public LongAndShort LongOrShort
+    {
+        get
+        {
+            switch (Quantity)
+            {
+                case TPrecision n when (n > TPrecision.Zero):
+                    return LongAndShort.Long;
+                case TPrecision n when (n < TPrecision.Zero):
+                    return LongAndShort.Short;
+                default:
+                    return LongAndShort.Unspecified;
+            }
+            //Volume > 0 
+            //? LongAndShort.Long 
+            //: Volume != 0 
+            //    ? LongAndShort.Short 
+            //    : LongAndShort.Unspecified;
+        }
+    }
 
     public Nullable<TPrecision> StopLoss { get; set; }
     public string? StopLossWorkingType { get; set; }

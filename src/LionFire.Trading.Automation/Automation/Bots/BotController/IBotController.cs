@@ -1,14 +1,11 @@
-﻿
-namespace LionFire.Trading.Automation;
+﻿namespace LionFire.Trading.Automation;
 
-public interface IBotController<TPrecision> : IAccountProvider2
+public interface IBotController<TPrecision> : ISimulationController<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
     IBot2 Bot { get; }
     IBotBatchController BotBatchController { get; }
 
-    IAccount2<TPrecision> Account { get; }
-
-    IEnumerable<IAccount2<TPrecision>> Accounts => Account == null ? [] : [Account];
-
 }
+
+

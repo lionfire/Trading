@@ -20,6 +20,7 @@ using LionFire.Execution;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using LionFire.Trading.Automation.Optimization;
+using LionFire.Trading.Journal;
 
 namespace Backtesting_;
 
@@ -141,11 +142,12 @@ public class Backtest_Batch_ : BinanceDataTest
                         
                         Points = new PPointsBot
                         {
-
+                            OpenThreshold = 5,
+                            CloseThreshold = 3,
                         }
                     },
 
-                    Start = new DateTimeOffset(2023, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                    Start = new DateTimeOffset(2022, 1, 1, 0, 0, 0, TimeSpan.Zero),
                     EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
                     //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),
                     //EndExclusive = new DateTimeOffset(2024, 7, 23, 0, 0, 0, TimeSpan.Zero),
@@ -155,8 +157,8 @@ public class Backtest_Batch_ : BinanceDataTest
 
             List<string> symbols = [
                     //"BTCUSDT",
-                    //"ETHUSDT",
-                    "LTCUSDT"
+                    "ETHUSDT",
+                    //"LTCUSDT"
                 ];
 
             var list = new List<IPBacktestTask2>();
@@ -202,6 +204,9 @@ public class Backtest_Batch_ : BinanceDataTest
 
         await job.Task;
 
+        //await Task.Delay(1000);
+        await ServiceProvider.GetRequiredService<ITradeJournal<decimal>>().CloseAll();
+        await ServiceProvider.GetRequiredService<ITradeJournal<double>>().CloseAll();
     }
 
     [Fact]
@@ -272,7 +277,7 @@ public class Backtest_ : BinanceDataTest
     [ClassData(typeof(BacktestTheoryData))]
     public async Task Execute_(IPBacktestTask2 parameters)
     {
-        await new BacktestBatchTask2(ServiceProvider, [parameters], dateChunker: HistoricalDataChunkRangeProvider).Run();
+        await (await BacktestBatchTask2<double>.Create(ServiceProvider, [parameters], dateChunker: HistoricalDataChunkRangeProvider)).Run();
     }
 
 #if RunViaExtensionMethod

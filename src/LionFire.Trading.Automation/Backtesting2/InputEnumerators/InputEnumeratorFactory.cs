@@ -10,7 +10,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
-using static LionFire.Trading.Automation.BacktestBatchTask2;
+using static LionFire.Trading.Automation.BacktestBatchTask2<double>;
 
 namespace LionFire.Trading.Automation;
 
@@ -52,7 +52,7 @@ public static class InputEnumeratorFactory
         //inputEnumerator = lookback == 1
         //    ? (InputEnumeratorBase)Activator.CreateInstance(typeof(SingleValueInputEnumerator<,>).MakeGenericType(type, ______FIXME_______ ), series())!
         //    : (InputEnumeratorBase)Activator.CreateInstance(typeof(ChunkingInputEnumerator<,>).MakeGenericType(type, ______FIXME_______), series(), lookback)!;
-        return true;
+        //return true;
     }
 }
 

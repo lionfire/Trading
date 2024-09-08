@@ -105,7 +105,7 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     public async ValueTask CloseAllPositions()
     {
-        await Task.WhenAll(Positions.Items.Select(p => p.Account.ClosePosition(p).AsTask())).ConfigureAwait(false);
+        await Task.WhenAll(Positions.Items.Select(p => Controller.Account.ClosePosition(p).AsTask())).ConfigureAwait(false);
     }
 
     #endregion

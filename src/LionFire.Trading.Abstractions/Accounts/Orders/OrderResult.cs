@@ -15,5 +15,7 @@ public class OrderResult : IOrderResult
     public object? Data { get; init; }
 
     public bool Noop { get; init; }
+
+    public List<IOrderResult>? InnerResults { get; set; }
 }
 

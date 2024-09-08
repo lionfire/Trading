@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Binance.Net;
+using LionFire.Trading.Journal;
 
 public static class ServiceProviderProvider
 {
@@ -20,6 +21,7 @@ public static class ServiceProviderProvider
             .AddOptions()
             .AddLogging(b => b.AddConsole())
             .AddSingleton<IConfiguration>(Configuration)
+            .AddTradeJournal()
             .AddHistoricalBars(Configuration)
             .AddIndicators()
             .AddQuantConnectIndicators()

@@ -12,3 +12,16 @@ public enum LongAndShort
     [Optimizable]
     LongAndShort = Long | Short,
 }
+
+public static class LongAndShortX
+{
+    public static LongAndShort Opposite(this LongAndShort longAndShort)
+    {
+        return longAndShort switch
+        {
+            LongAndShort.Long => LongAndShort.Short,
+            LongAndShort.Short => LongAndShort.Long,
+            _ => LongAndShort.Unspecified,
+        };
+    }
+}

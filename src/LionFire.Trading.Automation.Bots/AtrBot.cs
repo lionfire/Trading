@@ -124,8 +124,8 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
     #region State
 
-    public int OpenScore { get; set; } = 0;
-    public int CloseScore { get; set; } = 0;
+    public float OpenScore { get; set; } = 0;
+    public float CloseScore { get; set; } = 0;
 
     #endregion
 
@@ -140,7 +140,7 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
         //    if (ATR.Size > 0) {
         //        Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar ATR: {ATR[0]}, bars available: {ATR.Size}"); }
         //    else { Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A"); }
-            
+
         //    //if (Bars.Size > 0)
         //    //{
         //    //    Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: {Bars[0]}, bars available: {Bars.Size}");
@@ -151,13 +151,17 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
         //    //}
         //}
 
+        float factor = 0.8f;
         if (ATR[0] > ATR[1]) OpenScore++;
+        else OpenScore *= factor;
+
         if (ATR[0] < ATR[1]) CloseScore++;
+        else CloseScore *= factor;
 
         //Thread.SpinWait(150);
         //Thread.SpinWait(50);
-        //if (OpenScore >= Parameters.Points!.OpenThreshold) { TryOpen(); }
-        //if (CloseScore >= Parameters.Points.CloseThreshold) { TryClose(); }
+        if (OpenScore >= Parameters.Points!.OpenThreshold) { TryOpen(); }
+        if (CloseScore >= Parameters.Points.CloseThreshold) { TryClose(); }
 
         //long s;
     }

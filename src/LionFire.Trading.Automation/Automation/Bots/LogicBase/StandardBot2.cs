@@ -45,41 +45,52 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
     }
     public virtual ValueTask<IOrderResult> OpenPositionPortion(double? amount = null)
     {
-        return Account.ExecuteMarketOrder(Symbol, Parameters.Direction, amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value);
+        return DoubleAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value, PositionOperationFlags.Default | PositionOperationFlags.AllowCloseAndOpenAtOnce | PositionOperationFlags.Open);
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="amount">Defaults to Parameters.PositionSize</param>
+    /// <returns></returns>
     public virtual ValueTask<IOrderResult> ClosePositionPortion(double? amount = null)
     {
-        if (Positions.Count == 0) { return ValueTask.FromResult(OrderResult.NoopSuccess); }
-        double amountToClose = amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value;
+        amount = amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value;
+        if (Parameters.Direction == LongAndShort.Long) { amount = -amount.Value; }
+        else if (Parameters.Direction == LongAndShort.Unspecified) { amount = -amount.Value; }
+
+        return DoubleAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount.Value, PositionOperationFlags.Default | PositionOperationFlags.Close | PositionOperationFlags.CloseOnly);
+
+        //if (DoubleAccount.Positions.Count == 0) { return ValueTask.FromResult(OrderResult.NoopSuccess); }
+        //double amountToClose = amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value;
 
 
-        foreach (var p in Positions.KeyValues)
-        {
-            if (p.Value.Volume == amountToClose)
-            {
-                Account.ClosePosition(p.Value);
-                return ValueTask.FromResult(OrderResult.Success);
-            }
-        }
+        //foreach (var p in DoubleAccount.Positions.KeyValues)
+        //{
+        //    if (((IPosition<double>)p.Value).Quantity == amountToClose)
+        //    {
+        //        Account.ClosePosition(p.Value);
+        //        return ValueTask.FromResult(OrderResult.Success);
+        //    }
+        //}
 
-        foreach (var p in Positions.KeyValues)
-        {
+        //foreach (var p in Positions.KeyValues)
+        //{
 
-        }
+        //}
 
-        if (Parameters.CloseAllAtOnce)
-        {
-            //PrimaryAccount.ClosePositionsForSymbol(Symbol, )
-            throw new NotImplementedException();
+        //if (Parameters.CloseAllAtOnce)
+        //{
+        //    //PrimaryAccount.ClosePositionsForSymbol(Symbol, )
+        //    throw new NotImplementedException();
 
-        }
-        else
-        {
+        //}
+        //else
+        //{
 
-            throw new NotImplementedException();
+        //    throw new NotImplementedException();
 
-        }
+        //}
     }
 
     #endregion

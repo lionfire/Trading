@@ -3,12 +3,11 @@
 namespace LionFire.Trading.Automation;
 
 
-public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete> 
+public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>
     where TConcrete : PBot2<TConcrete>
 {
     public abstract ExchangeSymbol ExchangeSymbol { get; }
 }
-
 
 
 public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
@@ -21,6 +20,10 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
     public string Symbol => ExchangeSymbol.Symbol!;
 
     public IAccount2 Account { get; set; } = default!;
+    public IAccount2<double> DoubleAccount => Account as IAccount2<double> ?? (doubleAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<double, decimal>(DecimalAccount));
+    private IAccount2<double>? doubleAccountAdapter;
+    public IAccount2<decimal> DecimalAccount => Account as IAccount2<decimal> ?? (decimalAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<decimal, double>(DoubleAccount));
+    private IAccount2<decimal>? decimalAccountAdapter;
 
     #endregion
 

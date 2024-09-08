@@ -120,7 +120,7 @@ public partial class BacktestQueue
                 int count = 0;
                 foreach (var batch in job.BacktestBatches)
                 {
-                    var batchBacktest = new BacktestBatchTask2(ServiceProvider, batch);
+                    var batchBacktest = await BacktestBatchTask2<double>.Create(ServiceProvider, batch);
                     await batchBacktest.Run();
                     count++;
                 }
