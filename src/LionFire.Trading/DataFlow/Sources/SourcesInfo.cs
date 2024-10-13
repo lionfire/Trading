@@ -6,7 +6,7 @@ namespace LionFire.Trading.DataFlow;
 
 //public class SourceInfo
 //{
-//    public required PropertyInfo SourceProperty { get; init; }
+//    public required Key SourceProperty { get; init; }
 //}
 
 /// <summary>

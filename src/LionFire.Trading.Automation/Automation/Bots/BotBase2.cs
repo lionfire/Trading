@@ -91,8 +91,8 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     #region State
 
-    public IObservableCache<IPosition, int> Positions => positions;
-    protected SourceCache<IPosition, int> positions = new(p => p.Id); // OPTIMIZE idea: if it has a dedicated SimulatedAccount, use its position list directly instead of this field.
+    public IObservableCache<IPosition<TPrecision>, int> Positions => positions;
+    protected SourceCache<IPosition<TPrecision>, int> positions = new(p => p.Id); // OPTIMIZE idea: if it has a dedicated SimulatedAccount, use its position list directly instead of this field.
 
     //public IEnumerable<IPosition> CompatiblePositions => Positions.Items.Where(p => p.SymbolId.Symbol == Symbol);
     //public IEnumerable<IPosition> BotPositions => CompatiblePositions.Where(p => p.SymbolId.Symbol == Symbol && p.Label == );
@@ -115,7 +115,7 @@ public abstract class BotBase2<TParameters, TPrecision>
     #region Event Handlers
 
     public virtual void OnBar() { }
-    public virtual async ValueTask Stop()
+    public virtual async ValueTask Stop() // OPTIMIZE: Sync version
     {
         await CloseAllPositions();
     }

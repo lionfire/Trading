@@ -18,6 +18,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\src\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
 		<ProjectReference Include="..\..\src\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
 		<ProjectReference Include="..\..\src\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
 		<ProjectReference Include="..\..\src\LionFire.Trading.Indicators.QuantConnect\LionFire.Trading.Indicators.QuantConnect.csproj" />

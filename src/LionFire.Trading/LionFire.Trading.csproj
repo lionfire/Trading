@@ -52,6 +52,7 @@
   <ItemGroup>
     <PackageReference Include="CsvHelper" />
     <PackageReference Include="DeferredEvents" />
+    <PackageReference Include="Hjson" />
     <PackageReference Include="MemoryPack" />
     <PackageReference Include="MemoryPack.Streaming" />
     <PackageReference Include="Microsoft.CSharp" />

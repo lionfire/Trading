@@ -20,13 +20,22 @@ public abstract class PStandardBot2<TConcrete, TValue> : PBarsBot2<TConcrete, TV
 }
 
 public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, TValue>
-      where TParameters : PStandardBot2<TParameters, TValue>
+    where TParameters : PStandardBot2<TParameters, TValue>
+    where TValue : struct, INumber<TValue>
 {
+
+    public LongAndShort Direction { get; protected set; }
 
     #region Lifecycle
 
     public override void Init()
     {
+        Direction = Parameters.Direction switch
+        {
+            LongAndShort.Long => LongAndShort.Long,
+            LongAndShort.Short => LongAndShort.Short,
+            _ => Parameters.PositionSize >= 0 ? LongAndShort.Long : LongAndShort.Short
+        };
         base.Init();
     }
 
@@ -56,8 +65,7 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
     public virtual ValueTask<IOrderResult> ClosePositionPortion(double? amount = null)
     {
         amount = amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value;
-        if (Parameters.Direction == LongAndShort.Long) { amount = -amount.Value; }
-        else if (Parameters.Direction == LongAndShort.Unspecified) { amount = -amount.Value; }
+        if (Parameters.Direction != LongAndShort.Short) { amount = -amount.Value; }
 
         return DoubleAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount.Value, PositionOperationFlags.Default | PositionOperationFlags.Close | PositionOperationFlags.CloseOnly);
 
@@ -69,7 +77,7 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
         //{
         //    if (((IPosition<double>)p.Value).Quantity == amountToClose)
         //    {
-        //        Account.ClosePosition(p.Value);
+        //        Account.Close(p.Value);
         //        return ValueTask.FromResult(OrderResult.Success);
         //    }
         //}

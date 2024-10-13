@@ -156,7 +156,7 @@ public abstract class InputEnumeratorBase<TValue, TPrecision> : InputEnumeratorB
     protected override async ValueTask _PreloadRange(DateTimeOffset start, DateTimeOffset endExclusive)
     {
         var result = await Series.Get(start, endExclusive);
-        if (!result.IsSuccess) { throw new Exception("Failed to get historical data"); }
+        if (!result.IsSuccess) { throw new Exception($"Failed to get historical data from {start} to {endExclusive} for {Series}"); }
         InputBuffer = result.Values;
         InputBufferCursorIndex = -1; // MoveNext will bump it to 0
     }

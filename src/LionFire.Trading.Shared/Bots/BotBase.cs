@@ -1559,7 +1559,10 @@ where TBotType : TBot, ITBot, new()
             (this as IHasSingleSeries)?.MarketSeries?.TimeFrame?.Name;
 #endif
 
-            var filename = fitness.ToString("0000.0") + $"f " + (100.0 * backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={GetType().Name} sym={sym} tf={tf} id={id}";
+            var filename = fitness.ToString("0000.0") + $"f " 
+                + (100.0 * backtestResult.Aroi / backtestResult.MaxEquityDrawdownPercentages).ToString("00.0") 
+                + $"ad {tradesPerMonth}tpm {timeSpan.TotalDays.ToString("F0")}d  {backtestResult.AverageDaysPerWinningTrade.ToString("F2")}adwt bot={GetType().Name} sym={sym} tf={tf} id={id}";
+
             if (backtestFlags != null)
             {
                 filename += $" bt={backtestFlags}";

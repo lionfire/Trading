@@ -13,7 +13,8 @@ public static class ServiceProviderProvider
     {
         var Configuration = new ConfigurationManager();
         Configuration.AddInMemoryCollection([
-            new ("LionFire.Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\") // HARDCODE HARDPATH
+            new ("LionFire.Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\"), // HARDCODE HARDPATH
+            new ("LionFire.Trading:Backtesting:Dir", @"z:\Trading\Backtesting") // HARDCODE HARDPATH
         ]);
 
         IServiceCollection services = new ServiceCollection();
@@ -29,6 +30,7 @@ public static class ServiceProviderProvider
             .AddBinance()
 
             .AddAutomation()
+            .Backtesting(Configuration)
             ;
 
         return services.BuildServiceProvider();

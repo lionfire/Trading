@@ -2,6 +2,6 @@
 
 public class BacktestOptions
 {
-    public string BacktestsDir { get; set; } = @"F:\st\Investing-Output\.local\Backtests\";
+    public string Dir { get; set; } = @"F:\st\Investing-Output\.local\Backtests\";
 
 }

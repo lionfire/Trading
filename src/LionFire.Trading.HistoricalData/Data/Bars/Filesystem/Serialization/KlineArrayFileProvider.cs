@@ -32,6 +32,56 @@ public class KlineArrayFileProvider
 
     #region KlineArrayFile
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="reference"></param>
+    /// <param name="date"></param>
+    /// <param name="forceDeleteNonStale"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>true if the file was considered stale (or missing) and a deletion was attempted or the file doesn't exist.  False if the file exists and is not considered stale.</returns>
+    public ValueTask<bool> TryDeleteStaleDownloadFile(ExchangeSymbolTimeFrame reference, DateTimeOffset date, bool forceDeleteNonStale = false)
+    {
+        var ((start, endExclusive), isLong) = RangeProvider.RangeForDate(date, reference.TimeFrame);
+
+        var barsRangeReference = new SymbolBarsRange(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive);
+        KlineArrayInfo info = new()
+        {
+            //SymbolBarsRange = new SymbolBarsRange(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive),
+            Exchange = reference.Exchange,
+            ExchangeArea = reference.ExchangeArea,
+            Symbol = reference.Symbol,
+            TimeFrame = reference.TimeFrame.Name,
+            Start = start.UtcDateTime,
+            EndExclusive = endExclusive.UtcDateTime,
+        };
+        var pathBase = HistoricalDataPaths.GetDownloadingPath(reference, info, null);
+
+        bool didAnything = false;
+        foreach (var path in Directory.GetFiles(Path.GetDirectoryName(pathBase), Path.GetFileName(pathBase) + "*"))
+        {
+            bool stale = true;
+
+            if (!forceDeleteNonStale)
+            {
+                DateTime lastWriteTime = File.GetLastWriteTime(path);
+                TimeSpan timeDifference = DateTime.Now - lastWriteTime;
+                if (timeDifference.TotalMinutes <= 2) stale = false; // HARDCODE
+            }
+
+            if (stale)
+            {
+                try
+                {
+                    File.Delete(path); // BLOCKING I/O
+                    didAnything = true;
+                }
+                catch { } // EMPTYCATCH
+            }
+        }
+        return ValueTask.FromResult(didAnything);
+    }
+
     public async Task<KlineArrayFile?> TryCreateDownloadFile(ExchangeSymbolTimeFrame reference, DateTimeOffset date, KlineArrayFileOptions? options = null, bool waitForDownloadInProgressToFinish = true, CancellationToken cancellationToken = default)
     {
         var ((start, endExclusive), isLong) = RangeProvider.RangeForDate(date, reference.TimeFrame);
@@ -84,9 +134,10 @@ public class KlineArrayFileProvider
                 }
                 return null;
             }
-            else {
+            else
+            {
                 OnDownloadStarted(path);
-                isDownloading = true; 
+                isDownloading = true;
             }
 
             if (File.Exists(completePath))
@@ -99,8 +150,16 @@ public class KlineArrayFileProvider
         }
         catch
         {
-            if (isDownloading) { OnDownloadFinished(path);  }
             throw;
+        }
+        finally
+        {
+            if (isDownloading)
+            {
+                OnDownloadFinished(path);
+                DownloadInProgress.Remove(path);
+            }
+
         }
     }
 

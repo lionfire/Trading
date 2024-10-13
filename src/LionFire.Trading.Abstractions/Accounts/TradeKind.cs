@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading
+namespace LionFire.Trading;
+
+public enum TradeKind
 {
-    public enum TradeKind
-    {
-        Buy,
-        Sell,
-    }
+    Buy,
+    Sell,
 }

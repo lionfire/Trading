@@ -12,17 +12,33 @@ using System.Runtime.InteropServices;
 
 namespace LionFire.Trading.Automation;
 
+public class BacktestBatchInfo
+{
+    public TimeFrame? TimeFrame { get; set; }
+    public DateTimeOffset Start { get; set; }
+    public DateTimeOffset EndExclusive { get; set; }
+    public bool TicksEnabled { get; set; }
+}
+
+public class BacktestBatchResults : BacktestBatchInfo
+{
+    public string? BotDll { get; set; }
+    public TimeFrame TimeFrame { get; set; }
+}
+
 /// <summary>
 /// Batch processing of multiple bots:
 /// - InputEnumerators are enumerated in lock step
 /// </summary>
 /// <remarks>
+/// REVIEW: This base class should maybe be combined with BacktestBatchTask2 
 /// </remarks>
 public abstract class BotBatchControllerBase : IBotBatchController
 {
     #region Identity
 
     public abstract BotExecutionMode BotExecutionMode { get; }
+
 
     #endregion
 
@@ -31,6 +47,14 @@ public abstract class BotBatchControllerBase : IBotBatchController
     public IServiceProvider ServiceProvider { get; }
 
     #endregion
+
+    public T GetInfo<T>() where T : BacktestBatchInfo, new() => new()
+    {
+        TimeFrame = TimeFrame,
+        Start= Start,
+        EndExclusive = EndExclusive,
+        TicksEnabled= TicksEnabled,
+    };
 
     #region Parameters
 
@@ -63,25 +87,52 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
         TimeFrame = first.TimeFrame;
         Start = first.Start;
-
         EndExclusive = first.EndExclusive;
 
-        foreach (var p in parameters)
+        foreach (var p in PBacktests)
         {
             if (p.TimeFrame != TimeFrame) throw new ArgumentException("TimeFrame mismatch");
             if (p.Start != Start) throw new ArgumentException("Start mismatch");
             if (p.EndExclusive != EndExclusive) throw new ArgumentException("EndExclusive mismatch");
+
             TicksEnabled |= p.TicksEnabled();
         }
     }
+    protected virtual ValueTask Init()
+    {
+        foreach (var p in PBacktests)
+        {
+            ValidateParameter(p);
+        }
+        return ValueTask.CompletedTask;
+
+    }
+
+    /// <summary>
+    /// (No need to call this base method)
+    /// </summary>
+    /// <param name="p"></param>
+    protected virtual void ValidateParameter(IPBacktestTask2 p) { }
 
     public abstract Task StartAsync(CancellationToken cancellationToken = default);
+
+
+    protected virtual void OnFinishing()
+    {
+    }
+
+    protected virtual ValueTask OnFinished()
+    {
+        return ValueTask.CompletedTask;
+    }
 
     #endregion
 
     #region State
 
     public DateTimeOffset SimulatedCurrentDate { get; protected set; }
+
+    public BacktestBatchJournal Journal { get; protected set; }
 
     #region Enumerators
 

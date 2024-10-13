@@ -2,6 +2,7 @@
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.ValueWindows;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
@@ -17,7 +18,7 @@ namespace LionFire.Trading.Indicators.Harnesses;
 /// <typeparam name="TParameters"></typeparam>
 /// <typeparam name="TInput"></typeparam>
 /// <typeparam name="TOutput"></typeparam>
-public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput> 
+public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     : HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
     where TIndicator : IIndicator2<TParameters, TInput, TOutput>
     where TParameters : IIndicatorParameters
@@ -93,7 +94,7 @@ public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
         TimeFrameRange range = new TimeFrameRange(TimeFrame, start, endExclusive);
 
         // Condition: when reusing memory, memory capacity is lower than outputCount:
-        if(outputBuffer != null && outputBuffer.Capacity < outputCount) { outputBuffer = null; }
+        if (outputBuffer != null && outputBuffer.Capacity < outputCount) { outputBuffer = null; }
 
         #endregion
 
@@ -180,7 +181,7 @@ public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
                 inputStart = outputBufferNextStart;
             }
 
-            if(outputBuffer == null) { Indicator.Clear(); }
+            if (outputBuffer == null) { Indicator.Clear(); }
         }
 
         //actualMemory = reusingMemory ? outputBuffer! : new TimeFrameValuesWindowWithGaps<TOutput>(outputCount, range.TimeFrame, range.Start - range.TimeFrame.TimeSpan);
@@ -190,7 +191,16 @@ public class BufferingIndicatorHarness<TIndicator, TParameters, TInput, TOutput>
 
         #region Input sources
 
-        ArraySegment<TInput> inputData = await this.GetInputData(Inputs, inputStart, range.EndExclusive).ConfigureAwait(false);
+        ArraySegment<TInput> inputData;
+        try
+        {
+            inputData = await this.GetInputData(Inputs, inputStart, range.EndExclusive).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine(GetType().Name + " failed to get input data: " + ex.Message);
+            return HistoricalDataResult<TOutput>.Fail;
+        }
 
         #endregion
 

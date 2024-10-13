@@ -9,7 +9,10 @@ namespace LionFire.Trading.Journal;
 public interface ITradeJournal<TPrecision>
       where TPrecision : struct, INumber<TPrecision>
 {
-    ValueTask Write(JournalEntry<TPrecision> entry);
+    void Write(JournalEntry<TPrecision> entry);
     ValueTask Close(string context);
     ValueTask CloseAll();
+
+    string FileName { get; set; }
+    ExchangeSymbol? ExchangeSymbol { get; set; }
 }

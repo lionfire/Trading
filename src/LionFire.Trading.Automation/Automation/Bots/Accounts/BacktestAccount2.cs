@@ -1,6 +1,7 @@
 ﻿//#define BacktestAccountSlottedParameters // FUTURE Maybe, though I think we just typically need 1 hardcoded slot for the bars
 using CryptoExchange.Net.CommonObjects;
 using DynamicData;
+using LionFire.Assets;
 using LionFire.Threading;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Backtesting;
@@ -69,7 +70,7 @@ public class BacktestAccount2<TPrecision>
         return base.CurrentPrice(symbol);
     }
 
-
+    public const bool CanPositionChangeDirections = false;
 
     // ENH Idea: break this up into atomic operations. E.g.:
     // - reduce position 1 to 0 (close)
@@ -78,17 +79,17 @@ public class BacktestAccount2<TPrecision>
     //   - transaction Id
     //   - aggregate result
     //   - ENH: all or nothing support
-    public override async ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision requestedQuantityChange, PositionOperationFlags flags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null)
+    public override async ValueTask<IOrderResult> SimulatedExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision requestedQuantityChange, PositionOperationFlags operationFlags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null, TPrecision? currentPrice = null, JournalEntryFlags journalFlags = JournalEntryFlags.Unspecified)
     {
         if (requestedQuantityChange == TPrecision.Zero) { return new OrderResult { IsSuccess = true, Noop = true }; }
         if (longAndShort == LongAndShort.Unspecified || longAndShort == LongAndShort.LongAndShort)
         {
-            if (flags.HasFlag(PositionOperationFlags.Open) && !flags.HasFlag(PositionOperationFlags.CloseOnly))
+            if (operationFlags.HasFlag(PositionOperationFlags.Open) && !operationFlags.HasFlag(PositionOperationFlags.CloseOnly))
             {
                 if (requestedQuantityChange > TPrecision.Zero) { longAndShort = LongAndShort.Long; }
                 else if (requestedQuantityChange < TPrecision.Zero) { longAndShort = LongAndShort.Short; }
             }
-            if (longAndShort == LongAndShort.Unspecified && flags.HasFlag(PositionOperationFlags.Close))
+            if (longAndShort == LongAndShort.Unspecified && operationFlags.HasFlag(PositionOperationFlags.Close))
             {
                 if (requestedQuantityChange > TPrecision.Zero) { longAndShort = LongAndShort.Short; }
                 else if (requestedQuantityChange < TPrecision.Zero) { longAndShort = LongAndShort.Long; }
@@ -96,7 +97,7 @@ public class BacktestAccount2<TPrecision>
         }
 
         bool isIncrease;
-        bool allowCloseAndOpenAtOnce = flags.HasFlag(PositionOperationFlags.AllowCloseAndOpenAtOnce);
+        bool allowCloseAndOpenAtOnce = (operationFlags & PositionOperationFlags.AllowCloseAndOpenAtOnce) == PositionOperationFlags.AllowCloseAndOpenAtOnce;
 
         switch (longAndShort)
         {
@@ -113,11 +114,11 @@ public class BacktestAccount2<TPrecision>
         }
 
         transactionId ??= Controller.GetNextTransactionId();
-        var currentPrice = CurrentPrice(symbol);
+        currentPrice ??= CurrentPrice(symbol);
         var requestedQuantityChangeRemaining = requestedQuantityChange;
         List<IOrderResult>? innerResults = null;
 
-        if (flags.HasFlag(PositionOperationFlags.ResizeExistingPosition))
+        if ((operationFlags & PositionOperationFlags.ResizeExistingPosition) == PositionOperationFlags.ResizeExistingPosition)
         {
             TPrecision remainingSize = requestedQuantityChange;
 
@@ -142,7 +143,7 @@ public class BacktestAccount2<TPrecision>
                     }
                     else
                     {
-                        quantityDelta = TPrecision.MaxMagnitude(requestedQuantityChange, position.Quantity);
+                        quantityDelta = TPrecision.Max(TPrecision.Abs(requestedQuantityChange), TPrecision.Abs(position.Quantity));
                         quantityDelta = TPrecision.CopySign(quantityDelta, requestedQuantityChange);
                     }
 
@@ -159,49 +160,65 @@ public class BacktestAccount2<TPrecision>
                     position.Quantity += quantityDelta;
 
                     TPrecision realizedGrossProfitDelta = TPrecision.Zero;
-                    if (!isIncrease && position.EntryAverage.HasValue)
+                    if (!isIncrease)
                     {
-                        realizedGrossProfitDelta = (position.EntryAverage.Value - currentPrice) * quantityDelta;
+                        realizedGrossProfitDelta = (position.EntryAverage - currentPrice.Value) * quantityDelta;
                         position.RealizedGrossProfit += realizedGrossProfitDelta;
                         position.Account.OnRealizedProfit(realizedGrossProfitDelta);
                     }
-
-                    position.EntryAverage = position.Quantity == TPrecision.Zero
-                        ? default
-                        : ((oldQuantity * oldEntryAverage + quantityDelta * currentPrice) / position.Quantity);
 
                     requestedQuantityChangeRemaining -= quantityDelta;
 
                     if (position.Quantity == TPrecision.Zero)
                     {
-                        // Position is zero size and should be closed 
+                        position.EntryAverage = currentPrice.Value;
 
-                        await Controller.Journal.Write(new JournalEntry<TPrecision>(position)
+                        if (CanPositionChangeDirections && requestedQuantityChangeRemaining != TPrecision.Zero)
                         {
-                            TransactionId = transactionId,
-                            Time = DateTime,
-                            EntryType = JournalEntryType.ClosePosition,
-                            Symbol = symbol,
-                            QuantityChange = quantityDelta,
-                            Price = currentPrice,
-                            RealizedGrossProfitDelta = realizedGrossProfitDelta,
-                        });//.FireAndForget();
-                        positions.Remove(position.Id);
+                            // Position is reversing directions
+
+                            journalFlags |= JournalEntryFlags.Reverse;
+                            position.ResetDirection();
+                            position.Quantity = requestedQuantityChangeRemaining;
+                            quantityDelta += requestedQuantityChangeRemaining;
+                            //requestedQuantityChangeRemaining = TPrecision.Zero; // Unneeded
+
+                            Controller.Journal.Write(new JournalEntry<TPrecision>(position)
+                            {
+                                TransactionId = transactionId,
+                                Time = DateTime,
+                                EntryType = JournalEntryType.Modify,
+                                Flags = journalFlags,
+                                QuantityChange = quantityDelta,
+                                Price = currentPrice,
+                                RealizedGrossProfitDelta = realizedGrossProfitDelta,
+                            });
+                            throw new NotImplementedException("UNTESTED"); // Not sure if this branch is needed/desired, or correct yet
+                        }
+                        else
+                        {
+                            // Position is zero size and should be closed 
+                            OnClosingPosition(position, journalFlags, currentPrice, quantityDelta, realizedGrossProfitDelta, transactionId.Value);
+                        }
                     }
                     else
                     {
-                        // Modify position size
-                        await Controller.Journal.Write(new JournalEntry<TPrecision>(position)
+                        // Position still has some quantity remaining and has not changed directions.
+
+                        // Update the new EntryAverage
+                        position.EntryAverage = ((oldQuantity * oldEntryAverage + quantityDelta * currentPrice.Value) / position.Quantity);
+
+                        Controller.Journal.Write(new JournalEntry<TPrecision>(position)
                         {
                             TransactionId = transactionId,
                             Time = DateTime,
-                            EntryType = JournalEntryType.ModifyPosition,
+                            EntryType = JournalEntryType.Modify,
+                            Flags = journalFlags,
                             Symbol = symbol,
                             QuantityChange = quantityDelta,
                             Price = currentPrice,
                             RealizedGrossProfitDelta = realizedGrossProfitDelta,
-                        });//.FireAndForget();
-
+                        });
                     }
 
                     var result = new OrderResult { IsSuccess = true, Data = position };
@@ -211,18 +228,20 @@ public class BacktestAccount2<TPrecision>
 
                 if (madeProgressThisTurn && !isIncrease && requestedQuantityChangeRemaining != TPrecision.Zero && positions.Count > 0)
                 {
-                    goto tryAgain;
+                    // UNTESTED
+                    madeProgressThisTurn = false;
+                    goto tryAgain; // Try to decrease other positions from the same symbol until the requested amount is closed
                 }
 
                 #endregion
 
                 #region If PositionOperationFlags.AllowCloseAndOpenAtOnce, open position in opposite direction
 
-                if (didSomething && flags.HasFlag(PositionOperationFlags.AllowCloseAndOpenAtOnce) && requestedQuantityChangeRemaining > TPrecision.Zero)
+                if (didSomething && operationFlags.HasFlag(PositionOperationFlags.AllowCloseAndOpenAtOnce) && requestedQuantityChangeRemaining > TPrecision.Zero)
                 {
                     // Open/increase new position in opposite direction
                     // TODO FIXME: Result should probably be an aggregate of the close in one direction and the open/increase in the other direction.
-                    return await ExecuteMarketOrder(symbol, longAndShort.Opposite(), requestedQuantityChangeRemaining, flags, transactionId: transactionId);
+                    return await ExecuteMarketOrder(symbol, longAndShort.Opposite(), requestedQuantityChangeRemaining, operationFlags, transactionId: transactionId);
                     //innerResults ??= [];
                     //innerResults.Add(innerResult);
                     //return new OrderResult { IsSuccess = true, Data = position, InnerResults = innerResults };
@@ -234,11 +253,15 @@ public class BacktestAccount2<TPrecision>
 
         if (requestedQuantityChangeRemaining != TPrecision.Zero)
         {
-            if (!flags.HasFlag(PositionOperationFlags.Open) || flags.HasFlag(PositionOperationFlags.CloseOnly))
+            if (!operationFlags.HasFlag(PositionOperationFlags.Open) || operationFlags.HasFlag(PositionOperationFlags.CloseOnly))
             {
                 //Debug.WriteLine($"Not opening position of size {requestedQuantityChange} because of PositionOperationFlags.");
                 return innerResults != null && innerResults.Count > 0
-                    ? new OrderResult { IsSuccess = true, InnerResults = innerResults }
+                    ? new OrderResult
+                    {
+                        IsSuccess = true,
+                        InnerResults = innerResults
+                    }
                     : new OrderResult { IsSuccess = true, Noop = true };
             }
             else
@@ -246,10 +269,10 @@ public class BacktestAccount2<TPrecision>
                 //bool increase = requestedQuantityChangeRemaining > TPrecision.Zero
                 //    ? longAndShort == LongAndShort.Long
                 //    : longAndShort == LongAndShort.Short -- broken;
-                var p = new PositionBase<TPrecision>(this, symbol)
+                var p = new SimulatedPosition<TPrecision>(this, symbol)
                 {
                     Id = positionIdCounter++,
-                    EntryAverage = currentPrice,
+                    EntryAverage = currentPrice.Value,
                     Quantity = requestedQuantityChangeRemaining,
                     TakeProfit = default,
                     StopLoss = default,
@@ -257,11 +280,12 @@ public class BacktestAccount2<TPrecision>
                 };
                 positions.AddOrUpdate(p);
 
-                await Controller.Journal.Write(new JournalEntry<TPrecision>(p)
+                Controller.Journal.Write(new JournalEntry<TPrecision>(p)
                 {
                     TransactionId = transactionId,
                     Time = DateTime,
-                    EntryType = JournalEntryType.OpenPosition,
+                    EntryType = JournalEntryType.Open,
+                    Flags = journalFlags,
                     QuantityChange = p.Quantity,
                     Price = p.EntryAverage,
                 });//.FireAndForget();
@@ -281,8 +305,32 @@ public class BacktestAccount2<TPrecision>
     #region Event Handlers
 
     int x = 0;
-    public override void OnBar()
+    public override async void OnBar()
     {
+        foreach (var position in Positions.Items.OfType<PositionBase<TPrecision>>())
+        {
+            if ((position.StopLoss != default &&
+                       (
+                        (position.LongOrShort == LongAndShort.Long && Bars[0].Low <= position.StopLoss)
+                        || (position.LongOrShort == LongAndShort.Short && Bars[0].High >= position.StopLoss)
+                       )
+                   )
+              )
+            {
+                await ClosePosition(position, JournalEntryFlags.StopLoss, currentPrice: position.StopLoss.Value);
+            }
+            if ((position.TakeProfit != default &&
+                     (
+                      (position.LongOrShort == LongAndShort.Long && Bars[0].High >= position.TakeProfit)
+                      || (position.LongOrShort == LongAndShort.Short && Bars[0].Low <= position.TakeProfit)
+                     )
+                 )
+              )
+            {
+                await ClosePosition(position, JournalEntryFlags.TakeProfit, currentPrice: position.TakeProfit.Value);
+            }
+        }
+
         if (x++ <= 0)
         {
             if (typeof(TPrecision) == typeof(double))

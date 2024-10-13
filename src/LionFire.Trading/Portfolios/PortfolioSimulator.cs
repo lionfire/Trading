@@ -442,7 +442,7 @@ public class PortfolioSimulator
                 if (ddp > Sim.Stats.MaxEquityDrawdownPercent)
                 {
                     Sim.Stats.MaxEquityDrawdownPercent = dd / SimBalanceDrawdownFrom;
-                    //Console.WriteLine($"{openTime} >>>%  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, {Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}");
+                    //Console.WriteLine($"{openTime} >>>%  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, {Sim.MaxBalanceDrawdownPerunum.ToPercentString(1)}");
                 }
             }
         }
@@ -466,12 +466,12 @@ public class PortfolioSimulator
                 if (dd > Sim.Stats.MaxBalanceDrawdown)
                 {
                     Sim.Stats.MaxBalanceDrawdown = dd;
-                    //Console.WriteLine($"{openTime} >>>$  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  [DD: {dd}], {Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}");
+                    //Console.WriteLine($"{openTime} >>>$  Bal dd from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  [DD: {dd}], {Sim.MaxBalanceDrawdownPerunum.ToPercentString(1)}");
                 }
                 if (ddp > Sim.Stats.MaxBalanceDrawdownPercent)
                 {
                     Sim.Stats.MaxBalanceDrawdownPercent = dd / SimBalanceDrawdownFrom;
-                    //Console.WriteLine($"{openTime} >>>%  Bal dd% from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, [{Sim.MaxBalanceDrawdownPercent.ToPercentString(1)}]");
+                    //Console.WriteLine($"{openTime} >>>%  Bal dd% from {SimBalanceDrawdownFrom} to cur {balanceBar.Close}.  DD: {dd}, [{Sim.MaxBalanceDrawdownPerunum.ToPercentString(1)}]");
                 }
             }
         }

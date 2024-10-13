@@ -12,7 +12,7 @@ public abstract class PBot2<TConcrete> : PMarketProcessor, IPBotHierarchical2
     //                Type = typeof(AverageTrueRange),
     //            }];
 
-    public IEnumerable<IPBot2> Children => getChildren(this);
+    public IEnumerable<IPBot2>? Children => getChildren(this);
 
     #region (static)
 
@@ -22,7 +22,8 @@ public abstract class PBot2<TConcrete> : PMarketProcessor, IPBotHierarchical2
 
         getChildren = pBot =>
         {
-            return propertyInfos.Select(pi => pi.GetValue(pBot) as IPBotHierarchical2).Where(p => p != null)!;
+            var r = propertyInfos.Select(pi => pi.GetValue(pBot) as IPBotHierarchical2).OfType<IPBotHierarchical2>();
+            return r.Any() ? r : null;
         };
 
         #region InputSlots
@@ -45,7 +46,7 @@ public abstract class PBot2<TConcrete> : PMarketProcessor, IPBotHierarchical2
 #endif
         #endregion
     }
-    static Func<PBot2<TConcrete>, IEnumerable<IPBotHierarchical2>> getChildren;
+    static Func<PBot2<TConcrete>, IEnumerable<IPBotHierarchical2>?> getChildren;
     #endregion
 
 }

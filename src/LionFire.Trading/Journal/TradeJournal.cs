@@ -20,7 +20,6 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
 {
     #region Identity
 
-    private readonly string DefaultContext = "Process-" + Guid.NewGuid();
 
     #endregion
 
@@ -32,22 +31,70 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
 
     #region Options
 
-    public TradeJournalOptions Options => options.CurrentValue;
-    private readonly IOptionsMonitor<TradeJournalOptions> options;
+    public TradeJournalOptions Options => options;
+    private readonly TradeJournalOptions options;
+
+    private string? pathWithoutExtension { get; set; }
+    private void UpdatePath() => pathWithoutExtension = Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(), context);
+    public string? FileName { get; set; }
+    public ExchangeSymbol? ExchangeSymbol
+    {
+        get => exchangeSymbol;
+        set
+        {
+            exchangeSymbol = value;
+
+            //if (!Directory.Exists(JournalDirectory)) { Directory.CreateDirectory(JournalDirectory); } // BLOCKING IO
+            UpdatePath();
+        }
+    }
+
+    public string Context
+    {
+        get => context;
+        set
+        {
+            context = value;
+            UpdatePath();
+        }
+    }
+    private string context = "Journal-" + Guid.NewGuid();
+
+    #region Derived
+
+    public string JournalDirectory => Options.JournalDir;
+    //{
+    //    get
+    //    {
+    //        var path = Options.JournalDir;
+    //        if (Options.ExchangeSubDir)
+    //        {
+    //            path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange");
+    //        }
+    //        if (Options.ExchangeAreaSubDir && ExchangeSymbol?.ExchangeArea != null)
+    //        {
+    //            path = System.IO.Path.Combine(path, ExchangeSymbol.ExchangeArea);
+    //        }
+    //        if (Options.SymbolSubDir)
+    //        {
+    //            path = System.IO.Path.Combine(path, ExchangeSymbol?.Symbol ?? "UnknownSymbol");
+    //        }
+    //        return path;
+    //    }
+    //}
+
+    #endregion
 
     #endregion
 
     #region Lifecycle
 
-    public TradeJournal(ILogger<TradeJournal<TPrecision>> logger, IOptionsMonitor<TradeJournalOptions> options)
+    public TradeJournal(ILogger<TradeJournal<TPrecision>> logger, TradeJournalOptions options, ExchangeSymbol? exchangeSymbol = null)
     {
         this.logger = logger;
         this.options = options;
-
-        if (!Directory.Exists(Options.JournalDir))
-        {
-            Directory.CreateDirectory(Options.JournalDir);
-        }
+        ExchangeSymbol = exchangeSymbol;
+        UpdatePath();
     }
 
     ~TradeJournal() => Dispose();
@@ -56,9 +103,36 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
     {
         CloseAll().AsTask().Wait();
     }
+    private string GetPath(string filename) => Path.Combine(Options.JournalDir, filename);
+
+    private void OnClosed(string path)
+    {
+        if (FileName != null)
+        {
+            int i = 0;
+            string newPath;
+
+            string getPath() => Path.Combine(JournalDirectory, FileName) + (i++ == 0 ? "" : $" ({i:000})") + Path.GetExtension(path);
+
+            if (Options.ReplaceOutput && File.Exists(newPath = getPath()))
+            {
+                File.Delete(newPath);
+            }
+            else
+            {
+                do
+                {
+                    newPath = getPath();
+                } while (File.Exists(newPath));
+            }
+
+            File.Move(path, newPath);
+        }
+    }
 
     public async ValueTask CloseAll()
     {
+        await _Write();
         {
             var copy = csvWriters.ToArray();
             if (copy != null)
@@ -85,9 +159,9 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
             {
                 fileStreams = null!;
                 foreach (var kvp in copy.Where(c => c.Key.Item2 != JournalFormat.CSV)) { kvp.Value.Dispose(); }
+                foreach (var c in copy) OnClosed(c.Value.Name);
             }
         }
-
     }
 
     #endregion
@@ -103,39 +177,54 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
 
     AsyncLock writeLockBinary = new();
     AsyncLock writeLock = new();
-    public async ValueTask Write(JournalEntry<TPrecision> entry)
+    private ExchangeSymbol? exchangeSymbol;
+
+    ConcurrentQueue<JournalEntry<TPrecision>> entries = new(); // TODO: Replace with channel
+
+    public void Write(JournalEntry<TPrecision> entry)
     {
-        if (Options.LogLevel != LogLevel.None) { }
-        logger.Log(Options.LogLevel, $"Journal: {entry.Dump()}");
+        entries.Enqueue(entry);
+        if (entries.Count > 100) { _Write(); }
+    }
 
-        if (Options.JournalFormat.HasFlag(JournalFormat.Binary))
+    private async ValueTask _Write()
+    {
+        while (entries.TryDequeue(out var entry))
         {
-            var bin = MemoryPackSerializer.Serialize(entry);
-            var stream = GetStream(entry.Context, JournalFormat.Binary);
-
-            await stream.WriteAsync(bin)
-                //.ConfigureAwait(false)
-                ;
-        }
-
-        if (Options.JournalFormat.HasFlag(JournalFormat.CSV))
-        {
-            var writer = GetCsvWriter(entry.Context);
-            writeLock.Wait(() =>
+            if (Options.LogLevel != LogLevel.None)
             {
-                //{
-                //await writer.WriteRecordsAsync([entry]);
-                //writer.WriteRecord(entry);
-                writer.WriteRecords([entry]);
-                //}
-                //await writer.FlushAsync();
-            });
-        }
+                logger.Log(Options.LogLevel, $"Journal: {entry.Dump()}");
+            }
 
-        if (Options.JournalFormat.HasFlag(JournalFormat.Text))
-        {
-            var stream = GetStream(entry.Context, JournalFormat.Text);
-            await stream.WriteAsync(Encoding.UTF8.GetBytes(entry.ToXamlProperties() + Environment.NewLine)).ConfigureAwait(false);
+            if ((Options.JournalFormat & JournalFormat.Binary) == JournalFormat.Binary)
+            {
+                var bin = MemoryPackSerializer.Serialize(entry);
+                var stream = GetStream(JournalFormat.Binary);
+
+                await stream.WriteAsync(bin)
+                    //.ConfigureAwait(false)
+                    ;
+            }
+
+            if ((Options.JournalFormat & JournalFormat.CSV) == JournalFormat.CSV)
+            {
+                var writer = GetCsvWriter();
+                writeLock.Wait(() =>
+                {
+                    //{
+                    //await writer.WriteRecordsAsync([entry]);
+                    //writer.WriteRecord(entry);
+                    writer.WriteRecords([entry]);
+                    //}
+                    //await writer.FlushAsync();
+                });
+            }
+
+            if ((Options.JournalFormat & JournalFormat.Text) == JournalFormat.Text)
+            {
+                var stream = GetStream(JournalFormat.Text);
+                await stream.WriteAsync(Encoding.UTF8.GetBytes(entry.ToXamlProperties() + Environment.NewLine)).ConfigureAwait(false);
+            }
         }
     }
 
@@ -161,11 +250,9 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
         NewLine = "\r\n",
     };
 
-    CsvWriter GetCsvWriter(string? context)
+    CsvWriter GetCsvWriter()
     {
-        context ??= DefaultContext;
-
-        return csvWriters.GetOrAdd(context, key =>
+        return csvWriters.GetOrAdd(Context, key =>
         {
             //var ext = Options.CsvSeparator switch
             //{
@@ -176,23 +263,21 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
             //};
 
             //var fs = new FileStream(Path.Combine(Options.JournalDir, key + ext), FileMode.Append, FileAccess.Write, FileShare.Read);
-            var writer = new StreamWriter(GetStream(context, JournalFormat.CSV));
+            var writer = new StreamWriter(GetStream(JournalFormat.CSV));
             var csv = new CsvWriter(writer, CsvConfiguration);
 
             //Write(new TradeJournalEntry<TPrecision>
             //{
-            //    EntryType = JournalEntryType.JournalOpen,
+            //    EntryType = JournalEntryType.Start,
             //    Time = DateTimeOffset.Now,
             //}, fs);
             return csv;
         });
     }
 
-    FileStream GetStream(string? context, JournalFormat journalFormat)
+    FileStream GetStream(JournalFormat journalFormat)
     {
-        context ??= DefaultContext;
-
-        return fileStreams.GetOrAdd((context, journalFormat), key =>
+        return fileStreams.GetOrAdd((Context, journalFormat), key =>
         {
             var ext = journalFormat switch
             {
@@ -206,11 +291,12 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
                 _ => throw new NotSupportedException($"Specify a single {nameof(journalFormat)}"),
             };
 
-            var fs = new FileStream(Path.Combine(Options.JournalDir, key.Item1 + ext), FileMode.Append, FileAccess.Write, FileShare.Read);
+
+            var fs = new FileStream(pathWithoutExtension + ext, FileMode.Append, FileAccess.Write, FileShare.Read);
 
             //Write(new TradeJournalEntry<TPrecision>
             //{
-            //    EntryType = JournalEntryType.JournalOpen,
+            //    EntryType = JournalEntryType.Start,
             //    Time = DateTimeOffset.Now,
             //}, fs);
             return fs;

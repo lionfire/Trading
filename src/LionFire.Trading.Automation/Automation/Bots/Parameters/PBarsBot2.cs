@@ -1,6 +1,7 @@
 ﻿using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.ValueWindows;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation;
 
@@ -15,19 +16,23 @@ public abstract class PBarsBot2<TConcrete, TValue>
     , IPTimeFrameBot2
     where TConcrete : PBarsBot2<TConcrete, TValue>
 {
+    [JsonIgnore]
     public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
 
     #region Derived
 
+    [JsonIgnore]
     public override ExchangeSymbol ExchangeSymbol => ExchangeSymbolTimeFrame;
+    [JsonIgnore]
     public TimeFrame TimeFrame => ExchangeSymbolTimeFrame.TimeFrame;
-    
+
     #endregion
 
     #region Inputs
 
     [Signal(-1000)]
     //public SymbolValueAspect<TValue>? Bars { get; set; }
+    [JsonIgnore]
     public HLCReference<TValue>? Bars { get; set; }
 
     #endregion
@@ -73,6 +78,7 @@ public interface IBarsBot<TValue>
 
 public class BarsBot2<TParameters, TValue> : SymbolBot2<TParameters, TValue>, IBarsBot<TValue>
       where TParameters : PBarsBot2<TParameters, TValue>
+    where TValue : struct, INumber<TValue>
 {
     IPBarsBot2 IBarsBot<TValue>.Parameters => Parameters;
 

@@ -111,12 +111,23 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
         {
             var j = ActivatorUtilities.CreateInstance<RetrieveHistoricalDataJob>(ServiceProvider); // TODO: Refactor, get exchange-specific service
 
-            var resultList = await j.Execute2(new(range));
-            if (resultList != null)
+            List<IBarsResult<IKline>>? resultList;
+            Exception exception;
+            try
             {
-                if (resultList.Count != 1) throw new Exception("Expected exactly zero or one result.");
-                chunk = resultList.Single();
+                resultList = await j.Execute2(new(range));
+                if (resultList != null)
+                {
+                    if (resultList.Count != 1) throw new Exception("Expected exactly zero or one result.");
+                    chunk = resultList.Single();
+                }
             }
+            catch (Exception ex)
+            {
+                if (!canTryAgain) throw;
+                // else exception gets dropped
+            }
+
             if (chunk == null && canTryAgain)
             {
                 canTryAgain = false;

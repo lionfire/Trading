@@ -6,8 +6,8 @@ public static class TradeJournalHostingX
     {
         if (options != null) { services.Configure<TradeJournalOptions>(options); }
 
-        services.AddSingleton<ITradeJournal<double>, TradeJournal<double>>();
-        services.AddSingleton<ITradeJournal<decimal>, TradeJournal<decimal>>();
+        services.AddTransient<ITradeJournal<double>, TradeJournal<double>>();
+        services.AddTransient<ITradeJournal<decimal>, TradeJournal<decimal>>();
 
         return services;
     }

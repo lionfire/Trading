@@ -1,6 +1,7 @@
 ﻿#nullable enable
 using Orleans;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading;
 
@@ -11,6 +12,8 @@ public record  ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, str
     //public string ToGrainId() => $"{Exchange}}";
 
     public override string Key => $"{Exchange}.{ExchangeArea}:{Symbol}/{TimeFrame}";
+
+    [JsonIgnore]
     public virtual Type ValueType => typeof(IKline);
 
     public static ExchangeSymbolTimeFrame Parse(string id, ISymbolIdParser symbolIdParser)

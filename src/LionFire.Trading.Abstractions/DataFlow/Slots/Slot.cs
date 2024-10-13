@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading;
+﻿using System.Text.Json.Serialization;
+
+namespace LionFire.Trading;
 
 // REVIEW: Make Slot this generic, with ISlot interface?
 // REVIEW: Separate into different classes?
@@ -9,7 +11,9 @@
 public class Slot
 {
     public required string Name { get; init; }
-    public required Type ValueType { get; init; }
+
+    [JsonIgnore]
+    public Type ValueType { get; set; } // was required / init
 
     /// <summary>
     /// If Type is a Bar (IKline) this specifies which aspect(s) of the bar is needed. 

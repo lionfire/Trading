@@ -1,6 +1,7 @@
 ﻿using LionFire.Trading.Data;
 using LionFire.Trading.DataFlow;
 using LionFire.Trading.ValueWindows;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Indicators.Harnesses;
 
@@ -134,7 +135,16 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
         {
             #region Input sources
 
-            ArraySegment<TInput> inputData = await this.GetInputData(Inputs, inputStart, endExclusive).ConfigureAwait(false);
+            ArraySegment<TInput> inputData;
+            try
+            {
+                inputData = await this.GetInputData(Inputs, inputStart, endExclusive).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(GetType().Name + " failed to get input data: " + ex.Message);
+                return HistoricalDataResult<TOutput>.Fail;
+            }
 
             #endregion
 

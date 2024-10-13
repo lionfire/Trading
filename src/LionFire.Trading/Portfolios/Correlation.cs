@@ -33,7 +33,7 @@ namespace LionFire.Trading.Portfolios
     //    public double MaxEquityDrawdown { get; set; }
     //    public double MaxEquityDrawdownPercent { get; set; }
     //    public double MaxBalanceDrawdown { get; set; }
-    //    public double MaxBalanceDrawdownPercent { get; set; }
+    //    public double MaxBalanceDrawdownPerunum { get; set; }
     //    public double NetProfit { get; set; }
     //}
 

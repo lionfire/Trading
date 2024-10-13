@@ -21,6 +21,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Journal;
+using System.Numerics;
 
 namespace Backtesting_;
 
@@ -74,10 +75,11 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
             }
         }
         void createBotParameters<T>(TimeFrame timeFrame, string symbol)
+            where T : struct, INumber<T>
         {
             var pBot = new PAtrBot<T>(new ExchangeSymbolTimeFrame(Exchange, ExchangeArea, symbol, timeFrame), 14)
             {
-                //ATR = new PAverageTrueRange<T>
+                //SlowATR = new PAverageTrueRange<T>
                 //{
                 //    Period = 14,
                 //    MovingAverageType = QuantConnect.Indicators.MovingAverageType.Simple,
@@ -147,24 +149,27 @@ public class Backtest_Batch_ : BinanceDataTest
                         }
                     },
 
-                    Start = new DateTimeOffset(2022, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                    EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                    //Start = new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero),
+                    Start = new DateTimeOffset(2020, 2, 1, 0, 0, 0, TimeSpan.Zero),
+                    EndExclusive = new DateTimeOffset(2023, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                    //EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
                     //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),
                     //EndExclusive = new DateTimeOffset(2024, 7, 23, 0, 0, 0, TimeSpan.Zero),
                     Features = BotHarnessFeatures.Bars,
+                    
                 };
             }
 
             List<string> symbols = [
-                    //"BTCUSDT",
-                    "ETHUSDT",
+                    "BTCUSDT",
+                    //"ETHUSDT",
                     //"LTCUSDT"
                 ];
 
             var list = new List<IPBacktestTask2>();
             foreach (var symbol in symbols)
             {
-                for (uint i = 14; i <= 14; i++) { list.Add(createBacktest(symbol, i)); }
+                for (uint i = 14; i <= 17; i++) { list.Add(createBacktest(symbol, i)); }
             }
 
             batch.BacktestBatches = [
@@ -204,9 +209,7 @@ public class Backtest_Batch_ : BinanceDataTest
 
         await job.Task;
 
-        //await Task.Delay(1000);
-        await ServiceProvider.GetRequiredService<ITradeJournal<decimal>>().CloseAll();
-        await ServiceProvider.GetRequiredService<ITradeJournal<double>>().CloseAll();
+  
     }
 
     [Fact]

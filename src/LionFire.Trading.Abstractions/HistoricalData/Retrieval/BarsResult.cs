@@ -39,6 +39,27 @@ public sealed class BarsResult<TKline> : IBarsResult<TKline>
 
     public required TimeFrame TimeFrame { get; init; }
     public required DateTimeOffset Start { get; init; }
+
+    #region Derived
+
+    public DateTimeOffset? First
+    {
+        get
+        {
+            if (!first.HasValue && Values.Any())
+            {
+                if (Values.First() is IKlineWithOpenTime kline)
+                {
+                    first = kline.OpenTime.ToUniversalTime();
+                }
+            }
+            return first;
+        }
+    }
+    private DateTimeOffset? first;
+
+    #endregion
+
     public required DateTimeOffset EndExclusive { get; init; }
 
     //public required DateTime LastBarOpenTime { get; init; }
@@ -49,11 +70,29 @@ public sealed class BarsResult<TKline> : IBarsResult<TKline>
     /// <summary>
     /// Considered up to date if IsForeverUpToDate, or if the bar that is in progress hasn't finished yet.
     /// 
+    /// Works for first time data is available
+    /// 
     /// Note: this can become false over time.  It never goes back to true.
     /// 
     /// </summary>
-    public bool IsUpToDate => Values.Count == TimeFrame.GetExpectedBarCountForNow(Start, EndExclusive);
+    public bool IsUpToDate => Values.Count == TimeFrame.GetExpectedBarCountForNow(First ?? Start, EndExclusive);
 
+    public IEnumerable<(DateTimeOffset, DateTimeOffset)> Gaps
+    {
+        get
+        {
+            DateTimeOffset? previous = null;
+
+            foreach (var v in Values.OfType<IKline>())
+            {
+                if (previous.HasValue && v.OpenTime != previous + TimeFrame.TimeSpan)
+                {
+                    yield return (previous.Value, v.OpenTime);
+                }
+                previous = v.OpenTime;
+            }
+        }
+    }
 
 
     //IsForeverUpToDate || DateTime.UtcNow < (LastBarCloseTime + TimeFrame.TimeSpan!.Value);

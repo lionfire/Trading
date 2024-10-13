@@ -56,10 +56,14 @@ public static class ScottPlotUtils
         {
             //candles.Axes.YAxis.Max = 1;
             //candles.Axes.YAxis.Min = -1;
-            plot.Style.Background(figure: Color.FromHex("#22222200"), data: Color.FromHex("#0b304900"));
+            //plot.Style.Background(figure: Color.FromHex("#22222200"), data: Color.FromHex("#0b304900")); // OLD DEPRECATED
+            plot.DataBackground.Color = Color.FromHex("#0b304900");
+            plot.FigureBackground.Color = Color.FromHex("#22222200");
         }
-        plot.Style.ColorAxes(Color.FromHex("#a0acb5"));
-        plot.Style.ColorGrids(Color.FromHex("#00000000"));
+        //plot.Style.ColorAxes(Color.FromHex("#a0acb5"));
+        plot.Axes.Color(Color.FromHex("#a0acb5"));
+        //plot.Style.ColorGrids(Color.FromHex("#00000000"));
+        plot.Grid.MajorLineColor = Color.FromHex("#00000000");
 
         if (frameless)
         {
@@ -147,11 +151,15 @@ public static class ScottPlotUtils
             //candles.Axes.YAxis.Min = lowPercent;
             if (last > first)
             {
-                plot.Style.Background(figure: Color.FromHex("#025836"), data: Color.FromHex("#1b4049"));
+                //plot.Style.Background(figure: Color.FromHex("#025836"), data: Color.FromHex("#1b4049"));
+                plot.FigureBackground.Color = Color.FromHex("#025836");
+                plot.DataBackground.Color = Color.FromHex("#1b4049");
             }
             else
             {
-                plot.Style.Background(figure: Color.FromHex("#823836"), data: Color.FromHex("#4b3049"));
+                //plot.Style.Background(figure: Color.FromHex("#823836"), data: Color.FromHex("#4b3049"));
+                plot.FigureBackground.Color  = Color.FromHex("#823836");
+                plot.DataBackground.Color = Color.FromHex("#4b3049");
             }
         }
         else if (diffPercent > 1.0)
@@ -160,21 +168,29 @@ public static class ScottPlotUtils
             candles.Axes.YAxis.Min = -3;
             if (last > first)
             {
-                plot.Style.Background(figure: Color.FromHex("#023114"), data: Color.FromHex("#0b3049"));
+                //plot.Style.Background(figure: Color.FromHex("#023114"), data: Color.FromHex("#0b3049"));
+                plot.FigureBackground.Color = Color.FromHex("#023114");
+                plot.DataBackground.Color = Color.FromHex("#0b3049");
             }
             else
             {
-                plot.Style.Background(figure: Color.FromHex("#4c212b"), data: Color.FromHex("#0b3049"));
+                //plot.Style.Background(figure: Color.FromHex("#4c212b"), data: Color.FromHex("#0b3049"));
+                plot.FigureBackground.Color = Color.FromHex("#4c212b");
+                plot.DataBackground.Color = Color.FromHex("#0b3049");
             }
         }
         else
         {
             candles.Axes.YAxis.Max = 1;
             candles.Axes.YAxis.Min = -1;
-            plot.Style.Background(figure: Color.FromHex("#222222"), data: Color.FromHex("#0b3049"));
+            //plot.Style.Background(figure: Color.FromHex("#222222"), data: Color.FromHex("#0b3049"));
+            plot.FigureBackground.Color = Color.FromHex("#222222");
+            plot.DataBackground.Color = Color.FromHex("#0b3049");
         }
-        plot.Style.ColorAxes(Color.FromHex("#a0acb5"));
-        plot.Style.ColorGrids(Color.FromHex("#0e3d54"));
+        //plot.Style.ColorAxes(Color.FromHex("#a0acb5"));
+        plot.Axes.Color(Color.FromHex("#a0acb5"));
+        //plot.Style.ColorGrids(Color.FromHex("#0e3d54"));
+        plot.Grid.MajorLineColor = Color.FromHex("#0e3d54");
 
         plot.Axes.Title.Label.Text = name;
         //myPlot.Axes.Bottom.Label.Text = "Horizontal Axis";

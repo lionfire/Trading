@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading.Automation;
+﻿using LionFire.Trading.Journal;
+
+namespace LionFire.Trading.Automation;
 
 public class BacktestExecutionOptions
 {
@@ -45,6 +47,22 @@ public class BacktestExecutionOptions
     #endregion
 
     #region Memory
+
+    #endregion
+
+    #region Journaling
+
+    public TradeJournalOptions? TradeJournalOptions { get; set; }
+
+    #endregion
+
+    #region Paths
+
+    public bool BotSubDir { get; set; } = true;
+
+    public bool ExchangeSubDir { get; set; } 
+    public bool ExchangeAreaSubDir { get; set; }
+    public bool SymbolSubDir { get; set; } = true;
 
     #endregion
 }

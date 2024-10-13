@@ -9,6 +9,7 @@ public partial class JournalEntry<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
     public JournalEntryType EntryType { get; set; }
+    public JournalEntryFlags Flags { get; set; }
     public DateTimeOffset Time { get; set; }
 
     public string? Context { get; set; }
@@ -22,7 +23,7 @@ public partial class JournalEntry<TPrecision>
     public TPrecision? Balance { get; set; }
     public TPrecision? Swap { get; set; }
     public TPrecision? Price { get; set; }
-    public TPrecision? EntryAverage { get; set; }
+    public TPrecision EntryAverage { get; set; }
     public TPrecision? Quantity { get; set; }
     public TPrecision? QuantityChange { get; set; }
     public TPrecision RealizedGrossProfitDelta { get; set; }

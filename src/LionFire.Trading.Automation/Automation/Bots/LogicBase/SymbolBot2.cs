@@ -1,17 +1,24 @@
 ﻿using LionFire.Trading.ValueWindows;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation;
 
+public interface IPSymbolBot2
+{
+    ExchangeSymbol ExchangeSymbol { get; }
+}
 
-public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>
+public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>, IPSymbolBot2
     where TConcrete : PBot2<TConcrete>
 {
+    [JsonIgnore]
     public abstract ExchangeSymbol ExchangeSymbol { get; }
 }
 
 
 public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
       where TParameters : PSymbolBot2<TParameters>
+    where TValue : struct, INumber<TValue>
 {
 
     #region Parameters (Derived)
@@ -19,7 +26,7 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
     public ExchangeSymbol ExchangeSymbol { get; set; } = default!;
     public string Symbol => ExchangeSymbol.Symbol!;
 
-    public IAccount2 Account { get; set; } = default!;
+    public IAccount2<TValue> Account { get; set; } = default!;
     public IAccount2<double> DoubleAccount => Account as IAccount2<double> ?? (doubleAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<double, decimal>(DecimalAccount));
     private IAccount2<double>? doubleAccountAdapter;
     public IAccount2<decimal> DecimalAccount => Account as IAccount2<decimal> ?? (decimalAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<decimal, double>(DoubleAccount));
@@ -44,7 +51,7 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
         ExchangeSymbol = Parameters.ExchangeSymbol;
         //}
 
-        Account = Controller.Account ?? throw new NotImplementedException();
+        Account = Controller.Account as IAccount2<TValue> ?? throw new NotImplementedException();
 
         if (ExchangeSymbol == null) throw new InvalidOperationException($"Failed to resolve {nameof(ExchangeSymbol)}");
         if (Account == null) throw new InvalidOperationException($"Failed to resolve {nameof(Account)}");

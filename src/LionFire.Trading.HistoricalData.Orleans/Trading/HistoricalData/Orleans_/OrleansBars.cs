@@ -34,7 +34,7 @@ public class OrleansBars : ILocalNetworkBars, IChunkedBars
 
     #endregion
 
-    public async Task<IBarsResult?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null)
+    public async Task<IBarsResult<IKline>?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunkSource = true, QueryOptions? options = null)
     {
         var grainKey = range.ToId();
         var grain = ClusterClient.GetGrain<IHistoricalBarsChunkG>(grainKey);
@@ -51,7 +51,7 @@ public class OrleansBars : ILocalNetworkBars, IChunkedBars
         return result;
     }
 
-    public Task<IBarsResult?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null) => throw new NotSupportedException();
+    public Task<IBarsResult<IKline>?> GetLongChunk(SymbolBarsRange range, QueryOptions? options = null) => throw new NotSupportedException();
 
     //protected override Task<bool> CanGetImpl<T>(TimeFrame timeFrame, string symbol, DateTime Start, DateTime endExclusive, HistoricalDataQueryParameters retrieveOptions)
     //{

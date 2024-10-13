@@ -8,7 +8,7 @@ public class PBacktestAccount<TPrecision>
     : SlottedParameters<BacktestAccount2<T>>
     , IPTimeFrameMarketProcessor
 #else
-    : PAccount2<TPrecision>
+    : PSimulatedAccount2<TPrecision>
     , IPMayHaveUnboundInputSlots
 #endif
     , IPTimeFrameMarketProcessor
@@ -44,6 +44,8 @@ public class PBacktestAccount<TPrecision>
     }
 
     #endregion
+
+  
 
     #region Lifecycle
 

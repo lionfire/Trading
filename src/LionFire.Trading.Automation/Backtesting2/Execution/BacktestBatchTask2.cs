@@ -1,9 +1,12 @@
 ﻿//#define BacktestAccountSlottedParameters // FUTURE Maybe, though I think we just typically need 1 hardcoded slot for the bars
+using CryptoExchange.Net.Objects.Options;
+using Hjson;
 using LionFire.Execution;
 using LionFire.ExtensionMethods;
 using LionFire.Structures;
 using LionFire.Threading;
 using LionFire.Trading.Automation.Bots;
+using LionFire.Trading.Backtesting;
 using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Indicators.Harnesses;
@@ -12,8 +15,11 @@ using LionFire.Trading.Journal;
 using LionFire.Trading.ValueWindows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Newtonsoft.Json;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.IO.Compression;
+using System.Text.Json;
 
 namespace LionFire.Trading.Automation;
 
@@ -23,6 +29,8 @@ namespace LionFire.Trading.Automation;
 /// Must be homogeneous:
 /// - TimeFrame for bars
 /// - date range
+/// - Bot Type
+/// - primary Symbol
 /// 
 /// Can be heterogeneous:
 /// - Ticks
@@ -44,12 +52,50 @@ public class BacktestBatchTask2<TPrecision>
     #region Parameters
 
 
-    public BacktestExecutionOptions? ExecutionOptions { get; }
+    public BacktestOptions BacktestOptions { get; }
+    public BacktestExecutionOptions ExecutionOptions { get; }
+    public TradeJournalOptions TradeJournalOptions { get; }
+
     public DateChunker DateChunker { get; }
+
+    public ExchangeSymbol ExchangeSymbol { get; }
 
     #region Derived
 
     public IEnumerable<((DateTimeOffset start, DateTimeOffset endExclusive), bool isLong)> Chunks;
+
+    #region Must match across all parameters
+
+    public Type PBotType { get; }
+    public Type BotType { get; }
+
+    #endregion
+
+    #region Directory
+
+    public string BatchDirectory { get; }
+    private string GetBatchDirectory()
+    {
+        var path = BacktestOptions.Dir;
+
+        string botTypeName = BotType.Name;
+        if (BotType.IsGenericType)
+        {
+            int i = botTypeName.IndexOf('`');
+            if (i >= 0) { botTypeName = botTypeName.Substring(0, i); }
+        }
+
+        if (ExecutionOptions.BotSubDir) { path = System.IO.Path.Combine(path, botTypeName); }
+        if (ExecutionOptions.ExchangeSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange"); }
+        if (ExecutionOptions.ExchangeAreaSubDir && ExchangeSymbol?.ExchangeArea != null) { path = System.IO.Path.Combine(path, ExchangeSymbol.ExchangeArea); }
+        if (ExecutionOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Symbol ?? "UnknownSymbol"); }
+
+        path = GetUniqueDirectory(path, "", "", 4); // BLOCKING I/O
+
+        return path;
+    }
+
+    #endregion
 
     #endregion
 
@@ -68,13 +114,33 @@ public class BacktestBatchTask2<TPrecision>
     {
         try
         {
+            BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
             ExecutionOptions = executionOptions ?? ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
+
+
             DateChunker = dateChunker ?? ServiceProvider.GetRequiredService<DateChunker>();
 
-            Chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, shortOnly: ExecutionOptions.ShortChunks);
-            chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, ExecutionOptions.ShortChunks);
+            Chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, shortOnly: ExecutionOptions?.ShortChunks ?? false);
+            chunks = DateChunker.GetBarChunks(Start, EndExclusive, TimeFrame, ExecutionOptions?.ShortChunks ?? false);
             chunkEnumerator = chunks.GetEnumerator();
 
+            var firstParameter = parameters.FirstOrDefault();
+
+            ExchangeSymbol = firstParameter?.ExchangeSymbol
+                ?? (firstParameter?.Bot as IPSymbolBot2)?.ExchangeSymbol
+                ?? ExchangeSymbol.Unknown;
+
+            PBotType = firstParameter?.Bot.GetType() ?? typeof(DBNull);
+            BotType = firstParameter?.Bot?.MaterializedType ?? typeof(DBNull);
+
+            BatchDirectory = GetBatchDirectory();
+            if (!Directory.Exists(BatchDirectory)) { Directory.CreateDirectory(BatchDirectory); } // BLOCKING I/O
+
+            Journal = new BacktestBatchJournal(BatchDirectory, PBotType);
+
+            TradeJournalOptions = ExecutionOptions?.TradeJournalOptions ?? ServiceProvider.GetRequiredService<IOptionsMonitor<TradeJournalOptions>>().CurrentValue;
+            TradeJournalOptions = TradeJournalOptions.Clone();
+            TradeJournalOptions.JournalDir = BatchDirectory;
         }
         catch (Exception ex)
         {
@@ -82,8 +148,10 @@ public class BacktestBatchTask2<TPrecision>
             throw;
         }
     }
-    private async ValueTask Init()
+
+    protected async override ValueTask Init()
     {
+        await base.Init();
         try
         {
             foreach (var p in PBacktests)
@@ -117,16 +185,29 @@ public class BacktestBatchTask2<TPrecision>
             {
                 var copy = (PBacktestAccount<TPrecision>)PBacktestAccountPrototype.Clone();
                 copy.Bars = new HLCReference<TPrecision>(barsBot.Parameters.ExchangeSymbolTimeFrame);
+
+                if (typeof(TPrecision) == typeof(double))
+                {
+                    copy.AbortOnBalanceDrawdownPerunum = (TPrecision)(object)0.5;
+                }
                 return copy;
             });
         }
 
-        var controller = await BacktestBotController<TPrecision>.Create(this, bot, pAccount, ServiceProvider.GetRequiredService<ITradeJournal<TPrecision>>());
+        var tradeJournal = ActivatorUtilities.CreateInstance<TradeJournal<TPrecision>>(ServiceProvider, (bot?.Parameters as IPSymbolBot2)?.ExchangeSymbol!, TradeJournalOptions);
+
+        var controller = await BacktestBotController<TPrecision>.Create(this, bot, pAccount, tradeJournal);
+        controller.Id = NextBacktestId++;
         bot.Controller = controller;
         bot.Init();
         backtests.Add(new BacktestState(p, bot, controller));
     }
+    private long NextBacktestId = 0;
 
+    protected override void ValidateParameter(IPBacktestTask2 p)
+    {
+        if (p.Bot.GetType() != PBotType) throw new ArgumentException("Bot type mismatch");
+    }
     #endregion
 
     #region State Machine
@@ -508,6 +589,8 @@ public class BacktestBatchTask2<TPrecision>
     #endregion
 
 
+
+
     #region (Private) Run
 
     private void Run()
@@ -571,6 +654,7 @@ public class BacktestBatchTask2<TPrecision>
                 foreach (var b in backtests)
                 {
                     var account = b.Controller.Account;
+                    if (account.IsAborted) continue;
                     if (account != null) account.OnBar();
                     else
                     {
@@ -584,9 +668,36 @@ public class BacktestBatchTask2<TPrecision>
             }
             Debug.WriteLine($"{counter} bars for {backtests.Count} backtests in {sw.Elapsed.TotalSeconds}s ({(backtests.Count * counter / sw.Elapsed.TotalSeconds).ToString("N0")}/s)");
 
-            await Task.WhenAll(backtests.Select(b => b.Bot.OnBacktestFinished().AsTask())).ConfigureAwait(false);  // Close all positions, make BacktestResult ready
+            await Task.WhenAll(backtests.Select(b => b.Controller.OnFinished().AsTask())).ConfigureAwait(false);  // Close all positions, make BacktestResult ready
 
-            OnFinished();
+            foreach (var b in backtests)
+            {
+                var entry = new BacktestBatchJournalEntry
+                {
+                    Id = b.Controller.Id,
+                    AD = b.Controller.Account.AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent,
+                    // TODO NEXT: Parameters
+                };
+                
+                entry.Parameters = b.Bot.Parameters;
+
+                //entry.Parameters = new ();
+                //foreach(var p in ParameterMetadata.Get(PBotType).Items)
+                //{
+                //    entry.Parameters.Add(p.GetValue(b.PBacktest.Bot));
+                //}
+
+                //foreach (var p in b.PBacktest.Bot.Parameters)
+                //{
+                //    entry.Parameters.Add(p.ToString());
+                //}
+
+                while (!Journal.TryWrite(entry)) { await Task.Delay(10); }
+            }
+
+            OnFinishing();
+            await OnFinished();
+
             runTaskCompletionSource.SetResult();
             //await StopAsync().ConfigureAwait(false);
         }
@@ -607,12 +718,65 @@ public class BacktestBatchTask2<TPrecision>
 
     #endregion
 
-    /// <summary>
-    /// Runs after all backtests are finished
-    /// </summary>
-    protected void OnFinished()
+    protected override void OnFinishing()
     {
+        base.OnFinishing();
     }
+
+    protected override async ValueTask OnFinished()
+    {
+        await base.OnFinished();
+
+        SaveBatchInfo();
+
+        await Journal.DisposeAsync();
+
+        //await Task.Delay(1000);
+        ZipBatchDir();
+    }
+
+    private void ZipBatchDir()
+    {
+        var zipPath = Path.Combine(Path.GetDirectoryName(BatchDirectory)!, Path.GetFileName(BatchDirectory) + ".zip");
+        ZipFile.CreateFromDirectory(BatchDirectory, zipPath);
+        Directory.Delete(BatchDirectory, true);
+    }
+
+    private void SaveBatchInfo()
+    {
+        var r = GetInfo<BacktestBatchResults>();
+        r.BotDll = this.bots.FirstOrDefault()?.GetType().Assembly.FullName;
+
+        var json = JsonConvert.SerializeObject(r, new JsonSerializerSettings
+        {
+            DefaultValueHandling = DefaultValueHandling.Ignore,
+        });
+
+        var hjsonValue = JsonValue.Parse(json);
+
+        HjsonValue.Save(hjsonValue, Path.Combine(BatchDirectory, "batch.hjson"));
+    }
+
+    static string GetUniqueDirectory(string baseDir, string prefix, string suffix, int zeroPadding = 0)
+    {
+        for (int i = 0; ; i++)
+        {
+            var name = $"{prefix}{i.ToString("D" + zeroPadding)}{suffix}";
+            var dir = Path.Combine(baseDir, name);
+            if (!Directory.Exists(dir) && (!Directory.Exists(baseDir) || !Directory.GetFiles(baseDir, name + ".*").Any()))
+            {
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                catch { } // EMPTYCATCH
+                return dir;
+            }
+        }
+    }
+
+    static int batchCounter = 1;
+
 
     #region Inputs
 

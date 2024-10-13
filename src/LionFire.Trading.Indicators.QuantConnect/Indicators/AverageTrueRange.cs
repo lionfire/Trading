@@ -1,6 +1,7 @@
 ﻿using LionFire.Structures;
 using LionFire.Trading.ValueWindows;
 using QuantConnect.Data.Market;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
@@ -12,6 +13,7 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
 {
     #region Identity
 
+    [JsonIgnore]
     public override string Key => $"ATR({Period})";
 
     #endregion

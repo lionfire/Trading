@@ -295,6 +295,7 @@ public class BacktestResult : IDisposable
     };
     public DateTime CompileDate { get; set; }
     public Version AssemblyVersion { get; internal set; }
+    public bool Aborted { get; set; }
 
     public static bool IsBacktestProperty(string name)
     {

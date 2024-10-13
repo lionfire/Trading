@@ -13,12 +13,12 @@ public interface IBot2 : IMarketParticipant2
     ValueTask Stop();
     ValueTask OnBacktestFinished();
 
-    IObservableCache<IPosition, int> Positions { get; }
 }
 
 public interface IBot2<TPrecision> : IBot2
     where TPrecision : struct, INumber<TPrecision>
 {
+    IObservableCache<IPosition<TPrecision>, int> Positions { get; }
     IBotController<TPrecision>? Controller { get; set; }
 }
 public interface IBot2<TParameters, TPrecision> : IBot2<TPrecision>

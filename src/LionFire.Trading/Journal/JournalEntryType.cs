@@ -3,13 +3,17 @@
 public enum JournalEntryType
 {
     Unspecified = 0,
-    JournalOpen,
-    OpenPosition,
-    ClosePosition,
-    ModifyPosition,
+    Open,
+    Close,
+    Modify,
     CreateOrder,
     ModifyOrder,
     CancelOrder,
     SwapFee,
     InterestFee,
+    Abort,
+    Start,
+    End,
 }
+
+

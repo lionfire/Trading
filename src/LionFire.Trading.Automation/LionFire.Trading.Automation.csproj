@@ -17,4 +17,8 @@
     <Folder Include="Accounts\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Hjson" />
+  </ItemGroup>
+
 </Project>

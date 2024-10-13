@@ -13,9 +13,13 @@ public interface ISimulationController : IAccountProvider2
 public interface ISimulationController<TPrecision> : ISimulationController
 where TPrecision : struct, INumber<TPrecision>
 {
-    IAccount2<TPrecision> Account { get; }
+    ISimulatedAccount2<TPrecision> Account { get; }
 
     IEnumerable<IAccount2<TPrecision>> Accounts => Account == null ? [] : [Account];
 
     ITradeJournal<TPrecision> Journal { get; }
+
+    DateTimeOffset StartTime { get; }
+
+    void OnAccountAborted();
 }

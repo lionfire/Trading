@@ -2,20 +2,30 @@
 
 namespace LionFire.Trading;
 
-public class PAccountPrecisionAdapter<TPrecision, TFromPrecision> : IPAccount2<TPrecision>
+public class PAccountPrecisionAdapter<TPrecision, TFromPrecision> : IPSimulatedAccount2<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
     where TFromPrecision : struct, INumber<TFromPrecision>
 {
-    public IPAccount2<TFromPrecision> From { get; }
+    #region Relationships
+
+    public IPSimulatedAccount2<TFromPrecision> From { get; }
+
+    #endregion
+
+    #region Lifecycle
+
+    public PAccountPrecisionAdapter(IPSimulatedAccount2<TFromPrecision> parameters)
+    {
+        From = parameters;
+    }
+
+    #endregion
 
     public string? BalanceCurrency => From.BalanceCurrency;
 
     public TPrecision StartingBalance { get => ConvertFrom(From.StartingBalance); set => From.StartingBalance = Convert(value); }
+    public TPrecision AbortOnBalanceDrawdownPerunum { get => ConvertFrom(From.AbortOnBalanceDrawdownPerunum); set => From.AbortOnBalanceDrawdownPerunum = Convert(value); }
 
-    public PAccountPrecisionAdapter(IPAccount2<TFromPrecision> parameters)
-    {
-        From = parameters;
-    }
 
     public TFromPrecision Convert(TPrecision to) => (TFromPrecision)(object)to;
     public TPrecision ConvertFrom(TFromPrecision from) => (TPrecision)(object)from;
@@ -27,7 +37,7 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
 {
     public IAccount2<TFromPrecision> From { get; }
 
-    public IPAccount2<TPrecision> Parameters => PAccountPrecisionAdapter;
+    public IPSimulatedAccount2<TPrecision> Parameters => PAccountPrecisionAdapter;
     private PAccountPrecisionAdapter<TPrecision, TFromPrecision> PAccountPrecisionAdapter;
     IPAccount2 IAccount2.Parameters => From.Parameters;
 
@@ -37,7 +47,7 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
         PAccountPrecisionAdapter = new PAccountPrecisionAdapter<TPrecision, TFromPrecision>(from.Parameters);
     }
 
-    public IObservableCache<IPosition, int> Positions => throw new NotImplementedException();
+    public IObservableCache<IPosition<TPrecision>, int> Positions => throw new NotImplementedException();
 
 
     public string Exchange => From.Exchange;
@@ -52,7 +62,7 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
 
     public TPrecision Balance => ConvertFrom(From.Balance);
 
-    public ValueTask<IOrderResult> ClosePosition(IPosition position) => From.ClosePosition(position);
+    public ValueTask<IOrderResult> ClosePosition(IPosition<TPrecision> position, JournalEntryFlags flags = JournalEntryFlags.Unspecified) => From.ClosePosition(From.Positions.Lookup(position.Id).Value);
 
     //public TPrecision Convert(TFromPrecision from) => (TPrecision)(object)from;
     public TFromPrecision Convert(TPrecision from) => (TFromPrecision)(object)from;
@@ -63,7 +73,7 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
         return From.ClosePositionsForSymbol(symbol, longAndShort, Convert(positionSize), postOnly, marketExecuteAtPrice, stopLimit);
     }
 
-    public ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize, PositionOperationFlags increasePositionFlags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null) => From.ExecuteMarketOrder(symbol, longAndShort, Convert(positionSize), increasePositionFlags, existingPositionId);
+    public ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize, PositionOperationFlags increasePositionFlags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null, JournalEntryFlags journalFlags = JournalEntryFlags.Unspecified) => From.ExecuteMarketOrder(symbol, longAndShort, Convert(positionSize), increasePositionFlags, existingPositionId, transactionId: transactionId, journalFlags: journalFlags);
 
     public MarketFeatures GetMarketFeatures(string symbol) => From.GetMarketFeatures(symbol);
 
@@ -72,4 +82,13 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
     public ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize) => From.ReducePositionForSymbol(symbol, longAndShort, positionSize);
 
     public void OnRealizedProfit(TPrecision realizedGrossProfitDelta) => From.OnRealizedProfit(Convert(realizedGrossProfitDelta));
+
+    public ValueTask<IOrderResult> SetTakeProfits(string symbol, LongAndShort direction, TPrecision sl, StopLossFlags tightenOnly)
+    {
+        throw new NotImplementedException();
+    }
+    public ValueTask<IOrderResult> SetStopLosses(string symbol, LongAndShort direction, TPrecision sl, StopLossFlags tightenOnly)
+    {
+        throw new NotImplementedException();
+    }
 }

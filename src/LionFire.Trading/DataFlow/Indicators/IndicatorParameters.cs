@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.DataFlow; // TODO: Move to .DataFlow namespace
 
@@ -7,12 +8,14 @@ public class SlottedParameters<TInstance>
 {
     #region Identity
 
+    [JsonIgnore]
     public Type InstanceType => typeof(TInstance);
 
     #endregion
 
     #region Unbound
 
+    [JsonIgnore]
     public virtual IReadOnlyList<InputSlot> InputSlots => InputSlotsReflection.GetInputSlots(this.GetType());
 
     #endregion
@@ -27,7 +30,10 @@ public abstract class IndicatorParameters<TInstance> : SlottedParameters<TInstan
 
     #endregion
 
+    [JsonIgnore]
     public abstract Type InputType { get; }
+
+    [JsonIgnore]
     public virtual IReadOnlyList<Type> SlotTypes
     {
         get
@@ -39,13 +45,18 @@ public abstract class IndicatorParameters<TInstance> : SlottedParameters<TInstan
         }
     }
 
+    [JsonIgnore]
     public virtual SlotsInfo Slots => SlotsInfo.GetSlotsInfo(this.GetType());
 
+    [JsonIgnore]
     public abstract Type OutputType { get; }
 
+    [JsonIgnore]
     public int Memory { get => Lookback + 1; }
+    [JsonIgnore]
     public int Lookback { get; set; } = 0;
 
+    [JsonIgnore]
     public abstract Type ValueType { get; }
     public virtual string Key
     {
@@ -87,9 +98,12 @@ public abstract class IndicatorParameters<TInstance> : SlottedParameters<TInstan
         }
     }
 
+    [JsonIgnore]
     public virtual IEnumerable<PropertyInfo> ParameterProperties => this.GetType().GetProperties(BindingFlags.Instance | BindingFlags.Public).Where(p => p.CanWrite);
+    [JsonIgnore]
     public virtual object?[] Parameters => ParameterProperties.Select(p => p.GetValue(this)).ToArray();
 
+    [JsonIgnore]
     public virtual int InputCount => 1; // REVIEW - maybe this could be calculated using reflection if TConcrete was a generic parameter on this type
 }
 
@@ -98,9 +112,12 @@ public abstract class IndicatorParameters<TIndicator, TOutput> : IndicatorParame
     /// <summary>
     /// Matches TOutput
     /// </summary>
+    [JsonIgnore]
     public override Type InputType => typeof(TOutput);
 
+    [JsonIgnore]
     public override Type OutputType => typeof(TOutput);
+    [JsonIgnore]
     public override Type ValueType => typeof(TOutput);
 
 }
@@ -110,7 +127,10 @@ public abstract class IndicatorParameters<TIndicator, TInput, TOutput> : Indicat
     /// <summary>
     /// Matches TOutput
     /// </summary>
+    [JsonIgnore]
     public override Type InputType => typeof(TInput);
+    [JsonIgnore]
     public override Type OutputType => typeof(TOutput);
+    [JsonIgnore]
     public override Type ValueType => typeof(TOutput);
 }

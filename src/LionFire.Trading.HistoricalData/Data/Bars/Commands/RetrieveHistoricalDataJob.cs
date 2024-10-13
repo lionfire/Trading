@@ -28,9 +28,31 @@ using Baseline;
 using Binance.Net.Interfaces.Clients;
 using LionFire.Validation;
 using System.Diagnostics;
+using System.Collections.Concurrent;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
+public static class DownloadProgressTracker
+{
+
+    public static TimeSpan? HowLongSinceProgress(string exchange)
+    {
+        if (ExchangeLastProgress.TryGetValue(exchange, out var dateTimeOffset))
+        {
+            return DateTimeOffset.UtcNow - dateTimeOffset;
+        }
+        else
+        {
+            return null;
+        }
+    }
+    public static void OnProgress(string exchange)
+    {
+        ExchangeLastProgress.AddOrUpdate(exchange, DateTimeOffset.UtcNow, (key, oldValue) => DateTimeOffset.UtcNow);
+    }
+    private static ConcurrentDictionary<string, DateTimeOffset> ExchangeLastProgress = new();
+}
 public class RetrieveHistoricalDataParameters : HistoricalDataJobInput
 {
     [FlagAlias("force", true)]
@@ -239,7 +261,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         return listResult != null && listResult.Count > 0;
     }
 
-    public static int TotalFileDownloadedElsewhereRetries = 3;
+    public static int TotalFileDownloadedElsewhereRetries = 100;
     public async Task<List<IBarsResult<IKline>>?> Execute2(RetrieveHistoricalDataParameters input)
     {
         #region Parameter Validation
@@ -266,6 +288,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
         #endregion
 
+        var reference = new ExchangeSymbolTimeFrame(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame);
         int fileDownloadedElsewhereRetries = TotalFileDownloadedElsewhereRetries;
     tryAgain:
         BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(barsRangeReference);
@@ -309,17 +332,38 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 (barsResult, info) = await RetrieveForDate(NextDate).ConfigureAwait(false);
                 if (barsResult == null)
                 {
-                    if (fileDownloadedElsewhereRetries-- > 0)
+                    var since = DownloadProgressTracker.HowLongSinceProgress(Input.ExchangeFlag);
+
+                    if (!since.HasValue)
                     {
-                        //int waitTime = 2000;
-                        Debug.WriteLine($"File was downloaded by something else and should be ready now.  {fileDownloadedElsewhereRetries} retry attempts remaining.");
-                        //Debug.WriteLine($"File was downloaded by something else and should be ready now.  {fileDownloadedElsewhereRetries} retry attempts remaining. Waiting {waitTime}ms and trying again: " + ex.Message);
-                        //await Task.Delay(2000).ConfigureAwait(false);
+                        Debug.WriteLine($"{reference} {NextDate} - Attempting to delete stale file because it was not downloaded by this process.");
+                        if (await KlineArrayFileProvider!.TryDeleteStaleDownloadFile(reference, NextDate))
+                        {
+                            Debug.WriteLine($"{reference} {NextDate} - Deleted stale file because it was not downloaded by this process.");
+                            goto tryAgain;
+                        }
+                        else
+                        {
+                            Debug.WriteLine($"{reference} {NextDate} - Did not delete file because it was not considered stale.  (Unexpected behavior may follow.)");
+                        }
+                    }
+
+                    if (since <= TimeSpan.FromSeconds(30))
+                    {
+                        //Debug.WriteLine($"{input.Symbol} {input.SymbolBarsRange.Start} - {input.SymbolBarsRange.EndExclusive} -- File was downloaded by something else and should be ready now.  {fileDownloadedElsewhereRetries} retry attempts remaining.");
+                        await Task.Delay(150).ConfigureAwait(false); // TODO OPTIMIZE ASYNCBLOCKING WAIT - use a semaphore
+                        goto tryAgain;
+                    }
+                    else if (fileDownloadedElsewhereRetries-- > 0)
+                    {
+                        int waitTime = 350;
+                        Debug.WriteLine($"{reference} {NextDate} - File seems to be being downloaded by another process. {fileDownloadedElsewhereRetries} retry attempts remaining. Waiting {waitTime}ms and trying again" ); await Task.Delay(waitTime).ConfigureAwait(false);
+                        // TODO OPTIMIZE ASYNCBLOCKING WAIT - use a process spanning mutex
                         goto tryAgain;
                     }
                     else // REVIEW - infinite loop bailout
                     {
-                        throw new Exception("Too many attempts. Not trying again after file was downloaded elsewhere. " /*+ ioex.Message*/);
+                        throw new Exception($"Downloading data from exchange {Input.ExchangeFlag} has stalled for {since}. Assuming hung. Failed.");
                     }
                 }
                 // This logic has been encapsulated in callee
@@ -496,7 +540,9 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
             do
             {
-                Logger.LogInformation($"{nextStartTime} - {requestTo}");
+                Logger.LogInformation($"{Input.Symbol} {nextStartTime} - {requestTo}");
+                Debug.WriteLine($"Downloading {Input.Symbol} {nextStartTime} - {requestTo}");
+                DownloadProgressTracker.OnProgress(Input.ExchangeFlag);
                 CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinanceKline>> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime, endTime: requestTo.DateTime, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
 
                 await CheckWeight_Binance(result?.ResponseHeaders);

@@ -11,34 +11,36 @@ using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation.Bots;
 
-public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
+public class PDualAtrBot<TValue> : PStandardBot2<PDualAtrBot<TValue>, TValue>
     where TValue : struct, INumber<TValue>
 {
 
     #region Static
 
     [JsonIgnore]
-    public override Type MaterializedType => typeof(AtrBot<TValue>);
+    public override Type MaterializedType => typeof(DualAtrBot<TValue>);
 
     //public static IReadOnlyList<InputSlot> InputSlots() => GetInputSlots();
 
     //public static IReadOnlyList<InputSlot> InputSlots()
     //  => [new InputSlot() {
-    //                Name = "ATR",
+    //                Name = "SlowATR",
     //                Type = typeof(AverageTrueRange),
     //            }];
 
     #endregion
 
     [Signal(0)]
-    public PAverageTrueRange<double, TValue>? ATR { get; set; }
+    public PAverageTrueRange<double, TValue>? SlowATR { get; set; }
+    [Signal(0)]
+    public PAverageTrueRange<double, TValue>? FastATR { get; set; }
 
     /// <summary>
     /// Convention: match parameter name
     /// Can be get only, derived on other parameters.
-    /// - if false, the ATR ITimeValueSeries{TValue} won't receive any values.
+    /// - if false, the SlowATR ITimeValueSeries{TValue} won't receive any values.
     /// </summary>
-    //public bool UseAtr { get; set; } = true; 
+    //public bool UseDualAtr { get; set; } = true; 
 
     public PUnidirectionalBot? Unidirectional { get; set; }
     public PPointsBot? Points { get; set; }
@@ -49,12 +51,21 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 
     [JsonIgnore]
     const int Lookback = 1;
-    //public PAtrBot() { }
-    public PAtrBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, uint period, QuantConnect.Indicators.MovingAverageType movingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders) : base(exchangeSymbolTimeFrame)
+
+    //public PDualAtrBot() { }
+    public PDualAtrBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, uint slowPeriod, uint fastPeriod, QuantConnect.Indicators.MovingAverageType movingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders) : base(exchangeSymbolTimeFrame)
     {
-        ATR = new PAverageTrueRange<double, TValue>
+        SlowATR = new PAverageTrueRange<double, TValue>
         {
-            Period = (int)period,
+            Period = (int)slowPeriod,
+            Lookback = Lookback,
+            MovingAverageType = movingAverageType,
+            //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
+        };
+
+        FastATR = new PAverageTrueRange<double, TValue>
+        {
+            Period = (int)fastPeriod,
             Lookback = Lookback,
             MovingAverageType = movingAverageType,
             //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
@@ -62,7 +73,7 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 
         // REVIEW - does InputLookbacks make sense?
         // ENH - automate setting this somehow
-        //InputLookbacks = [(int)period + Lookback];
+        //InputLookbacks = [(int)slowPeriod + Lookback];
         InputLookbacks = [0, Lookback];
 
         InitFromDefault();
@@ -71,19 +82,21 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 
     public void ThrowIfInvalid()
     {
-        ArgumentNullException.ThrowIfNull(ATR, nameof(ATR));
+        ArgumentNullException.ThrowIfNull(SlowATR, nameof(SlowATR));
+        ArgumentNullException.ThrowIfNull(FastATR, nameof(FastATR));
         ArgumentNullException.ThrowIfNull(Points, nameof(Points));
         ArgumentNullException.ThrowIfNull(Unidirectional, nameof(Unidirectional));
     }
 }
 
 [Bot(Direction = BotDirection.Unidirectional)]
-public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
+public class DualAtrBot<TValue> : StandardBot2<PDualAtrBot<TValue>, TValue>
     where TValue : struct, INumber<TValue>
 {
     #region Inputs
 
-    public IReadOnlyValuesWindow<TValue> ATR { get; set; } = null!;
+    public IReadOnlyValuesWindow<TValue> SlowATR { get; set; } = null!;
+    public IReadOnlyValuesWindow<TValue> FastATR { get; set; } = null!;
 
     //public IReadOnlyValuesWindow<HLC<double>> Bars { get; set; } = null!;
 
@@ -96,9 +109,9 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
     //        // TInputSlots with specifics on lookbacks
     //        return [
     //            //new InputSignal<decimal>() {
-    //            //    Name = "ATR",
+    //            //    Name = "SlowATR",
     //            //    Type = typeof(AverageTrueRange),
-    //            //    Lookback = IndicatorParameters.ATR.Period,
+    //            //    Lookback = IndicatorParameters.SlowATR.Period,
     //            //    Phase = 0,
     //            //    Source = IndicatorParameters.Input,
     //            //}
@@ -116,10 +129,10 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
     //    Memory = 2,
     //};
 
-    //public AtrBot()
+    //public DualAtrBot()
     //{
     //    // TODO: Live Indicator harness if live
-    //    //var eATR = new BufferingIndicatorHarness<AverageTrueRange<TValue>, PAverageTrueRange<double. TValue>, IKline, TValue>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange<TValue>>(parameters.ATR!)
+    //    //var eATR = new BufferingIndicatorHarness<AverageTrueRange<TValue>, PAverageTrueRange<double. TValue>, IKline, TValue>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange<TValue>>(parameters.SlowATR!)
     //    //{
     //    //    Inputs = parameters.Inputs == null ? [] : [parameters.Inputs],
     //    //    TimeFrame = parameters.TimeFrame,
@@ -127,7 +140,7 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
     //    //eATR.GetWindow(OutputExecutionOptions.Memory);
 
-    //    //ATR = eATR.Memory;
+    //    //SlowATR = eATR.Memory;
     //}
 
     #region State
@@ -145,8 +158,8 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
     {
         //if (barIndex++ % 50000 == 0)
         //{
-        //    if (ATR.Size > 0) {
-        //        Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar ATR: {ATR[0]}, bars available: {ATR.Size}"); }
+        //    if (SlowATR.Size > 0) {
+        //        Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar SlowATR: {SlowATR[0]}, bars available: {SlowATR.Size}"); }
         //    else { Debug.WriteLine($"#{barIndex} {this.GetType().Name}.OnBar Bar: N/A"); }
 
         //    //if (Bars.Size > 0)
@@ -160,10 +173,10 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
         //}
 
         float factor = 0.8f;
-        if (ATR[0] > ATR[1]) OpenScore++;
+        if (FastATR[0] > FastATR[1] && FastATR[0] > SlowATR[0]) OpenScore++;
         else OpenScore *= factor;
 
-        if (ATR[0] < ATR[1]) CloseScore++;
+        if (FastATR[0] < FastATR[1] || FastATR[0] <= SlowATR[0]) CloseScore++;
         else CloseScore *= factor;
 
         //Thread.SpinWait(150);
@@ -173,15 +186,15 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
         var sl = Direction switch
         {
-            LongAndShort.Long => Bars[0].Low - ATR[0],
-            LongAndShort.Short => Bars[0].High + ATR[0],
+            LongAndShort.Long => Bars[0].Low - FastATR[0],
+            LongAndShort.Short => Bars[0].High + FastATR[0],
             _ => throw new NotImplementedException(),
         };
 
         var tp = Direction switch
         {
-            LongAndShort.Long => Bars[0].High + ATR[0],
-            LongAndShort.Short => Bars[0].Low - ATR[0],
+            LongAndShort.Long => Bars[0].High + FastATR[0],
+            LongAndShort.Short => Bars[0].Low - FastATR[0],
             _ => throw new NotImplementedException(),
         };
 
