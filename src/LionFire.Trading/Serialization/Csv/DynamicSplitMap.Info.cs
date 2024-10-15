@@ -44,7 +44,7 @@ public partial class DynamicSplitMap<T>
 
             var rootHierarchicalPropertyInfo = new HierarchicalPropertyInfo(null, [pi]);
 
-            Recurse(pi, ref results, typeOverride: parametersType, parentHierarchicalPropertyInfo: rootHierarchicalPropertyInfo);
+            Recurse(rootHierarchicalPropertyInfo, ref results, typeOverride: parametersType);
 
             HashSet<string> uniqueNames = new();
             HashSet<string> duplicateNames = new();
@@ -101,8 +101,10 @@ public partial class DynamicSplitMap<T>
                                 || subProp.PropertyType.GetCustomAttribute<SerializeAsSerializedAttribute>()?.SerializeAsSerialized == true;
         }
 
-        private void Recurse(PropertyInfo parentPropertyInfo, ref List<HierarchicalPropertyInfo> results, ImmutableList<PropertyInfo>? path = null, Type? typeOverride = null, HierarchicalPropertyInfo? parentHierarchicalPropertyInfo = null)
+        private void Recurse(HierarchicalPropertyInfo parentHierarchicalPropertyInfo, ref List<HierarchicalPropertyInfo> results, ImmutableList<PropertyInfo>? path = null, Type? typeOverride = null)
         {
+            PropertyInfo parentPropertyInfo = parentHierarchicalPropertyInfo.LastPropertyInfo;
+
             path ??= ImmutableList<PropertyInfo>.Empty;
             path = path.Add(parentPropertyInfo);
 
@@ -115,10 +117,7 @@ public partial class DynamicSplitMap<T>
                 }
                 else
                 {
-                    if (path.Count < 5) // TEMP - limit depth
-                    {
-                        Recurse(subProp, ref results, path, parentHierarchicalPropertyInfo: info);
-                    }
+                    Recurse(info, ref results, path);
                 }
             }
         }

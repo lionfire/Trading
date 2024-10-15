@@ -3,6 +3,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using LionFire.ExtensionMethods.Dumping;
 using LionFire.Inspection.Nodes;
+using LionFire.Ontology;
 using MemoryPack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,14 +24,6 @@ using System.Text.Json.Serialization;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace LionFire.Trading.Journal;
-
-[AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = false)]
-public class AliasAttribute : Attribute
-{
-    public AliasAttribute(string alias) => Alias = alias;
-
-    public string Alias { get; }
-}
 
 public class ConvertToStringClass2
 {
@@ -179,7 +172,7 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
 
     #region Derived
 
-    public string JournalDirectory => Options.JournalDir;
+    public string? JournalDirectory => Options?.JournalDir;
     //{
     //    get
     //    {
@@ -220,7 +213,8 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
     {
         CloseAll().AsTask().Wait();
     }
-    private string GetPath(string filename) => Path.Combine(Options.JournalDir, filename);
+
+    //private string GetPath(string filename) => Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(nameof(Options.JournalDir)), filename);
 
     private void OnClosed(string path)
     {
