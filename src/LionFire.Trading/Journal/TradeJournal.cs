@@ -1,19 +1,136 @@
-﻿using CsvHelper;
+﻿using CommandLine;
+using CsvHelper;
 using CsvHelper.Configuration;
 using LionFire.ExtensionMethods.Dumping;
+using LionFire.Inspection.Nodes;
 using MemoryPack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
+using System;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Numerics;
 using System.Reactive.Concurrency;
+using System.Reflection;
 using System.Text;
+using System.Text.Json.Serialization;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace LionFire.Trading.Journal;
+
+[AttributeUsage(AttributeTargets.All, AllowMultiple = false, Inherited = false)]
+public class AliasAttribute : Attribute
+{
+    public AliasAttribute(string alias) => Alias = alias;
+
+    public string Alias { get; }
+}
+
+public class ConvertToStringClass2
+{
+    #region Dependencies
+
+    public PropertyInfo PropertyInfo { get; }
+    public ConvertToStringClass2? ParentConverter { get; }
+
+    #endregion
+
+    #region Lifecycle
+
+    public ConvertToStringClass2(PropertyInfo propertyInfo, ConvertToStringClass2? parentConverter = null)
+    {
+        PropertyInfo = propertyInfo;
+        ParentConverter = parentConverter;
+    }
+
+    #endregion
+
+    public object? GetValue<T>(T root)
+    {
+        object? instance = ParentConverter == null
+            ? root
+            : ParentConverter.GetValue(root);
+        return instance == null
+            ? null
+            : PropertyInfo.GetValue(instance);
+    }
+
+    public string? ConvertToString<T>(ConvertToStringArgs<T> args)
+    {
+        return GetValue(args.Value)?.ToString() ?? "";
+    }
+}
+
+public class HierarchicalPropertyInfo : IKeyable<string>
+{
+    #region Relationships
+
+    public HierarchicalPropertyInfo? Parent { get; set; }
+
+    #endregion
+
+    #region Identity
+
+    public string Key { get; set; }
+
+    #region Derived
+
+    public string Path { get; }
+    public string Name => LastPropertyInfo.Name;
+    public string? Alias { get; set; }
+    public string EffectiveName => Alias ?? Name;
+
+    #endregion
+
+    #endregion
+
+    #region Lifecycle
+
+    public HierarchicalPropertyInfo(HierarchicalPropertyInfo? parent, IReadOnlyList<PropertyInfo> propertyInfos)
+    {
+        Parent = parent;
+        Path = string.Join(".", propertyInfos.Select(pi => pi.Name));
+        Key = Path;
+        PropertyInfos = propertyInfos;
+        Alias = LastPropertyInfo.GetCustomAttribute<AliasAttribute>()?.Alias;
+    }
+    #endregion
+
+    #region Children
+
+    public IReadOnlyList<PropertyInfo> PropertyInfos { get; }
+
+    #region Derived
+
+    public PropertyInfo LastPropertyInfo => PropertyInfos.Last();
+
+    #endregion
+
+    #endregion
+
+    #region Bonus
+
+    public ConvertToStringClass2 ConvertToString
+    {
+        get
+        {
+            if (convertToString == null)
+            {
+                convertToString = new ConvertToStringClass2(LastPropertyInfo, Parent?.ConvertToString);
+            }
+            return convertToString;
+        }
+    }
+    private ConvertToStringClass2? convertToString;
+
+    #endregion
+}
 
 public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
     where TPrecision : struct, INumber<TPrecision>

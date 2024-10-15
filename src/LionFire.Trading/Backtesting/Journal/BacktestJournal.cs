@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Threading;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using LionFire.Serialization.Csv;
 
 #if UNUSED
 public class IgnoreEmptyArrayConverter : JsonConverter<List<object>>
@@ -136,13 +137,12 @@ public class BacktestBatchJournal : IAsyncDisposable
                        new IgnoreEmptyArrayConverter<IKeyed<string>>(),
                    }
         };
-        public ParametersMapper(Type pType) : base(pType, nameof(BacktestBatchJournalEntry.Parameters))
+        public ParametersMapper(Type pType) : base(typeof(BacktestBatchJournalEntry).GetProperty(nameof(BacktestBatchJournalEntry.Parameters))!, pType, true)
         {
-            //var parameterMetadata = ParameterMetadata.Get(pType);
-
             Map(m => m.Id);
             Map(m => m.Fitness);
             Map(m => m.AD);
+            InitBase();
 
             //Map(m => m.Parameters).Convert(row =>
             //{
@@ -160,8 +160,6 @@ public class BacktestBatchJournal : IAsyncDisposable
             //});
 
             //var bpi = BotParametersInfo.Get(pType);
-
-
             //foreach (var kvp in bpi.Parameters)
             //{
             //    //Map(_ => kvp.Key).Convert((ConvertFromString<string>) (row =>

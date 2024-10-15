@@ -43,7 +43,9 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
     #region Inputs
 
     public HLCReference<TOutput>? Bars { get; set; }
-    public SlotSource BarsSource { get; set; }  // Optional: will fall back to first input if not set or this property doesn't exist
+    // TODO: Consolidate Bars' HLCReference<TOutput> into SlotSource?
+    [JournalIgnore]
+    public SlotSource BarsSource { get; set; }  // Optional: will fall back to first input if not set or this property doesn't exist. 
 
     //public IReadOnlyList<SlotSource> ATRSources { get; set; }  // Hypothetical, for other situations // OLD - not sure what this was for
 

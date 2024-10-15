@@ -4,16 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using LionFire.Trading.Automation.Bots.Parameters; 
+using LionFire.Trading.Automation.Bots.Parameters;
+using LionFire.Trading.Automation.Optimization;
 
 namespace Optimizing_;
-
-public class OptimizationParameters
-{
-
-    public double GranularityStepMultiplier { get; set; }
-    //public long MaxBacktests { get; set; }  // FUTURE ENH
-}
 
 
 
@@ -24,15 +18,17 @@ public class Optimize_ : BinanceDataTest
     {
         #region Input
 
-        // Normally user will focus on one bot type, but do here just to prove we can optimize using the high level optimization parameters without tweaking individual bot parameters
-        List<Type> botTypes = [
-                typeof(PAtrBot<double>),
-                typeof(PDualAtrBot<double>),
-            ];
-
-        var p = new OptimizationParameters()
+        var p = new POptimization()
         {
             GranularityStepMultiplier = 4,
+            BotParametersType = typeof(PAtrBot<double>),
+            Parameters = new List<PParameterOptimization>
+            {
+                new PParameterOptimization<int> { Name = "ATR.Period", Min = 1, Max = 100, Step = 1 },
+                new PParameterOptimization<int> { Name = "OpenThreshold", Min = 1, Max = 100, Step = 1 },
+                new PParameterOptimization<int> { Name = "CloseThreshold", Min = 1, Max = 100, Step = 1 },
+            },
+
         };
 
         #endregion

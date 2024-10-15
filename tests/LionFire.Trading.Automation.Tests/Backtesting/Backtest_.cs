@@ -144,13 +144,13 @@ public class Backtest_Batch_ : BinanceDataTest
                         
                         Points = new PPointsBot
                         {
-                            OpenThreshold = 5,
+                            OpenThreshold = 15,
                             CloseThreshold = 3,
                         }
                     },
 
                     //Start = new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero),
-                    Start = new DateTimeOffset(2020, 2, 1, 0, 0, 0, TimeSpan.Zero),
+                    Start = new DateTimeOffset(2023, 4, 1, 0, 0, 0, TimeSpan.Zero),
                     EndExclusive = new DateTimeOffset(2023, 7, 1, 0, 0, 0, TimeSpan.Zero),
                     //EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
                     //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),

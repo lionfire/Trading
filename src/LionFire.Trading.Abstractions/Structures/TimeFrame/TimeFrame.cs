@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using TS = System.TimeSpan;
+using LionFire.Serialization;
+
 #if cAlgo
 //using LFTimeFrame = LionFire.Trading.LionFireTimeFrame;
 using cAlgo.API;
@@ -65,7 +67,7 @@ public static class TimeFrameTimeSpanX
 #if cAlgo
 public class LionFireTimeFrame
 #else
-public class TimeFrame
+public class TimeFrame : ISerializableAsString
 #endif
 {
     public override bool Equals(object o)
@@ -585,6 +587,9 @@ public class TimeFrame
         if (TimeSpan < TimeSpan.Zero) throw new NotImplementedException("Irregular TimeFrames");
         return barTime + (TimeSpan * count);
     }
+
+    public string? Serialize() => this.ToString();
+    public static object? Deserialize(string? serializedString) => serializedString == null ? null : new TimeFrame(serializedString);
 
     ///// <summary>
     ///// </summary>

@@ -1,22 +1,38 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration;
+using LionFire.Inspection.Nodes;
+using LionFire.Trading.Journal;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using System.Xml.Linq;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 
-// Based on Claude 3.5 Sonnet
+namespace LionFire.Serialization.Csv;
 
-public class DynamicSplitMap<T> : ClassMap<T>
+//public class ConverterHierarchyItem
+//{
+//    public ConverterHierarchyItem? Parent { get; set; }
+//    public PropertyInfo PropertyInfo { get; set; }
+//}
+
+
+/// <summary>
+/// Special case hierarchy:
+/// - root object has a property 'rootPropertyName' which may be of type object
+/// - but the type we want a hierarchy for is of type 'parametersType'
+/// </summary>
+/// <typeparam name="T"></typeparam>
+public partial class DynamicSplitMap<T> : ClassMap<T>
 {
-    private readonly string propertyToSplit;
+
+    public readonly PropertyInfo RootPropertyInfo;
+    public readonly Type RootPropertyInstanceType;
 
     private class ConvertToStringClass
     {
-        //public delegate string? ConvertToString<T>(ConvertToStringArgs<T> args);
-
         public ConvertToStringClass(PropertyInfo propertyInfo, string? parametersName = null, ConvertToStringClass? parentConverter = null)
         {
             PropertyInfo = propertyInfo;
@@ -48,34 +64,57 @@ public class DynamicSplitMap<T> : ClassMap<T>
 
         public string? ConvertToString(ConvertToStringArgs<T> args)
         {
-            //if (parametersPropertyInfo == null)
-            //{
-            //    return "(todo)";
-            //}
-
             return GetValue(args.Value)?.ToString() ?? "";
-            //var parameters = parametersPropertyInfo.GetValue(args.Value);
-            //var val = PropertyInfo.GetValue(parameters);
-            //return val?.ToString();
         }
     }
 
-    public DynamicSplitMap(Type type, string propertyToSplit)
+    public DynamicSplitMap(PropertyInfo rootPropertyInfo, Type rootPropertyInstanceType,  bool manualInitBase = false)
     {
-        this.propertyToSplit = propertyToSplit;
-        var propertyInfo = typeof(T).GetProperty(propertyToSplit);
-        if (propertyInfo == null)
-            throw new ArgumentException($"Property {propertyToSplit} not found in type {typeof(T).Name}");
+        if(!rootPropertyInfo.DeclaringType!.IsAssignableTo(typeof(T)))
+        {
+            throw new ArgumentException($"Property {rootPropertyInfo.Name} must be a property of {typeof(T).Name}");
+        }
 
+        this.RootPropertyInfo = rootPropertyInfo;
+        this.RootPropertyInstanceType = rootPropertyInstanceType;
+        if (!manualInitBase) InitBase();
+    }
+
+    protected void InitBase()
+    {
+#if OLD
         //var type = ((obj.GetType().GetProperty(propertyName)
         //        ?? throw new ArgumentException($"Property {propertyName} not found in type {typeof(T).Name}")
         //    )
         //    .GetValue(obj) ?? typeof(object)).GetType();
 
         //var subProperties = propertyInfo.PropertyType.GetProperties();
-
         ConvertToStringClass? parentConverter = new ConvertToStringClass(propertyInfo);
         AddSubProperties(type, propertyToSplit, parentConverter: parentConverter);
+
+#else
+        var infos = BotParameterPropertiesInfo.Get(RootPropertyInstanceType);
+
+        foreach (var kvp in infos.Dictionary)
+        {
+            var memberMap = Map().Name(kvp.Key);
+
+            var fieldParameter = Expression.Parameter(typeof(ConvertToStringArgs<T>), "args");
+
+            var converter = kvp.Value.ConvertToString;
+            var instance = Expression.Constant(converter);
+            var methodExpression = Expression.Call
+            (
+                instance,
+                typeof(ConvertToStringClass2)
+                    .GetMethod(nameof(ConvertToStringClass2.ConvertToString))!
+                    .MakeGenericMethod(typeof(T)),
+                fieldParameter
+            );
+            var lambdaExpression = Expression.Lambda<ConvertToString<T>>(methodExpression, fieldParameter);
+            memberMap.Data.WritingConvertExpression = lambdaExpression;
+        }
+#endif
 
         // Map other properties
         //foreach (var prop in typeof(T).GetProperties().Where(p => p.Name != propertyName))
@@ -91,6 +130,32 @@ public class DynamicSplitMap<T> : ClassMap<T>
         //}
     }
 
+    //private void MapProperties(Type type, ConvertToStringClass? parentConverter = null)
+    //{
+
+    //    foreach(var kvp in BotParameterPropertiesInfo.Get(type).Parameters)
+    //    {
+    //        var name = prefix + (prefix.Length == 0 ? propertyName : "") + "." + kvp.Key;
+    //        var prop = kvp.Value.PropertyInfo;
+    //        MapProperty(name, prop);
+
+    //        var converter = new ConvertToStringClass(subProp, propertyName, parentConverter);
+    //        var memberMap = Map().Name(name);
+    //        var fieldParameter = Expression.Parameter(typeof(ConvertToStringArgs<T>), "args");
+
+    //        var instance = Expression.Constant(converter);
+    //        var methodExpression = Expression.Call
+    //        (
+    //            instance,
+    //            typeof(ConvertToStringClass).GetMethod(nameof(ConvertToStringClass.ConvertToString))!,
+    //            fieldParameter
+    //        );
+    //        var lambdaExpression = Expression.Lambda<ConvertToString<T>>(methodExpression, fieldParameter);
+    //        memberMap.Data.WritingConvertExpression = lambdaExpression;
+
+    //    }
+    //}
+
     private void AddSubProperties(Type type, string propertyName, string prefix = "", ConvertToStringClass? parentConverter = null)
     {
         var subProperties = type.GetProperties();
@@ -100,7 +165,11 @@ public class DynamicSplitMap<T> : ClassMap<T>
             if (!subProp.CanWrite) continue;
             if (subProp.GetCustomAttribute<JsonIgnoreAttribute>() != null) continue;
 
-            var name = prefix + (prefix.Length == 0 ? propertyName : "") + "_" + subProp.Name;
+            var displayPropertyName = propertyName;
+            if (displayPropertyName == "Parameters") displayPropertyName = "P"; // Alias (HARDCODE) ENH: Use alias attribute
+
+
+            var name = prefix + (prefix.Length == 0 ? displayPropertyName : "") + "." + subProp.Name;
 
             try
             {
@@ -176,18 +245,19 @@ public class DynamicSplitMap<T> : ClassMap<T>
     //    // Start with the parameter expression (like 'x' in x.B.C)
     //    ParameterExpression parameter = Expression.Parameter(typeof(TModel), "x");
 
-    //    Expression propertyAccess = parameter;
+//    Expression propertyAccess = parameter;
 
-    //    foreach (var propName in propertyNames)
-    //    {
-    //        MemberExpression member = Expression.PropertyOrField(propertyAccess, propName);
-    //        propertyAccess = member;
-    //    }
-    //    Expression converted = Expression.Convert(propertyAccess, typeof(ExpandoObject));
-    //    return Expression.Lambda<Func<TModel, object>>(converted, parameter);
-    //}
+//    foreach (var propName in propertyNames)
+//    {
+//        MemberExpression member = Expression.PropertyOrField(propertyAccess, propName);
+//        propertyAccess = member;
+//    }
+//    Expression converted = Expression.Convert(propertyAccess, typeof(ExpandoObject));
+//    return Expression.Lambda<Func<TModel, object>>(converted, parameter);
+//}
 
 
+#if OLD
     private void MapProperty(string parentPropertyName, PropertyInfo subProp)
     {
         var columnName = $"{parentPropertyName}_{subProp.Name}";
@@ -211,7 +281,7 @@ public class DynamicSplitMap<T> : ClassMap<T>
         else
         {
             var parentProperty = typeof(T).GetProperties()
-                .FirstOrDefault(p => p.PropertyType == prop.DeclaringType || p.Name == this.propertyToSplit);
+                .FirstOrDefault(p => p.PropertyType == prop.DeclaringType || p.Name == this.rootPropertyName);
 
             if (parentProperty == null)
                 throw new InvalidOperationException($"Unable to find parent property for {prop.Name} on type {typeof(T).Name}");
@@ -255,6 +325,7 @@ public class DynamicSplitMap<T> : ClassMap<T>
             });
         }
     }
+#endif
     private static object? GetPropertyValueDynamic(object obj, string propertyName)
     {
         return obj.GetType().GetProperty(propertyName)!.GetValue(obj, null);

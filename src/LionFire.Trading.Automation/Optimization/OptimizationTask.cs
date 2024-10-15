@@ -47,11 +47,16 @@ public class POptimization
     public required List<PParameterOptimization> Parameters { get; set; }
 
     public required Type BotParametersType { get; set; }
+    //public List<Type> BotTypes { get; set; } // ENH probably not: OPTIMIZE - Test multiple bot types in parallel
 
     /// <summary>
     /// If default, it will use the unkeyed Singleton for BacktestBatchQueue
     /// </summary>
     public object? BacktestBatcherName { get; set; }
+
+    public double GranularityStepMultiplier { get; set; }
+
+    //public long MaxBacktests { get; set; }  // FUTURE ENH
 }
 
 public class InputInfo
@@ -89,6 +94,8 @@ public interface PParameterOptimization
 public class PParameterOptimization<T> : PParameterOptimization
     where T : INumber<T>
 {
+    public string Name { get; set; }
+
     public T Min { get; set; } = T.Zero;
     public T Max { get; set; } = T.Zero;
 
