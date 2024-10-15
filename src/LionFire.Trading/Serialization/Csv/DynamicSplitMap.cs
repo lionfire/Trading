@@ -12,13 +12,6 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace LionFire.Serialization.Csv;
 
-//public class ConverterHierarchyItem
-//{
-//    public ConverterHierarchyItem? Parent { get; set; }
-//    public PropertyInfo PropertyInfo { get; set; }
-//}
-
-
 /// <summary>
 /// Special case hierarchy:
 /// - root object has a property 'rootPropertyName' which may be of type object
@@ -82,17 +75,6 @@ public partial class DynamicSplitMap<T> : ClassMap<T>
 
     protected void InitBase()
     {
-#if OLD
-        //var type = ((obj.GetType().GetProperty(propertyName)
-        //        ?? throw new ArgumentException($"Property {propertyName} not found in type {typeof(T).Name}")
-        //    )
-        //    .GetValue(obj) ?? typeof(object)).GetType();
-
-        //var subProperties = propertyInfo.PropertyType.GetProperties();
-        ConvertToStringClass? parentConverter = new ConvertToStringClass(propertyInfo);
-        AddSubProperties(type, propertyToSplit, parentConverter: parentConverter);
-
-#else
         var infos = BotParameterPropertiesInfo.Get(RootPropertyInstanceType);
 
         foreach (var kvp in infos.Dictionary)
@@ -114,47 +96,34 @@ public partial class DynamicSplitMap<T> : ClassMap<T>
             var lambdaExpression = Expression.Lambda<ConvertToString<T>>(methodExpression, fieldParameter);
             memberMap.Data.WritingConvertExpression = lambdaExpression;
         }
-#endif
-
-        // Map other properties
-        //foreach (var prop in typeof(T).GetProperties().Where(p => p.Name != propertyName))
-        //{
-        //    var parameter = Expression.Parameter(typeof(T), "x");
-        //    var propExpression = Expression.Property(parameter, prop);
-        //    var lambda = Expression.Lambda(propExpression, parameter);
-
-        //    var mapMethod = typeof(ClassMap<T>).GetMethods()
-        //        .First(m => m.Name == "Map" && m.IsGenericMethod);
-        //    var genericMapMethod = mapMethod.MakeGenericMethod(prop.PropertyType);
-        //    genericMapMethod.Invoke(this, new object[] { lambda });
-        //}
     }
 
+#if OLD
     //private void MapProperties(Type type, ConvertToStringClass? parentConverter = null)
     //{
 
-    //    foreach(var kvp in BotParameterPropertiesInfo.Get(type).Parameters)
-    //    {
-    //        var name = prefix + (prefix.Length == 0 ? propertyName : "") + "." + kvp.Key;
-    //        var prop = kvp.Value.PropertyInfo;
-    //        MapProperty(name, prop);
+//    foreach(var kvp in BotParameterPropertiesInfo.Get(type).Parameters)
+//    {
+//        var name = prefix + (prefix.Length == 0 ? propertyName : "") + "." + kvp.Key;
+//        var prop = kvp.Value.PropertyInfo;
+//        MapProperty(name, prop);
 
-    //        var converter = new ConvertToStringClass(subProp, propertyName, parentConverter);
-    //        var memberMap = Map().Name(name);
-    //        var fieldParameter = Expression.Parameter(typeof(ConvertToStringArgs<T>), "args");
+//        var converter = new ConvertToStringClass(subProp, propertyName, parentConverter);
+//        var memberMap = Map().Name(name);
+//        var fieldParameter = Expression.Parameter(typeof(ConvertToStringArgs<T>), "args");
 
-    //        var instance = Expression.Constant(converter);
-    //        var methodExpression = Expression.Call
-    //        (
-    //            instance,
-    //            typeof(ConvertToStringClass).GetMethod(nameof(ConvertToStringClass.ConvertToString))!,
-    //            fieldParameter
-    //        );
-    //        var lambdaExpression = Expression.Lambda<ConvertToString<T>>(methodExpression, fieldParameter);
-    //        memberMap.Data.WritingConvertExpression = lambdaExpression;
+//        var instance = Expression.Constant(converter);
+//        var methodExpression = Expression.Call
+//        (
+//            instance,
+//            typeof(ConvertToStringClass).GetMethod(nameof(ConvertToStringClass.ConvertToString))!,
+//            fieldParameter
+//        );
+//        var lambdaExpression = Expression.Lambda<ConvertToString<T>>(methodExpression, fieldParameter);
+//        memberMap.Data.WritingConvertExpression = lambdaExpression;
 
-    //    }
-    //}
+//    }
+//}
 
     private void AddSubProperties(Type type, string propertyName, string prefix = "", ConvertToStringClass? parentConverter = null)
     {
@@ -210,7 +179,6 @@ public partial class DynamicSplitMap<T> : ClassMap<T>
         ParameterExpression parameter = Expression.Parameter(currentType, "m");
         Expression propertyAccess = parameter;
 
-
         foreach (var kvp in propertyNames)
         {
             var propName = kvp.Item1;
@@ -256,8 +224,6 @@ public partial class DynamicSplitMap<T> : ClassMap<T>
 //    return Expression.Lambda<Func<TModel, object>>(converted, parameter);
 //}
 
-
-#if OLD
     private void MapProperty(string parentPropertyName, PropertyInfo subProp)
     {
         var columnName = $"{parentPropertyName}_{subProp.Name}";
@@ -331,30 +297,3 @@ public partial class DynamicSplitMap<T> : ClassMap<T>
         return obj.GetType().GetProperty(propertyName)!.GetValue(obj, null);
     }
 }
-
-#if false
-if (false) // OLD, WIP
-        {
-#if false
-            //var columnName = $"{propertyToSplit}_{subProp.Name}";
-
-            // Create a lambda expression for accessing the sub-property
-            var parameter = Expression.Parameter(typeof(T), "x");
-            var propertyExpression = Expression.Property(parameter, propertyToSplit);
-            var castExpression = Expression.Convert(propertyExpression, propertiesType);
-            var subPropertyExpression = Expression.Property(castExpression, propertiesType, subProp.Name);
-            var lambda = Expression.Lambda(subPropertyExpression, parameter);
-
-            // Use reflection to call the Map method with the correct generic type
-            var mapMethod = typeof(ClassMap<T>).GetMethods()
-                .First(m => m.Name == "Map" && m.IsGenericMethod);
-            var genericMapMethod = mapMethod.MakeGenericMethod(subProp.PropertyType);
-            var mapping = genericMapMethod.Invoke(this, new object[] { lambda, false });
-
-            // Set the column name
-            var nameMethod = mapping.GetType().GetMethod("Name");
-            nameMethod.Invoke(mapping, new object[] { new string[] { columnName } });
-#endif
-        }
-
-#endif
