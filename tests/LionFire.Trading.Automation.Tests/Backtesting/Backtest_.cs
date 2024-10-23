@@ -94,7 +94,8 @@ public class BacktestTheoryData : TheoryData<IPBacktestTask2>
 
             Add(new PBacktestTask2<PAtrBot<T>>
             {
-                Bot = pBot,
+                PBot = pBot,
+                TimeFrame = timeFrame,
                 Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
                 EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
                 Features = BotHarnessFeatures.Bars,
@@ -136,7 +137,8 @@ public class Backtest_Batch_ : BinanceDataTest
             {
                 return new PBacktestTask2<PAtrBot<double>>
                 {
-                    Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1), atrPeriod, QuantConnect.Indicators.MovingAverageType.Simple)
+                    //TimeFrame = TimeFrame.m1,
+                    PBot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1), atrPeriod, QuantConnect.Indicators.MovingAverageType.Simple)
                     {
                         //TimeFrame = TimeFrame.m1,
                         //Bars = new SymbolValueAspect<double>("Binance", "futures", symbol, TimeFrame.m1, DataPointAspect.Close),
@@ -224,7 +226,7 @@ public class Backtest_Batch_ : BinanceDataTest
                 batch.BacktestBatches = [[
                 new PBacktestTask2<PAtrBot<double>>
                  {
-                     Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 14)
+                     PBot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 14)
                         {
                             //TimeFrame = TimeFrame.m1,
                             //Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
@@ -236,7 +238,7 @@ public class Backtest_Batch_ : BinanceDataTest
                  },
                 new PBacktestTask2<PAtrBot<double>>
                  {
-                     Bot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 15)
+                     PBot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 15)
                         {
                             //TimeFrame = TimeFrame.m1,
                             //Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),

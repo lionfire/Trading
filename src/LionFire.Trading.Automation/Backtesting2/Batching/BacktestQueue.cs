@@ -83,8 +83,6 @@ public partial class BacktestQueue
         }
 
         return job;
-
-
     }
 
     #endregion
@@ -120,7 +118,7 @@ public partial class BacktestQueue
                 int count = 0;
                 foreach (var batch in job.BacktestBatches)
                 {
-                    var batchBacktest = await BacktestBatchTask2<double>.Create(ServiceProvider, batch);
+                    var batchBacktest = await BacktestBatchTask2<double>.Create(ServiceProvider, batch, backtestBatchJournal: job.Journal);
                     await batchBacktest.Run();
                     count++;
                 }

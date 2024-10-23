@@ -1,64 +1,125 @@
 ﻿using LionFire.Applications;
+using LionFire.Applications.Trading;
+using LionFire.DependencyMachines;
 using LionFire.Execution;
 using LionFire.Instantiating;
+using LionFire.Serialization.Csv;
 using LionFire.Trading.Automation.Optimization.Enumerators;
+using LionFire.Trading.Automation.Optimization.Strategies;
+using LionFire.Trading.Backtesting2;
+using LionFire.Trading.Journal;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Optimization;
 
-//public class TOptimizationTask : IHierarchicalTemplate, ITemplate<OptimizationTask>
-//{
-//    //public List<ITemplate> Children { get; set; }
-//    InstantiationCollection Instantiations { get; set; }
-
-//    //IEnumerable<IInstantiation> IHierarchicalTemplate.Children => Children?.OfType<IInstantiation>(); // TODO: Cast/wrap to IInstantiation?  REVIEW the IHierarchicalTemplate interface.
-//    IInstantiationCollection IHierarchicalTemplate.Children => Instantiations;
-//}
-
-public class POptimization
+public class OptimizationTask : IRunnable
 {
-    /// <summary>
-    /// True: Test the entire parameter space at regular intervals (as defined by steps).
-    /// False: Do a coarse test of entire parameter space, and then do a fine test of the most promising areas.
-    /// </summary>
-    public bool IsComprehensive { get; set; }
+    #region Dependencies
 
-    /// <summary>
-    /// (TODO - NOTIMPLEMENTED) For non-comprehensive tests, this sets the parameters for the initial coarse test.
-    /// </summary>
-    public int SearchSeed { get; set; }
+    public IServiceProvider ServiceProvider { get; }
 
-    /// <summary>
-    /// Skip backtests that would alter parameters by a sensitivity amount less than this.  
-    /// Set to 0 for an exhaustive test.
-    /// </summary>
+    public BacktestQueue BacktestBatcher { get; }
+    public BacktestOptions BacktestOptions { get; }
+    public BacktestExecutionOptions ExecutionOptions { get; }
+    #endregion
+
+    #region Parameters
+
+    public POptimization Parameters { get; set; }
+
+    public ExchangeSymbol? ExchangeSymbol => Parameters?.CommonBacktestParameters?.ExchangeSymbol;
+
+    #endregion
+
+    #region Lifecycle
+
+    public OptimizationTask(IServiceProvider serviceProvider, POptimization parameters)
+    {
+        ServiceProvider = serviceProvider;
+        Parameters = parameters;
+        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
+
+        if (Parameters.SearchSeed != 0) throw new NotImplementedException();
+
+        BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
+        ExecutionOptions = /*executionOptions ?? */ ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
+
+    }
+    public Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        //IOptimizerEnumerable optimizerEnumerable = Parameters.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this); // OLD - find this and absorb
+
+        if (CancellationTokenSource != null) { throw new AlreadyException(); }
+        CancellationTokenSource = new();
+
+        OptimizationDirectory = GetOptimizationDirectory(Parameters.BotParametersType);
+        OptimizationMultiBatchJournal = new BacktestBatchJournal(OptimizationDirectory, Parameters.BotParametersType);
+
+        PGridSearchStrategy pGridSearchStrategy = new()
+        {
+            //Parameters = Parameters.ParameterRanges.ToDictionary(p => p.Name, p => new ParameterOptimizationOptions { MinValue = p.Min, MaxValue = p.Max, MinStep = p.Step, MaxStep = p.Step }),
+        };
+        GridSearchStrategy gridSearchStrategy = new(pGridSearchStrategy, Parameters, this);
+
+        RunTask = gridSearchStrategy.Run(CancellationTokenSource.Token);
+        return Task.CompletedTask;
+    }
+
+    #endregion
+
+    #region State
+
+    string? OptimizationDirectory;
+    public BacktestBatchJournal? OptimizationMultiBatchJournal { get;private set; }
+
+    private IBacktestBatchJob? batchJob = null;
+
     /// <remarks>
-    /// NOT IMPLEMENTED - how would this actually be calculated? 
+    /// If not null, the task has already been started.
     /// </remarks>
-    public float SensitivityThreshold { get; set; }
+    public CancellationTokenSource? CancellationTokenSource { get; protected set; }
 
-    public required List<PParameterOptimization> Parameters { get; set; }
+    public Task? RunTask { get; private set; }
 
-    public required Type BotParametersType { get; set; }
-    //public List<Type> BotTypes { get; set; } // ENH probably not: OPTIMIZE - Test multiple bot types in parallel
+    #endregion
 
-    /// <summary>
-    /// If default, it will use the unkeyed Singleton for BacktestBatchQueue
-    /// </summary>
-    public object? BacktestBatcherName { get; set; }
+    private string GetOptimizationDirectory(Type botType)
+    {
+        Type materializedType = botType;
+        if (botType.IsAssignableTo(typeof(IPBot2Static)))
+        {
+            materializedType = (Type)botType.GetProperty(nameof(IPBot2Static.StaticMaterializedType))!.GetValue(null)!;
+        }
+        var path = BacktestOptions.Dir;
 
-    public double GranularityStepMultiplier { get; set; }
+        string botTypeName = materializedType.Name;
+        if (materializedType.IsGenericType)
+        {
+            int i = botTypeName.IndexOf('`');
+            if (i >= 0) { botTypeName = botTypeName.Substring(0, i); }
+        }
 
-    //public long MaxBacktests { get; set; }  // FUTURE ENH
+        if (ExecutionOptions.BotSubDir) { path = System.IO.Path.Combine(path, botTypeName); }
+        if (ExecutionOptions.ExchangeSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange"); }
+        if (ExecutionOptions.ExchangeAreaSubDir && ExchangeSymbol?.ExchangeArea != null) { path = System.IO.Path.Combine(path, ExchangeSymbol.ExchangeArea); }
+        if (ExecutionOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Symbol ?? "UnknownSymbol"); }
+
+        path = FilesystemUtils.GetUniqueDirectory(path, "", "", 4); // BLOCKING I/O
+
+        return path;
+    }
 }
 
+
+#if SCRAPS
 public class InputInfo
 {
 }
@@ -87,82 +148,14 @@ public class OptimizationRunInfo
 
     //public List<ParameterOptimizationInfo> ParameterOptimizationInfos { get; set; }
 }
+#endif
 
-public interface PParameterOptimization
-{
-}
-public class PParameterOptimization<T> : PParameterOptimization
-    where T : INumber<T>
-{
-    public string Name { get; set; }
 
-    public T Min { get; set; } = T.Zero;
-    public T Max { get; set; } = T.Zero;
+//public class TOptimizationTask : IHierarchicalTemplate, ITemplate<OptimizationTask>
+//{
+//    //public List<ITemplate> Children { get; set; }
+//    InstantiationCollection Instantiations { get; set; }
 
-    public T Step { get; set; } = T.One;
-    public double StepPower { get; set; }
-    public OptimizationStepType StepFunctionType { get; set; } = OptimizationStepType.Linear;
-
-}
-
-public enum OptimizationStepType
-{
-    Linear = 0
-}
-
-public class OptimizationTask : IRunnable //: AppTask
-{
-    #region Dependencies
-
-    public IServiceProvider ServiceProvider { get; }
-
-    public BacktestQueue BacktestBatcher { get; }
-
-    #endregion
-
-    #region Parameters
-
-    public POptimization Parameters { get; set; }
-
-    #endregion
-
-    #region Lifecycle
-
-    public OptimizationTask(IServiceProvider serviceProvider, POptimization parameters)
-    {
-        ServiceProvider = serviceProvider;
-        Parameters = parameters;
-        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
-
-        if (Parameters.SearchSeed != 0) throw new NotImplementedException();
-    }
-
-    IBacktestBatchJob batchJob;
-    public Task StartAsync(CancellationToken cancellationToken = default)
-    {
-        IOptimizerEnumerable optimizerEnumerable = Parameters.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this);
-
-        if(batchJob != null)
-        {
-            throw new AlreadyException();
-        }
-        batchJob = BacktestBatcher.EnqueueJob(batchJob =>
-        {
-            batchJob.BacktestBatches = optimizerEnumerable;
-        }, cancellationToken);
-
-        return Task.CompletedTask;
-    }
-
-    #endregion
-
-    #region State
-
-    public Task RunTask { get; private set; }
-
-    protected IEnumerable<IPBacktestTask2> CurrentEnumerable { get; private set; }
-
-    #endregion
-
-    //List<> parameterSpaces;
-}
+//    //IEnumerable<IInstantiation> IHierarchicalTemplate.Children => Children?.OfType<IInstantiation>(); // TODO: Cast/wrap to IInstantiation?  REVIEW the IHierarchicalTemplate interface.
+//    IInstantiationCollection IHierarchicalTemplate.Children => Instantiations;
+//}

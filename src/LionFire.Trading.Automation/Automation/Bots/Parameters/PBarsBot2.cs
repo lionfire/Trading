@@ -7,7 +7,9 @@ namespace LionFire.Trading.Automation;
 
 public interface IPBarsBot2
 {
-    ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
+    ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; set; }
+
+    void FinalizeInit();
 }
 
 public abstract class PBarsBot2<TConcrete, TValue>
@@ -17,7 +19,7 @@ public abstract class PBarsBot2<TConcrete, TValue>
     where TConcrete : PBarsBot2<TConcrete, TValue>
 {
     [JsonIgnore]
-    public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; }
+    public ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; set; }
 
     #region Derived
 
@@ -39,12 +41,17 @@ public abstract class PBarsBot2<TConcrete, TValue>
 
     #region Lifecycle
 
+    public PBarsBot2()
+    {
+        ExchangeSymbolTimeFrame = null!; // REVIEW - make it nullable, but invalid if null
+    }
+
     public PBarsBot2(ExchangeSymbolTimeFrame e)
     {
         ExchangeSymbolTimeFrame = e;
     }
 
-    public void InitFromDefault()
+    public virtual void FinalizeInit()
     {
         var pBotInfo = PBotInfos.Get(this.GetType());
 

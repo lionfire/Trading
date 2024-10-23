@@ -11,7 +11,9 @@ using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation.Bots;
 
+
 public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
+    , IPBot2Static
     where TValue : struct, INumber<TValue>
 {
 
@@ -19,6 +21,7 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 
     [JsonIgnore]
     public override Type MaterializedType => typeof(AtrBot<TValue>);
+    public static Type StaticMaterializedType => typeof(AtrBot<TValue>);
 
     //public static IReadOnlyList<InputSlot> InputSlots() => GetInputSlots();
 
@@ -49,7 +52,10 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 
     [JsonIgnore]
     const int Lookback = 1;
-    //public PAtrBot() { }
+
+    #region Lifecycle
+
+    public PAtrBot() { }
     public PAtrBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, uint period, QuantConnect.Indicators.MovingAverageType movingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders) : base(exchangeSymbolTimeFrame)
     {
         ATR = new PAverageTrueRange<double, TValue>
@@ -60,14 +66,24 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
             //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
         };
 
+        FinalizeInit();
+    }
+
+    public override void FinalizeInit()
+    {
         // REVIEW - does InputLookbacks make sense?
         // ENH - automate setting this somehow
         //InputLookbacks = [(int)period + Lookback];
         InputLookbacks = [0, Lookback];
 
-        InitFromDefault();
+        ATR!.Lookback = Lookback;
+
+        base.FinalizeInit();
     }
 
+    #endregion
+
+    #region Validaiton
 
     public void ThrowIfInvalid()
     {
@@ -75,6 +91,8 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
         ArgumentNullException.ThrowIfNull(Points, nameof(Points));
         ArgumentNullException.ThrowIfNull(Unidirectional, nameof(Unidirectional));
     }
+
+    #endregion
 }
 
 [Bot(Direction = BotDirection.Unidirectional)]

@@ -85,13 +85,13 @@ public abstract class BotBatchControllerBase : IBotBatchController
         var first = parameters.FirstOrDefault();
         if (first == null) throw new ArgumentException("batch empty");
 
-        TimeFrame = first.TimeFrame;
+        TimeFrame = first.TimeFrame ?? (first.PBot as IPTimeFrameBot2)?.TimeFrame ?? throw new ArgumentNullException($"Neither first {nameof(parameters)} nor first {nameof(first.PBot)} has a {nameof(first.TimeFrame)}");
         Start = first.Start;
         EndExclusive = first.EndExclusive;
 
         foreach (var p in PBacktests)
         {
-            if (p.TimeFrame != TimeFrame) throw new ArgumentException("TimeFrame mismatch");
+            if (p.EffectiveTimeFrame != TimeFrame) throw new ArgumentException("TimeFrame mismatch");
             if (p.Start != Start) throw new ArgumentException("Start mismatch");
             if (p.EndExclusive != EndExclusive) throw new ArgumentException("EndExclusive mismatch");
 

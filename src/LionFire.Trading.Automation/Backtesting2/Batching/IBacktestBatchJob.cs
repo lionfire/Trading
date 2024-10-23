@@ -12,5 +12,5 @@ public interface IBacktestBatchJob
     IPBacktestTask2 Backtest { set; }
    
     Task Task { get; }
-
+    BacktestBatchJournal? Journal { get; set; }
 }

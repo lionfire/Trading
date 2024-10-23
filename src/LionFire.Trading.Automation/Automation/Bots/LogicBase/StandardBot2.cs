@@ -6,6 +6,9 @@ namespace LionFire.Trading.Automation;
 public abstract class PStandardBot2<TConcrete, TValue> : PBarsBot2<TConcrete, TValue>
     where TConcrete : PStandardBot2<TConcrete, TValue>
 {
+    protected PStandardBot2() 
+    {
+    }
     protected PStandardBot2(ExchangeSymbolTimeFrame e) : base(e)
     {
     }

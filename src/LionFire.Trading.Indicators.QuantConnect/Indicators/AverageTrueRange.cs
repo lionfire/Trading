@@ -9,7 +9,7 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 // Input: IKline aspects: High, Low, Close
 // TODO: Use HLC<TOutput> instead of IKline as the TInput
 public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTrueRange<TPrice, TOutput>, HLC<TPrice>, TOutput>
-     
+
 {
     #region Identity
 
@@ -23,7 +23,7 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
     //public override IReadOnlyList<InputSlot> InputSlots => [
     //    //InputSlot.BarMultiAspect<TOutput>( DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close)
     //    ];
-    public static IReadOnlyList<InputSlot> InputSlots()
+    public static IReadOnlyList<InputSlot> GetInputSlots()
       => [new InputSlot() {
                     Name = "Source",
                     ValueType = typeof(IKline<TOutput>),
@@ -35,7 +35,22 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
 
     #region Parameters
 
+    [Parameter(MinValue = 2, MaxValue = null, DefaultMin = 3, DefaultMax = 1024, OptimizerHints = OptimizationDistributionKind.Period, SearchLogarithmExponent = 2.0)]
     public int Period { get; set; }
+
+    [Parameter(OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = QuantConnect.Indicators.MovingAverageType.Wilders, DefaultSearchSpace = [
+        QuantConnect.Indicators.MovingAverageType.Simple,
+        QuantConnect.Indicators.MovingAverageType.Exponential,
+        QuantConnect.Indicators.MovingAverageType.Wilders, 
+        QuantConnect.Indicators.MovingAverageType.Kama,
+        QuantConnect.Indicators.MovingAverageType.Alma,
+        //QuantConnect.Indicators.MovingAverageType.Triangular,
+        QuantConnect.Indicators.MovingAverageType.DoubleExponential,
+        QuantConnect.Indicators.MovingAverageType.TripleExponential,
+        QuantConnect.Indicators.MovingAverageType.Hull,
+        QuantConnect.Indicators.MovingAverageType.LinearWeightedMovingAverage,
+        QuantConnect.Indicators.MovingAverageType.T3
+        ])]
     public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
 
     #endregion
@@ -178,7 +193,7 @@ public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<Av
 
     // Stub time and period values.  QuantConnect checks the symbol ID and increasing end times.
     static DateTime DefaultEndTime => new DateTime(2000, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-    static  TimeSpan period => new TimeSpan(0, 1, 0);
+    static TimeSpan period => new TimeSpan(0, 1, 0);
 
     DateTime endTime = DefaultEndTime;
     TradeBar tradeBar = new TradeBar(time: DefaultEndTime,

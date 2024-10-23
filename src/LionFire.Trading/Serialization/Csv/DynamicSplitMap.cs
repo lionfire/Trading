@@ -20,10 +20,51 @@ namespace LionFire.Serialization.Csv;
 /// <typeparam name="T"></typeparam>
 public partial class DynamicSplitMap<T> : ClassMap<T>
 {
-
     public readonly PropertyInfo RootPropertyInfo;
     public readonly Type RootPropertyInstanceType;
 
+    #region Lifecycle
+
+    public DynamicSplitMap(PropertyInfo rootPropertyInfo, Type rootPropertyInstanceType, bool manualInitBase = false)
+    {
+        if (!rootPropertyInfo.DeclaringType!.IsAssignableTo(typeof(T)))
+        {
+            throw new ArgumentException($"Property {rootPropertyInfo.Name} must be a property of {typeof(T).Name}");
+        }
+
+        this.RootPropertyInfo = rootPropertyInfo;
+        this.RootPropertyInstanceType = rootPropertyInstanceType;
+        if (!manualInitBase) InitBase();
+    }
+
+    protected void InitBase()
+    {
+        var infos = CustomBotParameterPropertiesInfo.Get(RootPropertyInstanceType);
+
+        foreach (var kvp in infos.NameDictionary)
+        {
+            var memberMap = Map().Name(kvp.Key);
+
+            var fieldParameter = Expression.Parameter(typeof(ConvertToStringArgs<T>), "args");
+
+            var converter = kvp.Value.ConvertToString;
+            var instance = Expression.Constant(converter);
+            var methodExpression = Expression.Call
+            (
+                instance,
+                typeof(ConvertToStringClass2)
+                    .GetMethod(nameof(ConvertToStringClass2.ConvertToString))!
+                    .MakeGenericMethod(typeof(T)),
+                fieldParameter
+            );
+            var lambdaExpression = Expression.Lambda<ConvertToString<T>>(methodExpression, fieldParameter);
+            memberMap.Data.WritingConvertExpression = lambdaExpression;
+        }
+    }
+
+    #endregion
+
+#if OLD
     private class ConvertToStringClass
     {
         public ConvertToStringClass(PropertyInfo propertyInfo, string? parametersName = null, ConvertToStringClass? parentConverter = null)
@@ -61,44 +102,6 @@ public partial class DynamicSplitMap<T> : ClassMap<T>
         }
     }
 
-    public DynamicSplitMap(PropertyInfo rootPropertyInfo, Type rootPropertyInstanceType,  bool manualInitBase = false)
-    {
-        if(!rootPropertyInfo.DeclaringType!.IsAssignableTo(typeof(T)))
-        {
-            throw new ArgumentException($"Property {rootPropertyInfo.Name} must be a property of {typeof(T).Name}");
-        }
-
-        this.RootPropertyInfo = rootPropertyInfo;
-        this.RootPropertyInstanceType = rootPropertyInstanceType;
-        if (!manualInitBase) InitBase();
-    }
-
-    protected void InitBase()
-    {
-        var infos = BotParameterPropertiesInfo.Get(RootPropertyInstanceType);
-
-        foreach (var kvp in infos.Dictionary)
-        {
-            var memberMap = Map().Name(kvp.Key);
-
-            var fieldParameter = Expression.Parameter(typeof(ConvertToStringArgs<T>), "args");
-
-            var converter = kvp.Value.ConvertToString;
-            var instance = Expression.Constant(converter);
-            var methodExpression = Expression.Call
-            (
-                instance,
-                typeof(ConvertToStringClass2)
-                    .GetMethod(nameof(ConvertToStringClass2.ConvertToString))!
-                    .MakeGenericMethod(typeof(T)),
-                fieldParameter
-            );
-            var lambdaExpression = Expression.Lambda<ConvertToString<T>>(methodExpression, fieldParameter);
-            memberMap.Data.WritingConvertExpression = lambdaExpression;
-        }
-    }
-
-#if OLD
     //private void MapProperties(Type type, ConvertToStringClass? parentConverter = null)
     //{
 

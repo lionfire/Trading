@@ -7,6 +7,8 @@ using System.Threading;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using LionFire.Serialization.Csv;
+using System.Diagnostics;
+using System.IO.Compression;
 
 #if UNUSED
 public class IgnoreEmptyArrayConverter : JsonConverter<List<object>>
@@ -88,7 +90,9 @@ public class BacktestBatchJournal : IAsyncDisposable
     #region Parameters
 
     public string JournalFilename { get; set; } = "backtests";
+    public string BatchDirectory { get; }
     public Type PBotType { get; }
+    public bool ZipOnDispose { get; set; } = true;
 
     private readonly CsvConfiguration CsvConfiguration = new CsvConfiguration(CultureInfo.InvariantCulture)
     {
@@ -116,10 +120,9 @@ public class BacktestBatchJournal : IAsyncDisposable
         csv = new CsvWriter(writer, CsvConfiguration);
 
         consumeTask = Consume();
+        BatchDirectory = dir;
         PBotType = pBotType;
-        //ParameterMetadata = ParameterMetadata.Get(pBotType);
 
-        //var mapType = typeof(ParametersMapper<>).MakeGenericType(pBotType);
         csv.Context.RegisterClassMap(new ParametersMapper(pBotType));
         //typeof(CsvContext).GetMethod(nameof(CsvContext.RegisterClassMap), new Type[] { })!.MakeGenericMethod(mapType).Invoke(csv.Context, null);
     }
@@ -181,10 +184,27 @@ public class BacktestBatchJournal : IAsyncDisposable
     Task consumeTask;
     CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         channel.Writer.Complete();
-        return ValueTask.CompletedTask;
+        //await Task.Delay(200);
+
+        while (channel.Reader.TryPeek(out var _))
+        {
+            Debug.WriteLine($"{this.GetType().Name} - Waiting for Reader to be emptied.");
+            await Task.Delay(100);
+        }
+        if (ZipOnDispose)
+        {
+            ZipBatchDir();
+        }
+    }
+
+    public void ZipBatchDir()
+    {
+        var zipPath = Path.Combine(Path.GetDirectoryName(BatchDirectory)!, Path.GetFileName(BatchDirectory) + ".zip");
+        ZipFile.CreateFromDirectory(BatchDirectory, zipPath);
+        Directory.Delete(BatchDirectory, true);
     }
 
     #endregion

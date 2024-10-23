@@ -1,0 +1,128 @@
+﻿using CryptoExchange.Net.CommonObjects;
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using YamlDotNet.Core.Tokens;
+
+namespace LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
+
+/// <summary>
+/// Level 0 is the minimum resolution of testing in order for the optimization to be considered complete.
+/// 
+/// Negative levels 
+/// - (ENH) can be used for preview purposes, and to optimize promising areas first
+/// - (ENH) can be used if level 0 would result in more tests than the options allow.  (A note will be made in optimization results to indicate a full grid search wasn't completed, and ideally say what the max gaps were in testing.)
+/// 
+/// </summary>
+public partial class GridSearchState
+{
+    #region Relationships
+
+    private readonly GridSearchStrategy gridSearchStrategy;
+
+    #endregion
+
+    #region Parameters
+
+    private SortedDictionary<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> dict;
+
+    #endregion
+
+    #region Lifecycle
+
+    public GridSearchState(GridSearchStrategy gridSearchStrategy, SortedDictionary<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> dict)
+    {
+        this.gridSearchStrategy = gridSearchStrategy;
+        if (dict.Count == 0) throw new ArgumentException("No parameters to optimize");
+        this.dict = dict;
+
+        zero = new GridLevelOfDetailState(0, this);
+
+        while (CurrentLevel.TestCount > gridSearchStrategy.OptimizationParameters.MaxBatchSize)
+        {
+            currentLevel++;
+        }
+    }
+
+    #endregion
+
+    #region State
+
+    #region CurrentLevel
+
+    public GridLevelOfDetailState CurrentLevel => currentLevel == 0 ? zero : GetLevel(currentLevel);
+    public int CurrentLevelIndex => currentLevel;
+    int currentLevel = 0;
+
+    #endregion
+
+    #region Levels
+
+    public GridLevelOfDetailState GetLevel(int level)
+    {
+        if (levels == null)
+        {
+            levels = new();
+            levels.Add(0, zero);
+        }
+        if (!levels.TryGetValue(level, out var result))
+        {
+            result = new GridLevelOfDetailState(level, this);
+            levels.Add(level, result);
+        }
+        return result;
+    }
+    public SortedList<int /* level */, GridLevelOfDetailState>? levels = null;
+    GridLevelOfDetailState zero;
+
+    #endregion
+
+    #endregion
+
+}
+
+
+
+public class LevelOfDetail<T>
+{
+    private BitArray completed;
+
+    private BitArray shouldExplore;
+
+}
+
+internal class OptimizationResult
+{
+    public required int[] Parameters;
+    public double Fitness;
+
+    /// <remarks>
+    /// From Claude 3.5 Sonnet
+    /// 
+    /// Starting value (17):
+    ///    The hash is initialized with a non-zero value, often a prime number.
+    ///    17 is commonly used as this initial value.
+    ///    Starting with a non-zero value helps to better distribute hash codes, especially for small or empty collections.
+    ///
+    ///Multiplier (31):
+    ///
+    /// In the loop, the current hash is multiplied by 31 before adding the next element's hash code.
+    /// 31 is used because:
+    ///    a) It's an odd prime number, which is good for distribution in hash functions.
+    ///    b) It has a convenient property: 31 * i == (i << 5) - i.This means the multiplication can be optimized by the compiler into a bitwise shift and a subtraction, which is typically faster than multiplication on many processors.
+    ///
+    /// These specific numbers(17 and 31) are not magical or mandatory, but they are commonly used in hash code implementations across various programming languages and libraries.They provide a good balance of simplicity, performance, and hash distribution.
+    /// </remarks>
+    public override int GetHashCode()
+    {
+        int hash = 17;
+        foreach (var item in Parameters)
+        {
+            hash = hash * 31 + item.GetHashCode();
+        }
+        return hash;
+    }
+}

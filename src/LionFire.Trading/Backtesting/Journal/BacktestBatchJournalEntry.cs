@@ -5,6 +5,10 @@
     public double Fitness { get; set; }
     public double AD { get; set; }
 
+    // TODO:
+    // - MDWT Mean Days per Winning Trades
+    // - Sortino Ratio?
+    
     //[Ignore]
     //public List<object?>? Parameters { get; set; }
     public object? Parameters { get; set; }

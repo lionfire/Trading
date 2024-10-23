@@ -24,6 +24,8 @@ public partial class BacktestQueue
         /// </summary>
         public IEnumerable<IEnumerable<IPBacktestTask2>> BacktestBatches { get; set; } = [];
 
+        public BacktestBatchJournal? Journal { get; set; }
+
         #region Derived (convenience)
 
         public IEnumerable<IPBacktestTask2> Backtests { set => BacktestBatches = [value]; }

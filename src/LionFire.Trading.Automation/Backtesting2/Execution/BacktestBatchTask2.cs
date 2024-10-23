@@ -90,7 +90,7 @@ public class BacktestBatchTask2<TPrecision>
         if (ExecutionOptions.ExchangeAreaSubDir && ExchangeSymbol?.ExchangeArea != null) { path = System.IO.Path.Combine(path, ExchangeSymbol.ExchangeArea); }
         if (ExecutionOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Symbol ?? "UnknownSymbol"); }
 
-        path = GetUniqueDirectory(path, "", "", 4); // BLOCKING I/O
+        path = FilesystemUtils.GetUniqueDirectory(path, "", "", 4); // BLOCKING I/O
 
         return path;
     }
@@ -103,14 +103,15 @@ public class BacktestBatchTask2<TPrecision>
 
     #region Lifecycle
 
-    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null)
+    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null)
     {
-        var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, executionOptions, dateChunker);
+        var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, executionOptions, dateChunker, backtestBatchJournal: backtestBatchJournal);
+        t.TradeJournalOptions.JournalDir = t.Journal.BatchDirectory;
         await t.Init();
         return t;
     }
 
-    private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null) : base(serviceProvider, parameters)
+    private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) : base(serviceProvider, parameters)
     {
         try
         {
@@ -127,16 +128,26 @@ public class BacktestBatchTask2<TPrecision>
             var firstParameter = parameters.FirstOrDefault();
 
             ExchangeSymbol = firstParameter?.ExchangeSymbol
-                ?? (firstParameter?.Bot as IPSymbolBot2)?.ExchangeSymbol
+                ?? (firstParameter?.PBot as IPSymbolBot2)?.ExchangeSymbol
                 ?? ExchangeSymbol.Unknown;
 
-            PBotType = firstParameter?.Bot.GetType() ?? typeof(DBNull);
-            BotType = firstParameter?.Bot?.MaterializedType ?? typeof(DBNull);
+            PBotType = firstParameter?.PBot.GetType() ?? typeof(DBNull);
+            BotType = firstParameter?.PBot?.MaterializedType ?? typeof(DBNull);
 
-            BatchDirectory = GetBatchDirectory();
-            if (!Directory.Exists(BatchDirectory)) { Directory.CreateDirectory(BatchDirectory); } // BLOCKING I/O
 
-            Journal = new BacktestBatchJournal(BatchDirectory, PBotType);
+            if (backtestBatchJournal != null)
+            {
+                Journal = backtestBatchJournal;
+                BatchDirectory = Journal.BatchDirectory;
+                DisposeJournal = false;
+            }
+            else
+            {
+                BatchDirectory = GetBatchDirectory();
+                if (!Directory.Exists(BatchDirectory)) { Directory.CreateDirectory(BatchDirectory); } // BLOCKING I/O
+                Journal = new BacktestBatchJournal(BatchDirectory, PBotType);
+                DisposeJournal = true;
+            }
 
             TradeJournalOptions = ExecutionOptions?.TradeJournalOptions ?? ServiceProvider.GetRequiredService<IOptionsMonitor<TradeJournalOptions>>().CurrentValue;
             TradeJournalOptions = TradeJournalOptions.Clone();
@@ -173,25 +184,29 @@ public class BacktestBatchTask2<TPrecision>
 
     private async ValueTask CreateBot(IPBacktestTask2 p)
     {
-        var bot = (IBot2<TPrecision>)(Activator.CreateInstance(p.Bot.MaterializedType)
-            ?? throw new Exception("Failed to create bot: " + p.Bot.MaterializedType));
-        bot.Parameters = p.Bot;
+
+        var bot = (IBot2<TPrecision>)(Activator.CreateInstance(p.PBot.MaterializedType)
+            ?? throw new Exception("Failed to create bot: " + p.PBot.MaterializedType));
+        bot.Parameters = p.PBot;
 
         var pAccount = PBacktestAccountPrototype;
 
         if (bot is IBarsBot<TPrecision> barsBot)
         {
-            pAccount = SymbolPBacktestAccounts.GetOrAdd(barsBot.Parameters.ExchangeSymbolTimeFrame.Symbol, _ =>
-            {
-                var copy = (PBacktestAccount<TPrecision>)PBacktestAccountPrototype.Clone();
-                copy.Bars = new HLCReference<TPrecision>(barsBot.Parameters.ExchangeSymbolTimeFrame);
+            barsBot.Parameters.ExchangeSymbolTimeFrame ??= p.ExchangeSymbolTimeFrame;
+            if (p.PBot is IPBarsBot2 pbb) { pbb.FinalizeInit(); }
 
-                if (typeof(TPrecision) == typeof(double))
-                {
-                    copy.AbortOnBalanceDrawdownPerunum = (TPrecision)(object)0.5;
-                }
-                return copy;
-            });
+            pAccount = SymbolPBacktestAccounts.GetOrAdd(barsBot.Parameters.ExchangeSymbolTimeFrame.Symbol, _ =>
+{
+    var copy = (PBacktestAccount<TPrecision>)PBacktestAccountPrototype.Clone();
+    copy.Bars = new HLCReference<TPrecision>(barsBot.Parameters.ExchangeSymbolTimeFrame);
+
+    if (typeof(TPrecision) == typeof(double))
+    {
+        copy.AbortOnBalanceDrawdownPerunum = (TPrecision)(object)0.5;
+    }
+    return copy;
+});
         }
 
         var tradeJournal = ActivatorUtilities.CreateInstance<TradeJournal<TPrecision>>(ServiceProvider, (bot?.Parameters as IPSymbolBot2)?.ExchangeSymbol!, TradeJournalOptions);
@@ -206,7 +221,7 @@ public class BacktestBatchTask2<TPrecision>
 
     protected override void ValidateParameter(IPBacktestTask2 p)
     {
-        if (p.Bot.GetType() != PBotType) throw new ArgumentException("Bot type mismatch");
+        if (p.PBot.GetType() != PBotType) throw new ArgumentException("Bot type mismatch");
     }
     #endregion
 
@@ -356,7 +371,7 @@ public class BacktestBatchTask2<TPrecision>
             foreach (var inputInjectionInfo in (backtest.BotInfo.InputInjectionInfos ?? Enumerable.Empty<InputInjectionInfo>()))
             {
                 inputEnumeratorIndex++;
-                int lookback = pBacktest.Bot.InputLookbacks == null ? 0 : pBacktest.Bot.InputLookbacks[inputEnumeratorIndex];
+                int lookback = pBacktest.PBot.InputLookbacks == null ? 0 : pBacktest.PBot.InputLookbacks[inputEnumeratorIndex];
                 //IPInput pHydratedInput;
 
                 //{
@@ -393,7 +408,7 @@ public class BacktestBatchTask2<TPrecision>
                 //        Index = inputEnumeratorIndex,
                 //    });
                 //}
-                NewMethod(inputEnumerators, backtest, inputEnumeratorIndex, inputInjectionInfo, lookback, backtest.PBacktest.Bot);
+                NewMethod(inputEnumerators, backtest, inputEnumeratorIndex, inputInjectionInfo, lookback, backtest.PBacktest.PBot);
             }
 
             // BacktestAccount
@@ -562,7 +577,7 @@ public class BacktestBatchTask2<TPrecision>
             instanceInputInfos = null;
         }
 
-        public BotInfo BotInfo { get; init; } = BotInfos.Get(PBacktest.Bot.GetType(), Bot.GetType());
+        public BotInfo BotInfo { get; init; } = BotInfos.Get(PBacktest.PBot.GetType(), Bot.GetType());
 
         #region IHasInstanceInputInfos
 
@@ -678,7 +693,7 @@ public class BacktestBatchTask2<TPrecision>
                     AD = b.Controller.Account.AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent,
                     // TODO NEXT: Parameters
                 };
-                
+
                 entry.Parameters = b.Bot.Parameters;
 
                 //entry.Parameters = new ();
@@ -729,18 +744,15 @@ public class BacktestBatchTask2<TPrecision>
 
         SaveBatchInfo();
 
-        await Journal.DisposeAsync();
-
-        //await Task.Delay(1000);
-        ZipBatchDir();
+        if (DisposeJournal)
+        {
+            await Journal.DisposeAsync();
+        }
     }
 
-    private void ZipBatchDir()
-    {
-        var zipPath = Path.Combine(Path.GetDirectoryName(BatchDirectory)!, Path.GetFileName(BatchDirectory) + ".zip");
-        ZipFile.CreateFromDirectory(BatchDirectory, zipPath);
-        Directory.Delete(BatchDirectory, true);
-    }
+    public bool DisposeJournal { get; set; } = true;
+
+
 
     private void SaveBatchInfo()
     {
@@ -757,23 +769,7 @@ public class BacktestBatchTask2<TPrecision>
         HjsonValue.Save(hjsonValue, Path.Combine(BatchDirectory, "batch.hjson"));
     }
 
-    static string GetUniqueDirectory(string baseDir, string prefix, string suffix, int zeroPadding = 0)
-    {
-        for (int i = 0; ; i++)
-        {
-            var name = $"{prefix}{i.ToString("D" + zeroPadding)}{suffix}";
-            var dir = Path.Combine(baseDir, name);
-            if (!Directory.Exists(dir) && (!Directory.Exists(baseDir) || !Directory.GetFiles(baseDir, name + ".*").Any()))
-            {
-                try
-                {
-                    Directory.CreateDirectory(dir);
-                }
-                catch { } // EMPTYCATCH
-                return dir;
-            }
-        }
-    }
+
 
     static int batchCounter = 1;
 
@@ -892,6 +888,29 @@ public class BacktestBatchTask2<TPrecision>
     }
 
     #endregion
+}
+
+public static class FilesystemUtils
+{
+
+    public static string GetUniqueDirectory(string baseDir, string prefix, string suffix, int zeroPadding = 0)
+
+    {
+        for (int i = 0; ; i++)
+        {
+            var name = $"{prefix}{i.ToString("D" + zeroPadding)}{suffix}";
+            var dir = Path.Combine(baseDir, name);
+            if (!Directory.Exists(dir) && (!Directory.Exists(baseDir) || !Directory.GetFiles(baseDir, name + ".*").Any()))
+            {
+                try
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                catch { } // EMPTYCATCH
+                return dir;
+            }
+        }
+    }
 }
 
 #if UNUSED

@@ -41,7 +41,7 @@ public class PPointsBot
     [Parameter("Multiply the current close score by this after closing a position", DefaultValue = 1f, MinValue = -10f, DefaultMin = 0f, DefaultMax = 1f, Step = 0.05f)]
     public float CloseScoreMultiplierAfterClose { get; set; }
 
-    [Parameter("Multiply the current close score by this after opening a position", DefaultValue = 1f, MinValue = -10f, DefaultMin = 0f, DefaultMax = 1f, Step = 0.05f)]
+    [Parameter("Multiply the current close score by this after opening a position", DefaultValue = 1f, MinValue = -10f, DefaultMin = 0f, DefaultMax = 1f, Step = 0.05f, MinProbes = 1)]
     public float CloseScoreMultiplierAfterOpen { get; set; }
 
     #endregion

@@ -76,7 +76,7 @@ public class PDualAtrBot<TValue> : PStandardBot2<PDualAtrBot<TValue>, TValue>
         //InputLookbacks = [(int)slowPeriod + Lookback];
         InputLookbacks = [0, Lookback];
 
-        InitFromDefault();
+        FinalizeInit();
     }
 
 
