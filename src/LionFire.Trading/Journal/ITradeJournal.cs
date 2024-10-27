@@ -15,4 +15,9 @@ public interface ITradeJournal<TPrecision>
 
     string FileName { get; set; }
     ExchangeSymbol? ExchangeSymbol { get; set; }
+    bool IsAborted { get; set; }
+    bool DiscardDetails { get; set; }
+
+    TradeJournalOptions Options { get; }
+
 }

@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading.Automation;
+﻿using LionFire.Trading.Automation.Optimization;
+
+namespace LionFire.Trading.Automation;
 
 
 public partial class BacktestQueue
@@ -22,14 +24,17 @@ public partial class BacktestQueue
         /// After each round of backtests, the producer may decide on the next round, such as in the case of 
         /// a non-comprehensive optimization that will delve deeper into paths that seem most promising.
         /// </summary>
-        public IEnumerable<IEnumerable<IPBacktestTask2>> BacktestBatches { get; set; } = [];
+        public IEnumerable<IEnumerable<PBacktestTask2>> BacktestBatches { get; set; } = [];
+        public MultiBacktestContext Context { get; }
 
         public BacktestBatchJournal? Journal { get; set; }
 
         #region Derived (convenience)
 
-        public IEnumerable<IPBacktestTask2> Backtests { set => BacktestBatches = [value]; }
-        public IPBacktestTask2 Backtest { set => BacktestBatches = [[value]]; }
+        public IEnumerable<PBacktestTask2> Backtests { set => BacktestBatches = [value]; }
+        public PBacktestTask2 Backtest { set => BacktestBatches = [[value]]; }
+
+        public int Count => BacktestBatches.Aggregate(0, (acc, batch) => acc + batch.Count());
 
         #endregion
 
@@ -37,9 +42,10 @@ public partial class BacktestQueue
 
         #region Lifecycle
 
-        public BacktestBatchesJob(Guid guid)
+        public BacktestBatchesJob(Guid guid, MultiBacktestContext context)
         {
             Guid = guid;
+            Context = context;
         }
 
         #endregion

@@ -1335,7 +1335,7 @@ where TBotType : TBot, ITBot, new()
                         //History
                         LosingTrades = 5,
                         MaxBalanceDrawdown = 5,
-                        MaxBalanceDrawdownPercentages = 5,
+                        MaxBalanceDrawdownPerunum = 5,
                         MaxEquityDrawdown = 5,
                         MaxEquityDrawdownPercentages = 5,
                         NetProfit = 5,
@@ -1420,7 +1420,7 @@ where TBotType : TBot, ITBot, new()
                     //History
                     LosingTrades =(int) args.LosingTrades,
                     MaxBalanceDrawdown = args.MaxBalanceDrawdown,
-                    MaxBalanceDrawdownPercentages = args.MaxBalanceDrawdownPercentages,
+                    MaxBalanceDrawdownPerunum = args.MaxBalanceDrawdownPercentages,
                     MaxEquityDrawdown = args.MaxEquityDrawdown,
                     MaxEquityDrawdownPercentages = args.MaxEquityDrawdownPercentages,
                     NetProfit = args.NetProfit,

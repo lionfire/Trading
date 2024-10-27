@@ -1,20 +1,23 @@
 ﻿
 using CryptoExchange.Net.CommonObjects;
+using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Backtesting;
 using LionFire.Trading.Journal;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Automation;
 
 
-public class BacktestBotController<TPrecision> : IBotController<TPrecision>
+public sealed class BacktestBotController<TPrecision> : IBotController<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
     public long Id { get; internal set; }
 
     #region Relationships
 
-    public IBotBatchController BotBatchController { get; }
+    public IBotBatchController BotBatchController => botBatchController;
+    private BotBatchControllerBase botBatchController;
     public IBot2 Bot { get; }
     public PBacktestAccount<TPrecision> PBacktestAccount { get; }
     public ITradeJournal<TPrecision> Journal { get; }
@@ -40,7 +43,7 @@ public class BacktestBotController<TPrecision> : IBotController<TPrecision>
 
     private BacktestBotController(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<TPrecision> pBacktestAccount, ITradeJournal<TPrecision> journal)
     {
-        BotBatchController = botBatchController;
+        this.botBatchController = (BotBatchControllerBase)botBatchController;
         Bot = bot;
         PBacktestAccount = pBacktestAccount;
         Journal = journal;
@@ -101,9 +104,9 @@ public class BacktestBotController<TPrecision> : IBotController<TPrecision>
         {
             Aborted = Account.IsAborted,
             MaxBalanceDrawdown = Convert.ToDouble(Account.CurrentBalanceDrawdown),
-            MaxBalanceDrawdownPercentages = Convert.ToDouble(Account.MaxBalanceDrawdownPerunum),
+            MaxBalanceDrawdownPerunum = Convert.ToDouble(Account.MaxBalanceDrawdownPerunum),
             MaxEquityDrawdown = Convert.ToDouble(Account.CurrentEquityDrawdown),
-            MaxEquityDrawdownPercentages = Convert.ToDouble(Account.MaxEquityDrawdownPercent),
+            MaxEquityDrawdownPercentages = Convert.ToDouble(Account.MaxEquityDrawdownPerunum),
             AD = Account.AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent,
 
             //Fitness = ,
@@ -112,9 +115,23 @@ public class BacktestBotController<TPrecision> : IBotController<TPrecision>
         };
         result.Fitness = GetFitness(result);
 
-        Journal.FileName = $"{(result.Aborted ? "ABORTED" : "")} {result.Fitness:0.000}f {(result.AD == result.Fitness ? "" : result.AD.ToString("0.0"))}ad  id={result.Id} {(result.MaxBalanceDrawdownPercentages * 100.0).ToString("0.0")}bddp";
+        Journal.FileName = $"{(result.Aborted ? "ABORTED" : "")} {result.Fitness:0.000}f {(result.AD == result.Fitness ? "" : result.AD.ToString("0.0"))}ad  id={result.Id} {(result.MaxBalanceDrawdownPerunum * 100.0).ToString("0.0")}bddp";
+
+        if (result.Fitness < Journal.Options.DiscardDetailsWhenFitnessBelow
+            || !Context.ShouldLogTradeDetails) { Journal.DiscardDetails = true; }
+
+        if (!Journal.DiscardDetails)
+        {
+            if (result.Aborted) { Journal.IsAborted = true; }
+            else
+            {
+                Context.OnTradeJournalCreated();
+                Debug.WriteLine("Not aborted");
+            }
+        }
         await Journal.CloseAll();
     }
+    MultiBacktestContext Context => botBatchController.Context;
 
     public void OnAccountAborted()
     {

@@ -4,6 +4,8 @@ namespace LionFire.Trading.Journal;
 
 public class TradeJournalOptions
 {
+    public bool Enabled { get; set; } = true;
+
     #region Directory
 
     public string? JournalDir { get; set; }
@@ -28,7 +30,7 @@ public class TradeJournalOptions
 
     #region Keeping Details
 
-    public double DiscardDetailsWhenFitnessBelow { get; set; } = 1.0;
+    public double DiscardDetailsWhenFitnessBelow { get; set; } = 0.5;
     public bool DiscardDetailsWhenAborted { get; set; } // FUTURE = true;
     public int KeepDetailsForTopNResultsIncludingAborted { get; set; } = 10;
     public int KeepDetailsForTopNResults { get; set; } = 100;

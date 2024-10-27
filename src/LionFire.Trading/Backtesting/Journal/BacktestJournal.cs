@@ -145,6 +145,10 @@ public class BacktestBatchJournal : IAsyncDisposable
             Map(m => m.Id);
             Map(m => m.Fitness);
             Map(m => m.AD);
+            Map(m => m.MaxBalanceDrawdown);
+            Map(m => m.MaxBalanceDrawdownPerunum);
+            //Map(m => m.MaxEquityDrawdown);
+            //Map(m => m.MaxEquityDrawdownPerunum);
             InitBase();
 
             //Map(m => m.Parameters).Convert(row =>

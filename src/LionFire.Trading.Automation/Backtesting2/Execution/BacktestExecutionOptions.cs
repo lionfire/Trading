@@ -2,7 +2,7 @@
 
 namespace LionFire.Trading.Automation;
 
-public class BacktestExecutionOptions
+public class BacktestExecutionOptions : ICloneable
 {
     /// <summary>
     /// Backtest optimization: use short Chunks instead of long
@@ -50,11 +50,7 @@ public class BacktestExecutionOptions
 
     #endregion
 
-    #region Journaling
 
-    public TradeJournalOptions? TradeJournalOptions { get; set; }
-
-    #endregion
 
     #region Paths
 
@@ -64,5 +60,11 @@ public class BacktestExecutionOptions
     public bool ExchangeAreaSubDir { get; set; }
     public bool SymbolSubDir { get; set; } = true;
 
+
     #endregion
+    
+    public BacktestExecutionOptions Clone() => (BacktestExecutionOptions)MemberwiseClone();
+    object ICloneable.Clone() => Clone();
+
+
 }

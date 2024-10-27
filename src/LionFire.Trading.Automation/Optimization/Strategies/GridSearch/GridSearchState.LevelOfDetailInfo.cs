@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Diagnostics;
 
 namespace LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
 
@@ -24,11 +25,12 @@ public partial class GridSearchState
         {
             Level = level;
             GridSearchState = gridSearchState;
-            foreach (var kvp in gridSearchState.dict)
+            foreach ((var info, var options) in gridSearchState.optimizableParameters)
             {
-                var state = ParameterLevelOfDetailInfo.Create(level, kvp.Value.info, kvp.Value.options);
+                var state = ParameterLevelOfDetailInfo.Create(level, info, options);
                 Parameters.Add(state);
             }
+
         }
 
         #endregion
@@ -41,7 +43,7 @@ public partial class GridSearchState
 
         #region Derived
 
-        public int TestCount => Parameters.Aggregate(1, (acc, x) => acc * x.TestCount);
+        public int TestPermutationCount => Parameters.Aggregate(1, (acc, x) => acc * x.TestCount);
 
         #endregion
 
@@ -68,6 +70,7 @@ public partial class GridSearchState
                 int i = 0;
                 foreach (var p in gridLevelOfDetailState.Parameters)
                 {
+                    Debug.WriteLine($"Parameter: {gridLevelOfDetailState.GridSearchState.optimizableParameters[i].info.Key}  TestCount: {p.TestCount}");
                     max[i++] = p.TestCount;
                 }
             }
@@ -86,6 +89,7 @@ public partial class GridSearchState
                     if (current[i] < max[i] - 1)
                     {
                         current[i]++;
+                        //Debug.WriteLine("Iterator: " + string.Join(", ", current));
                         return true;
                     }
                     current[i] = 0;

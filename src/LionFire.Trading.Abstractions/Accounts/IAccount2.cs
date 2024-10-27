@@ -36,7 +36,7 @@ public interface ISimulatedAccount2<TPrecision> : IAccount2<TPrecision>
     double AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent { get; }
     double AnnualizedReturnOnInvestmentVsDrawdownPercent { get; }
 
-        TPrecision MaxEquityDrawdownPercent { get; }
+    TPrecision MaxEquityDrawdownPerunum { get; }
     TPrecision CurrentEquityDrawdown { get; }
     TPrecision MaxEquityDrawdown { get; }
 

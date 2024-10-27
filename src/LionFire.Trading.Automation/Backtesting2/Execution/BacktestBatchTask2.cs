@@ -6,6 +6,7 @@ using LionFire.ExtensionMethods;
 using LionFire.Structures;
 using LionFire.Threading;
 using LionFire.Trading.Automation.Bots;
+using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Backtesting;
 using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData;
@@ -53,7 +54,6 @@ public class BacktestBatchTask2<TPrecision>
 
 
     public BacktestOptions BacktestOptions { get; }
-    public BacktestExecutionOptions ExecutionOptions { get; }
     public TradeJournalOptions TradeJournalOptions { get; }
 
     public DateChunker DateChunker { get; }
@@ -103,21 +103,23 @@ public class BacktestBatchTask2<TPrecision>
 
     #region Lifecycle
 
-    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null)
+    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null)  // TODO: Get executionOptions from context
     {
-        var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, executionOptions, dateChunker, backtestBatchJournal: backtestBatchJournal);
-        t.TradeJournalOptions.JournalDir = t.Journal.BatchDirectory;
+        context ??= new();
+
+        var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, context, executionOptions, dateChunker, backtestBatchJournal: backtestBatchJournal);
+        //t.TradeJournalOptions.JournalDir = t.Journal.BatchDirectory;
         await t.Init();
         return t;
     }
 
-    private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) : base(serviceProvider, parameters)
+    private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) : base(serviceProvider, parameters, context, executionOptions: executionOptions)
+    // TODO: Get executionOptions from context
     {
         try
         {
-            BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
-            ExecutionOptions = executionOptions ?? ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
 
+            BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
 
             DateChunker = dateChunker ?? ServiceProvider.GetRequiredService<DateChunker>();
 
@@ -149,9 +151,18 @@ public class BacktestBatchTask2<TPrecision>
                 DisposeJournal = true;
             }
 
-            TradeJournalOptions = ExecutionOptions?.TradeJournalOptions ?? ServiceProvider.GetRequiredService<IOptionsMonitor<TradeJournalOptions>>().CurrentValue;
-            TradeJournalOptions = TradeJournalOptions.Clone();
-            TradeJournalOptions.JournalDir = BatchDirectory;
+            if (Context.TradeJournalOptions == null)
+            {
+                TradeJournalOptions = ServiceProvider.GetRequiredService<IOptionsMonitor<TradeJournalOptions>>().CurrentValue;
+                TradeJournalOptions = TradeJournalOptions.Clone();
+                TradeJournalOptions.JournalDir = BatchDirectory;
+
+                Context.TradeJournalOptions = TradeJournalOptions;
+            }
+            else
+            {
+                TradeJournalOptions = Context.TradeJournalOptions;
+            }
         }
         catch (Exception ex)
         {
@@ -182,7 +193,7 @@ public class BacktestBatchTask2<TPrecision>
 
     ConcurrentDictionary<string, PBacktestAccount<TPrecision>> SymbolPBacktestAccounts = new();
 
-    private async ValueTask CreateBot(IPBacktestTask2 p)
+    private async ValueTask CreateBot(PBacktestTask2 p)
     {
 
         var bot = (IBot2<TPrecision>)(Activator.CreateInstance(p.PBot.MaterializedType)
@@ -219,7 +230,7 @@ public class BacktestBatchTask2<TPrecision>
     }
     private long NextBacktestId = 0;
 
-    protected override void ValidateParameter(IPBacktestTask2 p)
+    protected override void ValidateParameter(PBacktestTask2 p)
     {
         if (p.PBot.GetType() != PBotType) throw new ArgumentException("Bot type mismatch");
     }
@@ -561,7 +572,7 @@ public class BacktestBatchTask2<TPrecision>
     IEnumerable<IBot2> bots => backtests.Select(s => s.Bot);
     List<BacktestState> backtests = new();
 
-    private record struct BacktestState(IPBacktestTask2 PBacktest, IBot2 Bot, IBotController<TPrecision> Controller) : IHasInstanceInputInfos
+    private record struct BacktestState(PBacktestTask2 PBacktest, IBot2 Bot, IBotController<TPrecision> Controller) : IHasInstanceInputInfos
     {
         internal List<InstanceInputInfo> InstanceInputInfos => instanceInputInfos;
         internal List<InstanceInputInfo> instanceInputInfos = new();
@@ -615,6 +626,14 @@ public class BacktestBatchTask2<TPrecision>
             try
             {
                 await (TicksEnabled ? RunTicks() : RunBars()).ConfigureAwait(false);
+
+                foreach (var b in backtests)
+                {
+                    if (b.PBacktest.OnFinished != null)
+                    {
+                        b.PBacktest.OnFinished();
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -691,6 +710,11 @@ public class BacktestBatchTask2<TPrecision>
                 {
                     Id = b.Controller.Id,
                     AD = b.Controller.Account.AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent,
+                    MaxBalanceDrawdown = Convert.ToDouble(b.Controller.Account.MaxBalanceDrawdown),
+                    MaxBalanceDrawdownPerunum = Convert.ToDouble(b.Controller.Account.MaxBalanceDrawdownPerunum),
+                    MaxEquityDrawdown = Convert.ToDouble(b.Controller.Account.MaxEquityDrawdown),
+                    MaxEquityDrawdownPerunum = Convert.ToDouble(b.Controller.Account.MaxEquityDrawdownPerunum)
+
                     // TODO NEXT: Parameters
                 };
 

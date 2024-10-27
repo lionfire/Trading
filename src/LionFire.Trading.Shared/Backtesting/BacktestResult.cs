@@ -109,7 +109,7 @@ public class BacktestResult : IDisposable
     //public History History { get; set; }
     public int LosingTrades { get; set; }
     public double MaxBalanceDrawdown { get; set; }
-    public double MaxBalanceDrawdownPercentages { get; set; }
+    public double MaxBalanceDrawdownPerunum { get; set; }
     public double MaxEquityDrawdown { get; set; }
     public double MaxEquityDrawdownPercentages { get; set; }
     public double NetProfit { get; set; }

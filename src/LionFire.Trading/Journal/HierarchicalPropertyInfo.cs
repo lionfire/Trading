@@ -2,6 +2,7 @@
 using LionFire.Trading.Journal;
 using Spectre.Console;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace LionFire.Trading;
@@ -79,6 +80,22 @@ public class HierarchicalPropertyInfo : IKeyable<string>
 
     public bool IsOptimizable => ParameterAttribute != null;
 
+    public int OptimizePriority
+    {
+        get
+        {
+            if (ParameterAttribute.OptimizePriority != null) { return (int)ParameterAttribute.OptimizePriority; }
+
+            if (ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.Period)) { return 500; }
+
+            if (ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.Reversal)) { return 800; }
+
+            if (ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.SpectralCategory)) { return 900; }
+            else if (LastPropertyInfo!.PropertyType.IsEnum || ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.Category)) { return 1000; }
+
+            return 0;
+        }
+    }
 
     private ConvertToStringClass2? convertToString;
 
@@ -113,40 +130,52 @@ public class HierarchicalPropertyInfo : IKeyable<string>
 
     public static void SetPropertyValue(object obj, PropertyInfo propertyInfo, object value)
     {
-        if (value == null)
+        try
         {
-            propertyInfo.SetValue(obj, null);
-            return;
-        }
-
-        Type propertyType = propertyInfo.PropertyType;
-        Type valueType = value.GetType();
-
-        if (propertyType == valueType)
-        {
-            propertyInfo.SetValue(obj, value);
-            return;
-        }
-
-        if (IsNumericType(propertyType) && IsNumericType(valueType))
-        {
-            try
+            if (value == null)
             {
-                object convertedValue = Convert.ChangeType(value, propertyType);
-                propertyInfo.SetValue(obj, convertedValue);
+                propertyInfo.SetValue(obj, null);
+                return;
             }
-            catch (OverflowException)
+
+            Type propertyType = propertyInfo.PropertyType;
+            Type valueType = value.GetType();
+
+            if (propertyType == valueType)
             {
-                throw new ArgumentException($"Value {value} is too large for property {propertyInfo.Name} of type {propertyType}");
+                propertyInfo.SetValue(obj, value);
+                return;
             }
-            catch (InvalidCastException)
+
+            if (propertyType.IsEnum)
             {
-                throw new ArgumentException($"Cannot convert value of type {valueType} to property {propertyInfo.Name} of type {propertyType}");
+                //if (!Enum.IsDefined(propertyType, value)) throw new ArgumentException(); // Assuming this check here passes
+                propertyInfo.SetValue(obj, Enum.ToObject(propertyType, value));
+            }
+            else if (IsNumericType(propertyType) && IsNumericType(valueType))
+            {
+                try
+                {
+                    object convertedValue = Convert.ChangeType(value, propertyType);
+                    propertyInfo.SetValue(obj, convertedValue);
+                }
+                catch (OverflowException)
+                {
+                    throw new ArgumentException($"Value {value} is too large for property {propertyInfo.Name} of type {propertyType}");
+                }
+                catch (InvalidCastException)
+                {
+                    throw new ArgumentException($"Cannot convert value of type {valueType} to property {propertyInfo.Name} of type {propertyType}");
+                }
+            }
+            else
+            {
+                throw new ArgumentException($"Cannot assign value of type {valueType} to property {propertyInfo.Name} of type {propertyType}");
             }
         }
-        else
+        catch (Exception ex)
         {
-            throw new ArgumentException($"Cannot assign value of type {valueType} to property {propertyInfo.Name} of type {propertyType}");
+            throw new Exception($"Exception setting property {propertyInfo.Name} of type {propertyInfo.PropertyType} to value of type {value?.GetType().FullName}");
         }
     }
 

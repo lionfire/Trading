@@ -1,34 +1,34 @@
 ﻿namespace LionFire.Trading.Automation;
 
 // REFACTOR: Eliminate IPBacktestTask2 and use PBacktestTask2 instead
-public interface IPBacktestTask2
-    : IPBacktestBatchTask2
+//public interface PBacktestTask2
+//    : PBacktestBatchTask2x
+//{
+//    IPTimeFrameBot2? PBot { get; }
+//    //IPBacktestBatchTask2 PBacktestBatchTask { get; }  // TODO: Reference IPBacktestBatchTask2 instead of inheriting
+//}
+
+
+//public interface IPBacktestBatchTask2 // REFACTOR: Eliminate IPBacktestBatchTask2 and use PBacktestBatchTask2 instead
+//{
+//    Type? PBotType { get; }
+
+//    BotHarnessFeatures Features { get; }
+
+//    ExchangeSymbol? ExchangeSymbol { get; }
+//    ExchangeSymbol[]? ExchangeSymbols { get; set; }
+//    TimeFrame? TimeFrame { get; }
+//    TimeFrame? EffectiveTimeFrame { get; }
+
+
+//    DateTimeOffset Start { get; }
+//    DateTimeOffset EndExclusive { get; }
+
+//}
+public class PBacktestBatchTask2 //: IPBacktestBatchTask2
 {
-    IPTimeFrameBot2? PBot { get; }
-    //IPBacktestBatchTask2 PBacktestBatchTask { get; }  // TODO: Reference IPBacktestBatchTask2 instead of inheriting
-}
-
-
-public interface IPBacktestBatchTask2 // REFACTOR: Eliminate IPBacktestBatchTask2 and use PBacktestBatchTask2 instead
-{
-    Type? PBotType { get; }
-
-    BotHarnessFeatures Features { get; }
-    bool TicksEnabled() => Features.HasFlag(BotHarnessFeatures.Ticks);
-
-    ExchangeSymbol? ExchangeSymbol { get; }
-    ExchangeSymbol[]? ExchangeSymbols { get; set; }
-    TimeFrame? TimeFrame { get; }
-    TimeFrame? EffectiveTimeFrame { get; }
-
-    ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame => ExchangeSymbol == null || TimeFrame == null ? null : new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.ExchangeArea, ExchangeSymbol.Symbol, TimeFrame);
-
-    DateTimeOffset Start { get; }
-    DateTimeOffset EndExclusive { get; }
-
-}
-public class PBacktestBatchTask2 : IPBacktestBatchTask2
-{
+    public bool TicksEnabled() => Features.HasFlag(BotHarnessFeatures.Ticks);
+    public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame => ExchangeSymbol == null || TimeFrame == null ? null : new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.ExchangeArea, ExchangeSymbol.Symbol, TimeFrame);
 
     public Type? PBotType { get; init; }
 
@@ -71,9 +71,10 @@ public class PBacktestBatchTask2 : IPBacktestBatchTask2
     public bool ShortChunks { get; init; }
 
     #endregion
+
 }
 
-public class PBacktestTask2 : PBacktestBatchTask2, IPBacktestTask2
+public class PBacktestTask2 : PBacktestBatchTask2 
 {
 
     //public static PBacktestTask2<PBot> Create<PBot>(PBot bot, TimeFrame timeFrame, DateTimeOffset start, DateTimeOffset endExclusive)
@@ -110,10 +111,10 @@ public class PBacktestTask2 : PBacktestBatchTask2, IPBacktestTask2
 
     public override TimeFrame? EffectiveTimeFrame => TimeFrame ?? PBot?.TimeFrame;
 
-
+    public Action OnFinished { get; internal set; }
 }
 
-public class PBacktestTask2<TPBot> : PBacktestTask2, IPBacktestTask2
+public sealed class PBacktestTask2<TPBot> : PBacktestTask2 
     where TPBot : IPTimeFrameBot2
 {
 

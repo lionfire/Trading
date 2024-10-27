@@ -3,6 +3,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using LionFire.ExtensionMethods.Dumping;
 using LionFire.Inspection.Nodes;
+using LionFire.Threading;
 using MemoryPack;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -127,7 +128,27 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
                 } while (File.Exists(newPath));
             }
 
-            File.Move(path, newPath);
+            if (DiscardDetails || !KeepAborted && IsAborted)
+            {
+                DeleteWithRetry(path);
+            }
+            else { File.Move(path, newPath); }
+        }
+    }
+    private static readonly bool KeepAborted = false;
+
+    public bool IsAborted { get; set; }
+    public bool DiscardDetails { get; set; }
+    public async void DeleteWithRetry(string path)
+    {
+        for (int retries = 0; retries < 10; retries++)
+        {
+            try
+            {
+                File.Delete(path);
+                break;
+            }
+            catch { await Task.Delay(500); }
         }
     }
 
@@ -184,12 +205,17 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
 
     public void Write(JournalEntry<TPrecision> entry)
     {
+        if (!Options.Enabled) return;
         entries.Enqueue(entry);
-        if (entries.Count > 100) { _Write(); }
+        if (entries.Count > BufferSize) { _Write().FireAndForget(); }
     }
 
-    private async ValueTask _Write()
+    public const int BufferSize = 10_000; // TOOPTIMIZE
+
+    private async Task _Write()
     {
+        if (!Options.Enabled) return;
+
         while (entries.TryDequeue(out var entry))
         {
             if (Options.LogLevel != LogLevel.None)
@@ -292,6 +318,13 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
                 _ => throw new NotSupportedException($"Specify a single {nameof(journalFormat)}"),
             };
 
+            if (!Directory.Exists(Path.GetDirectoryName(pathWithoutExtension)))
+            {
+                Debug.WriteLine($"WARNING - dir missing: {JournalDirectory}");
+                Debug.WriteLine(Environment.StackTrace);
+
+                //return null;
+            }
 
             var fs = new FileStream(pathWithoutExtension + ext, FileMode.Append, FileAccess.Write, FileShare.Read);
 
@@ -305,5 +338,7 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
     }
 
     #endregion
+
+
 
 }

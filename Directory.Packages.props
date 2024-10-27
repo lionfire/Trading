@@ -161,7 +161,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.8.1" />
     <PackageVersion Include="OrchardCore.Application.Cms.Targets" Version="1.8.2" />
     <PackageVersion Include="Orleans.Clustering.Redis" Version="7.0.0" />
-    <PackageVersion Include="Orleans.Persistence.Redis" Version="7.0.0" />
+    <PackageVersion Include="Microsoft.Orleans.Persistence.Redis" Version="8.2.0" />
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <PackageVersion Include="Overby.Extensions.Attachments" Version="1.2.0" />
     <PackageVersion Include="PixelLab.Core" Version="6.0.2" />

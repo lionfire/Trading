@@ -34,10 +34,10 @@ public class POptimization
 
     public double GranularityStepMultiplier { get; set; }
 
-    public long MaxBacktests { get; set; } = 17; // TEMP default for testing
+    public long MaxBacktests { get; set; } = 1_000;
 
     public required PBacktestBatchTask2 CommonBacktestParameters { get; set; }
-    public int MaxBatchSize { get; set; } = 5; // TEMP default
+    public int MaxBatchSize { get; set; } = 32;
 
     public int MinLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   
     public int MaxLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   
@@ -46,7 +46,7 @@ public class POptimization
 
     // Key: ParameterType
     public Dictionary<string, IParameterOptimizationOptions>? ParameterOptimizationOptions { get; set; }
-
+    public int MaxDetailedJournals { get; set; }
 }
 
 //public enum ParameterType

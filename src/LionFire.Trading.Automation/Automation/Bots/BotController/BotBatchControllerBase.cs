@@ -1,5 +1,7 @@
 ﻿using LionFire.Execution;
 using LionFire.ExtensionMethods;
+using LionFire.ExtensionMethods.Cloning;
+using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Data;
 using LionFire.Trading.Indicators.Harnesses;
 using LionFire.Trading.Indicators.Inputs;
@@ -39,6 +41,7 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
     public abstract BotExecutionMode BotExecutionMode { get; }
 
+    public MultiBacktestContext Context { get; }
 
     #endregion
 
@@ -58,7 +61,9 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
     #region Parameters
 
-    public IEnumerable<IPBacktestTask2> PBacktests { get; }
+    public IEnumerable<PBacktestTask2> PBacktests { get; }
+    public BacktestExecutionOptions ExecutionOptions { get; }
+    public PBacktestBatchTask2 BatchParameters { get; }
 
     #region Derived
 
@@ -77,10 +82,12 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
     #region Lifecycle
 
-    public BotBatchControllerBase(IServiceProvider serviceProvider, IEnumerable<IPBacktestTask2> parameters)
+    public BotBatchControllerBase(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context, BacktestExecutionOptions? executionOptions = null)
     {
         ServiceProvider = serviceProvider;
         PBacktests = parameters;
+        Context = context;
+        ExecutionOptions = executionOptions ?? ( ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue);
 
         var first = parameters.FirstOrDefault();
         if (first == null) throw new ArgumentException("batch empty");
@@ -98,6 +105,7 @@ public abstract class BotBatchControllerBase : IBotBatchController
             TicksEnabled |= p.TicksEnabled();
         }
     }
+
     protected virtual ValueTask Init()
     {
         foreach (var p in PBacktests)
@@ -105,14 +113,13 @@ public abstract class BotBatchControllerBase : IBotBatchController
             ValidateParameter(p);
         }
         return ValueTask.CompletedTask;
-
     }
 
     /// <summary>
     /// (No need to call this base method)
     /// </summary>
     /// <param name="p"></param>
-    protected virtual void ValidateParameter(IPBacktestTask2 p) { }
+    protected virtual void ValidateParameter(PBacktestTask2 p) { }
 
     public abstract Task StartAsync(CancellationToken cancellationToken = default);
 

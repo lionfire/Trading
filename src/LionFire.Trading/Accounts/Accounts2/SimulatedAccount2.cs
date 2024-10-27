@@ -123,8 +123,8 @@ public abstract class SimulatedAccount2<TPrecision> : ISimulatedAccount2<TPrecis
             {
                 var drawdown = CurrentEquityDrawdown;
                 if (drawdown > MaxEquityDrawdown) { MaxEquityDrawdown = drawdown; }
-                var percent = drawdown / HighestEquity;
-                if (percent > MaxEquityDrawdownPercent) { MaxEquityDrawdownPercent = percent; }
+                var perunum = drawdown / HighestEquity;
+                if (perunum > MaxEquityDrawdownPerunum) { MaxEquityDrawdownPerunum = perunum; }
             }
         }
     }
@@ -142,14 +142,14 @@ public abstract class SimulatedAccount2<TPrecision> : ISimulatedAccount2<TPrecis
     public TPrecision MaxBalanceDrawdownPerunum { get; set; }
     public TPrecision CurrentEquityDrawdown => Equity - HighestEquity;
     public TPrecision MaxEquityDrawdown { get; set; }
-    public TPrecision MaxEquityDrawdownPercent { get; set; }
+    public TPrecision MaxEquityDrawdownPerunum { get; set; }
 
     public TPrecision InitialBalance => Parameters.StartingBalance;
     public TPrecision BalanceReturnOnInvestment => (Balance - InitialBalance) / InitialBalance;
     public TPrecision EquityReturnOnInvestment => (Equity - InitialBalance) / InitialBalance;
     public double AnnualizedBalanceReturnOnInvestment => Convert.ToDouble(BalanceReturnOnInvestment) * ((DateTime - Start).TotalDays / 365);
     public double AnnualizedEquityReturnOnInvestment => Convert.ToDouble(EquityReturnOnInvestment) * ((DateTime - Start).TotalDays / 365);
-    public double AnnualizedReturnOnInvestmentVsDrawdownPercent => AnnualizedEquityReturnOnInvestment / Convert.ToDouble(MaxEquityDrawdownPercent);
+    public double AnnualizedReturnOnInvestmentVsDrawdownPercent => AnnualizedEquityReturnOnInvestment / Convert.ToDouble(MaxEquityDrawdownPerunum);
     public double AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent => AnnualizedBalanceReturnOnInvestment / Convert.ToDouble(MaxBalanceDrawdownPerunum);
 
     #endregion

@@ -1,27 +1,30 @@
 ﻿using LionFire.ExtensionMethods;
+using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Backtesting;
-
+using Microsoft.Extensions.Hosting;
 using Nito.AsyncEx;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation;
 
 public class BacktestBatchItemTask
 {
-    public IPBacktestTask2 Parameters { get; set; }
+    public PBacktestTask2 Parameters { get; set; }
     public BacktestResult Result { get; set; }
 }
 
 /// <summary>
 /// A consumer queue of IBacktestBatchJobs that will execute each job.
 /// </summary>
-public partial class BacktestQueue
+public partial class BacktestQueue : IHostedService
 {
     #region Dependencies
 
@@ -44,12 +47,49 @@ public partial class BacktestQueue
         ServiceProvider = serviceProvider;
         Logger = logger;
         tcs = new();
+
+        QueuedJobsChannel = Channel.CreateBounded<BacktestBatchesJob>(new BoundedChannelOptions(10_000)
+        {
+            SingleReader = false,
+            SingleWriter = false,
+            FullMode = BoundedChannelFullMode.Wait
+        });
+    }
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        runTask = Task.Run(() => Run(cancellationToken));
+        return Task.CompletedTask;
+    }
+
+    Task runTask;
+    private async Task Run(CancellationToken cancellationToken)
+    {
+        int numThreads = Environment.ProcessorCount;
+        var consumers = new Task[numThreads];
+        for (int i = 0; i < numThreads; i++)
+        {
+            consumers[i] = Task.Run(() => Consume());
+        }
+
+        await Task.WhenAll(consumers);
+    }
+
+    public async Task StopAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            QueuedJobsChannel.Writer.Complete();
+        }
+        catch { }
+
+        await runTask;
     }
 
     #endregion
 
     #region State
 
+    private Channel<BacktestBatchesJob> QueuedJobsChannel;
     ConcurrentQueue<BacktestBatchesJob> QueuedJobs { get; } = new();
     ConcurrentDictionary<Guid, BacktestBatchesJob> RunningJobs { get; } = new();
     ConcurrentDictionary<Guid, BacktestBatchesJob> FinishedJobs { get; } = new();
@@ -62,7 +102,12 @@ public partial class BacktestQueue
 
     #region (Public) Methods
 
-    public IBacktestBatchJob EnqueueJob(Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
+    public ValueTask<IBacktestBatchJob> EnqueueJob(Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
+    {
+        var backtestContext = new MultiBacktestContext();
+        return EnqueueJob(backtestContext, configure, cancellationToken);
+    }
+    public async ValueTask<IBacktestBatchJob> EnqueueJob(MultiBacktestContext backtestContext, Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
     {
         if (Parameters.SingleDateRange != true) throw new NotImplementedException();
 
@@ -70,16 +115,26 @@ public partial class BacktestQueue
 
         var job = Jobs.AddUnique(() => Guid.NewGuid(), guid =>
         {
-            var job = new BacktestBatchesJob(guid);
+            var job = new BacktestBatchesJob(guid, backtestContext);
+
             configure(job);
             return job;
         }).value;
 
-        QueuedJobs.Enqueue(job);
-
-        if (Parameters.AutoStart && RunningJobs.Count < Parameters.MaxConcurrentJobs)
+        if (job.Count == 0)
         {
-            TryStartNextJobs();
+            Debug.WriteLine("Batch has 0 backtests");
+        }
+        else
+        {
+            await QueuedJobsChannel.Writer.WriteAsync(job, cancellationToken);
+
+            //QueuedJobs.Enqueue(job); // OLD
+
+            //if (Parameters.AutoStart /*&& RunningJobs.Count < Parameters.MaxConcurrentJobs*/)
+            //{
+            //    TryStartNextJobs();
+            //}
         }
 
         return job;
@@ -89,57 +144,80 @@ public partial class BacktestQueue
 
     #region (Public) Methods
 
+    async Task Consume()
+    {
+        try
+        {
+            while (await QueuedJobsChannel.Reader.WaitToReadAsync())
+            {
+                while (QueuedJobsChannel.Reader.TryRead(out var job))
+                {
+                    RunningJobs.AddOrThrow(job.Guid, job);
+                    await RunJob(job).ConfigureAwait(false);
+                    //Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} consumed {item}");
+                }
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
     /// <summary>
     /// Only need to call this if AutoStart is false.
     /// </summary>
     public void TryStartNextJobs()
     {
-        while (QueuedJobs.Count > 0 && RunningJobs.Count < Parameters.MaxConcurrentJobs)
-        {
-            if (QueuedJobs.TryDequeue(out var job))
-            {
-                RunningJobs.AddOrThrow(job.Guid, job);
-                StartJob(job);
-            }
-        }
+        //while (QueuedJobs.Count > 0 && RunningJobs.Count < Parameters.MaxConcurrentJobs)
+        //{
+        //    if (QueuedJobs.TryDequeue(out var job))
+        //    {
+        //        RunningJobs.AddOrThrow(job.Guid, job);
+        //        StartJob(job);
+        //    }
+        //}
     }
 
     #endregion
 
     #region (Private) Methods
 
-    private void StartJob(BacktestBatchesJob job)
+    private async ValueTask RunJob(BacktestBatchesJob job)
     {
-        Task.Run(async () =>
+        //Task.Run(async () =>
+        //{
+        try
         {
-            try
+            var sw = Stopwatch.StartNew();
+            int count = 0;
+            foreach (var batch in job.BacktestBatches)
             {
-                var sw = Stopwatch.StartNew();
-                int count = 0;
-                foreach (var batch in job.BacktestBatches)
-                {
-                    var batchBacktest = await BacktestBatchTask2<double>.Create(ServiceProvider, batch, backtestBatchJournal: job.Journal);
-                    await batchBacktest.Run();
-                    count++;
-                }
-                sw.Stop();
-                job.OnFinished();
-                Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed}");
+                var batchBacktest = await BacktestBatchTask2<double>.Create(ServiceProvider, batch, job.Context, backtestBatchJournal: job.Journal);
+                await batchBacktest.Run();
+                count++;
             }
-            catch(Exception ex)
-            {
-                job.OnFaulted(ex);
-                RunningJobs.Remove(job.Guid, out var _);
-                FaultedJobs.AddOrThrow(job.Guid, job);
-            }
-        }).ContinueWith(t =>
+            sw.Stop();
+            job.OnFinished();
+            Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed}");
+        }
+        catch (Exception ex)
         {
-
+            job.OnFaulted(ex);
             RunningJobs.Remove(job.Guid, out var _);
-            FinishedJobs.AddOrThrow(job.Guid, job);
-            TryStartNextJobs();
-        });
+            FaultedJobs.AddOrThrow(job.Guid, job);
+        }
+        //}).ContinueWith(t =>
+        //{
+
+        RunningJobs.Remove(job.Guid, out var _);
+        FinishedJobs.AddOrThrow(job.Guid, job);
+        TryStartNextJobs();
+        //});
     }
+
+    internal async Task WaitForEmpty()
+    {
+        throw new NotImplementedException();
+    }
+
 
     #endregion
 

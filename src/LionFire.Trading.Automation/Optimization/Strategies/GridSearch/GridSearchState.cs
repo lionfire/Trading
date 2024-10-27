@@ -1,4 +1,6 @@
 ﻿using CryptoExchange.Net.CommonObjects;
+using LionFire.ExtensionMethods.Copying;
+using LionFire.Serialization.Csv;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -27,24 +29,69 @@ public partial class GridSearchState
 
     #region Parameters
 
-    private SortedDictionary<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> dict;
+    #region (Derived)
+
+    // OPTIMIZE: Make immutable array
+    // NOTE: at certain levels, optimizableParameters may only have a single value and not be optimizable at that level
+    public readonly List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = new();
+    public readonly List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = new();
+
+    #endregion
 
     #endregion
 
     #region Lifecycle
 
-    public GridSearchState(GridSearchStrategy gridSearchStrategy, SortedDictionary<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> dict)
+    public GridSearchState(GridSearchStrategy gridSearchStrategy)
     {
         this.gridSearchStrategy = gridSearchStrategy;
-        if (dict.Count == 0) throw new ArgumentException("No parameters to optimize");
-        this.dict = dict;
+
+        foreach (var kvp in BotParameterPropertiesInfo.Get(gridSearchStrategy.OptimizationParameters.BotParametersType)
+                .PathDictionary
+                    .Where(kvp => kvp.Value.IsOptimizable
+                        && kvp.Value.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
+                        )
+                    .Select(kvp
+                    => new KeyValuePair<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)>(kvp.Key,
+                        (info: kvp.Value,
+                         options: GetEffectiveOptions(
+                                        kvp.Value.ParameterAttribute.GetParameterOptimizationOptions(kvp.Value.LastPropertyInfo!.PropertyType),
+                                        gridSearchStrategy.Parameters.Parameters.TryGetValue(kvp.Key)))))
+                    .OrderByDescending(kvp => kvp.Value.options.OptimizeOrder)
+                    .ThenBy(kvp => kvp.Value.info.OptimizePriority)
+                    .ThenBy(kvp => kvp.Key)
+            )
+        {
+            if (kvp.Value.options.IsEligibleForOptimization) { optimizableParameters.Add(kvp.Value); }
+            else { unoptimizableParameters.Add(kvp.Value); }
+        }
+
+        if (optimizableParameters.Count == 0) throw new ArgumentException("No parameters to optimize");
 
         zero = new GridLevelOfDetailState(0, this);
 
-        while (CurrentLevel.TestCount > gridSearchStrategy.OptimizationParameters.MaxBatchSize)
+#if TODO // Lower resolution optimization when too many tests
+        while (CurrentLevel.TestCount > gridSearchStrategy.OptimizationParameters.MaxBacktests)
         {
             currentLevel++;
         }
+#endif
+    }
+
+    private IParameterOptimizationOptions GetEffectiveOptions(IParameterOptimizationOptions fromAttribute, IParameterOptimizationOptions? fromOptimizationParameters)
+    {
+        ArgumentNullException.ThrowIfNull(fromAttribute);
+
+        var clone = fromAttribute.Clone();
+
+        clone.FitnessOfInterest ??= gridSearchStrategy.Parameters.FitnessOfInterest;
+
+        if (fromOptimizationParameters != null)
+        {
+            AssignFromExtensions.AssignNonDefaultPropertiesFrom(fromOptimizationParameters, clone);
+        }
+
+        return clone;
     }
 
     #endregion

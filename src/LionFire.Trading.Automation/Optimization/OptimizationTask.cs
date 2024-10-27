@@ -55,6 +55,11 @@ public class OptimizationTask : IRunnable
     }
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
+        BacktestContext = new()
+        {
+            OptimizationOptions = Parameters,
+        };
+
         //IOptimizerEnumerable optimizerEnumerable = Parameters.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this); // OLD - find this and absorb
 
         if (CancellationTokenSource != null) { throw new AlreadyException(); }
@@ -69,7 +74,15 @@ public class OptimizationTask : IRunnable
         };
         GridSearchStrategy gridSearchStrategy = new(pGridSearchStrategy, Parameters, this);
 
-        RunTask = gridSearchStrategy.Run(CancellationTokenSource.Token);
+        RunTask = Task.Run(async () =>
+        {
+            await gridSearchStrategy.Run(CancellationTokenSource.Token);
+            //await ServiceProvider.GetRequiredService<BacktestQueue>().StopAsync(default);
+            if (OptimizationMultiBatchJournal != null)
+            {
+                await OptimizationMultiBatchJournal.DisposeAsync();
+            }
+        });
         return Task.CompletedTask;
     }
 
@@ -77,8 +90,10 @@ public class OptimizationTask : IRunnable
 
     #region State
 
+    public MultiBacktestContext BacktestContext { get; private set; }
+
     string? OptimizationDirectory;
-    public BacktestBatchJournal? OptimizationMultiBatchJournal { get;private set; }
+    public BacktestBatchJournal? OptimizationMultiBatchJournal { get; private set; }
 
     private IBacktestBatchJob? batchJob = null;
 

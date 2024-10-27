@@ -40,7 +40,7 @@ public static class BacktestX
     //}
 }
 
-public class BacktestTheoryData : TheoryData<IPBacktestTask2>
+public class BacktestTheoryData : TheoryData<PBacktestTask2>
 {
     public IEnumerable<TimeFrame> TimeFrames
     {
@@ -130,7 +130,7 @@ public class Backtest_Batch_ : BinanceDataTest
 
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
 
-        var job = batchQueue.EnqueueJob(batch =>
+        var job = await batchQueue.EnqueueJob(batch =>
         {
 
             PBacktestTask2<PAtrBot<double>> createBacktest(string symbol, uint atrPeriod)
@@ -168,7 +168,7 @@ public class Backtest_Batch_ : BinanceDataTest
                     //"LTCUSDT"
                 ];
 
-            var list = new List<IPBacktestTask2>();
+            var list = new List<PBacktestTask2>();
             foreach (var symbol in symbols)
             {
                 for (uint i = 14; i <= 17; i++) { list.Add(createBacktest(symbol, i)); }
@@ -280,7 +280,7 @@ public class Backtest_ : BinanceDataTest
     // TODO - FIXME
     [Theory]
     [ClassData(typeof(BacktestTheoryData))]
-    public async Task Execute_(IPBacktestTask2 parameters)
+    public async Task Execute_(PBacktestTask2 parameters)
     {
         await (await BacktestBatchTask2<double>.Create(ServiceProvider, [parameters], dateChunker: HistoricalDataChunkRangeProvider)).Run();
     }

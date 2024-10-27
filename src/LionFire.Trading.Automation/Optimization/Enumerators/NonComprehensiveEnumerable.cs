@@ -4,8 +4,8 @@ using LionFire.Trading.Automation.Optimization.Enumerators;
 namespace LionFire.Trading.Automation.Optimization;
 
 public class NonComprehensiveEnumerable : OptimizerEnumerableBase
-    , IEnumerable<IEnumerable<IPBacktestTask2>>
-    , IEnumerable<IPBacktestTask2>
+    , IEnumerable<IEnumerable<PBacktestTask2>>
+    , IEnumerable<PBacktestTask2>
     , IOptimizerEnumerable
 {
 
@@ -20,14 +20,14 @@ public class NonComprehensiveEnumerable : OptimizerEnumerableBase
 
     #endregion
 
-    public IEnumerator<IPBacktestTask2> GetEnumerator()
+    public IEnumerator<PBacktestTask2> GetEnumerator()
     {
         throw new NotImplementedException();
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    IEnumerator<IEnumerable<IPBacktestTask2>> IEnumerable<IEnumerable<IPBacktestTask2>>.GetEnumerator()
+    IEnumerator<IEnumerable<PBacktestTask2>> IEnumerable<IEnumerable<PBacktestTask2>>.GetEnumerator()
     {
         yield return this;
     }

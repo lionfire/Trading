@@ -40,6 +40,7 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
         Options = (ParameterOptimizationOptions<TValue>)options;
         max = Options.EffectiveMaxValue;
         min = Options.EffectiveMinValue;
+        step = Options.EffectiveOptimizationStep;
 
         if (level > 0) throw new NotImplementedException();
 

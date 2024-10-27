@@ -3,9 +3,12 @@ using DynamicData;
 using LionFire.ExtensionMethods.Copying;
 using LionFire.Extensions.Logging;
 using LionFire.Serialization.Csv;
+using LionFire.Threading;
 using LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
 using Microsoft.Extensions.DependencyInjection;
+using Spectre.Console;
 using Spectre.Console.Rendering;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Channels;
@@ -20,12 +23,6 @@ public interface IOptimizationStrategy
     int MaxBacktestsRemaining { get; }
 }
 
-public abstract class OptimizationStrategyBase
-{
-
-}
-
-
 public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrategy
 {
     #region Parent
@@ -39,7 +36,6 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
     public IServiceProvider ServiceProvider => OptimizationTask.ServiceProvider;
     private BacktestBatchJournal OptimizationMultiBatchJournal => OptimizationTask.OptimizationMultiBatchJournal!;
 
-
     #endregion
 
     #endregion
@@ -49,12 +45,11 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
     public PGridSearchStrategy Parameters { get; set; }
     public POptimization OptimizationParameters { get; }
 
-
     #endregion
 
     #region Lifecycle
 
-    public GridSearchStrategy(PGridSearchStrategy parameters, POptimization optimizationParameters, OptimizationTask optimizationTask)
+    public GridSearchStrategy(PGridSearchStrategy parameters, POptimization optimizationParameters, OptimizationTask optimizationTask) : base(optimizationTask.BacktestContext)
     {
         Parameters = parameters ?? throw new ArgumentNullException();
         OptimizationParameters = optimizationParameters ?? throw new ArgumentNullException();
@@ -84,46 +79,24 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
     #region Logic
 
-    private IParameterOptimizationOptions GetEffectiveOptions(IParameterOptimizationOptions fromAttribute, IParameterOptimizationOptions? fromOptimizationParameters)
-    {
-        ArgumentNullException.ThrowIfNull(fromAttribute);
-
-        var clone = fromAttribute.Clone();
-
-        clone.FitnessOfInterest ??= Parameters.FitnessOfInterest;
-
-        if (fromOptimizationParameters != null)
-        {
-            AssignFromExtensions.AssignNonDefaultPropertiesFrom(fromOptimizationParameters, clone);
-        }
-
-        return clone;
-    }
+    //public class ParameterOrderComparer : IComparer<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)>
+    //{
+    //    public int Compare((HierarchicalPropertyInfo info, IParameterOptimizationOptions options) x, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options) y)
+    //    {
+    //        if (y.)
+    //        {
+    //        }
+    //        return x.info.Period
+    //    }
+    //}
 
     public async Task Run(CancellationToken cancellationToken = default)
     {
         StartTime = DateTimeOffset.UtcNow;
 
-        SortedDictionary<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = new();
-        SortedDictionary<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = new();
-
-        foreach (var kvp in BotParameterPropertiesInfo.Get(OptimizationParameters.BotParametersType)
-                .PathDictionary
-                    .Where(kvp => kvp.Value.IsOptimizable 
-                        && kvp.Value.LastPropertyInfo.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
-                        )
-                    .Select(kvp
-                    => new KeyValuePair<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)>(kvp.Key,
-                        (info: kvp.Value,
-                         options: GetEffectiveOptions(
-                                        kvp.Value.ParameterAttribute.GetParameterOptimizationOptions(kvp.Value.LastPropertyInfo!.PropertyType),
-                                        Parameters.Parameters.TryGetValue(kvp.Key))))))
-        {
-            if (kvp.Value.options.IsEligibleForOptimization) { optimizableParameters.Add(kvp.Key, kvp.Value); }
-            else { unoptimizableParameters.Add(kvp.Key, kvp.Value); }
-        }
-
-        State = new GridSearchState(this, optimizableParameters);
+        State = new GridSearchState(this);
+        List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = State.optimizableParameters;
+        List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = State.unoptimizableParameters;
 
         // Start a loop to read from the ParametersToTest channel
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
@@ -133,6 +106,13 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
         long remainingBacktestsAllowed = OptimizationParameters.MaxBacktests;
 
+        CancellationTokenSource localCancellationTokenSource = new();
+
+        bool consumerFinished = false;
+        int backtestsEnqueued = 0;
+        AutoResetEvent backtestFinishedEvent = new(false);
+        void OnBacktestFinished() { Interlocked.Decrement(ref backtestsEnqueued); if (backtestsEnqueued == 0) { backtestFinishedEvent.Set(); } }
+
         var enqueueTask = Task.Run(async () =>
         {
             List<int[]> batchStaging = new(OptimizationTask.Parameters.MaxBatchSize);
@@ -140,7 +120,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
             {
                 batchStaging.Clear();
 
-                await foreach (var parameters in ParametersToTest.Reader.ReadAllAsync(cancellationToken))
+                await foreach (var parameters in ParametersToTest.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
                 {
                     batchStaging.Add(parameters);
                     if (batchStaging.Count >= OptimizationTask.Parameters.MaxBatchSize)
@@ -148,61 +128,66 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                         break;
                     }
                 }
-                int batchStagingIndex = 0;
 
-                List<IPBacktestTask2> backtestTasksBatch = new(maxBatchSize);
-
-                while (batchStagingIndex < batchStaging.Count)
+                if (batchStaging.Count > 0)
                 {
-                    var job = batchQueue.EnqueueJob(batch =>
+                    int batchStagingIndex = 0;
+
+                    while (batchStagingIndex < batchStaging.Count && remainingBacktestsAllowed > 0)
                     {
-                        batch.Journal = OptimizationMultiBatchJournal;
-
-                        backtestTasksBatch.Clear();
-
-                        for (
-                                ; batchStagingIndex < batchStaging.Count
-                                    && backtestTasksBatch.Count < maxBatchSize
-                                    && remainingBacktestsAllowed > 0
-                                ; batchStagingIndex++
-                                    , remainingBacktestsAllowed--)
+                        var job = await batchQueue.EnqueueJob(BacktestContext, batch =>
                         {
-                            var pBot = Activator.CreateInstance(OptimizationParameters.BotParametersType);
+                            batch.Journal = OptimizationMultiBatchJournal;
 
-                            foreach (var kvp in unoptimizableParameters)
+                            List<PBacktestTask2> backtestTasksBatch = new(maxBatchSize);
+                            //backtestTasksBatch.Clear();
+
+                            for (
+                                    ; batchStagingIndex < batchStaging.Count
+                                        && backtestTasksBatch.Count < maxBatchSize
+                                        && remainingBacktestsAllowed > 0
+                                    ; batchStagingIndex++
+                                        , remainingBacktestsAllowed--)
                             {
-                                kvp.Value.info.SetValue(pBot, kvp.Value.options.SingleValue);
+                                var pBot = Activator.CreateInstance(OptimizationParameters.BotParametersType);
+
+                                foreach (var kvp in unoptimizableParameters)
+                                {
+                                    kvp.info.SetValue(pBot, kvp.options.SingleValue);
+                                }
+
+                                int parameterIndex = 0;
+                                foreach (var kvp in optimizableParameters)
+                                {
+                                    kvp.info.SetValue(pBot, State.CurrentLevel.Parameters[parameterIndex]
+                                        .GetValue(batchStaging[batchStagingIndex][parameterIndex]));
+                                    parameterIndex++;
+                                }
+
+                                //foreach (var (src, dest) in propertiesToCopy) { dest.SetValue(pBot, src.GetValue(pBacktest)); }
+                                //foreach (var range in segments) { range.Info.SetValue(pBot, range.CurrentValue); }
+
+                                var pBacktestTask = new PBacktestTask2(OptimizationParameters.CommonBacktestParameters)
+                                {
+                                    PBot = (IPTimeFrameBot2)pBot!,
+                                    OnFinished = OnBacktestFinished
+                                };
+                                backtestTasksBatch.Add(pBacktestTask);
+                                Interlocked.Increment(ref backtestsEnqueued);
+
+                                //foreach (var range in ((IEnumerable<IParameterValuesSegment>)segments).Reverse())
+                                //{
+                                //    if (!range.IsFinished)
+                                //    {
+                                //        range.MoveNext();
+                                //        break;
+                                //    }
+                                //}
                             }
-
-                            int parameterIndex = 0;
-                            foreach (var kvp in optimizableParameters)
-                            {
-                                kvp.Value.info.SetValue(pBot, State.CurrentLevel.Parameters[parameterIndex]
-                                    .GetValue(batchStaging[batchStagingIndex][parameterIndex]));
-                                parameterIndex++;
-                            }
-
-                            //foreach (var (src, dest) in propertiesToCopy) { dest.SetValue(pBot, src.GetValue(pBacktest)); }
-                            //foreach (var range in segments) { range.Info.SetValue(pBot, range.CurrentValue); }
-
-                            var pBacktestTask = new PBacktestTask2(OptimizationParameters.CommonBacktestParameters)
-                            {
-                                PBot = (IPTimeFrameBot2)pBot!,
-                            };
-                            backtestTasksBatch.Add(pBacktestTask);
-
-                            //foreach (var range in ((IEnumerable<IParameterValuesSegment>)segments).Reverse())
-                            //{
-                            //    if (!range.IsFinished)
-                            //    {
-                            //        range.MoveNext();
-                            //        break;
-                            //    }
-                            //}
-                        }
-                        batch.Backtests = backtestTasksBatch;
-                    });
-                    await job.Task;
+                            batch.Backtests = backtestTasksBatch;
+                        });
+                        //await job.Task.ConfigureAwait(false);
+                    }
                 }
 
                 if (batchStaging.Count == 0)
@@ -212,18 +197,34 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     break;
                 }
             }
+            if (remainingBacktestsAllowed == 0)
+            {
+                Logger.LogWarning($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
+                // TODO: Set a warning flag on the results
+                Debug.WriteLine("Backtest quota exhausted.");
+            }
+            Logger.LogInformation("Done enqueuing backtests");
+            consumerFinished = true;
+            localCancellationTokenSource.Cancel();
         });
 
         HashSet<OptimizationResult> results = new();
         var producerTask = Task.Run(async () =>
         {
-            while (State.CurrentLevelIndex <= 0)
+            var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(new[] { cancellationToken, localCancellationTokenSource.Token });
+
+            try
             {
-                foreach (var current in State.CurrentLevel)
+                while (State.CurrentLevelIndex <= 0 && !consumerFinished)
                 {
-                    await ParametersToTest.Writer.WriteAsync(current, cancellationToken).ConfigureAwait(false);
+                    foreach (var current in State.CurrentLevel)
+                    {
+                        await ParametersToTest.Writer.WriteAsync(current, linkedCTS.Token).ConfigureAwait(false);
+                    }
                 }
             }
+            catch (TaskCanceledException) { }
+            catch (OperationCanceledException) { }
 
             //while (!cancellationToken.IsCancellationRequested)
             //{
@@ -234,18 +235,18 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
             //    }
             //    await ParametersToTest.Writer.WriteAsync(parameters);
             //}
-            await Task.Yield();
+            //await Task.Yield();
             ParametersToTest.Writer.Complete();
         });
 
         await producerTask;
         await enqueueTask;
 
-        if (remainingBacktestsAllowed <= 0)
+        while (backtestsEnqueued > 0)
         {
-            Logger.LogInformation($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
-            // TODO: Set a warning flag on the results
+            await backtestFinishedEvent.WaitOneAsync(1000);
         }
+
 
 #if TRIAGE
         //    entry.options.FitnessOfInterest ??= Parameters.FitnessOfInterest; // TRIAGE
@@ -254,8 +255,6 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         //var propertiesToCopy = new List<(PropertyInfo src, PropertyInfo dest)>(); // TRIAGE - maybe use this as an optimization
 #endif
 
-
-        await Task.Yield(); // TEMP
     }
 
 

@@ -14,6 +14,7 @@ public static class AutomationX
     {
         return services
             .AddSingleton<BacktestQueue>()
+            .AddHostedService(sp => sp.GetRequiredService<BacktestQueue>())
 
             // Example of named singleton (REVIEW)
             //.AddKeyedSingleton<BacktestBatchQueue>("test", (sp, key) =>
