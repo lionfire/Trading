@@ -74,8 +74,8 @@ public static class HostApplicationBuilderX_Local
 #if DEBUG // TODO: how to best configure this for real?
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["LionFire.Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
-                ["LionFire.Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
+                ["LionFire:Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
+                ["LionFire:Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
             })
 #endif
         )

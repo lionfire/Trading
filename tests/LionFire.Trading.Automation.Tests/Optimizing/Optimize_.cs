@@ -26,10 +26,12 @@ public class Optimize_ : BinanceDataTest
             MaxBatchSize = 4_096,
             //MaxBatchSize = 1_024,
             //MaxBatchSize = 10,
+
             //MaxBacktests = 1_000,
+            //MaxBacktests = 8_192,
             //MaxBacktests = 10_000,
-            //MaxBacktests = 100_000,
-            MaxBacktests = 1_000_000,
+            MaxBacktests = 100_000,
+            //MaxBacktests = 1_000_000,
             //MaxBacktests = 15_000,
 
             MaxDetailedJournals = 10,
@@ -37,7 +39,7 @@ public class Optimize_ : BinanceDataTest
             {
                 PBotType = typeof(PAtrBot<double>),
                 Start = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                EndExclusive = new DateTimeOffset(2024, 2, 20, 0, 0, 0, TimeSpan.Zero),
+                EndExclusive = new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
                 Features = BotHarnessFeatures.Bars,
                 TimeFrame = TimeFrame.h1,
                 ExchangeSymbol = new ExchangeSymbol("Binance", "futures", "BTCUSDT"),

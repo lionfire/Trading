@@ -130,6 +130,7 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
             }
         }
         await Journal.CloseAll();
+        await Journal.DisposeAsync();
     }
     MultiBacktestContext Context => botBatchController.Context;
 

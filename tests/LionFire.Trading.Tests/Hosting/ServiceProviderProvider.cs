@@ -12,10 +12,14 @@ public static class ServiceProviderProvider
     private static IServiceProvider Init()
     {
         var Configuration = new ConfigurationManager();
+
+        // Defaults
         Configuration.AddInMemoryCollection([
-            new ("LionFire.Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\"), // HARDCODE HARDPATH
-            new ("LionFire.Trading:Backtesting:Dir", @"z:\Trading\Backtesting") // HARDCODE HARDPATH
+            new ("LionFire:Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\"), // HARDCODE HARDPATH
+            new ("LionFire:Trading:Backtesting:Dir", @"z:\Trading\Backtesting") // HARDCODE HARDPATH
         ]);
+        // DOTNET__LionFire__Trading__HistoricalData__Windows__BaseDir
+        Configuration.AddEnvironmentVariables("DOTNET__"); // TODO: Change prefix to LIONFIRE__ or LF__
 
         IServiceCollection services = new ServiceCollection();
         services

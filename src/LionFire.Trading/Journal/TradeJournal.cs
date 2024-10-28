@@ -22,7 +22,7 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace LionFire.Trading.Journal;
 
-public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
+public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
     where TPrecision : struct, INumber<TPrecision>
 {
     #region Dependencies
@@ -98,11 +98,17 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
         UpdatePath();
     }
 
-    ~TradeJournal() => Dispose();
+    //~TradeJournal() => Dispose();
 
     public void Dispose()
     {
-        CloseAll().AsTask().Wait();
+        if (entries == null) return;
+        DisposeAsync().AsTask().Wait();
+    }
+    public async ValueTask DisposeAsync()
+    {
+        await CloseAll();
+        entries = null!;
     }
 
     //private string GetPath(string filename) => Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(nameof(Options.JournalDir)), filename);
@@ -114,7 +120,7 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
             int i = 0;
             string newPath;
 
-            string getPath() => Path.Combine(JournalDirectory, FileName) + (i++ == 0 ? "" : $" ({i:000})") + Path.GetExtension(path);
+            string getPath() => Path.Combine(JournalDirectory ?? throw new ArgumentNullException(nameof(JournalDirectory)), FileName) + (i++ == 0 ? "" : $" ({i:000})") + Path.GetExtension(path);
 
             if (Options.ReplaceOutput && File.Exists(newPath = getPath()))
             {
@@ -154,7 +160,8 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
 
     public async ValueTask CloseAll()
     {
-        await _Write();
+        await _Write(forceWriteToDisk: true);
+
         {
             var copy = csvWriters?.ToArray();
             if (copy != null)
@@ -202,20 +209,21 @@ public class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
     private ExchangeSymbol? exchangeSymbol;
 
     ConcurrentQueue<JournalEntry<TPrecision>> entries = new(); // TODO: Replace with channel
+    public bool IsDisposed => entries == null;
 
     public void Write(JournalEntry<TPrecision> entry)
     {
         if (!Options.Enabled) return;
         entries.Enqueue(entry);
-        if (entries.Count > BufferSize) { _Write().FireAndForget(); }
+        if (entries.Count > Options.BufferEntries) { _Write(forceWriteToDisk: true).FireAndForget(); }
     }
 
-    public const int BufferSize = 10_000; // TOOPTIMIZE
-
-    private async Task _Write()
+    private async Task _Write(bool forceWriteToDisk = false)
     {
         if (!Options.Enabled) return;
+        if (!forceWriteToDisk && Options.PreferInMemory) return;
 
+        if(entries == null) { return; } // Disposed
         while (entries.TryDequeue(out var entry))
         {
             if (Options.LogLevel != LogLevel.None)

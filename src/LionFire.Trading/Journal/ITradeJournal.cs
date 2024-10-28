@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Journal;
 
-public interface ITradeJournal<TPrecision>
+public interface ITradeJournal<TPrecision> : IAsyncDisposable
       where TPrecision : struct, INumber<TPrecision>
 {
     void Write(JournalEntry<TPrecision> entry);

@@ -48,7 +48,13 @@ public class KlineArrayFile : IDisposable
             tryAgain:
             try
             {
+                var dir = Path.GetDirectoryName(path); 
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir); // REVIEW - is there a better spot to create the directory?  
                 return File.Open(path, truncateIfExists ? FileMode.Create : FileMode.CreateNew);
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return null;
             }
             catch (IOException ioex)
             {
