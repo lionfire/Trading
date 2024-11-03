@@ -2,6 +2,7 @@
 using LionFire.Trading.ValueWindows;
 using QuantConnect.Data.Market;
 using System.Text.Json.Serialization;
+using MAT = QuantConnect.Indicators.MovingAverageType;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
@@ -35,23 +36,42 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
 
     #region Parameters
 
-    [Parameter(MinValue = 2, MaxValue = null, DefaultMin = 3, DefaultMax = 1024, OptimizerHints = OptimizationDistributionKind.Period, SearchLogarithmExponent = 2.0)]
+    [Parameter(HardMinValue = 2, HardMaxValue = null, DefaultMin = 3, DefaultMax = 1024, OptimizerHints = OptimizationDistributionKind.Period, SearchLogarithmExponent = 2.0)]
     public int Period { get; set; }
 
-    [Parameter(OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = QuantConnect.Indicators.MovingAverageType.Wilders, DefaultSearchSpace = [
-        QuantConnect.Indicators.MovingAverageType.Simple,
-        QuantConnect.Indicators.MovingAverageType.Exponential,
-        QuantConnect.Indicators.MovingAverageType.Wilders, 
-        QuantConnect.Indicators.MovingAverageType.Kama,
-        QuantConnect.Indicators.MovingAverageType.Alma,
-        //QuantConnect.Indicators.MovingAverageType.Triangular,
-        QuantConnect.Indicators.MovingAverageType.DoubleExponential,
-        QuantConnect.Indicators.MovingAverageType.TripleExponential,
-        QuantConnect.Indicators.MovingAverageType.Hull,
-        QuantConnect.Indicators.MovingAverageType.LinearWeightedMovingAverage,
-        QuantConnect.Indicators.MovingAverageType.T3
+    [Parameter(OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = MAT.Wilders,
+        DefaultSearchSpaces = [
+            (MAT[])[ // TODO: Find a nicer way to initialize these
+                MAT.Simple,
+                MAT.Exponential,
+                MAT.Wilders,
+                MAT.Kama,
+                MAT.Alma,
+                //MAT.Triangular,
+                MAT.DoubleExponential,
+                MAT.TripleExponential,
+                MAT.Hull,
+                MAT.LinearWeightedMovingAverage,
+                MAT.T3
+            ],
+            (MAT[])[
+                MAT.Simple,
+                MAT.Exponential,
+                MAT.Wilders,
+                MAT.Kama,
+                MAT.Hull,
+                MAT.T3
+            ],
+            (MAT[])[
+                MAT.Simple,
+                MAT.Exponential,
+                MAT.Wilders,
+            ],
+            (MAT[])[
+                MAT.Exponential,
+            ]
         ])]
-    public QuantConnect.Indicators.MovingAverageType MovingAverageType { get; set; } = QuantConnect.Indicators.MovingAverageType.Wilders;
+    public MAT MovingAverageType { get; set; } = MAT.Wilders;
 
     #endregion
 

@@ -117,7 +117,7 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
 
         Journal.FileName = $"{(result.Aborted ? "ABORTED" : "")} {result.Fitness:0.000}f {(result.AD == result.Fitness ? "" : result.AD.ToString("0.0"))}ad  id={result.Id} {(result.MaxBalanceDrawdownPerunum * 100.0).ToString("0.0")}bddp";
 
-        if (result.Fitness < Journal.Options.DiscardDetailsWhenFitnessBelow
+        if (double.IsNaN(result.Fitness) || result.Fitness < Journal.Options.DiscardDetailsWhenFitnessBelow
             || !Context.ShouldLogTradeDetails) { Journal.DiscardDetails = true; }
 
         if (!Journal.DiscardDetails)

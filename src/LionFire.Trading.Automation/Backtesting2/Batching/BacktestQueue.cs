@@ -1,6 +1,7 @@
 ﻿using LionFire.ExtensionMethods;
 using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Backtesting;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Nito.AsyncEx;
 using System;
@@ -102,11 +103,12 @@ public partial class BacktestQueue : IHostedService
 
     #region (Public) Methods
 
-    public ValueTask<IBacktestBatchJob> EnqueueJob(Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
-    {
-        var backtestContext = new MultiBacktestContext();
-        return EnqueueJob(backtestContext, configure, cancellationToken);
-    }
+    //public ValueTask<IBacktestBatchJob> EnqueueJob(Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
+    //{
+    //    var backtestContext = MultiBacktestContext.Create(ServiceProvider, new PMultiBacktestContext());
+
+    //    return EnqueueJob(backtestContext, configure, cancellationToken);
+    //}
     public async ValueTask<IBacktestBatchJob> EnqueueJob(MultiBacktestContext backtestContext, Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
     {
         if (Parameters.SingleDateRange != true) throw new NotImplementedException();

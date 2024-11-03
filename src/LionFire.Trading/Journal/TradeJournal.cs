@@ -160,7 +160,10 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
     public async ValueTask CloseAll()
     {
-        await _Write(forceWriteToDisk: true);
+        if (!DiscardDetails)
+        {
+            await _Write(forceWriteToDisk: true);
+        }
 
         {
             var copy = csvWriters?.ToArray();
@@ -220,7 +223,7 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
     private async Task _Write(bool forceWriteToDisk = false)
     {
-        if (!Options.Enabled) return;
+        if (!Options.Enabled || DiscardDetails) return;
         if (!forceWriteToDisk && Options.PreferInMemory) return;
 
         if(entries == null) { return; } // Disposed

@@ -54,9 +54,9 @@ public abstract class BotBatchControllerBase : IBotBatchController
     public T GetInfo<T>() where T : BacktestBatchInfo, new() => new()
     {
         TimeFrame = TimeFrame,
-        Start= Start,
+        Start = Start,
         EndExclusive = EndExclusive,
-        TicksEnabled= TicksEnabled,
+        TicksEnabled = TicksEnabled,
     };
 
     #region Parameters
@@ -82,12 +82,11 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
     #region Lifecycle
 
-    public BotBatchControllerBase(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context, BacktestExecutionOptions? executionOptions = null)
+    public BotBatchControllerBase(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context)
     {
         ServiceProvider = serviceProvider;
         PBacktests = parameters;
         Context = context;
-        ExecutionOptions = executionOptions ?? ( ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue);
 
         var first = parameters.FirstOrDefault();
         if (first == null) throw new ArgumentException("batch empty");

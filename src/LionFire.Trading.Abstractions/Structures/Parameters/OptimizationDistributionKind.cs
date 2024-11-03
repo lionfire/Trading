@@ -15,7 +15,7 @@ public enum OptimizationDistributionKind
     //Major = 1 << 1,
 
     /// <summary>
-    /// Operates in a completely different mode
+    /// Operates in a different mode.  Modes might be somewhat similar.  If modes should be considered orthogonal, use OrthogonalCategory.
     /// </summary>
     Category = 1 << 2,
 
@@ -25,7 +25,12 @@ public enum OptimizationDistributionKind
     SpectralCategory = 1 << 3,
 
     /// <summary>
+    /// When optimizing, don't skip any.
+    /// </summary>
+    OrthogonalCategory = 1 << 4,
+
+    /// <summary>
     /// A major reversal in logic
     /// </summary>
-    Reversal = 1 << 4,
+    Reversal = 1 << 5,
 }

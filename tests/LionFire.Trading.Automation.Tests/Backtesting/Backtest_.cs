@@ -130,57 +130,60 @@ public class Backtest_Batch_ : BinanceDataTest
 
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
 
-        var job = await batchQueue.EnqueueJob(batch =>
-        {
 
-            PBacktestTask2<PAtrBot<double>> createBacktest(string symbol, uint atrPeriod)
-            {
-                return new PBacktestTask2<PAtrBot<double>>
-                {
-                    //TimeFrame = TimeFrame.m1,
-                    PBot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1), atrPeriod, QuantConnect.Indicators.MovingAverageType.Simple)
-                    {
-                        //TimeFrame = TimeFrame.m1,
-                        //Bars = new SymbolValueAspect<double>("Binance", "futures", symbol, TimeFrame.m1, DataPointAspect.Close),
-                        //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
-                        
-                        Points = new PPointsBot
-                        {
-                            OpenThreshold = 15,
-                            CloseThreshold = 3,
-                        }
-                    },
-
-                    //Start = new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero),
-                    Start = new DateTimeOffset(2023, 4, 1, 0, 0, 0, TimeSpan.Zero),
-                    EndExclusive = new DateTimeOffset(2023, 7, 1, 0, 0, 0, TimeSpan.Zero),
-                    //EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
-                    //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),
-                    //EndExclusive = new DateTimeOffset(2024, 7, 23, 0, 0, 0, TimeSpan.Zero),
-                    Features = BotHarnessFeatures.Bars,
-                    
-                };
-            }
-
-            List<string> symbols = [
-                    "BTCUSDT",
+        List<string> symbols = [
+                "BTCUSDT",
                     //"ETHUSDT",
                     //"LTCUSDT"
                 ];
 
-            var list = new List<PBacktestTask2>();
-            foreach (var symbol in symbols)
-            {
-                for (uint i = 14; i <= 17; i++) { list.Add(createBacktest(symbol, i)); }
-            }
+        foreach (var symbol in symbols)
+        {
+            var exchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1);
 
-            batch.BacktestBatches = [
-                    list
-                    //[
-                    //createBacktest("BTCUSDT", 14),
-                    //createBacktest("BTCUSDT", 15),
-                    //createBacktest("ETHUSDT", 14),
-                    //createBacktest("ETHUSDT", 15)
+            var job = await batchQueue.EnqueueJob(MultiBacktestContext.Create(ServiceProvider,
+                new PMultiBacktestContext(typeof(PAtrBot<double>), exchangeSymbolTimeFrame)
+            ),
+            batch =>
+            {
+                PBacktestTask2<PAtrBot<double>> createBacktest(string symbol, uint atrPeriod)
+                {
+                    return new PBacktestTask2<PAtrBot<double>>
+                    {
+                        PBot = new PAtrBot<double>(exchangeSymbolTimeFrame, atrPeriod, QuantConnect.Indicators.MovingAverageType.Simple)
+                        {
+                            //Bars = new SymbolValueAspect<double>("Binance", "futures", symbol, TimeFrame.m1, DataPointAspect.Close),
+                            //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
+
+                            Points = new PPointsBot
+                            {
+                                OpenThreshold = 15,
+                                CloseThreshold = 3,
+                            }
+                        },
+
+                        //Start = new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero),
+                        Start = new DateTimeOffset(2023, 4, 1, 0, 0, 0, TimeSpan.Zero),
+                        EndExclusive = new DateTimeOffset(2023, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                        //EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                        //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),
+                        //EndExclusive = new DateTimeOffset(2024, 7, 23, 0, 0, 0, TimeSpan.Zero),
+                        Features = BotHarnessFeatures.Bars,
+
+                    };
+                }
+
+                var list = new List<PBacktestTask2>();
+
+                for (uint i = 14; i <= 17; i++) { list.Add(createBacktest(symbol, i)); }
+
+                batch.BacktestBatches = [
+                        list
+                        //[
+                        //createBacktest("BTCUSDT", 14),
+                        //createBacktest("BTCUSDT", 15),
+                        //createBacktest("ETHUSDT", 14),
+                        //createBacktest("ETHUSDT", 15)
                         //new PBacktestTask2<PAtrBot<double>>
                         // {
                         //     Bot = new PAtrBot<double>(14)
@@ -205,13 +208,14 @@ public class Backtest_Batch_ : BinanceDataTest
                         //     EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
                         //     Features = BotHarnessFeatures.Bars,
                         // },
-                    //]
-                    ];
-        });
+                        //]
+                        ];
+            });
 
-        await job.Task;
+            await job.Task;
+        }
 
-  
+
     }
 
     [Fact]
@@ -221,7 +225,7 @@ public class Backtest_Batch_ : BinanceDataTest
 
         Assert.Throws<ArgumentException>(() =>
         {
-            var job = batchQueue.EnqueueJob(batch =>
+            var job = batchQueue.EnqueueJob(MultiBacktestContext.Create(ServiceProvider, new(typeof(PAtrBot<double>))), batch =>
             {
                 batch.BacktestBatches = [[
                 new PBacktestTask2<PAtrBot<double>>

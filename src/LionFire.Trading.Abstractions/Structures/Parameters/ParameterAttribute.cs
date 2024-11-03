@@ -26,8 +26,8 @@ public sealed class ParameterAttribute : Attribute
     }
 
     public object? DefaultValue { get; set; }
-    public object? MinValue { get; set; }
-    public object? MaxValue { get; set; }
+    public object? HardMinValue { get; set; }
+    public object? HardMaxValue { get; set; }
     public object? Step { get; set; }
     public object? MinStep { get; set; }
     public object? MaxStep { get; set; }
@@ -35,7 +35,12 @@ public sealed class ParameterAttribute : Attribute
     public object? DefaultMin { get; set; }
     public object? DefaultMax { get; set; }
 
-    public object[]? DefaultSearchSpace { get; set; }
+    /// <summary>
+    /// Can be a single array, or an array of arrays.
+    /// If array of arrays:
+    /// - index is the inverse of the level of detail.  First array is the most detailed (Level 0), last array is the least detailed (Level -N).
+    /// </summary>
+    public object[]? DefaultSearchSpaces { get; set; }
 
     /// <summary>
     /// Defaults to e if not set
@@ -49,11 +54,28 @@ public sealed class ParameterAttribute : Attribute
     public object? SearchLogarithmExponent { get; set; }
 
     public OptimizationDistributionKind OptimizerHints { get; set; }
+
+    /// <summary>
+    /// Lower values will be optimized first
+    /// </summary>
+    public object? OptimizeOrderTiebreaker { get; set; }
+
+    /// <summary>
+    /// Recommended: negative whole numbers
+    /// Default: 0
+    /// Set this to below 0 to avoid optimizing for this parameter when a limited optimization is desired
+    /// </summary>
     public object? OptimizePriority { get; set; }
+
+    public int OptimizePriorityInt => Convert.ToInt32(OptimizePriority);
 
     public object? MinProbes { get; set; }
     public object? MaxProbes { get; set; }
     public object? DistributionParameter { get; set; }
+    public bool IsCategory => OptimizerHints == OptimizationDistributionKind.Category || OptimizerHints == OptimizationDistributionKind.SpectralCategory;
+
+    public int DefaultSearchSpacesCount => DefaultSearchSpaces?.Length ?? 0;
+
 
     public IParameterOptimizationOptions GetParameterOptimizationOptions(Type valueType)
     {

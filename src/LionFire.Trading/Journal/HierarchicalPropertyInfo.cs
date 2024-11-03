@@ -80,11 +80,11 @@ public class HierarchicalPropertyInfo : IKeyable<string>
 
     public bool IsOptimizable => ParameterAttribute != null;
 
-    public int OptimizePriority
+    public int OptimizeOrderTiebreaker
     {
         get
         {
-            if (ParameterAttribute.OptimizePriority != null) { return (int)ParameterAttribute.OptimizePriority; }
+            if (ParameterAttribute.OptimizeOrderTiebreaker != null) { return (int)ParameterAttribute.OptimizeOrderTiebreaker; }
 
             if (ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.Period)) { return 500; }
 

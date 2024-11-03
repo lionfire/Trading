@@ -231,14 +231,17 @@ public class BacktestBatchJournal : IAsyncDisposable
         await channel.Writer.WriteAsync(e);
     }
 
+    public int FlushEvery { get; set; } = 50;
     public async Task Consume()
     {
+        int flushCounter = 0;
+        int flushEvery = FlushEvery;
         await foreach (var item in channel.Reader.ReadAllAsync().WithCancellation(CancellationTokenSource.Token))
         {
             await csv.WriteRecordsAsync([item]);
+            if (flushCounter++ == flushEvery) { await csv.FlushAsync(); flushCounter = 0; }
         }
         await csv.DisposeAsync();
-
     }
 
     #endregion

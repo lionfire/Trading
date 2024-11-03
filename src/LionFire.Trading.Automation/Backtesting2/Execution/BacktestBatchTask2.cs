@@ -3,6 +3,7 @@ using CryptoExchange.Net.Objects.Options;
 using Hjson;
 using LionFire.Execution;
 using LionFire.ExtensionMethods;
+using LionFire.Hosting;
 using LionFire.Structures;
 using LionFire.Threading;
 using LionFire.Trading.Automation.Bots;
@@ -17,12 +18,82 @@ using LionFire.Trading.ValueWindows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Newtonsoft.Json;
+using Polly.Registry;
+using Polly;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text.Json;
+using LionFire.Collections;
+using System.Runtime.CompilerServices;
 
 namespace LionFire.Trading.Automation;
+
+public class UniqueFileWriter
+{
+    //static ConcurrentWeakDictionaryCache<string, UniqueFileWriter> instances = new();
+    static ConditionalWeakTable<string, UniqueFileWriter> instances = new();
+
+    // Based on: https://stackoverflow.com/questions/9545619/a-fast-hash-function-for-string-in-c-sharp
+    static UInt64 CalculateHash(string read)
+    {
+        UInt64 hashedValue = 3074457345618258791ul;
+        for (int i = 0; i < read.Length; i++)
+        {
+            hashedValue += read[i];
+            hashedValue *= 3074457345618258799ul;
+        }
+        return hashedValue;
+    }
+
+    UInt64 lastHash = 0;
+    int counter = -1;
+
+
+    public static Task SaveIfDifferent(string templatedPath, string contents)
+    {
+        lock (_staticlock)
+        {
+            return instances.GetOrCreateValue(templatedPath).saveIfDifferent(templatedPath, contents);
+        }
+    }
+
+    private readonly object _lock = new();
+    private static readonly object _staticlock = new();
+    private Task saveIfDifferent(string templatedPath, string contents)
+    {
+        counter++; // Always increment counter (ENH: make configurable)
+
+        lock (_lock)
+        {
+            var newHash = CalculateHash(contents);
+            if (newHash == lastHash) return Task.CompletedTask;
+            lastHash = newHash;
+        }
+
+        var path = templatedPath.Replace("{0}", counter.ToString());
+        if (path == templatedPath)
+        {
+            var dir = Path.GetDirectoryName(templatedPath) ?? throw new ArgumentException($"{nameof(templatedPath)} is unknown directory");
+            if (counter == 0)
+            {
+                path = Path.Combine(dir, Path.GetFileNameWithoutExtension(path) + Path.GetExtension(path));
+            }
+            else
+            {
+                path = Path.Combine(dir, Path.GetFileNameWithoutExtension(path) + " (" + (counter + 1) + ")" + Path.GetExtension(path));
+            }
+        }
+
+        if (System.IO.File.Exists(path))
+        {
+            var existing = System.IO.File.ReadAllText(path);
+            if (existing == contents) return Task.CompletedTask;
+            else throw new AlreadySetException();
+        }
+        return System.IO.File.WriteAllTextAsync(path, contents);
+    }
+}
 
 /// <summary>
 /// A backtest task that supports batching of backtests.
@@ -40,13 +111,16 @@ namespace LionFire.Trading.Automation;
 /// - inputs (such as indicators, even if they have different lookback requirements)
 /// </summary>
 public class BacktestBatchTask2<TPrecision>
-    : BotBatchControllerBase
-    , IBacktestBatch
-        where TPrecision : struct, INumber<TPrecision>
+: BotBatchControllerBase
+, IBacktestBatch
+    where TPrecision : struct, INumber<TPrecision>
 {
     #region Identity
 
     public override BotExecutionMode BotExecutionMode => BotExecutionMode.Backtest;
+
+    public int BatchId { get; } = batchCounter++;
+    private static int batchCounter = 0;
 
     #endregion
 
@@ -74,51 +148,37 @@ public class BacktestBatchTask2<TPrecision>
     #region Directory
 
     public string BatchDirectory { get; }
-    private string GetBatchDirectory()
-    {
-        var path = BacktestOptions.Dir;
-
-        string botTypeName = BotType.Name;
-        if (BotType.IsGenericType)
-        {
-            int i = botTypeName.IndexOf('`');
-            if (i >= 0) { botTypeName = botTypeName.Substring(0, i); }
-        }
-
-        if (ExecutionOptions.BotSubDir) { path = System.IO.Path.Combine(path, botTypeName); }
-        if (ExecutionOptions.ExchangeSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange"); }
-        if (ExecutionOptions.ExchangeAreaSubDir && ExchangeSymbol?.ExchangeArea != null) { path = System.IO.Path.Combine(path, ExchangeSymbol.ExchangeArea); }
-        if (ExecutionOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Symbol ?? "UnknownSymbol"); }
-
-        path = FilesystemUtils.GetUniqueDirectory(path, "", "", 4); // BLOCKING I/O
-
-        return path;
-    }
 
     #endregion
 
     #endregion
 
     #endregion
+
+    ResiliencePipeline? FilesystemRetryPipeline;
 
     #region Lifecycle
 
-    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null)  // TODO: Get executionOptions from context
+    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) 
     {
-        context ??= new();
+        context ??= MultiBacktestContext.Create(serviceProvider, new(parameters));
 
-        var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, context, executionOptions, dateChunker, backtestBatchJournal: backtestBatchJournal);
-        //t.TradeJournalOptions.JournalDir = t.Journal.BatchDirectory;
+        if(executionOptions != null) { context.ExecutionOptions = executionOptions; }
+
+        var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, context, dateChunker, backtestBatchJournal: backtestBatchJournal);
         await t.Init();
         return t;
     }
 
-    private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) : base(serviceProvider, parameters, context, executionOptions: executionOptions)
-    // TODO: Get executionOptions from context
+    private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) : base(serviceProvider, parameters, context)
     {
+        if (serviceProvider.GetService<ResiliencePipelineProvider<string>>()?.TryGetPipeline(FilesystemPersistenceResilience.RetryPolicyKey, out var p) == true)
+        {
+            FilesystemRetryPipeline = p;
+        }
+
         try
         {
-
             BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
 
             DateChunker = dateChunker ?? ServiceProvider.GetRequiredService<DateChunker>();
@@ -145,7 +205,7 @@ public class BacktestBatchTask2<TPrecision>
             }
             else
             {
-                BatchDirectory = GetBatchDirectory();
+                BatchDirectory = Context.LogDirectory;
                 if (!Directory.Exists(BatchDirectory)) { Directory.CreateDirectory(BatchDirectory); } // BLOCKING I/O
                 Journal = new BacktestBatchJournal(BatchDirectory, PBotType);
                 DisposeJournal = true;
@@ -163,6 +223,7 @@ public class BacktestBatchTask2<TPrecision>
             {
                 TradeJournalOptions = Context.TradeJournalOptions;
             }
+
         }
         catch (Exception ex)
         {
@@ -766,7 +827,7 @@ public class BacktestBatchTask2<TPrecision>
     {
         await base.OnFinished();
 
-        SaveBatchInfo();
+        await SaveBatchInfo();
 
         if (DisposeJournal)
         {
@@ -778,7 +839,8 @@ public class BacktestBatchTask2<TPrecision>
 
 
 
-    private void SaveBatchInfo()
+    HjsonOptions hjsonOptions = new HjsonOptions() { EmitRootBraces = false };
+    private async ValueTask SaveBatchInfo()
     {
         var r = GetInfo<BacktestBatchResults>();
         r.BotDll = this.bots.FirstOrDefault()?.GetType().Assembly.FullName;
@@ -788,14 +850,23 @@ public class BacktestBatchTask2<TPrecision>
             DefaultValueHandling = DefaultValueHandling.Ignore,
         });
 
-        var hjsonValue = JsonValue.Parse(json);
+        var hjsonValue = Hjson.JsonValue.Parse(json);
+        var hjson = hjsonValue.ToString(hjsonOptions);
 
-        HjsonValue.Save(hjsonValue, Path.Combine(BatchDirectory, "batch.hjson"));
+        await Task.Yield(); // Hjson is synchronous
+        if (FilesystemRetryPipeline != null)
+        {
+            await FilesystemRetryPipeline.ExecuteAsync(_ =>
+            {
+                go();
+                return ValueTask.CompletedTask;
+            });
+        }
+        else { go(); }
+        void go() => UniqueFileWriter.SaveIfDifferent(Path.Combine(BatchDirectory, $"BatchInfo.hjson"), hjson);
+        //HjsonValue.Save(hjsonValue, );
     }
 
-
-
-    static int batchCounter = 1;
 
 
     #region Inputs
@@ -916,7 +987,6 @@ public class BacktestBatchTask2<TPrecision>
 
 public static class FilesystemUtils
 {
-
     public static string GetUniqueDirectory(string baseDir, string prefix, string suffix, int zeroPadding = 0)
 
     {

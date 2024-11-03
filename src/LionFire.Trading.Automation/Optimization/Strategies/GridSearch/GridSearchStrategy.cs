@@ -1,5 +1,6 @@
 ﻿
 using DynamicData;
+using Hjson;
 using LionFire.ExtensionMethods.Copying;
 using LionFire.Extensions.Logging;
 using LionFire.Serialization.Csv;
@@ -11,6 +12,7 @@ using Spectre.Console.Rendering;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Threading.Channels;
 
 namespace LionFire.Trading.Automation.Optimization.Strategies;
@@ -55,6 +57,28 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         OptimizationParameters = optimizationParameters ?? throw new ArgumentNullException();
         OptimizationTask = optimizationTask ?? throw new ArgumentNullException();
         Logger = optimizationTask.ServiceProvider.GetRequiredService<ILogger<GridSearchStrategy>>();
+        State = new GridSearchState(this);
+
+        if (optimizationTask.BacktestContext.LogDirectory != null)
+        {
+            foreach (var level in State.LevelsOfDetail)
+            {
+                var json = JsonSerializer.Serialize(
+                    level,
+                    //level.Parameters.OfType<object>(),
+                    new JsonSerializerOptions
+                {
+                    WriteIndented = false,
+                    
+                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
+                });
+                var hjsonValue = Hjson.JsonValue.Parse(json);
+                var hjson = hjsonValue.ToString(new HjsonOptions { EmitRootBraces = false });
+
+                var path = Path.Combine(optimizationTask.BacktestContext.LogDirectory, $"GridLevel {level.Level}.hjson");
+                File.WriteAllText(path, hjson);
+            }
+        }
     }
 
     #endregion
@@ -94,7 +118,6 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
     {
         StartTime = DateTimeOffset.UtcNow;
 
-        State = new GridSearchState(this);
         List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = State.optimizableParameters;
         List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = State.unoptimizableParameters;
 
@@ -104,9 +127,8 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
         Channel<int[]> ParametersToTest = Channel.CreateBounded<int[]>(new BoundedChannelOptions(maxBatchSize * 2) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
 
-        long remainingBacktestsAllowed = OptimizationParameters.MaxBacktests;
 
-        CancellationTokenSource localCancellationTokenSource = new();
+        //CancellationTokenSource localCancellationTokenSource = new();
 
         bool consumerFinished = false;
         int backtestsEnqueued = 0;
@@ -116,7 +138,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         var enqueueTask = Task.Run(async () =>
         {
             List<int[]> batchStaging = new(OptimizationTask.Parameters.MaxBatchSize);
-            while (!cancellationToken.IsCancellationRequested && remainingBacktestsAllowed > 0)
+            while (!cancellationToken.IsCancellationRequested && !ParametersToTest.Reader.Completion.IsCompleted)
             {
                 batchStaging.Clear();
 
@@ -133,7 +155,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                 {
                     int batchStagingIndex = 0;
 
-                    while (batchStagingIndex < batchStaging.Count && remainingBacktestsAllowed > 0)
+                    while (batchStagingIndex < batchStaging.Count)
                     {
                         var job = await batchQueue.EnqueueJob(BacktestContext, batch =>
                         {
@@ -145,15 +167,13 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                             for (
                                     ; batchStagingIndex < batchStaging.Count
                                         && backtestTasksBatch.Count < maxBatchSize
-                                        && remainingBacktestsAllowed > 0
-                                    ; batchStagingIndex++
-                                        , remainingBacktestsAllowed--)
+                                    ; batchStagingIndex++)
                             {
-                                var pBot = Activator.CreateInstance(OptimizationParameters.BotParametersType);
+                                var pBot = Activator.CreateInstance(OptimizationParameters.PBotType);
 
                                 foreach (var kvp in unoptimizableParameters)
                                 {
-                                    kvp.info.SetValue(pBot, kvp.options.SingleValue);
+                                    kvp.info.SetValue(pBot, kvp.options.DefaultValue);
                                 }
 
                                 int parameterIndex = 0;
@@ -194,33 +214,38 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                 {
                     var delay = TimeSpan.FromMilliseconds(1000);
                     Logger.LogInformation($"Batch staging: no parameters available.  Delaying for {delay}ms.");
-                    break;
+                    await Task.Delay(delay);
+                    //break;
                 }
-            }
-            if (remainingBacktestsAllowed == 0)
-            {
-                Logger.LogWarning($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
-                // TODO: Set a warning flag on the results
-                Debug.WriteLine("Backtest quota exhausted.");
             }
             Logger.LogInformation("Done enqueuing backtests");
             consumerFinished = true;
-            localCancellationTokenSource.Cancel();
+            //localCancellationTokenSource.Cancel();
         });
 
         HashSet<OptimizationResult> results = new();
         var producerTask = Task.Run(async () =>
         {
-            var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(new[] { cancellationToken, localCancellationTokenSource.Token });
+            //var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(new[] { cancellationToken, localCancellationTokenSource.Token });
+
+            long remainingBacktestsAllowed = OptimizationParameters.MaxBacktests;
 
             try
             {
-                while (State.CurrentLevelIndex <= 0 && !consumerFinished)
+                while (State.CurrentLevelIndex <= 0 && !consumerFinished && remainingBacktestsAllowed > 0)
                 {
                     foreach (var current in State.CurrentLevel)
                     {
-                        await ParametersToTest.Writer.WriteAsync(current, linkedCTS.Token).ConfigureAwait(false);
+                        await ParametersToTest.Writer.WriteAsync(current, cancellationToken).ConfigureAwait(false);
+                        if (remainingBacktestsAllowed-- == 0)
+                        {
+                            Logger.LogWarning($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
+                            Debug.WriteLine($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
+                            // TODO: Set a warning flag on the results
+                            break;
+                        }
                     }
+                    break; // TODO NEXT: Go up a level, or optimize promising regions
                 }
             }
             catch (TaskCanceledException) { }

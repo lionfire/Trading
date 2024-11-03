@@ -1,4 +1,8 @@
-﻿using System.Collections;
+﻿using System.Linq;
+using System.Collections;
+using System.Diagnostics;
+using System;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
 
@@ -14,23 +18,54 @@ public static class ParameterLevelOfDetailInfo
     }
 }
 
+[JsonPolymorphic(
+    UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToNearestAncestor)]
+[JsonDerivedType(typeof(ParameterLevelOfDetailInfo<int>), typeDiscriminator: "int")]
+[JsonDerivedType(typeof(ParameterLevelOfDetailInfo<uint>), typeDiscriminator: "uint")]
+[JsonDerivedType(typeof(ParameterLevelOfDetailInfo<float>), typeDiscriminator: "float")]
+[JsonDerivedType(typeof(ParameterLevelOfDetailInfo<double>), typeDiscriminator: "double")]
+[JsonDerivedType(typeof(ParameterLevelOfDetailInfo<decimal>), typeDiscriminator: "decimal")]
 public interface IParameterLevelOfDetailInfo
 {
+    string Key { get; }
+    string ValueType { get; }
     int TestCount { get; }
     object GetValue(int index);
 }
+
 public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
      where TValue : struct, INumber<TValue>
 {
+    public string Key => Info.Key;
+    
+    [JsonIgnore] // Only for debugging
+    public string ValueType => typeof(TValue).Name;
+
     public readonly HierarchicalPropertyInfo Info;
     private readonly ParameterOptimizationOptions<TValue> Options;
 
+    public TValue Max => max;
     private readonly TValue max;
+    public TValue Min => min;
     private readonly TValue min;
     private TValue range => max - min;
+    public TValue Step => step;
     private readonly TValue step;
+    public TValue Exponent => exponent;
     private readonly TValue exponent;
+    public IEnumerable<TValue> Values
+    {
+        get
+        {
+            for (int i = 0; i < TestCount; i++)
+            {
+                yield return GetValue(i);
+            }
+        }
+    }
+    public double ExponentAdjustment => exponentAdjustment;
     private readonly double exponentAdjustment;
+    public double LevelMultiplier => levelMultiplier;
     private readonly double levelMultiplier;
 
     public ParameterLevelOfDetailInfo(int level, HierarchicalPropertyInfo info, IParameterOptimizationOptions options)
@@ -42,39 +77,115 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
         min = Options.EffectiveMinValue;
         step = Options.EffectiveOptimizationStep;
 
-        if (level > 0) throw new NotImplementedException();
-
-        int count = Options.MinOptimizationTests ?? throw new ArgumentNullException(nameof(Options.MinOptimizationTests));
-        levelMultiplier = Math.Pow(2, -level);
-
-        count = (int)double.Ceiling(count / Math.Pow(2, -level));
-
-        //for (; level < 0; level++)
-        //{
-        //    count /= 2;
-        //}
-
-        IsComplete = new BitArray(count);
-
-        var rangeForLog = Math.Log((IsComplete.Count - 1) * Convert.ToDouble(step));
-        exponentAdjustment = Convert.ToDouble(range) / rangeForLog;
-
-        GetValue = Options.DistributionParameter.HasValue ? GetDistributionValue : GetLinearValue;
-        if (levelMultiplier != 1)
+        if (level > 0)
         {
-            GetValue = i => GetValue((int)(i * levelMultiplier)); // TODO: fix artefacts?
+            // We are doing a fine-grained optimization search.
+            // This requires an additional input of specific promising areas to search (not implemented yet.)
+            throw new NotImplementedException();
+        }
+
+        if ((info.ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.OrthogonalCategory)))
+        {
+            // Don't sample these. Always include them all, on every level.
+            throw new NotImplementedException();
+        }
+        else
+        {
+            var dssc = info.ParameterAttribute.DefaultSearchSpacesCount;
+            if (info.ParameterAttribute.IsCategory && dssc > 0)
+            {
+                var inverseLevel = -level;
+                var maxSpaceIndex = dssc - 1;
+                var dsscIndex = Math.Min(inverseLevel, maxSpaceIndex);
+                var difference = inverseLevel - maxSpaceIndex;
+                // ENH: Trim the remaining parameters if difference > 0
+
+                TValue[] values = CategoryValues = (TValue[])info.ParameterAttribute.DefaultSearchSpaces![dsscIndex];
+                testCount = values.Length;
+
+                GetValue = i => values[i];
+
+                #region Avoid serializing
+
+                max = TValue.Zero;
+                step = TValue.Zero;
+                
+                #endregion
+            }
+            else
+            {
+                if (Options.MinOptimizationValues.HasValue)
+                {
+                    testCount = (Options.MinOptimizationValues.Value + Options.MaxOptimizationValues) / 2;
+                } else
+                {
+                    testCount = Options.MaxOptimizationValues;
+                }
+                //testCount = Options.MinOptimizationValues ?? throw new ArgumentNullException(nameof(Options.MinOptimizationValues));
+                checked // REVIEW - is this necessary?
+                {
+                    if (Options.MaxProbes.HasValue)
+                    {
+                        testCount = Math.Min(testCount, (int)Options.MaxProbes.Value);
+                    }
+                    if (Options.MinProbes.HasValue)
+                    {
+                        testCount = Math.Max(testCount, (int)Options.MinProbes.Value);
+                    }
+                }
+                if (Options.MinOptimizationValues.HasValue)
+                {
+                    testCount = Math.Max(testCount, Options.MinOptimizationValues.Value);
+                }
+                if(Options.MaxOptimizationValues > 0)
+                {
+                    testCount = Math.Min(testCount, Options.MaxOptimizationValues);
+                }
+
+                levelMultiplier = Math.Pow(2, -level);
+
+                var divisor = Math.Pow(2, -level);
+                var remainder = testCount % divisor;
+                testCount = (int)double.Ceiling(testCount / divisor);
+
+                // TODO: extra test at the end if it doesn't perfectly line up
+                //if (divisor != 0) count++;
+
+                //IsComplete = new BitArray(count);
+
+                if (Options.DistributionParameter.HasValue && Options.DistributionParameter.Value != 1)
+                {
+                    Debug.WriteLine("UNTESTED: DistributionParameter != 1");
+
+                    var rangeForLog = Math.Log((testCount - 1) * Convert.ToDouble(step));
+                    exponentAdjustment = Convert.ToDouble(range) / rangeForLog;
+
+                    GetValue = GetDistributionValue;
+                }
+                else
+                {
+                    GetValue = GetLinearValue;
+                    exponentAdjustment = 0; // 0 means ignore this parameter (effective exponentAdjustment of 1)
+                }
+
+                if (levelMultiplier != 1)
+                {
+                    var copy = GetValue;
+                    GetValue = i => copy((int)(i * levelMultiplier)); // TODO: fix artefacts?
+                }
+            }
         }
     }
 
+
     #region State
 
-    public readonly BitArray IsComplete;
+    //public readonly BitArray IsComplete;
+    public int TestCount => testCount;
+    private int testCount;
 
-    #region Derived
+    private readonly TValue[]? CategoryValues; // UNUSED
 
-    public int TestCount => IsComplete.Count;
-
-    #endregion
     #endregion
 
     #region GetValue

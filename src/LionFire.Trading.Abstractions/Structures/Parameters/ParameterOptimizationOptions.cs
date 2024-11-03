@@ -18,13 +18,15 @@ public interface IParameterOptimizationOptions
 
     #region Derived
 
-    int? MinOptimizationTests { get; }
-    int MaxOptimizationTests { get; }
+    int? MinOptimizationValues { get; }
+    int MaxOptimizationValues { get; }
 
     //int StepsPossible { get; }
 
     bool IsEligibleForOptimization { get; }
+    bool? EnableOptimization { get; set; }
     object SingleValue { get; }
+    object? DefaultValue { get; }
 
     #endregion
 
@@ -60,9 +62,15 @@ public class ParameterOptimizationOptions<TValue>
     #region Derived
 
     public TValue? SingleValue => MinValue.HasValue && MinValue == MaxValue ? MinValue : null;
+    //public TValue? SingleValue => MinValue.HasValue && MinValue == MaxValue ? MinValue : ((MaxValue - MinValue) / TValue.CreateChecked(2.0));
+    //public TValue? SingleValue => MinValue.HasValue && MinValue == MaxValue ? MinValue : (DefaultValue ?? MinValue);
+    //((MaxValue - MinValue) / TValue.CreateChecked(2.0)));
+
     object IParameterOptimizationOptions.SingleValue => SingleValue ?? throw new InvalidOperationException($"{nameof(SingleValue)} not available when {nameof(IsEligibleForOptimization)} is false");
 
-    public bool IsEligibleForOptimization => !SingleValue.HasValue;
+    public bool IsEligibleForOptimization => !SingleValue.HasValue && EnableOptimization != false;
+
+    public bool? EnableOptimization { get; set; }
 
     public TValue? Range => MaxValue - MinValue;
 
@@ -73,19 +81,24 @@ public class ParameterOptimizationOptions<TValue>
     //    {
     //        return (min, max, count) => (int i) => min + (max - min) * Math.Pow(DistributionParameter.Value, i / count);
     //    }
-
     //}
 
     //return (min, max, count) => (int i) => min + (max - min) * i / count;
     #endregion
     public int? OptimizeOrder { get; set; }
 
+    public TValue? HardMinValue { get; set; }
     public TValue? MinValue { get; set; }
-    public TValue EffectiveMinValue => MinValue ?? (AllowNegativeValues ? DataTypeMinValue : TValue.Zero);
+    public TValue? DefaultMin { get; set; }
+    public TValue EffectiveMinValue => MinValue ?? DefaultMin ?? HardMinValue ?? (AllowNegativeValues ? DataTypeMinValue : TValue.Zero);
+    public TValue? HardMaxValue { get; set; }
     public TValue? MaxValue { get; set; }
     public TValue? DefaultMax { get; set; }
-    public TValue EffectiveMaxValue => DefaultMax ?? MaxValue ?? DefaultMaxForDataType;
-    public TValue EffectiveRange => EffectiveMaxValue - EffectiveMinValue;
+    public TValue? DefaultValue { get; set; }
+    object? IParameterOptimizationOptions.DefaultValue => DefaultValue;
+
+    public TValue EffectiveMaxValue => MaxValue ?? DefaultMax ?? HardMaxValue ?? DefaultMaxForDataType;
+    public TValue EffectiveRange => (EffectiveMaxValue - EffectiveMinValue) + TValue.One;
 
     public TValue? MinStep { get; set; }
     public TValue EffectiveMinStep
@@ -146,8 +159,8 @@ public class ParameterOptimizationOptions<TValue>
     public static TValue DataTypeMaxValue => (TValue)typeof(TValue).GetField(nameof(int.MaxValue), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
     public static TValue DataTypeMinValue => (TValue)typeof(TValue).GetField(nameof(int.MinValue), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
 
-    public int? MinOptimizationTests => (int)Convert.ToUInt32(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxOptimizationStep)));
-    public int MaxOptimizationTests => (int)Convert.ToUInt32(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep));
+    public int? MinOptimizationValues => (int)Convert.ToUInt32(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxOptimizationStep)));
+    public int MaxOptimizationValues => (int)Convert.ToUInt32(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep));
 
     #endregion
 

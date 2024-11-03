@@ -46,7 +46,10 @@ public partial class GridSearchState
     {
         this.gridSearchStrategy = gridSearchStrategy;
 
-        foreach (var kvp in BotParameterPropertiesInfo.Get(gridSearchStrategy.OptimizationParameters.BotParametersType)
+        var x = gridSearchStrategy.OptimizationParameters.EnableParametersAtOrAboveOptimizePriority;
+
+
+        foreach (var kvp in BotParameterPropertiesInfo.Get(gridSearchStrategy.OptimizationParameters.PBotType)
                 .PathDictionary
                     .Where(kvp => kvp.Value.IsOptimizable
                         && kvp.Value.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
@@ -54,31 +57,36 @@ public partial class GridSearchState
                     .Select(kvp
                     => new KeyValuePair<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)>(kvp.Key,
                         (info: kvp.Value,
-                         options: GetEffectiveOptions(
+                         options: GetEffectiveOptions(kvp.Value,
                                         kvp.Value.ParameterAttribute.GetParameterOptimizationOptions(kvp.Value.LastPropertyInfo!.PropertyType),
-                                        gridSearchStrategy.Parameters.Parameters.TryGetValue(kvp.Key)))))
+                                        gridSearchStrategy.Parameters.Parameters.TryGetValue(kvp.Key),
+                                        gridSearchStrategy.OptimizationParameters))))
                     .OrderByDescending(kvp => kvp.Value.options.OptimizeOrder)
-                    .ThenBy(kvp => kvp.Value.info.OptimizePriority)
+                    .ThenBy(kvp => kvp.Value.info.OptimizeOrderTiebreaker)
                     .ThenBy(kvp => kvp.Key)
             )
         {
-            if (kvp.Value.options.IsEligibleForOptimization) { optimizableParameters.Add(kvp.Value); }
+            if (kvp.Value.options.IsEligibleForOptimization
+                && (kvp.Value.options.EnableOptimization == true
+                || kvp.Value.info.ParameterAttribute.OptimizePriorityInt >= gridSearchStrategy.OptimizationParameters.EnableParametersAtOrAboveOptimizePriority
+                )
+                )
+            { optimizableParameters.Add(kvp.Value); }
             else { unoptimizableParameters.Add(kvp.Value); }
         }
 
         if (optimizableParameters.Count == 0) throw new ArgumentException("No parameters to optimize");
 
-        zero = new GridLevelOfDetailState(0, this);
+        zero = new LevelOfDetail(0, this);
 
-#if TODO // Lower resolution optimization when too many tests
-        while (CurrentLevel.TestCount > gridSearchStrategy.OptimizationParameters.MaxBacktests)
+        while (CurrentLevel.TestPermutationCount > gridSearchStrategy.OptimizationParameters.MaxBacktests)
         {
-            currentLevel++;
+            currentLevel--;
         }
-#endif
     }
 
-    private IParameterOptimizationOptions GetEffectiveOptions(IParameterOptimizationOptions fromAttribute, IParameterOptimizationOptions? fromOptimizationParameters)
+
+    private IParameterOptimizationOptions GetEffectiveOptions(HierarchicalPropertyInfo info, IParameterOptimizationOptions fromAttribute, IParameterOptimizationOptions? fromOptimizationParameters, POptimization pOptimization)
     {
         ArgumentNullException.ThrowIfNull(fromAttribute);
 
@@ -88,7 +96,13 @@ public partial class GridSearchState
 
         if (fromOptimizationParameters != null)
         {
-            AssignFromExtensions.AssignNonDefaultPropertiesFrom(fromOptimizationParameters, clone);
+            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
+        }
+
+        var fromPOptimization = pOptimization.ParameterOptimizationOptions?.TryGetValue(info.Path) ?? pOptimization.ParameterOptimizationOptions?.TryGetValue(info.Key);
+        if (fromPOptimization != null)
+        {
+            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
         }
 
         return clone;
@@ -100,7 +114,7 @@ public partial class GridSearchState
 
     #region CurrentLevel
 
-    public GridLevelOfDetailState CurrentLevel => currentLevel == 0 ? zero : GetLevel(currentLevel);
+    public LevelOfDetail CurrentLevel => currentLevel == 0 ? zero : GetLevel(currentLevel);
     public int CurrentLevelIndex => currentLevel;
     int currentLevel = 0;
 
@@ -108,7 +122,7 @@ public partial class GridSearchState
 
     #region Levels
 
-    public GridLevelOfDetailState GetLevel(int level)
+    public LevelOfDetail GetLevel(int level)
     {
         if (levels == null)
         {
@@ -117,21 +131,21 @@ public partial class GridSearchState
         }
         if (!levels.TryGetValue(level, out var result))
         {
-            result = new GridLevelOfDetailState(level, this);
+            result = new LevelOfDetail(level, this);
             levels.Add(level, result);
         }
         return result;
     }
-    public SortedList<int /* level */, GridLevelOfDetailState>? levels = null;
-    GridLevelOfDetailState zero;
+    public SortedList<int /* level */, LevelOfDetail>? levels = null;
+    LevelOfDetail zero;
+
+    public IEnumerable<LevelOfDetail> LevelsOfDetail => levels?.Values ?? [zero];
 
     #endregion
 
     #endregion
 
 }
-
-
 
 public class LevelOfDetail<T>
 {

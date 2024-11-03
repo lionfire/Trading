@@ -19,41 +19,61 @@ public class Optimize_ : BinanceDataTest
     {
         #region Input
 
-        var p = new POptimization()
+        var ExchangeSymbol = new ExchangeSymbol("Binance", "futures", "BTCUSDT");
+
+        var p = new POptimization(typeof(PAtrBot<double>), ExchangeSymbol)
         {
             //MaxBatchSize = 100_000,
             //MaxBatchSize = 20_048,
-            MaxBatchSize = 4_096,
+            //MaxBatchSize = 4_096,
+            MaxBatchSize = 2_048,
             //MaxBatchSize = 1_024,
             //MaxBatchSize = 10,
 
             //MaxBacktests = 1_000,
             //MaxBacktests = 8_192,
             //MaxBacktests = 10_000,
-            MaxBacktests = 100_000,
-            //MaxBacktests = 1_000_000,
+            //MaxBacktests = 100_000,
+            MaxBacktests = 1_000_000,
             //MaxBacktests = 15_000,
 
-            MaxDetailedJournals = 10,
+            EnableParametersAtOrAboveOptimizePriority = -10,
+
+
+            MaxDetailedJournals = 10, // TODO: Replace worse ones with better ones
+
             CommonBacktestParameters = new PBacktestBatchTask2
             {
+
                 PBotType = typeof(PAtrBot<double>),
                 Start = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero),
                 EndExclusive = new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
                 Features = BotHarnessFeatures.Bars,
                 TimeFrame = TimeFrame.h1,
-                ExchangeSymbol = new ExchangeSymbol("Binance", "futures", "BTCUSDT"),
+                ExchangeSymbol = ExchangeSymbol,
                 //StartingBalance = 10000,
-
             },
             GranularityStepMultiplier = 4,
-            BotParametersType = typeof(PAtrBot<double>),
-            ParameterRanges = new List<IPParameterOptimization>
+            ParameterOptimizationOptions = new Dictionary<string, IParameterOptimizationOptions>
             {
-                new PParameterOptimization<uint> { Name = "ATR.Period", Min = 10, Max = 20, Step = 2 },
-                new PParameterOptimization<int> { Name = "OpenThreshold", Min = 3, Max = 30, Step = 1 },
-                new PParameterOptimization<int> { Name = "CloseThreshold", Min = 1, Max = 20, Step = 1 },
+                ["Period"] = new ParameterOptimizationOptions<int>
+                {
+                    MaxProbes = 20,
+                    MinProbes = 20,
+                    MinValue = 2,
+                    MaxValue = 40,
+                    OptimizationStep = 3
+                },
+                //["OpenThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 2 },
+                //["CloseThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 3 },
             },
+
+            //ParameterRanges = new List<IPParameterOptimization>
+            //{
+            //    new PParameterOptimization<uint> { Name = "ATR.Period", Min = 10, Max = 20, Step = 2 },
+            //    new PParameterOptimization<int> { Name = "OpenThreshold", Min = 3, Max = 30, Step = 1 },
+            //    new PParameterOptimization<int> { Name = "CloseThreshold", Min = 1, Max = 20, Step = 1 },
+            //},
 
         };
 
