@@ -1,0 +1,51 @@
+﻿@inherits ReactiveInjectableComponentBase<OneShotOptimizeVM>
+
+@page "/optimize/one-shot"
+@rendermode InteractiveServer
+
+@* This page is a quick UI for optimizing right from a Worker process' UI.  The long-term approach favors a FireLynx workbench that supports Optimize documents which can be saved/loaded.  *@
+
+@* <CascadingValue Value="ViewModel" Name="OneShotOptimizeVM"> *@
+
+<MudExpansionPanel @bind-Expanded=@ShowParameters>
+    <OptimizeParameters ViewModel="ViewModel" />
+
+    <MudPaper Class="gap-6 d-flex flex-row justify-end pa-6">
+        @if (IsRunning)
+        {
+            <MudButton OnClick="@OnCancel" Color="Color.Error" Variant="@(IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+                @if (IsAborting)
+                {
+                    <text>Aborting...</text>
+                }
+                else
+                {
+                    <text>Abort</text>
+                }
+            </MudButton>
+        }
+        <MudButton OnClick="@OnOptimize" Color="Color.Primary" Variant="@(IsRunning && !IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+            @if (IsRunning)
+            {
+                <text>Optimizing...</text>
+            }
+            else
+            {
+                <text>Optimize</text>
+            }
+        </MudButton>
+    </MudPaper>
+</MudExpansionPanel>
+
+@* </CascadingValue> *@
+
+<div>
+    <h3>Results</h3>
+</div>
+
+<div>
+    <h3>Selected Backtest</h3>
+
+</div>
+
+

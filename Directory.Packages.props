@@ -129,7 +129,7 @@
     <PackageVersion Include="MorseCode.ITask" Version="2.0.3" />
     <PackageVersion Include="MSTest.TestAdapter" Version="3.6.1" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.6.1" />
-    <PackageVersion Include="MudBlazor" Version="6.20.0" />
+    <PackageVersion Include="MudBlazor" Version="7.15.0" />
     <PackageVersion Include="MyCouch" Version="7.6.0" />
     <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageVersion Include="Nito.AsyncEx" Version="5.1.2" />
@@ -173,6 +173,7 @@
     <PackageVersion Include="QuickFix.Net.NETCore" Version="1.8.1" />
     <PackageVersion Include="QuickFix.Net.NETCore.FIX44" Version="1.8.1" />
     <PackageVersion Include="Radzen.Blazor" Version="4.24.4" />
+    <PackageVersion Include="ReactiveUI.Blazor" Version="20.1.63" />
     <PackageVersion Include="RestSharp.NetCore" Version="105.2.3" />
     <PackageVersion Include="RethinkDb.Driver" Version="2.3.150" />
     <PackageVersion Include="ScottPlot" Version="5.0.35" />
