@@ -1,7 +1,28 @@
 ﻿@page "/"
+@using Microsoft.Extensions.Options
 
-<PageTitle>Home</PageTitle>
+@inject IOptionsMonitor<BacktestOptions> BacktestOptionsMonitor
 
-<h1>Hello, world!</h1>
+<PageTitle>Status</PageTitle>
 
-Welcome to your new app.
+<MudGrid>
+
+    <MudItem sm="3">
+
+        <MudSimpleTable>
+            <tr>
+                <th></th>
+                <th></th>
+            </tr>
+            <tr>
+                <td>
+                    Backtests Dir
+                </td>
+                <td>
+                    @BacktestOptionsMonitor.CurrentValue.Dir
+                </td>
+            </tr>
+        </MudSimpleTable>
+    </MudItem>
+
+</MudGrid>

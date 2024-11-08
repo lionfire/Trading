@@ -31,9 +31,6 @@ namespace LionFire.Trading.Automation;
 
 public class UniqueFileWriter
 {
-    //static ConcurrentWeakDictionaryCache<string, UniqueFileWriter> instances = new();
-    static ConditionalWeakTable<string, UniqueFileWriter> instances = new();
-
     // Based on: https://stackoverflow.com/questions/9545619/a-fast-hash-function-for-string-in-c-sharp
     static UInt64 CalculateHash(string read)
     {
@@ -49,32 +46,29 @@ public class UniqueFileWriter
     UInt64 lastHash = 0;
     int counter = -1;
 
-
-    public static Task SaveIfDifferent(string templatedPath, string contents)
-    {
-        lock (_staticlock)
-        {
-            return instances.GetOrCreateValue(templatedPath).saveIfDifferent(templatedPath, contents);
-        }
-    }
-
     private readonly object _lock = new();
-    private static readonly object _staticlock = new();
-    private Task saveIfDifferent(string templatedPath, string contents)
-    {
-        counter++; // Always increment counter (ENH: make configurable)
 
+    public string TemplatedPath { get; }
+
+
+    public UniqueFileWriter(string templatedPath)
+    {
+        this.TemplatedPath = templatedPath;
+    }
+    public Task SaveIfDifferent(string contents)
+    {
         lock (_lock)
         {
+            counter++; // Always increment counter (ENH: make configurable)
             var newHash = CalculateHash(contents);
             if (newHash == lastHash) return Task.CompletedTask;
             lastHash = newHash;
         }
 
-        var path = templatedPath.Replace("{0}", counter.ToString());
-        if (path == templatedPath)
+        var path = TemplatedPath.Replace("{0}", counter.ToString());
+        if (path == TemplatedPath)
         {
-            var dir = Path.GetDirectoryName(templatedPath) ?? throw new ArgumentException($"{nameof(templatedPath)} is unknown directory");
+            var dir = Path.GetDirectoryName(TemplatedPath) ?? throw new ArgumentException($"{nameof(TemplatedPath)} is unknown directory");
             if (counter == 0)
             {
                 path = Path.Combine(dir, Path.GetFileNameWithoutExtension(path) + Path.GetExtension(path));
@@ -159,11 +153,11 @@ public class BacktestBatchTask2<TPrecision>
 
     #region Lifecycle
 
-    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) 
+    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null)
     {
         context ??= MultiBacktestContext.Create(serviceProvider, new(parameters));
 
-        if(executionOptions != null) { context.ExecutionOptions = executionOptions; }
+        if (executionOptions != null) { context.ExecutionOptions = executionOptions; }
 
         var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, context, dateChunker, backtestBatchJournal: backtestBatchJournal);
         await t.Init();
@@ -863,10 +857,11 @@ public class BacktestBatchTask2<TPrecision>
             });
         }
         else { go(); }
-        void go() => UniqueFileWriter.SaveIfDifferent(Path.Combine(BatchDirectory, $"BatchInfo.hjson"), hjson);
-        //HjsonValue.Save(hjsonValue, );
+        void go()
+        {
+            Context.BatchInfoFileWriter.SaveIfDifferent(hjson);
+        }
     }
-
 
 
     #region Inputs

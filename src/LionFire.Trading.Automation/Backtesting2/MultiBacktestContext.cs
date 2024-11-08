@@ -55,10 +55,22 @@ public class MultiBacktestContext
 
     #endregion
 
+
     #region LogDirectory
 
-    // BLOCKING I/O
-    public string LogDirectory { get => logDirectory ??= GetBatchDirectory(); set => logDirectory = value; }
+    // BLOCKING I/O, first time used
+    public string LogDirectory
+    {
+        get
+        {
+            if (logDirectory == null)
+            {
+                logDirectory = GetBatchDirectory(); // BLOCKING I/O
+                BatchInfoFileWriter = new(Path.Combine(LogDirectory, $"BatchInfo.hjson"));
+            }
+            return logDirectory;
+        }
+    }
     private string? logDirectory;
 
     private string GetBatchDirectory() // BLOCKING I/O
@@ -108,5 +120,6 @@ public class MultiBacktestContext
 
     #endregion
 
+    public UniqueFileWriter BatchInfoFileWriter { get; private set; }
 }
 

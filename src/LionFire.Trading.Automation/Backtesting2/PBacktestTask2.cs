@@ -23,24 +23,25 @@
 
 //    DateTimeOffset Start { get; }
 //    DateTimeOffset EndExclusive { get; }
-
 //}
+
+// OPTIMIZE: change set properties to init?
 public class PBacktestBatchTask2 //: IPBacktestBatchTask2
 {
     public bool TicksEnabled() => Features.HasFlag(BotHarnessFeatures.Ticks);
     public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame => ExchangeSymbol == null || TimeFrame == null ? null : new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.ExchangeArea, ExchangeSymbol.Symbol, TimeFrame);
 
-    public Type? PBotType { get; init; }
+    public Type? PBotType { get; set; }
 
     #region Time
 
-    public TimeFrame? TimeFrame { get; init; }
+    public TimeFrame? TimeFrame { get; set; }
 
     public virtual TimeFrame? EffectiveTimeFrame => TimeFrame;
 
     //public TimeFrame TimeFrame => PBot.TimeFrame;
-    public DateTimeOffset Start { get; init; }
-    public DateTimeOffset EndExclusive { get; init; }
+    public DateTimeOffset Start { get; set; }
+    public DateTimeOffset EndExclusive { get; set; }
 
     #endregion
 
@@ -57,7 +58,7 @@ public class PBacktestBatchTask2 //: IPBacktestBatchTask2
     /// <summary>
     /// null if ExchangeSymbols is set instead
     /// </summary>
-    public ExchangeSymbol? ExchangeSymbol { get; init; }
+    public ExchangeSymbol? ExchangeSymbol { get; set; }
 
     /// <summary>
     /// null if ExchangeSymbol is set instead.  Order is important, with the first symbol typically being the primary one.
@@ -68,7 +69,7 @@ public class PBacktestBatchTask2 //: IPBacktestBatchTask2
 
     #region Performance tuning
 
-    public bool ShortChunks { get; init; }
+    public bool ShortChunks { get; set; }
 
     #endregion
 

@@ -1,4 +1,5 @@
 using LionFire.Execution;
+using LionFire.Mvvm;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Automation.Optimization;
@@ -7,6 +8,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using MudBlazor;
 using QuantConnect;
 using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 using System;
 
 namespace LionFire.Trading.Worker.Components.Pages.Optimization;
@@ -21,58 +23,38 @@ public partial class OneShotOptimize
 
     bool ShowParameters { get; set; } = true;
 
-
-   
     void OnOptimize()
     {
-        var optimizationTask = new OptimizationTask(ServiceProvider, ViewModel.POptimization);
-
-        cts = new();
-        var task = optimizationTask.Run(cts.Token);
-
-        IsRunning = true;
-        IsAborted = false;
-
-        Task.Run(async () =>
-        {
-            await task;
-            IsRunning = false;
-            IsCompleted = true;
-            if (IsAborting)
-            {
-                IsAborted = true;
-                IsAborting = false;
-            }
-            _ = InvokeAsync(StateHasChanged);
-        });
+        ViewModel!.Start();
     }
 
-    void OnCancel()
-    {
-        IsAborting = true;
-        cts.Cancel();
-    }
-    Task? task;
-    CancellationTokenSource cts;
-
-    OptimizationTask? OptimizationTask { get; set; }
-
-    bool IsCompleted { get; set; }
-    bool IsRunning { get; set; }
-    bool IsAborted { get; set; }
-    bool IsAborting { get; set; }
-
-   
 }
 
 public class OneShotOptimizeVM : ReactiveObject
 {
-    public OneShotOptimizeVM()
+    public IServiceProvider ServiceProvider { get; }
+    public OneShotOptimizeVM(IServiceProvider serviceProvider)
     {
+        ServiceProvider = serviceProvider;
     }
 
 
     #region State
+
+    [Reactive]
+    public bool IsCompleted { get; set; }
+    [Reactive]
+    public bool IsRunning { get; set; }
+    [Reactive]
+    public bool IsAborted { get; set; }
+    [Reactive]
+    public bool IsAborting { get; set; }
+
+
+    Task? task;
+    CancellationTokenSource? cts;
+
+    OptimizationTask? OptimizationTask { get; set; }
 
     #region Input Binding
 
@@ -87,8 +69,8 @@ public class OneShotOptimizeVM : ReactiveObject
 
     #region Derived
 
-    public DateTimeOffset Start { get; set; } = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero);
-    public DateTimeOffset EndExclusive { get; set; } = new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero);
+    //public DateTimeOffset Start { get; set; } = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    //public DateTimeOffset EndExclusive { get; set; } = new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero);
 
     public POptimization POptimization
     {
@@ -96,11 +78,12 @@ public class OneShotOptimizeVM : ReactiveObject
         {
             return new POptimization(PBotType, new ExchangeSymbol(Exchange, ExchangeArea, Symbol))
             {
+                
                 CommonBacktestParameters = new()
                 {
                     PBotType = PBotType,
-                    Start = Start,
-                    EndExclusive = EndExclusive,
+                    //Start = Start,
+                    //EndExclusive = EndExclusive,
                     Features = BotHarnessFeatures.Bars,
                     TimeFrame = TimeFrame,
                     ExchangeSymbol = ExchangeSymbolTimeFrame,
@@ -133,5 +116,37 @@ public class OneShotOptimizeVM : ReactiveObject
 
     #endregion
 
+    #region Methods
 
+    public void Cancel()
+    {
+        IsAborting = true;
+        cts.Cancel();
+    }
+
+    public void Start()
+    {
+        var optimizationTask = new OptimizationTask(ServiceProvider, POptimization);
+
+        cts = new();
+        var task = optimizationTask.Run(cts.Token);
+
+        IsRunning = true;
+        IsAborted = false;
+
+        Task.Run(async () =>
+        {
+            await task;
+            IsRunning = false;
+            IsCompleted = true;
+            if (IsAborting)
+            {
+                IsAborted = true;
+                IsAborting = false;
+            }
+            //_ = InvokeAsync(StateHasChanged);
+        });
+    }
+
+    #endregion
 }

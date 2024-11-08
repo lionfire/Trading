@@ -23,6 +23,7 @@ new HostApplicationBuilder(args)
             .AddSingleton<BinanceClientProvider>()
             .AddSingleton<IndicatorProvider>()
             .AddIndicators()
+            .Backtesting(lf.Configuration)
         )
     )
     .ConfigureServices(services => services

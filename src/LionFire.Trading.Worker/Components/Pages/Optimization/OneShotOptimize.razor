@@ -11,10 +11,10 @@
     <OptimizeParameters ViewModel="ViewModel" />
 
     <MudPaper Class="gap-6 d-flex flex-row justify-end pa-6">
-        @if (IsRunning)
+        @if (ViewModel!.IsRunning)
         {
-            <MudButton OnClick="@OnCancel" Color="Color.Error" Variant="@(IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
-                @if (IsAborting)
+            <MudButton OnClick="@ViewModel!.Cancel" Color="Color.Error" Variant="@(ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+                @if (ViewModel!.IsAborting)
                 {
                     <text>Aborting...</text>
                 }
@@ -24,8 +24,8 @@
                 }
             </MudButton>
         }
-        <MudButton OnClick="@OnOptimize" Color="Color.Primary" Variant="@(IsRunning && !IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
-            @if (IsRunning)
+        <MudButton OnClick="@OnOptimize" Color="Color.Primary" Variant="@(ViewModel!.IsRunning && !ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+            @if (ViewModel!.IsRunning)
             {
                 <text>Optimizing...</text>
             }
