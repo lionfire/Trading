@@ -3,11 +3,11 @@ using LionFire.Trading.Worker.Components;
 using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using MudBlazor.Services;
 
-public class TradingWorkerStartup : WebHostConfig
+public class TradingWorkerStartup //: WebHostConfig
 {
-    public TradingWorkerStartup(IConfiguration configuration) : base(configuration)
-    {
-    }
+    //public TradingWorkerStartup(IConfiguration configuration) : base(configuration)
+    //{
+    //}
 
     public void ConfigureServices(IServiceCollection services)
     {
@@ -63,13 +63,13 @@ public class TradingWorkerStartup : WebHostConfig
         app.UseEndpoints(e =>
         {
             //    endpoints.MapBlazorHub();
-            //    endpoints.MapFallbackToPage("/_Host");
+            //e.MapFallbackToPage("/_Host");
             e.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode()
                 //.AddInteractiveWebAssemblyRenderMode()
                 .AddAdditionalAssemblies(
-                    typeof(FireLynx.Blazor.Public.Pages.TradingAlertsDashboard).Assembly
-                    //typeof(LionFire.Trading.Optimization.OneShotOptimize).Assembly
+                    typeof(FireLynx.Blazor.Public.Pages.TradingAlertsDashboard).Assembly,
+                    typeof(LionFire.Trading.Automation.Blazor.Optimization.OneShotOptimize).Assembly
                 );
         });
     }

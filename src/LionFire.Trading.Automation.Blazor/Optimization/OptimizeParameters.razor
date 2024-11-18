@@ -1,0 +1,71 @@
+﻿@inherits ReactiveComponentBase<OneShotOptimizeVM>
+
+@rendermode InteractiveServer
+
+<h3 class="py-4">Optimize Parameters</h3>
+
+<MudGrid>
+    <MudItem sm="3">
+        <MudSelect Label="Bot" @bind-Value="ViewModel!.PBotType" Dense="@true">
+            @foreach (var e in ViewModel!.BotTypes)
+            {
+                <MudSelectItem Value="@e">@e.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem sm="3">
+        <MudSelect Label="Exchange" @bind-Value="ViewModel!.Exchange" Dense="@true">
+            @foreach (var e in ViewModel!.Exchanges)
+            {
+                <MudSelectItem Value="@e">@e</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <MudItem sm="3">
+        <MudSelect Label="Area" @bind-Value="ViewModel!.ExchangeArea">
+            <MudSelectItem Value="@("futures")">futures</MudSelectItem>
+        </MudSelect>
+    </MudItem>
+
+    <MudItem sm="3">
+        <MudSelect Label="Symbol" @bind-Value="ViewModel!.Symbol">
+            @foreach (var e in ViewModel!.Symbols)
+            {
+                <MudSelectItem Value="@e">@e</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <MudItem sm="3">
+        <MudSelect Label="TimeFrame" @bind-Value="ViewModel!.TimeFrameString">
+            @foreach (var e in ViewModel!.TimeFrames)
+            {
+                <MudSelectItem Value="@e">@e</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+
+    <MudItem sm="5" >
+        <MudDateRangePicker @bind-DateRange="ViewModel!.DateRange" Label="Date Range" Dense="@true" />
+    </MudItem>
+
+
+     <MudItem sm="5" >
+         <ObjectExplorer CurrentObject="ViewModel"/>
+        @* <MudSlider Min="0" Max="int.MaxValue" @bind-Value="ViewModel!.MaxDetailedJournals" Label="Max Trade Journals" Dense="@true" />
+        <MudSlider Min="1" Max="8192" @bind-Value="ViewModel!.BatchSize" Label="Batch size" Dense="@true" />
+        <MudSlider T="int" Min="1"  Max="int.MaxValue" @bind-Value="ViewModel!.BatchSize" Label="Max backtests" Dense="@true" /> *@
+    </MudItem>
+
+</MudGrid>
+
+<MudCard>
+    <MudCardHeader>
+        Bot Parameters
+    </MudCardHeader>
+    @* <InspectorView Object="ViewModel!.POptimization" /> *@
+</MudCard>
+
+
+

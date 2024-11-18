@@ -1,6 +1,8 @@
 ﻿public class BacktestBatchJournalEntry
 {
+    public int BatchId { get; set; }
     public long Id { get; set; }
+    public string StringId => $"{BatchId}-{Id}";
 
     public double Fitness { get; set; }
     public double AD { get; set; }

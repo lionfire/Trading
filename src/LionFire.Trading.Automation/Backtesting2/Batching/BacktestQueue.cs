@@ -13,6 +13,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Channels;
 using System.Threading.Tasks;
+using static CommunityToolkit.Mvvm.ComponentModel.__Internals.__TaskExtensions.TaskAwaitableWithoutEndValidation;
 
 namespace LionFire.Trading.Automation;
 
@@ -72,7 +73,7 @@ public partial class BacktestQueue : IHostedService
             consumers[i] = Task.Run(() => Consume());
         }
 
-        await Task.WhenAll(consumers);
+        await Task.WhenAll(consumers).WaitAsync(cancellationToken);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -118,7 +119,6 @@ public partial class BacktestQueue : IHostedService
         var job = Jobs.AddUnique(() => Guid.NewGuid(), guid =>
         {
             var job = new BacktestBatchesJob(guid, backtestContext);
-
             configure(job);
             return job;
         }).value;
@@ -156,6 +156,10 @@ public partial class BacktestQueue : IHostedService
                 {
                     RunningJobs.AddOrThrow(job.Guid, job);
                     await RunJob(job).ConfigureAwait(false);
+                    if (job.CancellationToken.IsCancellationRequested)
+                    {
+                        Logger.LogDebug("Enqueued Job was canceled: " + job.Guid);
+                    }
                     //Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} consumed {item}");
                 }
             }
@@ -192,13 +196,19 @@ public partial class BacktestQueue : IHostedService
             int count = 0;
             foreach (var batch in job.BacktestBatches)
             {
+                if (job.CancellationToken.IsCancellationRequested)
+                {
+                    Logger.LogInformation($"Job {job.Guid} canceled.");
+                    break;
+                }
+
                 var batchBacktest = await BacktestBatchTask2<double>.Create(ServiceProvider, batch, job.Context, backtestBatchJournal: job.Journal);
-                await batchBacktest.Run();
+                await batchBacktest.Run(job.CancellationToken);
                 count++;
             }
             sw.Stop();
             job.OnFinished();
-            Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed}");
+            Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed} {(job.CancellationToken.IsCancellationRequested ? "(CANCELED)" : "")}");
         }
         catch (Exception ex)
         {

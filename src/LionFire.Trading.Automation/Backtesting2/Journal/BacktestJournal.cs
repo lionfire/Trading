@@ -9,6 +9,14 @@ using System.Text.Json.Serialization;
 using LionFire.Serialization.Csv;
 using System.Diagnostics;
 using System.IO.Compression;
+using DynamicData;
+using ReactiveUI;
+using LionFire.Trading.Automation;
+using Polly;
+using LionFire.Structures;
+using Polly.Registry;
+using LionFire.Persistence.Persisters;
+using LionFire.Resilience;
 
 #if UNUSED
 public class IgnoreEmptyArrayConverter : JsonConverter<List<object>>
@@ -86,12 +94,20 @@ public class IgnoreEmptyArrayConverter<T> : JsonConverter<T[]>
 
 public class BacktestBatchJournal : IAsyncDisposable
 {
+    #region Dependencies
+
+    ILogger<BacktestBatchJournal> Logger { get; }
+    ResiliencePipeline fsRetry;
+
+    #endregion
 
     #region Parameters
 
     public string JournalFilename { get; set; } = "backtests";
-    public string BatchDirectory { get; }
+    public MultiBacktestContext Context { get; }
+    public string BatchDirectory => Context.LogDirectory;
     public Type PBotType { get; }
+    public bool RetainInMemory { get; }
     public bool ZipOnDispose { get; set; } = true;
 
     private readonly CsvConfiguration CsvConfiguration = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -109,23 +125,34 @@ public class BacktestBatchJournal : IAsyncDisposable
     #endregion
 
     #endregion
-
     #region Lifecycle
 
-    public BacktestBatchJournal(string dir, Type pBotType)
+    public BacktestBatchJournal(MultiBacktestContext context, Type pBotType, ResiliencePipelineProvider<string> resiliencePipelineProvider, ILogger<BacktestBatchJournal> logger,
+        bool retainInMemory = false)
     {
-        var path = Path.Combine(dir, JournalFilename + ".csv");
+        fsRetry = resiliencePipelineProvider.GetPipeline(FilesystemResilience.Retry);
+
+        Context = context;
+
+        var path = Path.Combine(Context.LogDirectory, JournalFilename + ".csv");
         var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
         var writer = new StreamWriter(fs);
         csv = new CsvWriter(writer, CsvConfiguration);
 
         consumeTask = Consume();
-        BatchDirectory = dir;
         PBotType = pBotType;
-
+        RetainInMemory = retainInMemory;
+        Logger = logger;
+        if (retainInMemory)
+        {
+            sourceCache = new(e => (e.BatchId, e.Id));
+        }
         csv.Context.RegisterClassMap(new ParametersMapper(pBotType));
         //typeof(CsvContext).GetMethod(nameof(CsvContext.RegisterClassMap), new Type[] { })!.MakeGenericMethod(mapType).Invoke(csv.Context, null);
     }
+
+    public IObservableCache<BacktestBatchJournalEntry, (int, long)>? ObservableCache => sourceCache;
+    SourceCache<BacktestBatchJournalEntry, (int, long)>? sourceCache = null;
 
     public class ParametersMapper : DynamicSplitMap<BacktestBatchJournalEntry>
     {
@@ -186,29 +213,46 @@ public class BacktestBatchJournal : IAsyncDisposable
     }
 
     Task consumeTask;
-    CancellationTokenSource CancellationTokenSource = new CancellationTokenSource();
 
     public async ValueTask DisposeAsync()
     {
         channel.Writer.Complete();
-        //await Task.Delay(200);
 
         while (channel.Reader.TryPeek(out var _))
         {
             Debug.WriteLine($"{this.GetType().Name} - Waiting for Reader to be emptied.");
             await Task.Delay(100);
         }
-        if (ZipOnDispose)
-        {
-            ZipBatchDir();
-        }
+        if (csv != null) { await csv.DisposeAsync(); }
+
+        if (ZipOnDispose) { await ZipBatchDir(); }
     }
 
-    public void ZipBatchDir()
+    public async ValueTask ZipBatchDir()
     {
         var zipPath = Path.Combine(Path.GetDirectoryName(BatchDirectory)!, Path.GetFileName(BatchDirectory) + ".zip");
-        ZipFile.CreateFromDirectory(BatchDirectory, zipPath);
-        Directory.Delete(BatchDirectory, true);
+
+       await Task.Delay(100);
+       await fsRetry.ExecuteAsync(ct =>
+        {
+            if (File.Exists(zipPath))
+            {
+                Logger.LogWarning("Deleting failed zip file before retrying: {0}", zipPath);
+                try
+                {
+                    File.Delete(zipPath);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to delete failed zip file: {0}", zipPath);
+                    throw;
+                }
+            }
+                ZipFile.CreateFromDirectory(BatchDirectory, zipPath);
+                Directory.Delete(BatchDirectory, true);
+            return ValueTask.CompletedTask;
+        });
+
     }
 
     #endregion
@@ -224,24 +268,39 @@ public class BacktestBatchJournal : IAsyncDisposable
 
     public bool TryWrite(BacktestBatchJournalEntry e)
     {
+        sourceCache?.AddOrUpdate(e);
         return channel.Writer.TryWrite(e);
     }
     public async ValueTask WriteAsync(BacktestBatchJournalEntry e)
     {
+        sourceCache?.AddOrUpdate(e);
         await channel.Writer.WriteAsync(e);
     }
 
     public int FlushEvery { get; set; } = 50;
     public async Task Consume()
     {
+        //CancellationTokenSource localCTS = new();
+
+        //_ = Task.Run(() =>
+        //{
+        //    ((ManualResetEvent)Context.CancellationToken.WaitHandle).WaitOne();
+        //}
+        //    );
+
         int flushCounter = 0;
         int flushEvery = FlushEvery;
-        await foreach (var item in channel.Reader.ReadAllAsync().WithCancellation(CancellationTokenSource.Token))
+        //try
+        //{
+        await foreach (var item in channel.Reader.ReadAllAsync()
+            //.WithCancellation(Context.CancellationToken)
+            )
         {
             await csv.WriteRecordsAsync([item]);
             if (flushCounter++ == flushEvery) { await csv.FlushAsync(); flushCounter = 0; }
         }
-        await csv.DisposeAsync();
+        //}
+        //catch (OperationCanceledException) { }
     }
 
     #endregion

@@ -9,6 +9,9 @@ using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Backtesting2;
 using LionFire.Trading.Journal;
 using Microsoft.Extensions.DependencyInjection;
+using Polly;
+using ReactiveUI;
+using ReactiveUI.Fody.Helpers;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -20,7 +23,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Optimization;
 
-public class OptimizationTask : IRunnable
+public class OptimizationTask : ReactiveObject, IRunnable
 {
     #region Dependencies
 
@@ -34,7 +37,7 @@ public class OptimizationTask : IRunnable
 
     #region Parameters
 
-    public POptimization? Parameters => BacktestContext?.OptimizationOptions;
+    public POptimization Parameters => Context.OptimizationOptions!;
 
     public ExchangeSymbol? ExchangeSymbol => Parameters?.CommonBacktestParameters?.ExchangeSymbol;
 
@@ -45,7 +48,7 @@ public class OptimizationTask : IRunnable
     public OptimizationTask(IServiceProvider serviceProvider, POptimization parameters)
     {
         ServiceProvider = serviceProvider;
-        BacktestContext = MultiBacktestContext.Create(ServiceProvider, new(parameters));
+        Context = MultiBacktestContext.Create(ServiceProvider, new(parameters ?? throw new ArgumentNullException(nameof(parameters))));
         //OptimizationDirectory = GetOptimizationDirectory(Parameters.PBotType);
 
         BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
@@ -54,26 +57,36 @@ public class OptimizationTask : IRunnable
 
         BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
         ExecutionOptions = /*executionOptions ?? */ ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
-
     }
     public Task StartAsync(CancellationToken cancellationToken = default)
     {
+        if (Parameters == null) throw new ArgumentNullException(nameof(Parameters));
         //IOptimizerEnumerable optimizerEnumerable = Parameters.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this); // OLD - find this and absorb
 
         if (CancellationTokenSource != null) { throw new AlreadyException(); }
         CancellationTokenSource = new();
 
-        OptimizationMultiBatchJournal = new BacktestBatchJournal(BacktestContext.LogDirectory, Parameters.PBotType);
+        {
+            var actualCTS = CancellationTokenSource;
+            if (cancellationToken.CanBeCanceled)
+            {
+                actualCTS = CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token, cancellationToken);
+            }
+            Context.CancellationToken = actualCTS.Token;
+        }
+
+        OptimizationMultiBatchJournal = ActivatorUtilities.CreateInstance<BacktestBatchJournal>(ServiceProvider, Context, Parameters.PBotType, true);
 
         PGridSearchStrategy pGridSearchStrategy = new()
         {
             //Parameters = Parameters.ParameterRanges.ToDictionary(p => p.Name, p => new ParameterOptimizationOptions { MinValue = p.Min, MaxValue = p.Max, MinStep = p.Step, MaxStep = p.Step }),
         };
-        GridSearchStrategy gridSearchStrategy = new(pGridSearchStrategy, Parameters, this);
+
+        GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, pGridSearchStrategy, Parameters, this);  // new(pGridSearchStrategy, Parameters, this);
 
         RunTask = Task.Run(async () =>
         {
-            await gridSearchStrategy.Run(CancellationTokenSource.Token);
+            await gridSearchStrategy.Run().ConfigureAwait(false);
             //await ServiceProvider.GetRequiredService<BacktestQueue>().StopAsync(default);
             if (OptimizationMultiBatchJournal != null)
             {
@@ -87,9 +100,13 @@ public class OptimizationTask : IRunnable
 
     #region State
 
-    public MultiBacktestContext BacktestContext { get; private set; }
+    public CancellationToken CancellationToken => CancellationTokenSource?.Token ?? CancellationToken.None;
+    public void Cancel() => CancellationTokenSource?.Cancel();
+
+    public MultiBacktestContext Context { get; private set; }
 
     //string? OptimizationDirectory;
+    [Reactive]
     public BacktestBatchJournal? OptimizationMultiBatchJournal { get; private set; }
 
     private IBacktestBatchJob? batchJob = null;
@@ -97,7 +114,7 @@ public class OptimizationTask : IRunnable
     /// <remarks>
     /// If not null, the task has already been started.
     /// </remarks>
-    public CancellationTokenSource? CancellationTokenSource { get; protected set; }
+    public CancellationTokenSource? CancellationTokenSource { get; private set; }
 
     public Task? RunTask { get; private set; }
 

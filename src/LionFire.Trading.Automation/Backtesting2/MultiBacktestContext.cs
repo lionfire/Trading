@@ -18,7 +18,7 @@ public class MultiBacktestContext
 
     #region Parameters
 
-    public POptimization? OptimizationOptions => Parameters.OptimizationOptions;
+    public POptimization OptimizationOptions => Parameters.OptimizationOptions;
 
     public BacktestExecutionOptions ExecutionOptions
     {
@@ -36,6 +36,8 @@ public class MultiBacktestContext
     public ExchangeSymbol ExchangeSymbol => Parameters.ExchangeSymbol;
     public Type BotType => Parameters.BotType;
 
+    public CancellationToken CancellationToken { get; set; }
+
     #endregion
 
     #endregion
@@ -51,6 +53,7 @@ public class MultiBacktestContext
     {
         ServiceProvider = serviceProvider;
         Parameters = parameters;
+        if(Parameters.OptimizationOptions == null) { throw new ArgumentNullException(nameof(Parameters.OptimizationOptions)); }
     }
 
     #endregion

@@ -54,6 +54,8 @@ public partial class BacktestQueue
 
         public Task Task => tcs.Task;
 
+        //public CancellationToken CancellationToken { get; internal set; }
+        public CancellationToken CancellationToken => Context.CancellationToken;
 
         TaskCompletionSource tcs = new();
         internal void OnFinished() => tcs.SetResult();

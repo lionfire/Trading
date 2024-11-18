@@ -126,7 +126,6 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
             else
             {
                 Context.OnTradeJournalCreated();
-                Debug.WriteLine("Not aborted");
             }
         }
         await Journal.CloseAll();

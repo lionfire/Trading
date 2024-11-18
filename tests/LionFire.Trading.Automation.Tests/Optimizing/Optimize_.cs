@@ -40,11 +40,10 @@ public class Optimize_ : BinanceDataTest
             EnableParametersAtOrAboveOptimizePriority = -10,
 
 
-            MaxDetailedJournals = 10, // TODO: Replace worse ones with better ones
+            MaxDetailedJournals = 0, // TODO: Replace worse ones with better ones
 
             CommonBacktestParameters = new PBacktestBatchTask2
             {
-
                 PBotType = typeof(PAtrBot<double>),
                 Start = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero),
                 EndExclusive = new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),

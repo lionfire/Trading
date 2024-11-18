@@ -165,6 +165,7 @@
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />
     <PackageVersion Include="Overby.Extensions.Attachments" Version="1.2.0" />
     <PackageVersion Include="PixelLab.Core" Version="6.0.2" />
+    <PackageVersion Include="Plotly.Blazor" Version="5.3.0" />
     <PackageVersion Include="Polly" Version="8.4.2" />
     <PackageVersion Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageVersion Include="prometheus-net" Version="8.2.1" />

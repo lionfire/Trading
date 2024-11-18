@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -14,11 +14,28 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" />
 		<PackageReference Include="Microsoft.Orleans.Client" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
 		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="Plotly.Blazor" />
+		<PackageReference Include="ReactiveUI.Blazor" />
 	</ItemGroup>
-	
+
 	<ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="8.0.10" />
-  </ItemGroup>
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
+		<ProjectReference Include="..\..\..\core\src\LionFire.Orleans.Hosting\LionFire.Orleans.Hosting.csproj" />
+		<ProjectReference Include="..\..\..\Trading.Proprietary\src\FireLynx.Blazor.Public\FireLynx.Blazor.Public.csproj" />
+		<ProjectReference Include="..\..\..\Trading\src\LionFire.Trading.Blazor\LionFire.Trading.Blazor.csproj" />
+
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Applications.Extensions\LionFire.Applications.Extensions.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.AspNetCore.Framework\LionFire.AspNetCore.Framework.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.AspNetCore\LionFire.AspNetCore.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Blazor.Components.MudBlazor\LionFire.Blazor.Components.MudBlazor.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Blazor.Components\LionFire.Blazor.Components.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
+	</ItemGroup>
+
 
 </Project>

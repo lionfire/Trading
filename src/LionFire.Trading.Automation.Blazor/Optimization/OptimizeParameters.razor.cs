@@ -1,26 +1,26 @@
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Automation.Optimization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
 using ReactiveUI;
 
-namespace LionFire.Trading.Worker.Components.Pages.Optimization;
+namespace LionFire.Trading.Automation.Blazor.Optimization;
 
-public partial class OptimizeParameters
+public partial class OptimizeParameters(ILogger<OptimizeParameters> Logger)
 {
+
+    ILogger Logger2 = Logger;
 
     //[CascadingParameter(Name = "OneShotOptimizeVM")]
     //public OneShotOptimizeVM OneShotOptimizeVM { get; set; }
 
-    public OptimizeParameters()
-    {
-    }
-
     protected override Task OnParametersSetAsync()
     {
-        if (ViewModel != null)
+        this.Logger2.LogInformation("---------------TESTING-----------------");
+        //if (ViewModel != null)
         {
-            this.WhenAnyValue(x => x.DateRange).Subscribe(range =>
+            this.WhenAnyValue(x => x.ViewModel.DateRange).Subscribe(range =>
             {
                 ViewModel!.POptimization.CommonBacktestParameters.Start = !range.Start.HasValue ? DateTimeOffset.MinValue : new DateTimeOffset(range.Start.Value, TimeSpan.Zero);
                 ViewModel!.POptimization.CommonBacktestParameters.EndExclusive = !range.End.HasValue ? DateTimeOffset.MaxValue : new DateTimeOffset(range.End.Value, TimeSpan.Zero);
@@ -29,8 +29,7 @@ public partial class OptimizeParameters
         return base.OnParametersSetAsync();
     }
 
-    public DateRange DateRange { get; set; } = new(new(2020, 1, 1), new(2020, 2, 1));
-
+ 
 
 }
 

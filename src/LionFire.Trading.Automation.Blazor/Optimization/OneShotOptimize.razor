@@ -1,0 +1,87 @@
+﻿@page "/optimize/one-shot"
+@inherits ReactiveInjectableComponentBase<OneShotOptimizeVM>
+
+@rendermode InteractiveServer
+
+@using LionFire.Blazor.Components.Terminal
+
+@* This page is a quick UI for optimizing right from a Worker process' UI.  The long-term approach favors a FireLynx workbench that supports Optimize documents which can be saved/loaded.  *@
+
+<MudPaper Class="gap-6 d-flex flex-row justify-end pa-6">
+    @if (ViewModel!.IsRunning)
+    {
+        <MudButton OnClick="@ViewModel!.Cancel" Color="Color.Error" Variant="@(ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+            @if (ViewModel!.IsAborting)
+            {
+                <text>Aborting...</text>
+            }
+            else
+            {
+                <text>Abort</text>
+            }
+        </MudButton>
+    }
+    <MudButton OnClick="ViewModel.OnOptimize" Color="Color.Primary" Variant="@(ViewModel!.IsRunning && !ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+        @if (ViewModel!.IsRunning)
+        {
+            <text>Optimizing...</text>
+        }
+        else
+        {
+            <text>Optimize</text>
+        }
+    </MudButton>
+</MudPaper>
+
+<MudExpansionPanel @bind-Expanded=@ShowParameters>
+    <OptimizeParameters ViewModel="ViewModel" />
+</MudExpansionPanel>
+
+
+<MudExpansionPanel @bind-Expanded=@ShowResults>
+
+    <MudGrid>
+        <MudItem>
+            <OptimizationResultsChart />
+        </MudItem>
+        <MudItem>
+            @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory != null)
+            {
+                <div>
+                    Dir:
+                    <a href="@($"file:///{ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory}")">@ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory</a>
+
+                </div>
+            }
+        </MudItem>
+        <MudItem>
+            <div style="min-height: 220px;">
+                <h3>Selected Backtest</h3>
+
+            </div>
+
+        </MudItem>
+    </MudGrid>
+</MudExpansionPanel>
+
+<div>
+    <h3>Results</h3>
+    @* @if (ViewModel!.Backtests != null) *@
+    @if (ViewModel.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache.Items != null)
+    {
+        @* <MudDataGrid Items="ViewModel.Backtests.Items"> *@
+        <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items">
+            <Columns>
+                <PropertyColumn Property="x => x.StringId" />
+                <PropertyColumn Property="x => x.Fitness" />
+                <PropertyColumn Property="x => x.AD" />
+            </Columns>
+
+        </MudDataGrid>
+    }
+
+    <TerminalView ViewModel="ViewModel!.LinesVM" />
+</div>
+
+
+

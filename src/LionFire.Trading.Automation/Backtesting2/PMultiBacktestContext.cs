@@ -9,25 +9,51 @@ public class PMultiBacktestContext
     public PMultiBacktestContext(POptimization pOptimization)
     {
         OptimizationOptions = pOptimization;
-        ExchangeSymbol = pOptimization.ExchangeSymbol;
-        PBotType = pOptimization.PBotType;
-        BotType = TryGetBotType(PBotType);
     }
 
-    public PMultiBacktestContext(Type pBotType, ExchangeSymbol? exchangeSymbol = null)
+    public PMultiBacktestContext(Type pBotType, ExchangeSymbol? exchangeSymbol = null, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
-        PBotType = pBotType;
-        BotType = TryGetBotType(PBotType);
-        ExchangeSymbol = ExchangeSymbol ?? ExchangeSymbol.Unknown;
+        OptimizationOptions = new POptimization(pBotType, ExchangeSymbol)
+        {
+            CommonBacktestParameters = new()
+            {
+                Start = start ?? default,
+                EndExclusive = endExclusive ?? default
+            }
+        };
     }
-    public PMultiBacktestContext(IEnumerable<PBacktestTask2> pBacktestTask2)
+
+    public PMultiBacktestContext(IEnumerable<PBacktestTask2> pBacktestTask2, DateTimeOffset? start, DateTimeOffset? endExclusive)
     {
         var first = pBacktestTask2.First();
-        PBotType = first.PBot!.GetType();
-        BotType = TryGetBotType(PBotType);
-        ExchangeSymbol = first.ExchangeSymbol ?? ExchangeSymbol.Unknown;
+        var pBotType = first.PBot!.GetType();
+        var exchangeSymbol = first.ExchangeSymbol ?? ExchangeSymbol.Unknown;
+
+        OptimizationOptions = new POptimization(pBotType, exchangeSymbol)
+        {
+            CommonBacktestParameters = new()
+            {
+                Start = start ?? default,
+                EndExclusive = endExclusive ?? default
+            }
+        };
     }
 
+    #endregion
+
+    public POptimization OptimizationOptions { get; set; }
+
+    #region Derived
+
+    #region Convenience
+
+    public Type PBotType => OptimizationOptions.PBotType;
+    public ExchangeSymbol ExchangeSymbol => OptimizationOptions.ExchangeSymbol;
+
+    #endregion
+
+    public Type BotType => botType ??= TryGetBotType(PBotType);
+    private Type? botType;
     private static Type TryGetBotType(Type pBotType)
     {
         Type? botType;
@@ -44,12 +70,5 @@ public class PMultiBacktestContext
     }
 
     #endregion
-
-    public Type PBotType { get; }
-    public Type BotType { get; }
-
-    public ExchangeSymbol ExchangeSymbol { get; set; }
-
-    public POptimization? OptimizationOptions { get; set; }
 }
 

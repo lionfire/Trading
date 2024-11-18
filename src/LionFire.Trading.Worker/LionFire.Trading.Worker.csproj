@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>f574b2a2-05d7-48cf-9049-676cd7251af1</UserSecretsId>
@@ -29,12 +29,17 @@
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Blazor.Components.MudBlazor\LionFire.Blazor.Components.MudBlazor.csproj" />
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Blazor.Components\LionFire.Blazor.Components.csproj" />
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Automation.Blazor\LionFire.Trading.Automation.Blazor.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
 		<!--<ProjectReference Include="..\FireLynx.Blazor.Public\FireLynx.Blazor.Public.csproj" />-->
 		<!--<ProjectReference Include="..\..\..\Trading.Proprietary\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />-->
 		<!--<ProjectReference Include="..\FireLynx.Blazor\FireLynx.Blazor.csproj" />-->
 		<!--<ProjectReference Include="..\LionFire.Trading.BotHost\LionFire.Trading.BotHosting.csproj" />-->
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Components\Pages\Optimization\" />
 	</ItemGroup>
 
 </Project>

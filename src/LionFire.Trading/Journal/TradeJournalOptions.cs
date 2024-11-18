@@ -35,7 +35,7 @@ public class TradeJournalOptions
     public bool DiscardDetailsWhenAborted { get; set; } // FUTURE = true;
     public int KeepDetailsForTopNResultsIncludingAborted { get; set; } = 10;
     public int KeepDetailsForTopNResults { get; set; } = 100;
-    public int BufferEntries { get; set; } = 10_000;
+    public int BufferEntries { get; set; } = 100_000;
 
     //public long MaxDiskSpaceForDetails { get; set; } = 20 * 1024 * 1024; // ENH
 

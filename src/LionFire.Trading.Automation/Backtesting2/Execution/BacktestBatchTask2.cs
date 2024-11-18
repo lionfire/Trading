@@ -26,6 +26,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using LionFire.Collections;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace LionFire.Trading.Automation;
 
@@ -153,9 +154,9 @@ public class BacktestBatchTask2<TPrecision>
 
     #region Lifecycle
 
-    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null)
+    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
-        context ??= MultiBacktestContext.Create(serviceProvider, new(parameters));
+        context ??= MultiBacktestContext.Create(serviceProvider, new(parameters, start, endExclusive));
 
         if (executionOptions != null) { context.ExecutionOptions = executionOptions; }
 
@@ -201,7 +202,7 @@ public class BacktestBatchTask2<TPrecision>
             {
                 BatchDirectory = Context.LogDirectory;
                 if (!Directory.Exists(BatchDirectory)) { Directory.CreateDirectory(BatchDirectory); } // BLOCKING I/O
-                Journal = new BacktestBatchJournal(BatchDirectory, PBotType);
+                Journal = ActivatorUtilities.CreateInstance<BacktestBatchJournal>(ServiceProvider, Context, PBotType);
                 DisposeJournal = true;
             }
 
@@ -210,6 +211,10 @@ public class BacktestBatchTask2<TPrecision>
                 TradeJournalOptions = ServiceProvider.GetRequiredService<IOptionsMonitor<TradeJournalOptions>>().CurrentValue;
                 TradeJournalOptions = TradeJournalOptions.Clone();
                 TradeJournalOptions.JournalDir = BatchDirectory;
+                if (Context.Parameters.OptimizationOptions.MaxDetailedJournals <= 0)
+                {
+                    TradeJournalOptions.Enabled = false;
+                }
 
                 Context.TradeJournalOptions = TradeJournalOptions;
             }
@@ -293,7 +298,8 @@ public class BacktestBatchTask2<TPrecision>
 
     #region State Machine
 
-    readonly CancellationTokenSource cancelledSource = new();
+    readonly CancellationTokenSource CancellationTokenSource = new();
+
 
     public Task RunTask => runTaskCompletionSource == null ? Task.CompletedTask : runTaskCompletionSource.Task;
 
@@ -313,7 +319,7 @@ public class BacktestBatchTask2<TPrecision>
 
     public async Task Cancel(CancellationToken cancellationToken = default)
     {
-        cancelledSource.Cancel();
+        CancellationTokenSource.Cancel();
         await runTaskCompletionSource.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -670,7 +676,9 @@ public class BacktestBatchTask2<TPrecision>
     #endregion
 
 
+    public bool IsCancelled => this.CancellationTokenSource.IsCancellationRequested || (Context?.CancellationToken.IsCancellationRequested == true);
 
+    public CancellationToken CancellationToken => CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token, Context?.CancellationToken ?? CancellationToken.None).Token;
 
     #region (Private) Run
 
@@ -681,12 +689,19 @@ public class BacktestBatchTask2<TPrecision>
             try
             {
                 await (TicksEnabled ? RunTicks() : RunBars()).ConfigureAwait(false);
-
-                foreach (var b in backtests)
+                if (IsCancelled)
                 {
-                    if (b.PBacktest.OnFinished != null)
+                    Debug.WriteLine(this.GetType().Name + " canceled");
+                }
+                else
+                {
+
+                    foreach (var b in backtests)
                     {
-                        b.PBacktest.OnFinished();
+                        if (b.PBacktest.OnFinished != null)
+                        {
+                            b.PBacktest.OnFinished();
+                        }
                     }
                 }
             }
@@ -694,7 +709,7 @@ public class BacktestBatchTask2<TPrecision>
             {
                 runTaskCompletionSource.SetException(ex);
             }
-        }, cancelledSource.Token).FireAndForget();
+        }, CancellationToken).FireAndForget();
 
         #region (local)
 
@@ -709,7 +724,8 @@ public class BacktestBatchTask2<TPrecision>
             int counter = 0;
             var sw = Stopwatch.StartNew();
             while (SimulatedCurrentDate < EndExclusive
-                && (false == cancelledSource?.IsCancellationRequested)
+                && (!CancellationTokenSource.IsCancellationRequested)
+                && (!Context.CancellationToken.IsCancellationRequested)
                 )
             {
                 counter++;
@@ -763,6 +779,7 @@ public class BacktestBatchTask2<TPrecision>
             {
                 var entry = new BacktestBatchJournalEntry
                 {
+                    BatchId = BatchId,
                     Id = b.Controller.Id,
                     AD = b.Controller.Account.AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent,
                     MaxBalanceDrawdown = Convert.ToDouble(b.Controller.Account.MaxBalanceDrawdown),
@@ -798,7 +815,9 @@ public class BacktestBatchTask2<TPrecision>
 
         async Task RunTicks()
         {
-            while (SimulatedCurrentDate < EndExclusive && (false == cancelledSource?.IsCancellationRequested)
+            while (SimulatedCurrentDate < EndExclusive
+                && !CancellationTokenSource.IsCancellationRequested
+                && !Context.CancellationToken.IsCancellationRequested
                 )
             {
                 await NextTick();
@@ -830,8 +849,6 @@ public class BacktestBatchTask2<TPrecision>
     }
 
     public bool DisposeJournal { get; set; } = true;
-
-
 
     HjsonOptions hjsonOptions = new HjsonOptions() { EmitRootBraces = false };
     private async ValueTask SaveBatchInfo()

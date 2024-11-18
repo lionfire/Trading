@@ -1,0 +1,31 @@
+﻿@using Plotly.Blazor.Traces.ScatterLib
+<h3>OptimizationResultsChart</h3>
+<PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" />
+
+@code {
+    
+    PlotlyChart? chart;
+
+    Config config = new Config();
+    Layout layout = new Layout();
+
+    // Using of the interface IList is important for the event callback!
+    IList<ITrace> data = new List<ITrace>
+    {
+        new Scatter
+        {
+            Name = "ScatterTrace",
+            Mode = ModeFlag.Lines | ModeFlag.Markers,
+            X = new List<object>{1,2,3},
+            Y = new List<object>{1,2,3}
+        }
+    };
+
+    // private async Task AddData(int count = 100)
+    // {
+    //     if (!(chart?.Data.FirstOrDefault() is Scatter scatter)) return;
+    //     var (x, y) = Helper.GenerateData(scatter.X.Count + 1, scatter.X.Count + 1 + count);
+
+    //     await chart.ExtendTrace(x, y, data.IndexOf(scatter));
+    // }
+}

@@ -81,9 +81,11 @@ public class POptimization
     #region Journal
 
     public int MaxDetailedJournals { get; set; }
-    
+
     #endregion
 
+
+    public override string ToString() => this.ToXamlProperties();
 }
 
 //public enum ParameterType

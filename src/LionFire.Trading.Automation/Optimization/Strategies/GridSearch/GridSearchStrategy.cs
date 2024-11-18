@@ -51,15 +51,15 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
     #region Lifecycle
 
-    public GridSearchStrategy(PGridSearchStrategy parameters, POptimization optimizationParameters, OptimizationTask optimizationTask) : base(optimizationTask.BacktestContext)
+    public GridSearchStrategy(ILogger<GridSearchStrategy> logger, PGridSearchStrategy parameters, POptimization optimizationParameters, OptimizationTask optimizationTask) : base(optimizationTask.Context)
     {
         Parameters = parameters ?? throw new ArgumentNullException();
         OptimizationParameters = optimizationParameters ?? throw new ArgumentNullException();
         OptimizationTask = optimizationTask ?? throw new ArgumentNullException();
-        Logger = optimizationTask.ServiceProvider.GetRequiredService<ILogger<GridSearchStrategy>>();
+        Logger = logger; // optimizationTask.ServiceProvider.GetRequiredService<ILogger<GridSearchStrategy>>();
         State = new GridSearchState(this);
 
-        if (optimizationTask.BacktestContext.LogDirectory != null)
+        if (optimizationTask.Context.LogDirectory != null)
         {
             foreach (var level in State.LevelsOfDetail)
             {
@@ -67,15 +67,15 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     level,
                     //level.Parameters.OfType<object>(),
                     new JsonSerializerOptions
-                {
-                    WriteIndented = false,
-                    
-                    DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
-                });
+                    {
+                        WriteIndented = false,
+
+                        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
+                    });
                 var hjsonValue = Hjson.JsonValue.Parse(json);
                 var hjson = hjsonValue.ToString(new HjsonOptions { EmitRootBraces = false });
 
-                var path = Path.Combine(optimizationTask.BacktestContext.LogDirectory, $"GridLevel {level.Level}.hjson");
+                var path = Path.Combine(optimizationTask.Context.LogDirectory, $"GridLevel {level.Level}.hjson");
                 File.WriteAllText(path, hjson);
             }
         }
@@ -114,8 +114,13 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
     //    }
     //}
 
-    public async Task Run(CancellationToken cancellationToken = default)
+    public CancellationToken CancellationToken => OptimizationTask.Context.CancellationToken;
+
+    public async Task Run()
     {
+        Logger.LogInformation("Starting: {0}", OptimizationParameters);
+        //Logger.LogInformation($"{nameof(OptimizationParameters)}");
+
         StartTime = DateTimeOffset.UtcNow;
 
         List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = State.optimizableParameters;
@@ -127,9 +132,6 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
         Channel<int[]> ParametersToTest = Channel.CreateBounded<int[]>(new BoundedChannelOptions(maxBatchSize * 2) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
 
-
-        //CancellationTokenSource localCancellationTokenSource = new();
-
         bool consumerFinished = false;
         int backtestsEnqueued = 0;
         AutoResetEvent backtestFinishedEvent = new(false);
@@ -138,11 +140,12 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         var enqueueTask = Task.Run(async () =>
         {
             List<int[]> batchStaging = new(OptimizationTask.Parameters.MaxBatchSize);
-            while (!cancellationToken.IsCancellationRequested && !ParametersToTest.Reader.Completion.IsCompleted)
+            while (!CancellationToken.IsCancellationRequested
+            && !ParametersToTest.Reader.Completion.IsCompleted)
             {
                 batchStaging.Clear();
 
-                await foreach (var parameters in ParametersToTest.Reader.ReadAllAsync(cancellationToken).ConfigureAwait(false))
+                await foreach (var parameters in ParametersToTest.Reader.ReadAllAsync(CancellationToken).ConfigureAwait(false))
                 {
                     batchStaging.Add(parameters);
                     if (batchStaging.Count >= OptimizationTask.Parameters.MaxBatchSize)
@@ -155,11 +158,13 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                 {
                     int batchStagingIndex = 0;
 
-                    while (batchStagingIndex < batchStaging.Count)
+                    while (batchStagingIndex < batchStaging.Count && !CancellationToken.IsCancellationRequested)
                     {
+                        var enqueueJobSW = Stopwatch.StartNew();
                         var job = await batchQueue.EnqueueJob(BacktestContext, batch =>
                         {
                             batch.Journal = OptimizationMultiBatchJournal;
+                            Logger.LogInformation("Enqueuing batch {0} with {1} items", batch.Guid, batchStaging.Count);
 
                             List<PBacktestTask2> backtestTasksBatch = new(maxBatchSize);
                             //backtestTasksBatch.Clear();
@@ -205,16 +210,22 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                                 //}
                             }
                             batch.Backtests = backtestTasksBatch;
-                        });
-                        //await job.Task.ConfigureAwait(false);
+                        }, CancellationToken);
+
+                        Logger.Log(enqueueJobSW.ElapsedMilliseconds > 50 ? LogLevel.Information : LogLevel.Trace, "Enqueued batch in {0}ms", enqueueJobSW.ElapsedMilliseconds);
                     }
                 }
+                else
+                {
+                    Logger.LogInformation("BatchStaging is empty.");
 
-                if (batchStaging.Count == 0)
+                }
+
+                if (batchStaging.Count == 0 && !CancellationToken.IsCancellationRequested)
                 {
                     var delay = TimeSpan.FromMilliseconds(1000);
                     Logger.LogInformation($"Batch staging: no parameters available.  Delaying for {delay}ms.");
-                    await Task.Delay(delay);
+                    await Task.Delay(delay, CancellationToken);
                     //break;
                 }
             }
@@ -232,11 +243,11 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
             try
             {
-                while (State.CurrentLevelIndex <= 0 && !consumerFinished && remainingBacktestsAllowed > 0)
+                while (State.CurrentLevelIndex <= 0 && !consumerFinished && remainingBacktestsAllowed > 0 && !CancellationToken.IsCancellationRequested)
                 {
                     foreach (var current in State.CurrentLevel)
                     {
-                        await ParametersToTest.Writer.WriteAsync(current, cancellationToken).ConfigureAwait(false);
+                        await ParametersToTest.Writer.WriteAsync(current, CancellationToken).ConfigureAwait(false);
                         if (remainingBacktestsAllowed-- == 0)
                         {
                             Logger.LogWarning($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
@@ -262,16 +273,22 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
             //}
             //await Task.Yield();
             ParametersToTest.Writer.Complete();
+            Logger.LogInformation("Writing to ParametersToTest complete.");
         });
 
         await producerTask;
         await enqueueTask;
 
-        while (backtestsEnqueued > 0)
+        while (backtestsEnqueued > 0 && !CancellationToken.IsCancellationRequested)
         {
-            await backtestFinishedEvent.WaitOneAsync(1000);
+            try
+            {
+                await backtestFinishedEvent.WaitOneAsync(1000, cancellationToken: CancellationToken);
+            }
+            catch (OperationCanceledException) { }
         }
 
+        Logger.LogInformation("Done." + (CancellationToken.IsCancellationRequested ? " (Canceled)" : ""));
 
 #if TRIAGE
         //    entry.options.FitnessOfInterest ??= Parameters.FitnessOfInterest; // TRIAGE
