@@ -58,6 +58,8 @@ public class OneShotOptimizeVM : ReactiveObject
     {
         ServiceProvider = serviceProvider;
 
+#error NEXT: subscribe to CustomLogProvider (RENAME)
+
         this.WhenAnyValue(x => x.OptimizationTask!.OptimizationMultiBatchJournal!.ObservableCache).Subscribe(oc =>
         {
             Backtests = oc;

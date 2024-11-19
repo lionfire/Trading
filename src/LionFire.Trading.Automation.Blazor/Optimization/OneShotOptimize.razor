@@ -40,9 +40,12 @@
 
 <MudExpansionPanel @bind-Expanded=@ShowResults>
 
+    @* <div>
+            <OptimizationResultsChart />
+    </div> *@
+
     <MudGrid>
         <MudItem>
-            <OptimizationResultsChart />
         </MudItem>
         <MudItem>
             @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory != null)
