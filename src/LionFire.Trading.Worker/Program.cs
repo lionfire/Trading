@@ -13,8 +13,10 @@ using LionFire.Trading.Indicators;
 using LionFire.Blazor.Components.Terminal;
 using System.Reactive.Subjects;
 using LionFire.Trading.Automation.Blazor.Optimization;
+using Serilog;
 
 var wab = WebApplication.CreateBuilder(args);
+var clp = new CustomLoggerProvider();
 
 Host.CreateApplicationBuilder(args)
     .LionFire(9850, lf => lf
@@ -27,10 +29,8 @@ Host.CreateApplicationBuilder(args)
             .AddSingleton<IndicatorProvider>()
             .AddIndicators()
             .Backtesting(lf.Configuration)
-        .AddLogging(loggingBuilder =>
-        {
-            loggingBuilder.AddProvider(new CustomLoggerProvider());
-        })
+            .AddSingleton(clp)
+            .AddLogging(b =>b.AddProvider(clp))
             //    .VosMount("/output".ToVobReference(), @"f:\st\Investing-Output\.local".ToFileReference())
             .AddUIComponents()
             .AddMudBlazorComponents()
@@ -46,21 +46,24 @@ Host.CreateApplicationBuilder(args)
     .Run();
 
 
-
 public class CustomLoggerProvider : ILoggerProvider
 {
-    public ILogger CreateLogger(string categoryName)
+    public Microsoft.Extensions.Logging.ILogger CreateLogger(string categoryName)
     {
-        return new CustomLogger(categoryName);
+        var logger = new CustomLogger(categoryName);
+        logger.Observable.Subscribe(subject);
     }
+    public IObservable<LogMessage> Observable => subject;
+    Subject<LogMessage> subject = new Subject<LogMessage>();
 
     public void Dispose()
     {
         // Implement disposal logic if necessary
     }
+
 }
 
-public class CustomLogger : ILogger
+public class CustomLogger : Microsoft.Extensions.Logging.ILogger 
 {
     private readonly string _categoryName;
 
@@ -75,7 +78,7 @@ public class CustomLogger : ILogger
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         string message = formatter(state, exception);
-        Console.WriteLine($"CUSTOM - [{_categoryName}] {logLevel}: {message}"); // Example: Write to console
+        //Console.WriteLine($"CUSTOM - [{_categoryName}] {logLevel}: {message}"); // Example: Write to console
         subject.OnNext(new LogMessage
         {
             LogLevel = logLevel,
@@ -86,7 +89,7 @@ public class CustomLogger : ILogger
         });
     }
 
-    IObservable<LogMessage> Observable => subject;
+    public IObservable<LogMessage> Observable => subject;
     Subject<LogMessage> subject = new Subject<LogMessage>();
 
 }
