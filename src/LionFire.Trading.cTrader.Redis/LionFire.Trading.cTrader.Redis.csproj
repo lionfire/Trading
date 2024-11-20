@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFramework>net8.0</TargetFramework>
+	  <TargetFramework>net9.0</TargetFramework>
     <AssemblyName>LionFire.Trading.cTrader.Redis</AssemblyName>
     <PackageId>LionFire.Trading.cTrader.Redis</PackageId>
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
