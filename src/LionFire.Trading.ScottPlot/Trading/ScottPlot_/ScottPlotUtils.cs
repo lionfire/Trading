@@ -17,7 +17,20 @@ public static class ScottPlotUtils
         plot ??= new();
 
         plot.Add.Palette = new ScottPlot.Palettes.Penumbra();
+#if OLD
         plot.Style.DarkMode();
+#else
+        // TODO: Update colors to what I want. This is from docs:
+        //plot.FigureBackground.Color = Color.FromHex("#181818");
+        //plot.DataBackground.Color = Color.FromHex("#1f1f1f");
+
+        //plot.Axes.Color(Color.FromHex("#d7d7d7"));
+        //plot.Grid.MajorLineColor = Color.FromHex("#404040");
+
+        //plot.Legend.BackgroundColor = Color.FromHex("#404040");
+        //plot.Legend.FontColor = Color.FromHex("#d7d7d7");
+        //plot.Legend.OutlineColor = Color.FromHex("#d7d7d7");
+#endif
         plot.ScaleFactor = 0.5f;
 
         var barsSeries = plot.Add.Bars(bars.Select(b => (double)b.Volume).Reverse().ToArray());
@@ -143,7 +156,7 @@ public static class ScottPlotUtils
         candles.Axes.YAxis.Label.Text = percentAxis ? "%" : "Price";
 
         plot.Axes.DateTimeTicksBottom();
-        //myPlot.Axes.DateTimeTicks(Edge.Bottom);
+        //plot.Axes.DateTimeTicks(Edge.Bottom);
 
         if (diffPercent > 3.0)
         {
@@ -193,8 +206,8 @@ public static class ScottPlotUtils
         plot.Grid.MajorLineColor = Color.FromHex("#0e3d54");
 
         plot.Axes.Title.Label.Text = name;
-        //myPlot.Axes.Bottom.Label.Text = "Horizontal Axis";
-        //myPlot.Axes.Left.Label.Text = "Vertical Axis";
+        //plot.Axes.Bottom.Label.Text = "Horizontal Axis";
+        //plot.Axes.Left.Label.Text = "Vertical Axis";
 
         if (frameless)
         {

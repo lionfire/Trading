@@ -17,19 +17,15 @@ public partial class OptimizeParameters(ILogger<OptimizeParameters> Logger)
 
     protected override Task OnParametersSetAsync()
     {
-        this.Logger2.LogInformation("---------------TESTING-----------------");
-        //if (ViewModel != null)
+        this.WhenAnyValue(x => x.ViewModel.DateRange).Subscribe(range =>
         {
-            this.WhenAnyValue(x => x.ViewModel.DateRange).Subscribe(range =>
-            {
-                ViewModel!.POptimization.CommonBacktestParameters.Start = !range.Start.HasValue ? DateTimeOffset.MinValue : new DateTimeOffset(range.Start.Value, TimeSpan.Zero);
-                ViewModel!.POptimization.CommonBacktestParameters.EndExclusive = !range.End.HasValue ? DateTimeOffset.MaxValue : new DateTimeOffset(range.End.Value, TimeSpan.Zero);
-            });
-        }
+            ViewModel!.POptimization.CommonBacktestParameters.Start = !range.Start.HasValue ? DateTimeOffset.MinValue : new DateTimeOffset(range.Start.Value, TimeSpan.Zero);
+            ViewModel!.POptimization.CommonBacktestParameters.EndExclusive = !range.End.HasValue ? DateTimeOffset.MaxValue : new DateTimeOffset(range.End.Value, TimeSpan.Zero);
+        });
         return base.OnParametersSetAsync();
     }
 
- 
+
 
 }
 

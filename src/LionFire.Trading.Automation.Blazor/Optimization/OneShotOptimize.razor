@@ -33,58 +33,60 @@
     </MudButton>
 </MudPaper>
 
-<MudExpansionPanel @bind-Expanded=@ShowParameters>
-    <OptimizeParameters ViewModel="ViewModel" />
-</MudExpansionPanel>
+<MudExpansionPanels>
 
+    <MudExpansionPanel Text="Parameters" @bind-Expanded=@ShowParameters>
+        <OptimizeParameters ViewModel="ViewModel" />
+    </MudExpansionPanel>
 
-<MudExpansionPanel @bind-Expanded=@ShowResults>
+    <MudExpansionPanel Text="Results" @bind-Expanded=@ShowResults>
 
-    @* <div>
+        @* <div>
             <OptimizationResultsChart />
     </div> *@
 
-    <MudGrid>
-        <MudItem>
-        </MudItem>
-        <MudItem>
-            @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory != null)
-            {
-                <div>
-                    Dir:
-                    <a href="@($"file:///{ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory}")">@ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory</a>
+        <MudGrid>
+            <MudItem>
+                @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory != null)
+                {
+                    <div>
+                        Dir:
+                        <a href="@($"file:///{ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory}")">@ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory</a>
+
+                    </div>
+                }
+            </MudItem>
+            <MudItem>
+                <div style="min-height: 220px;">
+                    <h3>Selected Backtest</h3>
 
                 </div>
-            }
-        </MudItem>
-        <MudItem>
-            <div style="min-height: 220px;">
-                <h3>Selected Backtest</h3>
 
-            </div>
+            </MudItem>
+        </MudGrid>
+    </MudExpansionPanel>
 
-        </MudItem>
-    </MudGrid>
-</MudExpansionPanel>
-
-<div>
-    <h3>Results</h3>
+    <MudExpansionPanel Text="Backtests" @bind-Expanded=@ShowBacktests>
     @* @if (ViewModel!.Backtests != null) *@
     @if (ViewModel.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache.Items != null)
     {
         @* <MudDataGrid Items="ViewModel.Backtests.Items"> *@
-        <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items">
+            <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true >
             <Columns>
                 <PropertyColumn Property="x => x.StringId" />
                 <PropertyColumn Property="x => x.Fitness" />
-                <PropertyColumn Property="x => x.AD" />
+                <PropertyColumn Property="x => x.AD"  />
             </Columns>
 
         </MudDataGrid>
     }
 
-    <TerminalView ViewModel="ViewModel!.LinesVM" />
-</div>
+    </MudExpansionPanel>
 
+</MudExpansionPanels>
+
+<MudExpansionPanel Text="Log" @bind-Expanded=@ShowLog>
+    <TerminalView ViewModel="ViewModel!.LinesVM" />
+</MudExpansionPanel>
 
 

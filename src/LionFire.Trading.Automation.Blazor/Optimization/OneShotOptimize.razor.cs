@@ -16,6 +16,7 @@ using System.Reactive;
 using DynamicData;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using LionFire.Logging;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
@@ -29,6 +30,11 @@ public partial class OneShotOptimize
 
     bool ShowParameters { get; set; } = true;
     bool ShowResults { get; set; } = false;
+    bool ShowBacktests { get; set; } = false;
+    bool ShowLog { get; set; } = true;
+
+    private SortMode _sortMode = SortMode.Multiple;
+
 
     protected override Task OnParametersSetAsync()
     {
@@ -54,11 +60,17 @@ public class OneShotOptimizeVM : ReactiveObject
     public ILogger ConsoleLog => LinesVM;
 
     public IServiceProvider ServiceProvider { get; }
-    public OneShotOptimizeVM(IServiceProvider serviceProvider)
+    public CustomLoggerProvider CustomLoggerProvider { get; }
+
+    public OneShotOptimizeVM(IServiceProvider serviceProvider, LionFire.Logging.CustomLoggerProvider customLoggerProvider)
     {
         ServiceProvider = serviceProvider;
+        CustomLoggerProvider = customLoggerProvider;
 
-#error NEXT: subscribe to CustomLogProvider (RENAME)
+        customLoggerProvider.Observable.Subscribe(logEntry =>
+        {
+            LinesVM.Append(logEntry.Message ?? "", logEntry.LogLevel, logEntry.Category ?? "");
+        });
 
         this.WhenAnyValue(x => x.OptimizationTask!.OptimizationMultiBatchJournal!.ObservableCache).Subscribe(oc =>
         {
