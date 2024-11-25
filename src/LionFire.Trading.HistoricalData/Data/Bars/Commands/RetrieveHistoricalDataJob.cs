@@ -348,7 +348,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                         }
                     }
 
-                    if (since <= TimeSpan.FromSeconds(30))
+                    if (since <= TimeSpan.FromSeconds(Debugger.IsAttached ? 180 : 30))
                     {
                         //Debug.WriteLine($"{input.Symbol} {input.SymbolBarsRange.Start} - {input.SymbolBarsRange.EndExclusive} -- File was downloaded by something else and should be ready now.  {fileDownloadedElsewhereRetries} retry attempts remaining.");
                         await Task.Delay(150).ConfigureAwait(false); // TODO OPTIMIZE ASYNCBLOCKING WAIT - use a semaphore

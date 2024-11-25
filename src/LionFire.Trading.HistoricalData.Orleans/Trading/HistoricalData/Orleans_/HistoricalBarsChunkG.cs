@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NLog.LayoutRenderers.Wrappers;
 using LionFire.Trading.HistoricalData;
+using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading.Binance_;
 
@@ -15,8 +16,9 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
 {
     #region Dependencies
 
+    public ILogger<HistoricalBarsChunkG> Logger { get; }
     public IChunkedBars BarsService { get; }
-   
+
 
     #endregion
 
@@ -47,11 +49,13 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
     #region Lifecycle
 
     public HistoricalBarsChunkG(
+        ILogger<HistoricalBarsChunkG> logger,
         DateChunker historicalDataChunkRangeProvider,
         ISymbolIdParser symbolIdParser,
         IChunkedBars bars
         )
     {
+        Logger = logger;
         BarsService = bars;
 
         BarsRange = SymbolBarsRange.Parse(this.GetPrimaryKeyString(), symbolIdParser);
@@ -68,19 +72,65 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
     #region State (cache)
 
     private IReadOnlyList<IKline>? bars;
-    
+
     #endregion
 
     public async Task<IReadOnlyList<IKline>> Bars()
     {
-        // TODO: Up to date check
-        if (bars == null)
+        bool isUpToDate = bars != null && bars.Any();
+
+        if (isUpToDate)
+        {
+            if (BarsRange.EndExclusive > DateTimeOffset.UtcNow)
+            {
+                if (bars!.Last().CloseTime < DateTimeOffset.UtcNow - TimeFrame.TimeSpan)
+                {
+                    Logger.LogInformation("{name} Last close of {lastClose} is old.  Retrieving latest.", this.GetPrimaryKeyString(), bars.Last().CloseTime); // LOGCLEANUP - make this trace, maybe
+                    isUpToDate = false;
+                }
+            }
+            else if (BarsRange.ExpectedBarCount != bars!.Count)
+            {
+                Logger.LogInformation("{name} This chunk ended as of {endExclusive} and should be complete with {expectedBarCount}, but only {barCount} bars are present. Retrieving latest.", this.GetPrimaryKeyString(), BarsRange.EndExclusive, BarsRange.ExpectedBarCount, bars.Count); // LOGCLEANUP - make this trace, maybe
+                isUpToDate = false;
+            }
+        }
+
+        if (!isUpToDate)
         {
             var result = await BarsService.GetShortChunk(BarsRange);
 
             if (result == null) throw new Exception("Failed to retrieve bars");
 
-            bars = result.Bars; 
+            var expectedLastOpenTime = BarsRange.EndExclusive > DateTimeOffset.UtcNow ? TimeFrame.GetExpectedBarOpenTimeForLastClosedBar() : TimeFrame.AddBars(BarsRange.EndExclusive, -1);
+
+            if (expectedLastOpenTime > DateTimeOffset.UtcNow)
+            {
+//#if DEBUG
+                Logger.LogError("Sanity check JG28F9WJ3218ROSJ"); // REVIEW - should always be true
+//#endif
+            }
+            else if (result.Bars == null || !result.Bars.Any())
+            {
+                Logger.LogInformation("{name} TODO - got no bars. Figure out if this is ok.", this.GetPrimaryKeyString());
+            }
+            else
+            {
+                if (expectedLastOpenTime > result.Bars.Last().OpenTime)
+                {
+                    var diff = Math.Abs(TimeFrame.GetExpectedBarCount(expectedLastOpenTime, result.Bars.Last().OpenTime)!.Value);
+                    if (diff > 1)
+                    {
+                        Logger.LogWarning("{name} Expected last open time of {expected} but got {actual}.  Diff: {diff}", this.GetPrimaryKeyString(), expectedLastOpenTime, result.Bars.Last().OpenTime, diff);
+                    }
+                    else
+                    {
+                        Logger.LogInformation("{name} Expected last open time of {expected} but got {actual}. Diff: {diff}", this.GetPrimaryKeyString(), expectedLastOpenTime, result.Bars.Last().OpenTime, diff);
+                    }
+                }
+            }
+
+            bars = result.Bars;
         }
         return bars;
     }

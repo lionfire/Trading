@@ -124,6 +124,16 @@ public class TimeFrame : ISerializableAsString
         var now = DateTimeOffset.UtcNow;
         return GetExpectedBarCount(start, endExclusive > now ? GetPeriodStart(now) + TimeSpan : endExclusive);
     }
+    public DateTimeOffset GetExpectedBarOpenTimeForLastClosedBar()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return AddBars(GetOpenTimeBefore(now), -1);
+    }
+    public DateTimeOffset GetExpectedBarOpenTimeForNow()
+    {
+        var now = DateTimeOffset.UtcNow;
+        return GetOpenTimeBefore(now);
+    }
 
     public static TimeFrame t1 { get; private set; }
     public static TimeFrame m1 { get; private set; }
