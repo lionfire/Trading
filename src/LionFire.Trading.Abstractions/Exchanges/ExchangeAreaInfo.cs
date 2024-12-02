@@ -1,6 +1,8 @@
 ﻿using LionFire.Structures;
+using Orleans;
 
 namespace LionFire.Trading.Exchanges;
+
 
 public class ExchangeAreaInfo : IKeyed
 {
@@ -9,4 +11,6 @@ public class ExchangeAreaInfo : IKeyed
 
     public Type BarType { get; set; }
 }
+
+
 

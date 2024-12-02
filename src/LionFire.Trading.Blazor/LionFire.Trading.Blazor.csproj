@@ -2,14 +2,15 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>LionFire</RootNamespace>
-    <Configurations>Debug;Release</Configurations>
+    <!--<Configurations>Debug;Release</Configurations>-->
   </PropertyGroup>
 
 
 	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" />
 		<PackageReference Include="LightweightCharts.Blazor" />
 		<PackageReference Include="MudBlazor" />
 		<PackageReference Include="ScottPlot.Blazor" />

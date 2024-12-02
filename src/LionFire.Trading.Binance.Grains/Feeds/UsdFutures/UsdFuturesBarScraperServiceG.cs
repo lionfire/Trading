@@ -3,7 +3,7 @@ using Orleans.Runtime;
 
 namespace LionFire.Trading.Binance_;
 
-[Alias("BinanceUsdFuturesBarScraperService")]
+//[Alias("BinanceUsdFuturesBarScraperService")]
 public class UsdFuturesBarScraperServiceG([PersistentState("BinanceUsdFuturesBarScraperOptions", "Trading")] IPersistentState<UsdFuturesBarScraperServiceOptions> options, ILogger<UsdFuturesBarScraperServiceG> logger) : Grain, IUsdFuturesBarScraperServiceG
 {
     TimeFrame TimeFrame { get; set; } = null!;

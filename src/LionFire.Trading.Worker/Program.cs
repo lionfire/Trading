@@ -4,26 +4,44 @@ using LionFire.Trading.Indicators;
 using LionFire.Trading.Automation.Blazor.Optimization;
 using LionFire.Logging;
 
-var wab = WebApplication.CreateBuilder(args);
-var clp = new CustomLoggerProvider();
+var customLoggerProvider = new CustomLoggerProvider();
 
 Host.CreateApplicationBuilder(args)
     .LionFire(9850, lf => lf
+        .ForIHostApplicationBuilder(builder => builder
+             //.Trading()
+            .UseOrleansClient_LF()
+        )
         //.FireLynxApp()
         .If(Convert.ToBoolean(lf.Configuration["Orleans:Enable"]), lf => lf.Silo())
         .WebHost<TradingWorkerStartup>(w => w.Http().BlazorServer())
         .ConfigureServices(services => services
+
+        #region Data
+            .AddTradingData()
             .AddHistoricalBars(lf.Configuration)
-            .AddSingleton<BinanceClientProvider>()
+        #endregion
+
+        #region Indicators
             .AddSingleton<IndicatorProvider>()
             .AddIndicators()
-            .Backtesting(lf.Configuration)
-            .AddSingleton(clp)
+        #endregion
+
+        #region Exchanges (TODO: move this upstream)
+            .AddSingleton<BinanceClientProvider>()
+        #endregion
+
+        #region Logging
+            .AddSingleton(customLoggerProvider)
             .AddLogging(b =>
             {
                 b.ClearProviders(); // TEMP - clear console logger in LF DLLs?
-                b.AddProvider(clp);
+                b.AddProvider(customLoggerProvider);
             })
+        #endregion
+
+            #region UI
+
             //    .VosMount("/output".ToVobReference(), @"f:\st\Investing-Output\.local".ToFileReference())
             .AddUIComponents()
             .AddMudBlazorComponents()
@@ -31,10 +49,13 @@ Host.CreateApplicationBuilder(args)
             .AddTradingUI()
             //.AddTransient<OneShotOptimizeVM>()
             .AddSingleton<OneShotOptimizeVM>()
+        
+            #endregion
+
+            .Backtesting(lf.Configuration)
             .AddAutomation()
         )
     )
-    //.I(i => i.Configuration.AddUserSecrets<FireLynxAppStartup>(optional: true, reloadOnChange: true)) // TODO SECURITY - disable in Production
     .Build()
     .Run();
 

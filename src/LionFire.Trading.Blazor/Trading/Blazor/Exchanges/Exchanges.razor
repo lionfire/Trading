@@ -1,0 +1,17 @@
+@page "/exchanges"
+@page "/abc"
+@using LionFire.Trading.Exchanges
+@inject NavigationManager NavigationManager
+@inject ExchangeInfos ExchangeInfos
+
+@* @rendermode InteractiveServer *@
+
+@namespace LionFire.Trading.Blazor.Exchanges
+
+<h2>Exchanges</h2>
+
+<MudDataGrid T="string" Items="Items" RowClick="OnRowClick">
+    <Columns>
+        <PropertyColumn Property="x=>x" />
+    </Columns>
+</MudDataGrid>

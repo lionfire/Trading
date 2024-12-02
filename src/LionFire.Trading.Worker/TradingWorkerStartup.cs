@@ -62,15 +62,16 @@ public class TradingWorkerStartup //: WebHostConfig
 
         app.UseEndpoints(e =>
         {
-            //    endpoints.MapBlazorHub();
-            //e.MapFallbackToPage("/_Host");
             e.MapRazorComponents<App>()
-                .AddInteractiveServerRenderMode()
                 //.AddInteractiveWebAssemblyRenderMode()
                 .AddAdditionalAssemblies(
-                    typeof(FireLynx.Blazor.Public.Pages.TradingAlertsDashboard).Assembly,
-                    typeof(LionFire.Trading.Automation.Blazor.Optimization.OneShotOptimize).Assembly
-                );
+                //    //typeof(FireLynx.Blazor.Public.Pages.TradingAlertsDashboard).Assembly,
+                    typeof(LionFire.Trading.Automation.Blazor.Optimization.OneShotOptimize).Assembly,
+                    typeof(LionFire.Trading.Blazor.Exchanges.Exchanges).Assembly
+                )
+                .AddInteractiveServerRenderMode()
+                ;
+            e.MapBlazorHub().WithOrder(-1);
         });
     }
 }

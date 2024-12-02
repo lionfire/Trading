@@ -105,7 +105,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
     public BinanceClientProvider? BinanceClientProvider { get; set; }
     public KlineArrayFileProvider? KlineArrayFileProvider { get; set; }
-    public ILogger<RetrieveHistoricalDataJob>? Logger { get; set; }
+    public ILogger<RetrieveHistoricalDataJob> Logger { get; set; }
     public IBinanceRestClient? BinanceClient { get; set; }
 
     BarsFileSource BarsFileSource { get; set; }
@@ -116,7 +116,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
     #region Lifecycle
 
     //public RetrieveHistoricalDataJob() { }
-    public RetrieveHistoricalDataJob(IBinanceRestClient? binanceClient, ILogger<RetrieveHistoricalDataJob>? logger, KlineArrayFileProvider? klineArrayFileProvider, BarsFileSource barsFileSource, DateChunker historicalDataChunkRangeProvider)
+    public RetrieveHistoricalDataJob(IBinanceRestClient? binanceClient, ILogger<RetrieveHistoricalDataJob> logger, KlineArrayFileProvider? klineArrayFileProvider, BarsFileSource barsFileSource, DateChunker historicalDataChunkRangeProvider)
     {
         BinanceClient = binanceClient;
         Logger = logger;
@@ -129,7 +129,7 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
 
     #region Options: Validation and Parsing
 
-    public RetrieveHistoricalDataParameters Input { get; set; }
+    public RetrieveHistoricalDataParameters? Input { get; set; }
 
     public void ValidateAndParseOptions()
     {
@@ -804,11 +804,12 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
         {
             foreach (var h in responseHeaders ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>())
             {
-                if (h.Key.ToUpperInvariant().Contains("WEIGHT") && h.Key != "X-MBX-USED-WEIGHT-1M")
+                if (h.Key.ToUpperInvariant().Contains("WEIGHT") && h.Key.ToUpperInvariant() != "X-MBX-USED-WEIGHT-1M")
                 {
                     foreach (var v in h.Value)
                     {
-                        Console.WriteLine($"TODO - {h.Key} = {v}");
+                        //Logger.LogTrace("X-MBX-USED-WEIGHT-1M: " + maxUsedWeight);
+                        Logger.LogWarning("TODO - handle weight from server: {header} = {value}", h.Key, v);
                     }
                 }
 

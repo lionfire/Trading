@@ -3,6 +3,8 @@ using Orleans.Concurrency;
 
 namespace LionFire.Trading.Binance_;
 
+//[Alias("BinanceUsdFuturesBarScraperService")]
+//[GrainType("BinanceUsdFuturesBarScraperService")]
 public interface IUsdFuturesBarScraperServiceG : IGrainWithStringKey
 {
     Task Start();
