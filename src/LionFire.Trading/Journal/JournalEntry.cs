@@ -1,6 +1,8 @@
 ﻿using MemoryPack;
 using System.CommandLine;
 using System.Numerics;
+using System.Text.Json.Serialization;
+using System.Threading;
 
 namespace LionFire.Trading;
 
@@ -8,6 +10,8 @@ namespace LionFire.Trading;
 public partial class JournalEntry<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
+    #region Properties
+
     public JournalEntryType EntryType { get; set; }
     public JournalEntryFlags Flags { get; set; }
     public DateTimeOffset Time { get; set; }
@@ -28,6 +32,17 @@ public partial class JournalEntry<TPrecision>
     public TPrecision? QuantityChange { get; set; }
     public TPrecision RealizedGrossProfitDelta { get; set; }
 
+    #endregion
+
+    #region Non-serialized
+
+    [MemoryPackIgnore]
+    public IPosition<TPrecision>? Position { get; set; }
+
+    #endregion
+
+    #region Lifecycle
+
     [MemoryPackConstructor]
     public JournalEntry() { }
 
@@ -38,10 +53,19 @@ public partial class JournalEntry<TPrecision>
 
     public JournalEntry(IPosition<TPrecision> position) : this(position.Account)
     {
+        Position = position;
         PositionId = position.Id;
         Quantity = position.Quantity;
         EntryAverage = position.EntryAverage;
         Symbol = position.Symbol;
     }
+
+    #endregion
+
+    #region Misc
+
     public override string ToString() => this.ToXamlAttribute();
+
+    #endregion
+
 }

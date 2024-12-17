@@ -3,6 +3,7 @@ using CsvHelper;
 using CsvHelper.Configuration;
 using LionFire.ExtensionMethods.Dumping;
 using LionFire.Inspection.Nodes;
+using LionFire.Parsing.String;
 using LionFire.Threading;
 using MemoryPack;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,66 @@ using static System.Net.Mime.MediaTypeNames;
 
 namespace LionFire.Trading.Journal;
 
+public class JournalStatsCollector
+{
+    public readonly RollingAverage AverageMinutesPerWinningTrade = new();
+
+    public JournalStats JournalStats
+    {
+        get
+        {
+            s.AverageMinutesPerWinningTrade = AverageMinutesPerWinningTrade.CurrentAverage;
+            return s;
+        }
+    }
+    private JournalStats s = new();
+
+    internal void OnClose<TPrecision>(JournalEntry<TPrecision> entry) where TPrecision : struct, INumber<TPrecision>
+    {
+        if (entry.RealizedGrossProfitDelta > TPrecision.Zero)
+        {
+            if (entry.Position == null) { throw new ArgumentNullException(nameof(entry.Position)); }
+            var positionDuration = entry.Time - entry.Position.EntryTime; /// REVIEW - move this somewhere?
+            AverageMinutesPerWinningTrade.AddValue(positionDuration.TotalMinutes);
+
+            s.WinningTrades++;
+        }
+        else if (entry.RealizedGrossProfitDelta == TPrecision.Zero)
+        {
+            s.BreakevenTrades++;
+        }
+        else if (entry.RealizedGrossProfitDelta <= TPrecision.Zero)
+        {
+            s.LosingTrades++;
+        }
+        else { s.UnknownTrades++; }
+    }
+}
+
+public class JournalStats
+{
+    public int WinningTrades { get; set; }
+    public int LosingTrades { get; set; }
+    public int BreakevenTrades { get; set; }
+    public int UnknownTrades { get; set; }
+    public double AverageMinutesPerWinningTrade { get; set; }
+}
+
+
+public class RollingAverage
+{
+    private double sum = 0;
+    private long count = 0;
+
+    public void AddValue(double value)
+    {
+        sum += value;
+        count++;
+    }
+
+    public double CurrentAverage => count > 0 ? (sum / count) : double.NaN;
+}
+
 public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
     where TPrecision : struct, INumber<TPrecision>
 {
@@ -37,7 +98,7 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
     private readonly TradeJournalOptions options;
 
     private string? pathWithoutExtension { get; set; }
-    private void UpdatePath() => pathWithoutExtension = Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(), context);
+    private void UpdatePath() => pathWithoutExtension = Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(nameof(Options.JournalDir)), context);
     public string? FileName { get; set; }
     public ExchangeSymbol? ExchangeSymbol
     {
@@ -90,10 +151,15 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
     #region Lifecycle
 
-    public TradeJournal(ILogger<TradeJournal<TPrecision>> logger, TradeJournalOptions options, ExchangeSymbol? exchangeSymbol = null)
+    public TradeJournal(IServiceProvider serviceProvider, ILogger<TradeJournal<TPrecision>> logger, TradeJournalOptions options, ExchangeSymbol? exchangeSymbol = null)
     {
         this.logger = logger;
         this.options = options;
+        if (options.JournalDir == null)
+        {
+            // REVIEW - find a better way to do this
+            options.JournalDir = serviceProvider.GetService<IOptionsMonitor<TradeJournalOptions>>().CurrentValue.JournalDir ?? throw new ArgumentException("No JournalDir");
+        }
         ExchangeSymbol = exchangeSymbol;
         UpdatePath();
     }
@@ -200,6 +266,11 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
     #region State
 
+    public JournalStatsCollector JournalStatsCollector => journalStatsCollector;
+    private JournalStatsCollector journalStatsCollector = new();
+    public JournalStats JournalStats => journalStatsCollector.JournalStats;
+
+
     ConcurrentDictionary<(string, JournalFormat), FileStream> fileStreams = new();
     ConcurrentDictionary<string, CsvWriter> csvWriters = new();
 
@@ -214,19 +285,60 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
     ConcurrentQueue<JournalEntry<TPrecision>> entries = new(); // TODO: Replace with channel
     public bool IsDisposed => entries == null;
 
+
+    Dictionary<int, IPosition<TPrecision>> openPositions = new();
+
+    void UpdateStats(JournalEntry<TPrecision> entry)
+    {
+        switch (entry.EntryType)
+        {
+            case JournalEntryType.Unspecified:
+                break;
+            case JournalEntryType.Open:
+                //openPositions.Add(entry.)
+                break;
+            case JournalEntryType.Close:
+
+                journalStatsCollector.OnClose(entry);
+                break;
+            case JournalEntryType.Modify:
+                break;
+            case JournalEntryType.CreateOrder:
+                break;
+            case JournalEntryType.ModifyOrder:
+                break;
+            case JournalEntryType.CancelOrder:
+                break;
+            case JournalEntryType.SwapFee:
+                break;
+            case JournalEntryType.InterestFee:
+                break;
+            case JournalEntryType.Abort:
+                break;
+            case JournalEntryType.Start:
+                break;
+            case JournalEntryType.End:
+                break;
+            default:
+                break;
+        }
+
+    }
+
     public void Write(JournalEntry<TPrecision> entry)
     {
-        if (!Options.Enabled) return;
+        UpdateStats(entry);
+        if (!Options.EffectiveEnabled) return;
         entries.Enqueue(entry);
         if (entries.Count > Options.BufferEntries) { _Write(forceWriteToDisk: true).FireAndForget(); }
     }
 
     private async Task _Write(bool forceWriteToDisk = false)
     {
-        if (!Options.Enabled || DiscardDetails) return;
+        if (!Options.EffectiveEnabled || DiscardDetails) return;
         if (!forceWriteToDisk && Options.PreferInMemory) return;
 
-        if(entries == null) { return; } // Disposed
+        if (entries == null) { return; } // Disposed
         while (entries.TryDequeue(out var entry))
         {
             if (Options.LogLevel != LogLevel.None)

@@ -5,7 +5,23 @@
 <h3 class="py-4">Optimize Parameters</h3>
 
 <MudGrid>
+    <MudItem sm="4">
+        <MudTextField @bind-Value="ViewModel!.MaxBacktests" Label="Max Backtests" Dense="@true" />
+        <MudSlider T="int" @bind-Value="ViewModel.MaxBacktests" Label="Max Backtests" Dense="@true" />
+    </MudItem>
     <MudItem sm="3">
+        <MudTextField @bind-Value="ViewModel!.BatchSize" Label="Batch size" Dense="@true" />
+        <MudSlider T="int" @bind-Value="ViewModel.BatchSize" Label="Batch size" Dense="@true" />
+    </MudItem>
+    <MudItem sm="2">
+        <MudSelect Label="Bot" @bind-Value="ViewModel!.PBotType" Dense="@true">
+            @foreach (var e in ViewModel!.BotTypes)
+            {
+                <MudSelectItem Value="@e">@e.Name</MudSelectItem>
+            }
+        </MudSelect>
+    </MudItem>
+    <MudItem sm="2">
         <MudSelect Label="Bot" @bind-Value="ViewModel!.PBotType" Dense="@true">
             @foreach (var e in ViewModel!.BotTypes)
             {
@@ -58,6 +74,11 @@
         <MudSlider T="int" Min="1"  Max="int.MaxValue" @bind-Value="ViewModel!.BatchSize" Label="Max backtests" Dense="@true" /> *@
     </MudItem>
 
+    <MudItem sm="3">
+        <MudSwitch T="bool" @bind-Value="ViewModel!.TradeJournalOptions.Enabled" Label="Trade Journals" Dense="@true" />
+        <MudSlider T="int" @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
+        <MudNumericField @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
+    </MudItem>
 </MudGrid>
 
 <MudCard>

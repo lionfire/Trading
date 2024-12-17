@@ -18,7 +18,7 @@ public class MultiBacktestContext
 
     #region Parameters
 
-    public POptimization OptimizationOptions => Parameters.OptimizationOptions;
+    public POptimization POptimization => Parameters.POptimization;
 
     public BacktestExecutionOptions ExecutionOptions
     {
@@ -28,8 +28,6 @@ public class MultiBacktestContext
         set => executionOptions = value;
     }
     private BacktestExecutionOptions? executionOptions;
-
-    public TradeJournalOptions? TradeJournalOptions { get; set; }
 
     #region Derived
 
@@ -53,7 +51,7 @@ public class MultiBacktestContext
     {
         ServiceProvider = serviceProvider;
         Parameters = parameters;
-        if(Parameters.OptimizationOptions == null) { throw new ArgumentNullException(nameof(Parameters.OptimizationOptions)); }
+        if(Parameters.POptimization == null) { throw new ArgumentNullException(nameof(Parameters.POptimization)); }
     }
 
     #endregion
@@ -102,12 +100,12 @@ public class MultiBacktestContext
 
     #region State
 
-    public int TradeJournalCount { get; set; }
+    //public int TradeJournalCount { get; set; }
 
     #region Derived
 
-    public bool ShouldLogTradeDetails => (OptimizationOptions == null || TradeJournalCount < OptimizationOptions?.MaxDetailedJournals);
-
+    //public bool ShouldLogTradeDetails => (POptimization == null || TradeJournalCount < POptimization?.MaxDetailedJournals);
+    public bool ShouldLogTradeDetails => POptimization.TradeJournalOptions.EffectiveEnabled;
 
     #endregion
 
@@ -117,8 +115,8 @@ public class MultiBacktestContext
 
     public void OnTradeJournalCreated()
     {
-        TradeJournalCount++;
-        if (!ShouldLogTradeDetails) { TradeJournalOptions!.Enabled = false; }
+        //TradeJournalCount++;
+        //if (!ShouldLogTradeDetails) { POptimization.TradeJournalOptions!.Enabled = false; }
     }
 
     #endregion

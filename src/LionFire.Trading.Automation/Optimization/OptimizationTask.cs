@@ -23,6 +23,25 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Optimization;
 
+public class OptimizationProgress
+{
+    public long Total { get; set; }
+    public long Skipped { get; set; }
+    public long Queued { get; set; }
+    public long Completed { get; set; }
+    public double Percent => PerUn * 100.0;
+    public double PerUn => Queued == 0 ? 0 : (double)Completed / Queued;
+    public long Remaining => Queued - Completed;
+    public DateTimeOffset? Start { get; set; }
+    public DateTimeOffset? EstimatedEnd { get; set; }
+    public TimeSpan? EstimatedDuration => EstimatedEnd - Start;
+
+    public TimeSpan PauseElapsed { get; set; }
+    public bool IsPaused { get; set; }
+
+    public static readonly OptimizationProgress NoProgress = new();
+}
+
 public class OptimizationTask : ReactiveObject, IRunnable
 {
     #region Dependencies
@@ -37,7 +56,7 @@ public class OptimizationTask : ReactiveObject, IRunnable
 
     #region Parameters
 
-    public POptimization Parameters => Context.OptimizationOptions!;
+    public POptimization Parameters => Context.POptimization!;
 
     public ExchangeSymbol? ExchangeSymbol => Parameters?.CommonBacktestParameters?.ExchangeSymbol;
 
@@ -80,9 +99,11 @@ public class OptimizationTask : ReactiveObject, IRunnable
         PGridSearchStrategy pGridSearchStrategy = new()
         {
             //Parameters = Parameters.ParameterRanges.ToDictionary(p => p.Name, p => new ParameterOptimizationOptions { MinValue = p.Min, MaxValue = p.Max, MinStep = p.Step, MaxStep = p.Step }),
+
         };
 
         GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, pGridSearchStrategy, Parameters, this);  // new(pGridSearchStrategy, Parameters, this);
+        OptimizationStrategy = gridSearchStrategy;
 
         RunTask = Task.Run(async () =>
         {
@@ -96,9 +117,13 @@ public class OptimizationTask : ReactiveObject, IRunnable
         return Task.CompletedTask;
     }
 
+    
+
     #endregion
 
     #region State
+
+    public IOptimizationStrategy OptimizationStrategy { get; private set; }
 
     public CancellationToken CancellationToken => CancellationTokenSource?.Token ?? CancellationToken.None;
     public void Cancel() => CancellationTokenSource?.Cancel();

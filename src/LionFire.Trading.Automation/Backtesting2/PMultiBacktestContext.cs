@@ -1,6 +1,34 @@
-﻿using LionFire.Trading.Automation.Optimization;
+﻿using DynamicData;
+using LionFire.Trading.Automation.Optimization;
+using System.Collections.Concurrent;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
+using System.Security.AccessControl;
 
 namespace LionFire.Trading.Automation;
+
+public class MultiBacktestEvents
+{
+    public void OnCompleted(long count)
+    {
+        completedCount += count;
+        completions.OnNext(completedCount);
+    }
+
+    SourceCache<BacktestBatchProgress, int> batchesInProgress = new(b => b.BatchId);
+
+    public void BatchStarting(BacktestBatchProgress progress) 
+        => batchesInProgress.AddOrUpdate(progress);
+
+    public void BatchFinished(BacktestBatchProgress progress) => batchesInProgress.Remove(progress);
+
+    public long Completed => completedCount + (long)batchesInProgress.Items.Select(p => p.EffectiveCompleted).Sum();
+    private long completedCount = 0;
+
+    public IObservable<long> Completions => completions;
+    private Subject<long> completions = new();
+}
 
 public class PMultiBacktestContext
 {
@@ -8,12 +36,12 @@ public class PMultiBacktestContext
 
     public PMultiBacktestContext(POptimization pOptimization)
     {
-        OptimizationOptions = pOptimization;
+        POptimization = pOptimization;
     }
 
     public PMultiBacktestContext(Type pBotType, ExchangeSymbol? exchangeSymbol = null, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
-        OptimizationOptions = new POptimization(pBotType, ExchangeSymbol)
+        POptimization = new POptimization(pBotType, ExchangeSymbol)
         {
             CommonBacktestParameters = new()
             {
@@ -29,7 +57,7 @@ public class PMultiBacktestContext
         var pBotType = first.PBot!.GetType();
         var exchangeSymbol = first.ExchangeSymbol ?? ExchangeSymbol.Unknown;
 
-        OptimizationOptions = new POptimization(pBotType, exchangeSymbol)
+        POptimization = new POptimization(pBotType, exchangeSymbol)
         {
             CommonBacktestParameters = new()
             {
@@ -41,14 +69,14 @@ public class PMultiBacktestContext
 
     #endregion
 
-    public POptimization OptimizationOptions { get; set; }
+    public POptimization POptimization { get; set; }
 
     #region Derived
 
     #region Convenience
 
-    public Type PBotType => OptimizationOptions.PBotType;
-    public ExchangeSymbol ExchangeSymbol => OptimizationOptions.ExchangeSymbol;
+    public Type PBotType => POptimization.PBotType;
+    public ExchangeSymbol ExchangeSymbol => POptimization.ExchangeSymbol;
 
     #endregion
 
@@ -70,5 +98,10 @@ public class PMultiBacktestContext
     }
 
     #endregion
+
+    public MultiBacktestEvents Events { get; } = new();
+
+
 }
+
 

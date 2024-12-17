@@ -30,66 +30,6 @@ using System.Threading;
 
 namespace LionFire.Trading.Automation;
 
-public class UniqueFileWriter
-{
-    // Based on: https://stackoverflow.com/questions/9545619/a-fast-hash-function-for-string-in-c-sharp
-    static UInt64 CalculateHash(string read)
-    {
-        UInt64 hashedValue = 3074457345618258791ul;
-        for (int i = 0; i < read.Length; i++)
-        {
-            hashedValue += read[i];
-            hashedValue *= 3074457345618258799ul;
-        }
-        return hashedValue;
-    }
-
-    UInt64 lastHash = 0;
-    int counter = -1;
-
-    private readonly object _lock = new();
-
-    public string TemplatedPath { get; }
-
-
-    public UniqueFileWriter(string templatedPath)
-    {
-        this.TemplatedPath = templatedPath;
-    }
-    public Task SaveIfDifferent(string contents)
-    {
-        lock (_lock)
-        {
-            counter++; // Always increment counter (ENH: make configurable)
-            var newHash = CalculateHash(contents);
-            if (newHash == lastHash) return Task.CompletedTask;
-            lastHash = newHash;
-        }
-
-        var path = TemplatedPath.Replace("{0}", counter.ToString());
-        if (path == TemplatedPath)
-        {
-            var dir = Path.GetDirectoryName(TemplatedPath) ?? throw new ArgumentException($"{nameof(TemplatedPath)} is unknown directory");
-            if (counter == 0)
-            {
-                path = Path.Combine(dir, Path.GetFileNameWithoutExtension(path) + Path.GetExtension(path));
-            }
-            else
-            {
-                path = Path.Combine(dir, Path.GetFileNameWithoutExtension(path) + " (" + (counter + 1) + ")" + Path.GetExtension(path));
-            }
-        }
-
-        if (System.IO.File.Exists(path))
-        {
-            var existing = System.IO.File.ReadAllText(path);
-            if (existing == contents) return Task.CompletedTask;
-            else throw new AlreadySetException();
-        }
-        return System.IO.File.WriteAllTextAsync(path, contents);
-    }
-}
-
 /// <summary>
 /// A backtest task that supports batching of backtests.
 /// 
@@ -123,7 +63,7 @@ public class BacktestBatchTask2<TPrecision>
 
 
     public BacktestOptions BacktestOptions { get; }
-    public TradeJournalOptions TradeJournalOptions { get; }
+    public TradeJournalOptions TradeJournalOptions => Context.Parameters.POptimization.TradeJournalOptions;
 
     public DateChunker DateChunker { get; }
 
@@ -206,22 +146,25 @@ public class BacktestBatchTask2<TPrecision>
                 DisposeJournal = true;
             }
 
-            if (Context.TradeJournalOptions == null)
-            {
-                TradeJournalOptions = ServiceProvider.GetRequiredService<IOptionsMonitor<TradeJournalOptions>>().CurrentValue;
-                TradeJournalOptions = TradeJournalOptions.Clone();
-                TradeJournalOptions.JournalDir = BatchDirectory;
-                if (Context.Parameters.OptimizationOptions.MaxDetailedJournals <= 0)
-                {
-                    TradeJournalOptions.Enabled = false;
-                }
+            Context.POptimization.TradeJournalOptions.JournalDir = BatchDirectory;
 
-                Context.TradeJournalOptions = TradeJournalOptions;
-            }
-            else
-            {
-                TradeJournalOptions = Context.TradeJournalOptions;
-            }
+            //if (Context.POptimization.TradeJournalOptions == null)
+            //{
+            //    // Try to get a default from DI (DEPRECATED)
+            //    TradeJournalOptions = ServiceProvider.GetService<IOptionsMonitor<TradeJournalOptions>>()?.CurrentValue ?? new();
+            //    TradeJournalOptions = TradeJournalOptions.Clone();
+            //    TradeJournalOptions.JournalDir = BatchDirectory;
+            //    if (Context.Parameters.POptimization.TradeJournalOptions.KeepTradeJournalsForTopNResults <= 0)
+            //    {
+            //        TradeJournalOptions.Enabled = false;
+            //    }
+
+            //    Context.POptimization.TradeJournalOptions = TradeJournalOptions;
+            //}
+            //else
+            //{
+            //    TradeJournalOptions = Context.POptimization.TradeJournalOptions;
+            //}
 
         }
         catch (Exception ex)
@@ -280,7 +223,10 @@ public class BacktestBatchTask2<TPrecision>
 });
         }
 
+        ExchangeSymbol exchangeSymbol = (bot?.Parameters as IPSymbolBot2)?.ExchangeSymbol!;
+
         var tradeJournal = ActivatorUtilities.CreateInstance<TradeJournal<TPrecision>>(ServiceProvider, (bot?.Parameters as IPSymbolBot2)?.ExchangeSymbol!, TradeJournalOptions);
+        //var tradeJournal = new TradeJournal<TPrecision>(ServiceProvider.GetRequiredService<ILogger<TradeJournal<TPrecision>>>(), TradeJournalOptions, exchangeSymbol);
 
         var controller = await BacktestBotController<TPrecision>.Create(this, bot, pAccount, tradeJournal);
         controller.Id = NextBacktestId++;
@@ -682,12 +628,18 @@ public class BacktestBatchTask2<TPrecision>
 
     #region (Private) Run
 
+    BacktestBatchProgress Progress;
+    
     private void Run()
     {
         Task.Run(async () =>
         {
             try
             {
+                Progress = new() { BatchId = BatchId };
+                Context.Parameters.Events.BatchStarting(Progress);
+                Progress.Total = backtests.Count;
+
                 await (TicksEnabled ? RunTicks() : RunBars()).ConfigureAwait(false);
                 if (IsCancelled)
                 {
@@ -695,7 +647,6 @@ public class BacktestBatchTask2<TPrecision>
                 }
                 else
                 {
-
                     foreach (var b in backtests)
                     {
                         if (b.PBacktest.OnFinished != null)
@@ -708,6 +659,10 @@ public class BacktestBatchTask2<TPrecision>
             catch (Exception ex)
             {
                 runTaskCompletionSource.SetException(ex);
+            }
+            finally
+            {
+                Context.Parameters.Events.BatchFinished(Progress);
             }
         }, CancellationToken).FireAndForget();
 
@@ -729,6 +684,13 @@ public class BacktestBatchTask2<TPrecision>
                 )
             {
                 counter++;
+                if(counter % 1_000 == 0)
+                {
+                    if (EndExclusive != Start) // This should be checked elsewhere
+                    {
+                        Progress.PerUn = (SimulatedCurrentDate - Start) / (EndExclusive - Start);
+                    }
+                }
                 await AdvanceInputsByOneBar().ConfigureAwait(false);
 
                 //await NextBar().ConfigureAwait(false);
@@ -782,6 +744,11 @@ public class BacktestBatchTask2<TPrecision>
                     BatchId = BatchId,
                     Id = b.Controller.Id,
                     AD = b.Controller.Account.AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent,
+                    AMWT = b.Controller.Journal.JournalStats.AverageMinutesPerWinningTrade,
+                    Wins = b.Controller.Journal.JournalStats.WinningTrades,
+                    Losses = b.Controller.Journal.JournalStats.LosingTrades,
+                    Breakevens = b.Controller.Journal.JournalStats.BreakevenTrades,
+                    UnknownTrades = b.Controller.Journal.JournalStats.UnknownTrades, // TEMP - shouldn't happen. Write warnings to log instead
                     MaxBalanceDrawdown = Convert.ToDouble(b.Controller.Account.MaxBalanceDrawdown),
                     MaxBalanceDrawdownPerunum = Convert.ToDouble(b.Controller.Account.MaxBalanceDrawdownPerunum),
                     MaxEquityDrawdown = Convert.ToDouble(b.Controller.Account.MaxEquityDrawdown),
@@ -838,6 +805,7 @@ public class BacktestBatchTask2<TPrecision>
 
     protected override async ValueTask OnFinished()
     {
+        this.Context.Parameters.Events.OnCompleted(backtests.Count);
         await base.OnFinished();
 
         await SaveBatchInfo();
@@ -879,7 +847,6 @@ public class BacktestBatchTask2<TPrecision>
             Context.BatchInfoFileWriter.SaveIfDifferent(hjson);
         }
     }
-
 
     #region Inputs
 
@@ -995,28 +962,6 @@ public class BacktestBatchTask2<TPrecision>
     }
 
     #endregion
-}
-
-public static class FilesystemUtils
-{
-    public static string GetUniqueDirectory(string baseDir, string prefix, string suffix, int zeroPadding = 0)
-
-    {
-        for (int i = 0; ; i++)
-        {
-            var name = $"{prefix}{i.ToString("D" + zeroPadding)}{suffix}";
-            var dir = Path.Combine(baseDir, name);
-            if (!Directory.Exists(dir) && (!Directory.Exists(baseDir) || !Directory.GetFiles(baseDir, name + ".*").Any()))
-            {
-                try
-                {
-                    Directory.CreateDirectory(dir);
-                }
-                catch { } // EMPTYCATCH
-                return dir;
-            }
-        }
-    }
 }
 
 #if UNUSED

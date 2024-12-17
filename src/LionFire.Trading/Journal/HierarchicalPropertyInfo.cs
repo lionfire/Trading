@@ -203,5 +203,6 @@ public class HierarchicalPropertyInfo : IKeyable<string>
     }
     #endregion
 
+    public override string ToString() => Name ?? Key;
 
 }

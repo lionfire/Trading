@@ -4,7 +4,9 @@ namespace LionFire.Trading.Journal;
 
 public class TradeJournalOptions
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
+    public bool EffectiveEnabled => Enabled && KeepTradeJournalsForTopNResults > 0;
+
     public bool PreferInMemory { get; set; } = true;
 
     #region Directory
@@ -34,7 +36,7 @@ public class TradeJournalOptions
     public double DiscardDetailsWhenFitnessBelow { get; set; } = 0.5;
     public bool DiscardDetailsWhenAborted { get; set; } // FUTURE = true;
     public int KeepDetailsForTopNResultsIncludingAborted { get; set; } = 10;
-    public int KeepDetailsForTopNResults { get; set; } = 100;
+    public int KeepTradeJournalsForTopNResults { get; set; } = 20;
     public int BufferEntries { get; set; } = 100_000;
 
     //public long MaxDiskSpaceForDetails { get; set; } = 20 * 1024 * 1024; // ENH

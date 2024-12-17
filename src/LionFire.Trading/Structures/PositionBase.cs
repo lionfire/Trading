@@ -53,7 +53,7 @@ public abstract class PositionBase<TPrecision> : IPosition<TPrecision>
     #region Identity / Immutable
 
     public int Id { get; set; }
-    public DateTime EntryTime { get; set; }
+    public DateTimeOffset EntryTime { get; set; }
 
 
     public string Symbol { get; set; }

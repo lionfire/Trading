@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading.Automation.Optimization;
+﻿using LionFire.Trading.Journal;
+
+namespace LionFire.Trading.Automation.Optimization;
 
 // ENH: Validatable, make all properties mutable and not required in ctor.  (Or consider a new pattern: a pair of classes, one frozen and one mutable.)
 public class POptimization
@@ -80,7 +82,8 @@ public class POptimization
 
     #region Journal
 
-    public int MaxDetailedJournals { get; set; }
+    public TradeJournalOptions TradeJournalOptions { get => tradeJournalOptions ??= new(); set => tradeJournalOptions = value; }
+    private TradeJournalOptions? tradeJournalOptions;
 
     #endregion
 

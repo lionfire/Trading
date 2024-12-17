@@ -277,6 +277,7 @@ public class BacktestAccount2<TPrecision>
                     TakeProfit = default,
                     StopLoss = default,
                     Symbol = symbol,
+                    EntryTime = DateTime,
                 };
                 positions.AddOrUpdate(p);
 
@@ -344,9 +345,9 @@ public class BacktestAccount2<TPrecision>
                 //}, PriceSubscriptionDirection.Up);
             }
         }
-        if (x % 10000 == 0)
+        if (x % 25000 == 0)
         {
-            Debug.WriteLine($"#{x} Account - {Bars.Size} bars, {Bars[0]}");
+            Debug.WriteLine($"Bar #{x} {Bars[0]}, lookback: {Bars.Size}");
         }
 
     }

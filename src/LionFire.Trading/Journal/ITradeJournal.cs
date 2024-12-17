@@ -19,5 +19,6 @@ public interface ITradeJournal<TPrecision> : IAsyncDisposable
     bool DiscardDetails { get; set; }
 
     TradeJournalOptions Options { get; }
+    JournalStats JournalStats { get; }
 
 }

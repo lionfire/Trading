@@ -31,7 +31,7 @@ public interface IPosition<TPrecision> : IPosition
     TPrecision Commissions { get; }
     TPrecision EntryAverage { get; }
     TPrecision RealizedGrossProfit { get; }
-    DateTime EntryTime { get; }
+    DateTimeOffset EntryTime { get; }
     TPrecision GrossProfit { get; }
     TPrecision NetProfit { get; }
     TPrecision Pips { get; }

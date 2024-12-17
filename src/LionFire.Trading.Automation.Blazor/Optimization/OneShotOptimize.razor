@@ -4,12 +4,41 @@
 @rendermode InteractiveServer
 
 @using LionFire.Blazor.Components.Terminal
+@using MudBlazor.Components
 
 @* This page is a quick UI for optimizing right from a Worker process' UI.  The long-term approach favors a FireLynx workbench that supports Optimize documents which can be saved/loaded.  *@
 
+@* Toolbar: [Abort] [Optimize] *@
+@* <MudToolBar Class="gap-6 d-flex flex-row justify-end pa-6"> *@
 <MudPaper Class="gap-6 d-flex flex-row justify-end pa-6">
+
+    @* <LionFire.Trading.Automation.Blazor.Infra.CpuChart/> *@
+
     @if (ViewModel!.IsRunning)
     {
+        <MudProgressLinear Color="Color.Primary" Value="@ViewModel.Progress.Percent" />
+
+        <MudSimpleTable>
+            <tr>
+                <td>Progress</td>
+                <td>
+                    @ViewModel.Progress.Percent
+                </td>
+            </tr>
+            <tr>
+                <td>Completed</td>
+                <td>@ViewModel.Progress.Completed</td>
+            </tr>
+            <tr>
+                <td>Queued</td>
+                <td>@ViewModel.Progress.Queued</td>
+            </tr>
+            <tr>
+                <td>Total</td>
+                <td>@ViewModel.Progress.Total</td>
+            </tr>
+        </MudSimpleTable>
+
         <MudButton OnClick="@ViewModel!.Cancel" Color="Color.Error" Variant="@(ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
             @if (ViewModel!.IsAborting)
             {
@@ -32,6 +61,7 @@
         }
     </MudButton>
 </MudPaper>
+@* </MudToolBar> *@
 
 <MudExpansionPanels>
 
@@ -67,19 +97,19 @@
     </MudExpansionPanel>
 
     <MudExpansionPanel Text="Backtests" @bind-Expanded=@ShowBacktests>
-    @* @if (ViewModel!.Backtests != null) *@
-    @if (ViewModel.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache.Items != null)
-    {
-        @* <MudDataGrid Items="ViewModel.Backtests.Items"> *@
-            <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true >
-            <Columns>
-                <PropertyColumn Property="x => x.StringId" />
-                <PropertyColumn Property="x => x.Fitness" />
-                <PropertyColumn Property="x => x.AD"  />
-            </Columns>
+        @* @if (ViewModel!.Backtests != null) *@
+        @if (ViewModel.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache.Items != null)
+        {
+            @* <MudDataGrid Items="ViewModel.Backtests.Items"> *@
+            <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
+                <Columns>
+                    <PropertyColumn Property="x => x.StringId" />
+                    <PropertyColumn Property="x => x.Fitness" />
+                    <PropertyColumn Property="x => x.AD" />
+                </Columns>
 
-        </MudDataGrid>
-    }
+            </MudDataGrid>
+        }
 
     </MudExpansionPanel>
 

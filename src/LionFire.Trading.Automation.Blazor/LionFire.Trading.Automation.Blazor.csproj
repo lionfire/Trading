@@ -19,6 +19,10 @@
 		<PackageReference Include="MudBlazor" />
 		<PackageReference Include="Plotly.Blazor" />
 		<PackageReference Include="ReactiveUI.Blazor" />
+		<PackageReference Include="ReactiveUI.SourceGenerators">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -35,6 +39,10 @@
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Infra\" />
 	</ItemGroup>
 
 

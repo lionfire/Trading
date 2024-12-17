@@ -7,6 +7,15 @@
     public double Fitness { get; set; }
     public double AD { get; set; }
 
+    /// <summary>
+    /// Average minutes per winning trade
+    /// </summary>
+    public double AMWT { get; set; }
+    public int Wins { get; set; }
+    public int Losses { get; set; }
+    public int Breakevens { get; set; }
+    public int UnknownTrades { get; set; }
+
     public double MaxBalanceDrawdown { get; set; }
     public double MaxBalanceDrawdownPerunum { get; set; }
     public double MaxEquityDrawdown { get; set; }
