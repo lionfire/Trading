@@ -1,13 +1,9 @@
-﻿@inherits ReactiveComponentBase<OneShotOptimizeVM>
+﻿@using LionFire.ExtensionMethods
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
 
 @rendermode InteractiveServer
 
-<h3 class="py-4">Optimization Status</h3>
-
-
-
-<div class="py-4">
-    <MudText Typo="Typo.h6">Level of Detail</MudText>
+<div class="py-4 LevelsOfDetail">
     <MudGrid>
         <MudItem sm="1">
             <MudTextField @bind-Value="ViewModel!.POptimization2.MaxBacktests" Label="Max Backtests" Dense="@true" />
@@ -18,61 +14,20 @@
 
         @foreach (var level in ViewModel!.POptimization2.LevelsOfDetailEnumeration.WithIndex())
         {
-            <MudItem sm="1">
+            <MudItem Class="Level" sm="1">
                 <MudText Typo="Typo.h6">Level @level.item.Level</MudText>
                 <div>@level.item.TestPermutationCount tests</div>
             </MudItem>
         }
-    </MudGrid>
-</div>
-<MudDivider />
-<div class="py-4">
 
-    <MudText Typo="Typo.h6">Performance Tuning</MudText>
-    <MudGrid>
-        <MudItem sm="1">
-            <MudTextField @bind-Value="ViewModel!.POptimization2.MaxBatchSize" Label="Batch size" Dense="@true" />
-            <MudSlider T="double" @bind-Value="ViewModel.BatchSizeExponential"
-                       Min="1" Max="16"
-                       Label="Batch size" Dense="@true" />
-        </MudItem>
-    </MudGrid>
-</div>
-
-<MudExpansionPanels>
-    <MudExpansionPanel Text="Properties">
-        <div class="overflow-auto">
-            <ObjectExplorer CurrentObject="ViewModel" />
+        <div class="lf-field">
+            <div class="label">Comprehensive Scan</div>
+            <div class="value">@ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanTotal</div>
         </div>
-        @* <MudSlider Min="0" Max="int.MaxValue" @bind-Value="ViewModel!.MaxDetailedJournals" Label="Max Trade Journals" Dense="@true" />
-        <MudSlider Min="1" Max="8192" @bind-Value="ViewModel!.BatchSize" Label="Batch size" Dense="@true" />
-        <MudSlider T="int" Min="1"  Max="int.MaxValue" @bind-Value="ViewModel!.BatchSize" Label="Max backtests" Dense="@true" /> *@
-    </MudExpansionPanel>
-</MudExpansionPanels>
-
-<MudCard>
-    <MudCardHeader>
-        Bot Parameters
-    </MudCardHeader>
-    <MudGrid>
-        <MudItem sm="1">
-            <MudTextField @bind-Value="ViewModel!.POptimization2.MinParameterPriority" Label="Min Parameter Priority" Dense="@true" />
-            <MudSlider T="int" @bind-Value="ViewModel.POptimization2.MinParameterPriority"
-                       Min=-50 Max=50
-                       Label="Min Parameter Priority" Dense="@true" />
-        </MudItem>
-
-        @if (ViewModel!.POptimization2.ParameterOptimizationOptions != null)
-        {
-            @foreach (var p in ViewModel!.POptimization2.ParameterOptimizationOptions)
-            {
-                <div>@p.Key - TODO NEXT</div>
-            }
-        }
-    
+        <div class="lf-field">
+            <div class="label">Comprehensiveness</div>
+            <div class="value">@((ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
+        </div>
     </MudGrid>
-    @* <InspectorView Object="ViewModel!.POptimization" /> *@
-</MudCard>
-
-
+</div>
 

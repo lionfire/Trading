@@ -1,0 +1,10 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+
+<MudGrid>
+    <MudItem sm="1">
+        <MudTextField @bind-Value="ViewModel!.POptimization2.MaxBatchSize" Label="Batch size" Dense="@true" />
+        <MudSlider T="double" @bind-Value="ViewModel.BatchSizeExponential"
+                   Min="1" Max="16"
+                   Label="Batch size" Dense="@true" />
+    </MudItem>
+</MudGrid>

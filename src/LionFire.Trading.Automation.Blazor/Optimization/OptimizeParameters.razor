@@ -1,100 +1,27 @@
 ﻿@inherits ReactiveComponentBase<OneShotOptimizeVM>
-
 @rendermode InteractiveServer
 
-<h3 class="py-4">Optimize Parameters</h3>
+<MudExpansionPanels MultiExpansion=true>
 
 
-<MudGrid>
-    <MudItem sm="2">
-        <MudSelect Label="Bot" @bind-Value="ViewModel!.Common.PBotType" Dense="@true">
-            @foreach (var e in ViewModel!.BotTypes)
-            {
-                <MudSelectItem Value="@e">@e.Name</MudSelectItem>
-            }
-        </MudSelect>
-    </MudItem>
-    <MudItem sm="1">
-        <MudSelect Label="Exchange" @bind-Value="ViewModel!.Common.Exchange" Dense="@true">
-            @foreach (var e in ViewModel!.Exchanges)
-            {
-                <MudSelectItem Value="@e">@e</MudSelectItem>
-            }
-        </MudSelect>
-    </MudItem>
-
-    <MudItem sm="1">
-        <MudSelect Label="Area" @bind-Value="ViewModel!.Common.ExchangeArea">
-            <MudSelectItem Value="@("futures")">futures</MudSelectItem>
-        </MudSelect>
-    </MudItem>
-
-    <MudItem sm="1">
-        <MudSelect Label="Symbol" @bind-Value="ViewModel!.Common.Symbol">
-            @foreach (var e in ViewModel!.Symbols)
-            {
-                <MudSelectItem Value="@e">@e</MudSelectItem>
-            }
-        </MudSelect>
-    </MudItem>
-
-    <MudItem sm="1">
-        <MudSelect Label="TimeFrame" @bind-Value="ViewModel!.Common.TimeFrameString">
-            @foreach (var e in ViewModel!.TimeFrames)
-            {
-                <MudSelectItem Value="@e">@e</MudSelectItem>
-            }
-        </MudSelect>
-    </MudItem>
-
-    <MudItem sm="2">
-        <MudDatePicker @bind-Date="ViewModel!.Common.StartDateTime" Label="Start" Dense="@true" />
-        <MudDatePicker @bind-Date="ViewModel!.Common.EndExclusiveDateTime" Label="End" Dense="@true" />
-        @* <MudDateRangePicker @bind-DateRange="ViewModel!.DateRange" Label="Range" Dense="@true" /> *@
-    </MudItem>
-
-    <MudItem sm="1">
-        <MudSwitch T="bool" @bind-Value="ViewModel!.TradeJournalOptions.Enabled" Label="Trade Journals" Dense="@true" />
-        <MudSlider T="int" @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
-        <MudNumericField @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
-    </MudItem>
-</MudGrid>
-<MudDivider />
-
-<div class="py-4">
-    <MudText Typo="Typo.h6">Level of Detail</MudText>
-    <MudGrid>
-        <MudItem sm="1">
-            <MudTextField @bind-Value="ViewModel!.POptimization2.MaxBacktests" Label="Max Backtests" Dense="@true" />
-            <MudSlider T="double" @bind-Value="ViewModel.MaxBacktestsExponential"
-                       Min=6 Max=34
-                       Label="Max Backtests" Dense="@true" />
-        </MudItem>
-
-        @foreach (var level in ViewModel!.POptimization2.LevelsOfDetailEnumeration.WithIndex())
-        {
+    <MudExpansionPanel Text="Results">
+        <MudGrid>
             <MudItem sm="1">
-                <MudText Typo="Typo.h6">Level @level.item.Level</MudText>
-                <div>@level.item.TestPermutationCount tests</div>
+                <MudSwitch T="bool" @bind-Value="ViewModel!.TradeJournalOptions.Enabled" Label="Trade Journals" Dense="@true" />
+                <MudSlider T="int" @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
+                <MudNumericField @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
             </MudItem>
-        }
-    </MudGrid>
-</div>
-<MudDivider />
-<div class="py-4">
+        </MudGrid>
+    </MudExpansionPanel>
 
-    <MudText Typo="Typo.h6">Performance Tuning</MudText>
-    <MudGrid>
-        <MudItem sm="1">
-            <MudTextField @bind-Value="ViewModel!.POptimization2.MaxBatchSize" Label="Batch size" Dense="@true" />
-            <MudSlider T="double" @bind-Value="ViewModel.BatchSizeExponential"
-                       Min="1" Max="16"
-                       Label="Batch size" Dense="@true" />
-        </MudItem>
-    </MudGrid>
-</div>
+    <MudExpansionPanel Text="Parameter Selection" @bind-Expanded=ShowParameterSelection>
+        <ParameterSelection ViewModel="ViewModel" />
+    </MudExpansionPanel>
 
-<MudExpansionPanels>
+    <MudExpansionPanel Text="Performance Tuning">
+        <PerformanceTuning ViewModel="ViewModel" />
+    </MudExpansionPanel>
+
     <MudExpansionPanel Text="Properties">
         <div class="overflow-auto">
             <ObjectExplorer CurrentObject="ViewModel" />
@@ -104,30 +31,5 @@
         <MudSlider T="int" Min="1"  Max="int.MaxValue" @bind-Value="ViewModel!.BatchSize" Label="Max backtests" Dense="@true" /> *@
     </MudExpansionPanel>
 </MudExpansionPanels>
-
-<MudCard>
-    <MudCardHeader>
-        Bot Parameters
-    </MudCardHeader>
-    <MudGrid>
-        <MudItem sm="1">
-            <MudTextField @bind-Value="ViewModel!.POptimization2.MinParameterPriority" Label="Min Parameter Priority" Dense="@true" />
-            <MudSlider T="int" @bind-Value="ViewModel.POptimization2.MinParameterPriority"
-                       Min=-50 Max=50
-                       Label="Min Parameter Priority" Dense="@true" />
-        </MudItem>
-
-        @if (ViewModel!.POptimization2.ParameterOptimizationOptions != null)
-        {
-            @foreach (var p in ViewModel!.POptimization2.ParameterOptimizationOptions)
-            {
-                <div>@p.Key - TODO NEXT</div>
-            }
-        }
-    
-    </MudGrid>
-    @* <InspectorView Object="ViewModel!.POptimization" /> *@
-</MudCard>
-
 
 

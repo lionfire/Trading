@@ -19,9 +19,12 @@ public partial class OneShotOptimize
     IServiceProvider ServiceProvider { get; set; } = null!;
 
     bool ShowParameters { get; set; } = true;
+    bool ShowOptimizationStatus { get; set; } = true;
     bool ShowResults { get; set; } = false;
     bool ShowBacktests { get; set; } = false;
     bool ShowLog { get; set; } = true;
+
+    public string GeneralParametersSummary => $"{ViewModel!.PBotType.Name} — {ViewModel!.Symbol} {ViewModel!.TimeFrame} — {ViewModel!.TimeFrame.GetExpectedBarCount(ViewModel!.Common.Start , ViewModel!.Common.EndExclusive)} bars";
 
     private SortMode _sortMode = SortMode.Multiple;
 

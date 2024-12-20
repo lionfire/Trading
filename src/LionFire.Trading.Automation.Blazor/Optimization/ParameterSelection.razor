@@ -1,0 +1,25 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+
+<MudCard>
+    <MudCardHeader>
+        Bot Parameters
+    </MudCardHeader>
+    <MudGrid>
+        <MudItem sm="1">
+            <MudTextField @bind-Value="ViewModel!.POptimization2.MinParameterPriority" Label="Min Parameter Priority" Dense="@true" />
+            <MudSlider T="int" @bind-Value="ViewModel.POptimization2.MinParameterPriority"
+                       Min=-50 Max=50
+                       Label="Min Parameter Priority" Dense="@true" />
+        </MudItem>
+
+        @if (ViewModel!.POptimization2.ParameterOptimizationOptions != null)
+        {
+            @foreach (var p in ViewModel!.POptimization2.ParameterOptimizationOptions)
+            {
+                <div>@p.Key - TODO NEXT</div>
+            }
+        }
+
+    </MudGrid>
+    @* <InspectorView Object="ViewModel!.POptimization" /> *@
+</MudCard>

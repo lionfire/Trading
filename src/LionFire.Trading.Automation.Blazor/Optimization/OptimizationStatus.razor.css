@@ -1,0 +1,4 @@
+
+.LevelsOfDetail .Level:not(:first-of-type) {
+    opacity: 0.5;
+}
