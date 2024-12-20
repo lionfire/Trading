@@ -1,5 +1,6 @@
 ﻿
 using CryptoExchange.Net.CommonObjects;
+using LionFire.Trading.Automation.Journaling.Trades;
 using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Backtesting;
 using LionFire.Trading.Journal;
@@ -20,7 +21,8 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
     private BotBatchControllerBase botBatchController;
     public IBot2 Bot { get; }
     public PBacktestAccount<TPrecision> PBacktestAccount { get; }
-    public ITradeJournal<TPrecision> Journal { get; }
+    public BacktestTradeJournal<TPrecision> Journal { get; }
+    IBacktestTradeJournal<TPrecision> ISimulationController<TPrecision>.Journal => Journal;
 
     #region Derived
 
@@ -34,14 +36,14 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
 
     #region Lifecycle
 
-    public static async ValueTask<BacktestBotController<TPrecision>> Create(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<TPrecision> pBacktestAccount, ITradeJournal<TPrecision> journal)
+    public static async ValueTask<BacktestBotController<TPrecision>> Create(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<TPrecision> pBacktestAccount, BacktestTradeJournal<TPrecision> journal)
     {
         var c = new BacktestBotController<TPrecision>(botBatchController, bot, pBacktestAccount, journal);
         await c.OnStarting();
         return c;
     }
 
-    private BacktestBotController(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<TPrecision> pBacktestAccount, ITradeJournal<TPrecision> journal)
+    private BacktestBotController(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<TPrecision> pBacktestAccount, BacktestTradeJournal<TPrecision> journal)
     {
         this.botBatchController = (BotBatchControllerBase)botBatchController;
         Bot = bot;
@@ -125,12 +127,13 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
             if (result.Aborted) { Journal.IsAborted = true; }
             else
             {
-                Context.OnTradeJournalCreated();
             }
         }
-        await Journal.CloseAll();
+
+        await Journal.Finish(result.Fitness);
         await Journal.DisposeAsync();
     }
+
     MultiBacktestContext Context => botBatchController.Context;
 
     public void OnAccountAborted()

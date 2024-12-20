@@ -27,6 +27,7 @@ using System.Text.Json;
 using LionFire.Collections;
 using System.Runtime.CompilerServices;
 using System.Threading;
+using LionFire.Trading.Automation.Journaling.Trades;
 
 namespace LionFire.Trading.Automation;
 
@@ -126,6 +127,7 @@ public class BacktestBatchTask2<TPrecision>
 
             ExchangeSymbol = firstParameter?.ExchangeSymbol
                 ?? (firstParameter?.PBot as IPSymbolBot2)?.ExchangeSymbol
+                ?? context.ExchangeSymbol
                 ?? ExchangeSymbol.Unknown;
 
             PBotType = firstParameter?.PBot.GetType() ?? typeof(DBNull);
@@ -207,7 +209,7 @@ public class BacktestBatchTask2<TPrecision>
 
         if (bot is IBarsBot<TPrecision> barsBot)
         {
-            barsBot.Parameters.ExchangeSymbolTimeFrame ??= p.ExchangeSymbolTimeFrame;
+            barsBot.Parameters.ExchangeSymbolTimeFrame ??= p.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException(nameof(p.ExchangeSymbolTimeFrame));
             if (p.PBot is IPBarsBot2 pbb) { pbb.FinalizeInit(); }
 
             pAccount = SymbolPBacktestAccounts.GetOrAdd(barsBot.Parameters.ExchangeSymbolTimeFrame.Symbol, _ =>
@@ -225,7 +227,7 @@ public class BacktestBatchTask2<TPrecision>
 
         ExchangeSymbol exchangeSymbol = (bot?.Parameters as IPSymbolBot2)?.ExchangeSymbol!;
 
-        var tradeJournal = ActivatorUtilities.CreateInstance<TradeJournal<TPrecision>>(ServiceProvider, (bot?.Parameters as IPSymbolBot2)?.ExchangeSymbol!, TradeJournalOptions);
+        var tradeJournal = ActivatorUtilities.CreateInstance<BacktestTradeJournal<TPrecision>>(ServiceProvider, (bot?.Parameters as IPSymbolBot2)?.ExchangeSymbol!, TradeJournalOptions, Context);
         //var tradeJournal = new TradeJournal<TPrecision>(ServiceProvider.GetRequiredService<ILogger<TradeJournal<TPrecision>>>(), TradeJournalOptions, exchangeSymbol);
 
         var controller = await BacktestBotController<TPrecision>.Create(this, bot, pAccount, tradeJournal);
@@ -637,7 +639,7 @@ public class BacktestBatchTask2<TPrecision>
             try
             {
                 Progress = new() { BatchId = BatchId };
-                Context.Parameters.Events.BatchStarting(Progress);
+                Context.Events.BatchStarting(Progress);
                 Progress.Total = backtests.Count;
 
                 await (TicksEnabled ? RunTicks() : RunBars()).ConfigureAwait(false);
@@ -662,7 +664,7 @@ public class BacktestBatchTask2<TPrecision>
             }
             finally
             {
-                Context.Parameters.Events.BatchFinished(Progress);
+                Context.Events.BatchFinished(Progress);
             }
         }, CancellationToken).FireAndForget();
 
@@ -805,7 +807,7 @@ public class BacktestBatchTask2<TPrecision>
 
     protected override async ValueTask OnFinished()
     {
-        this.Context.Parameters.Events.OnCompleted(backtests.Count);
+        this.Context.Events.OnCompleted(backtests.Count);
         await base.OnFinished();
 
         await SaveBatchInfo();

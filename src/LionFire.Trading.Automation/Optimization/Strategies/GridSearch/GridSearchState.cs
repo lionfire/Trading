@@ -1,6 +1,6 @@
 ﻿using CryptoExchange.Net.CommonObjects;
 using LionFire.ExtensionMethods.Copying;
-using LionFire.Serialization.Csv;
+using LionFire.Extensions.Logging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -24,19 +24,15 @@ public partial class GridSearchState
     #region Relationships
 
     private readonly GridSearchStrategy gridSearchStrategy;
+    private ILogger Logger => gridSearchStrategy.Logger;
 
     #endregion
 
-    #region Parameters
+    #region TEMP - convenience
 
-    #region (Derived)
+    public IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> OptimizableParameters => proxy.OptimizableParameters;
 
-    // OPTIMIZE: Make immutable array
-    // NOTE: at certain levels, optimizableParameters may only have a single value and not be optimizable at that level
-    public readonly List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = new();
-    public readonly List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = new();
-
-    #endregion
+    public IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> UnoptimizableParameters => proxy.UnoptimizableParameters;
 
     #endregion
 
@@ -46,66 +42,17 @@ public partial class GridSearchState
     {
         this.gridSearchStrategy = gridSearchStrategy;
 
-        var x = gridSearchStrategy.OptimizationParameters.EnableParametersAtOrAboveOptimizePriority;
+        //LevelsOfDetail2 = new(gridSearchStrategy.OptimizationParameters);// MOVE - Get from Parameters?
 
+        if (OptimizableParameters.Count == 0) throw new ArgumentException("No parameters to optimize");
 
-        foreach (var kvp in BotParameterPropertiesInfo.Get(gridSearchStrategy.OptimizationParameters.PBotType)
-                .PathDictionary
-                    .Where(kvp => kvp.Value.IsOptimizable
-                        && kvp.Value.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
-                        )
-                    .Select(kvp
-                    => new KeyValuePair<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)>(kvp.Key,
-                        (info: kvp.Value,
-                         options: GetEffectiveOptions(kvp.Value,
-                                        kvp.Value.ParameterAttribute.GetParameterOptimizationOptions(kvp.Value.LastPropertyInfo!.PropertyType),
-                                        gridSearchStrategy.Parameters.Parameters.TryGetValue(kvp.Key),
-                                        gridSearchStrategy.OptimizationParameters))))
-                    .OrderByDescending(kvp => kvp.Value.options.OptimizeOrder)
-                    .ThenBy(kvp => kvp.Value.info.OptimizeOrderTiebreaker)
-                    .ThenBy(kvp => kvp.Key)
-            )
+        //while (CurrentLevel.TestPermutationCount > gridSearchStrategy.OptimizationParameters.MaxBacktests)
+        while (CurrentLevel.Level > proxy.MinLevel)
         {
-            if (kvp.Value.options.IsEligibleForOptimization
-                && (kvp.Value.options.EnableOptimization == true
-                || kvp.Value.info.ParameterAttribute.OptimizePriorityInt >= gridSearchStrategy.OptimizationParameters.EnableParametersAtOrAboveOptimizePriority
-                )
-                )
-            { optimizableParameters.Add(kvp.Value); }
-            else { unoptimizableParameters.Add(kvp.Value); }
-        }
-
-        if (optimizableParameters.Count == 0) throw new ArgumentException("No parameters to optimize");
-
-        zero = new LevelOfDetail(0, this);
-
-        while (CurrentLevel.TestPermutationCount > gridSearchStrategy.OptimizationParameters.MaxBacktests)
-        {
+            Logger.LogInformation("Level {level} has {count} backtests but max is {maxBacktests}, so going down a level of detail", currentLevel, CurrentLevel.TestPermutationCount, gridSearchStrategy.OptimizationParameters.MaxBacktests);
             currentLevel--;
         }
-    }
-
-
-    private IParameterOptimizationOptions GetEffectiveOptions(HierarchicalPropertyInfo info, IParameterOptimizationOptions fromAttribute, IParameterOptimizationOptions? fromOptimizationParameters, POptimization pOptimization)
-    {
-        ArgumentNullException.ThrowIfNull(fromAttribute);
-
-        var clone = fromAttribute.Clone();
-
-        clone.FitnessOfInterest ??= gridSearchStrategy.Parameters.FitnessOfInterest;
-
-        if (fromOptimizationParameters != null)
-        {
-            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
-        }
-
-        var fromPOptimization = pOptimization.ParameterOptimizationOptions?.TryGetValue(info.Path) ?? pOptimization.ParameterOptimizationOptions?.TryGetValue(info.Key);
-        if (fromPOptimization != null)
-        {
-            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
-        }
-
-        return clone;
+        Logger.LogInformation("Level {level} has {count} backtests.", currentLevel, CurrentLevel.TestPermutationCount);
     }
 
     #endregion
@@ -114,7 +61,7 @@ public partial class GridSearchState
 
     #region CurrentLevel
 
-    public LevelOfDetail CurrentLevel => currentLevel == 0 ? zero : GetLevel(currentLevel);
+    public LevelOfDetail CurrentLevel => GetLevel(currentLevel);
     public int CurrentLevelIndex => currentLevel;
     int currentLevel = 0;
 
@@ -122,24 +69,27 @@ public partial class GridSearchState
 
     #region Levels
 
-    public LevelOfDetail GetLevel(int level)
-    {
-        if (levels == null)
-        {
-            levels = new();
-            levels.Add(0, zero);
-        }
-        if (!levels.TryGetValue(level, out var result))
-        {
-            result = new LevelOfDetail(level, this);
-            levels.Add(level, result);
-        }
-        return result;
-    }
-    public SortedList<int /* level */, LevelOfDetail>? levels = null;
-    LevelOfDetail zero;
+    // TODO - cleanup this proxy - RENAME
+    OptimizerLevelsOfDetail proxy => gridSearchStrategy.OptimizationParameters.LevelsOfDetail;
+    public LevelOfDetail GetLevel(int level)=> proxy.GetLevel(level);
+    //{
+    //    if (level == 0) return zero ??= new LevelOfDetail(0, LevelsOfDetail2);
+    //    if (levels == null)
+    //    {
+    //        levels = new();
+    //        levels.Add(0, zero);
+    //    }
+    //    if (!levels.TryGetValue(level, out var result))
+    //    {
+    //        result = new LevelOfDetail(level, this);
+    //        levels.Add(level, result);
+    //    }
+    //    return result;
+    //}
+    //public SortedList<int /* level */, LevelOfDetail>? levels = null;
+    //LevelOfDetail zero => proxy.GetLevel(0);
 
-    public IEnumerable<LevelOfDetail> LevelsOfDetail => levels?.Values ?? [zero];
+    public IEnumerable<LevelOfDetail> LevelsOfDetail => proxy.LevelsOfDetail;// levels?.Values ?? [zero];
 
     #endregion
 
@@ -147,6 +97,7 @@ public partial class GridSearchState
 
 }
 
+#if UNUSED
 public class LevelOfDetail<T>
 {
     private BitArray completed;
@@ -187,3 +138,4 @@ internal class OptimizationResult
         return hash;
     }
 }
+#endif

@@ -5,8 +5,17 @@ public abstract class OptimizationStrategyBase
     public MultiBacktestContext BacktestContext => backtestContext;
     private MultiBacktestContext backtestContext;
 
-    protected OptimizationStrategyBase(MultiBacktestContext backtestContext)
+    #region Parameters
+
+    public POptimization OptimizationParameters { get; }
+
+    #endregion
+
+    protected OptimizationStrategyBase(MultiBacktestContext backtestContext, POptimization optimizationParameters)
     {
         this.backtestContext = backtestContext;
+        OptimizationParameters = optimizationParameters ?? throw new ArgumentNullException();
     }
+
+
 }

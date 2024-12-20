@@ -10,113 +10,191 @@
 
 @* Toolbar: [Abort] [Optimize] *@
 @* <MudToolBar Class="gap-6 d-flex flex-row justify-end pa-6"> *@
-<MudPaper Class="gap-6 d-flex flex-row justify-end pa-6">
+<div style="height: 100%;" class="d-flex flex-column">
 
-    @* <LionFire.Trading.Automation.Blazor.Infra.CpuChart/> *@
+    <MudPaper Class="gap-6 d-flex flex-row justify-end pa-6">
 
-    @if (ViewModel!.IsRunning)
-    {
-        <MudProgressLinear Color="Color.Primary" Value="@ViewModel.Progress.Percent" />
+        @* <LionFire.Trading.Automation.Blazor.Infra.CpuChart/> *@
 
-        <MudSimpleTable>
-            <tr>
-                <td>Progress</td>
-                <td>
-                    @ViewModel.Progress.Percent
-                </td>
-            </tr>
-            <tr>
-                <td>Completed</td>
-                <td>@ViewModel.Progress.Completed</td>
-            </tr>
-            <tr>
-                <td>Queued</td>
-                <td>@ViewModel.Progress.Queued</td>
-            </tr>
-            <tr>
-                <td>Total</td>
-                <td>@ViewModel.Progress.Total</td>
-            </tr>
-        </MudSimpleTable>
-
-        <MudButton OnClick="@ViewModel!.Cancel" Color="Color.Error" Variant="@(ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
-            @if (ViewModel!.IsAborting)
+        @if (ViewModel!.IsRunning || ViewModel.Progress.Completed > 0)
+        {
+            @if (ViewModel!.IsRunning)
             {
-                <text>Aborting...</text>
+                <div style="flex-grow: 1; flex-basis: 250px; min-height: 200px;">
+                    <MudProgressLinear Color="Color.Primary" Value="@ViewModel.Progress.Percent" Size="Size.Medium" />
+                    <MudProgressLinear Color="Color.Primary" Value="@ViewModel.Progress.FractionalPercent" Size="Size.Small" />
+                </div>
+            }
+            <div class="d-flex flex-column no-wrap lf-fieldset">
+
+                <div class="lf-field">
+                    <div class="label">Progress</div>
+                    <div class="value">@ViewModel.Progress.FractionalPerUn.ToString("P1")</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Completed</div>
+                    <div class="value">@ViewModel.Progress.Completed</div>
+                </div>
+                @* <div class="lf-field">
+                    <div class="caption"></div>
+                    <div class="value">@ViewModel.Progress.</div>
+                </div>
+                <div class="lf-field">
+                    <div class="caption"></div>
+                    <div class="value">@ViewModel.Progress.</div>
+                </div>
+                <div class="lf-field">
+                    <div class="caption"></div>
+                    <div class="value">@ViewModel.Progress.</div>
+                </div>
+                <div class="lf-field">
+                    <div class="caption"></div>
+                    <div class="value">@ViewModel.Progress.</div>
+                </div>
+                <div class="lf-field">
+                    <div class="caption"></div>
+                    <div class="value">@ViewModel.Progress.</div>
+                </div>
+                <div class="lf-field">
+                    <div class="caption"></div>
+                    <div class="value">@ViewModel.Progress.</div>
+                </div> *@
+            </div>
+
+            <MudSimpleTable>
+                <tr>
+                    <td>Progress</td>
+                    <td>
+                        @ViewModel.Progress.FractionalPerUn.ToString("P1")
+                    </td>
+                </tr>
+                <tr>
+                    <td>Completed</td>
+                    <td>@ViewModel.Progress.Completed</td>
+                </tr>
+                <tr>
+                    <td>Completish</td>
+                    <td>@ViewModel.Progress.FractionallyCompleted</td>
+                </tr>
+                <tr>
+                    <td>Queued</td>
+                    <td>@ViewModel.Progress.Queued</td>
+                </tr>
+                <tr>
+                    <td>Planned Scan</td>
+                    <td>@ViewModel.POptimization2.LevelsOfDetail.PlannedScanTotal</td>
+                </tr>
+                <tr>
+                    <td>Comprehensive Scan </td>
+                    <td>@ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanTotal</td>
+                </tr>
+                <tr>
+                    <td>Comprehensiveness</td>
+                    <td>@((ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</td>
+                </tr>
+            </MudSimpleTable>
+
+            @if (ViewModel!.IsRunning)
+            {
+                <MudButton OnClick="@ViewModel!.Cancel" Color="Color.Error" Variant="@(ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+                    @if (ViewModel!.IsAborting)
+                    {
+                        <text>Aborting...</text>
+                    }
+                    else
+                    {
+                        <text>Abort</text>
+                    }
+                </MudButton>
             }
             else
             {
-                <text>Abort</text>
+                <MudButton OnClick="@ViewModel!.Clear" Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Large">
+                    <text>Clear</text>
+                </MudButton>
+            }
+        }
+        <MudButton OnClick="ViewModel.OnOptimize" Color="Color.Primary" Variant="@(ViewModel!.IsRunning && !ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
+            @if (ViewModel!.IsRunning)
+            {
+                <text>Optimizing...</text>
+            }
+            else
+            {
+                <text>Optimize</text>
             }
         </MudButton>
-    }
-    <MudButton OnClick="ViewModel.OnOptimize" Color="Color.Primary" Variant="@(ViewModel!.IsRunning && !ViewModel!.IsAborting ? Variant.Filled : Variant.Outlined)" Size="Size.Large">
-        @if (ViewModel!.IsRunning)
-        {
-            <text>Optimizing...</text>
-        }
-        else
-        {
-            <text>Optimize</text>
-        }
-    </MudButton>
-</MudPaper>
-@* </MudToolBar> *@
+    </MudPaper>
+    @* </MudToolBar> *@
 
-<MudExpansionPanels>
+    <MudExpansionPanels>
 
-    <MudExpansionPanel Text="Parameters" @bind-Expanded=@ShowParameters>
-        <OptimizeParameters ViewModel="ViewModel" />
-    </MudExpansionPanel>
+        <MudExpansionPanel Text="Level of Detail" @bind-Expanded=@ShowParameters>
+            <OptimizationStatus ViewModel="ViewModel" />
+        </MudExpansionPanel>
+        
+        <MudExpansionPanel Text="Parameters" @bind-Expanded=@ShowParameters>
+            <OptimizeParameters ViewModel="ViewModel" />
+        </MudExpansionPanel>
 
-    <MudExpansionPanel Text="Results" @bind-Expanded=@ShowResults>
+        <MudExpansionPanel Text="Results" @bind-Expanded=@ShowResults>
 
-        @* <div>
+            @* <div>
             <OptimizationResultsChart />
     </div> *@
 
-        <MudGrid>
-            <MudItem>
-                @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory != null)
-                {
-                    <div>
-                        Dir:
-                        <a href="@($"file:///{ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory}")">@ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory</a>
+            <MudGrid>
+                <MudItem>
+                    @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory != null)
+                    {
+                        <div>
+                            Dir:
+                            <a href="@($"file:///{ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory}")">@ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.BatchDirectory</a>
+
+                        </div>
+                    }
+                </MudItem>
+                <MudItem>
+                    <div style="min-height: 220px;">
+                        <h3>Selected Backtest</h3>
 
                     </div>
-                }
-            </MudItem>
-            <MudItem>
-                <div style="min-height: 220px;">
-                    <h3>Selected Backtest</h3>
 
+                </MudItem>
+            </MudGrid>
+        </MudExpansionPanel>
+
+        <MudExpansionPanel Text="Backtests" @bind-Expanded=@ShowBacktests>
+            @* @if (ViewModel!.Backtests != null) *@
+            @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache?.Items != null)
+            {
+                @* <MudDataGrid Items="ViewModel.Backtests.Items"> *@
+                <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
+                    <Columns>
+                        <PropertyColumn Property="x => x.StringId" />
+                        <PropertyColumn Property="x => x.Fitness" />
+                        <PropertyColumn Property="x => x.AD" />
+                    </Columns>
+
+                </MudDataGrid>
+            }
+
+        </MudExpansionPanel>
+
+    </MudExpansionPanels>
+    <MudSpacer />
+    <div style="min-height: 50px;">
+        <MudExpansionPanels>
+            <MudExpansionPanel Text="Log" @bind-Expanded=@ShowLog>
+                @* <MudPaper> *@
+                <div style="height: 200px; overflow: auto;">
+                    <TerminalView ViewModel="ViewModel!.LinesVM" />
                 </div>
+                @* </MudPaper> *@
+            </MudExpansionPanel>
+        </MudExpansionPanels>
 
-            </MudItem>
-        </MudGrid>
-    </MudExpansionPanel>
-
-    <MudExpansionPanel Text="Backtests" @bind-Expanded=@ShowBacktests>
-        @* @if (ViewModel!.Backtests != null) *@
-        @if (ViewModel.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache.Items != null)
-        {
-            @* <MudDataGrid Items="ViewModel.Backtests.Items"> *@
-            <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
-                <Columns>
-                    <PropertyColumn Property="x => x.StringId" />
-                    <PropertyColumn Property="x => x.Fitness" />
-                    <PropertyColumn Property="x => x.AD" />
-                </Columns>
-
-            </MudDataGrid>
-        }
-
-    </MudExpansionPanel>
-
-</MudExpansionPanels>
-
-<MudExpansionPanel Text="Log" @bind-Expanded=@ShowLog>
-    <TerminalView ViewModel="ViewModel!.LinesVM" />
-</MudExpansionPanel>
+    </div>
+</div>
 
 

@@ -12,6 +12,7 @@
   </ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="BlazorGridStack" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" />
 		<PackageReference Include="Microsoft.Orleans.Client" />
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />

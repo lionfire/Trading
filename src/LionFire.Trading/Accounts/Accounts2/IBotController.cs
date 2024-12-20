@@ -17,7 +17,7 @@ where TPrecision : struct, INumber<TPrecision>
 
     IEnumerable<IAccount2<TPrecision>> Accounts => Account == null ? [] : [Account];
 
-    ITradeJournal<TPrecision> Journal { get; }
+    IBacktestTradeJournal<TPrecision> Journal { get; }
 
     DateTimeOffset StartTime { get; }
 

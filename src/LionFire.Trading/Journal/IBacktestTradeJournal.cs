@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Journal;
 
-public interface ITradeJournal<TPrecision> : IAsyncDisposable
+// TODO: Eliminate this interface. Use the concrete class instead.  Revisit if I have a non-backtest Trade Journal.
+public interface IBacktestTradeJournal<TPrecision> : IAsyncDisposable
       where TPrecision : struct, INumber<TPrecision>
 {
     void Write(JournalEntry<TPrecision> entry);
-    ValueTask Close(string context);
-    ValueTask CloseAll();
+    ValueTask Finish(double fitness);
 
-    string FileName { get; set; }
+    string? FileName { get; set; }
     ExchangeSymbol? ExchangeSymbol { get; set; }
     bool IsAborted { get; set; }
     bool DiscardDetails { get; set; }

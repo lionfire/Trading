@@ -155,7 +155,15 @@ public partial class BacktestQueue : IHostedService
                 while (QueuedJobsChannel.Reader.TryRead(out var job))
                 {
                     RunningJobs.AddOrThrow(job.Guid, job);
-                    await RunJob(job).ConfigureAwait(false);
+                    try
+                    {
+                        await RunJob(job).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex, "Job threw exception");
+                        job.OnFaulted(ex);
+                    }
                     if (job.CancellationToken.IsCancellationRequested)
                     {
                         Logger.LogDebug("Enqueued Job was canceled: " + job.Guid);

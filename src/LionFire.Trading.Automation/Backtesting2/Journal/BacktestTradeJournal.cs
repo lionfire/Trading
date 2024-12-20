@@ -1,94 +1,25 @@
-﻿using CommandLine;
-using CsvHelper;
+﻿using CsvHelper;
 using CsvHelper.Configuration;
 using LionFire.ExtensionMethods.Dumping;
-using LionFire.Inspection.Nodes;
-using LionFire.Parsing.String;
 using LionFire.Threading;
+using LionFire.Trading.Automation;
+using LionFire.Trading.Journal;
 using MemoryPack;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using System;
+using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Numerics;
 using System.Reactive.Concurrency;
-using System.Text;
-using System.Text.Json.Serialization;
-using static System.Net.Mime.MediaTypeNames;
 
-namespace LionFire.Trading.Journal;
+namespace LionFire.Trading.Automation.Journaling.Trades;
 
-public class JournalStatsCollector
-{
-    public readonly RollingAverage AverageMinutesPerWinningTrade = new();
-
-    public JournalStats JournalStats
-    {
-        get
-        {
-            s.AverageMinutesPerWinningTrade = AverageMinutesPerWinningTrade.CurrentAverage;
-            return s;
-        }
-    }
-    private JournalStats s = new();
-
-    internal void OnClose<TPrecision>(JournalEntry<TPrecision> entry) where TPrecision : struct, INumber<TPrecision>
-    {
-        if (entry.RealizedGrossProfitDelta > TPrecision.Zero)
-        {
-            if (entry.Position == null) { throw new ArgumentNullException(nameof(entry.Position)); }
-            var positionDuration = entry.Time - entry.Position.EntryTime; /// REVIEW - move this somewhere?
-            AverageMinutesPerWinningTrade.AddValue(positionDuration.TotalMinutes);
-
-            s.WinningTrades++;
-        }
-        else if (entry.RealizedGrossProfitDelta == TPrecision.Zero)
-        {
-            s.BreakevenTrades++;
-        }
-        else if (entry.RealizedGrossProfitDelta <= TPrecision.Zero)
-        {
-            s.LosingTrades++;
-        }
-        else { s.UnknownTrades++; }
-    }
-}
-
-public class JournalStats
-{
-    public int WinningTrades { get; set; }
-    public int LosingTrades { get; set; }
-    public int BreakevenTrades { get; set; }
-    public int UnknownTrades { get; set; }
-    public double AverageMinutesPerWinningTrade { get; set; }
-}
-
-
-public class RollingAverage
-{
-    private double sum = 0;
-    private long count = 0;
-
-    public void AddValue(double value)
-    {
-        sum += value;
-        count++;
-    }
-
-    public double CurrentAverage => count > 0 ? (sum / count) : double.NaN;
-}
-
-public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDisposable
+public sealed partial class BacktestTradeJournal<TPrecision> : IBacktestTradeJournal<TPrecision>, IDisposable
     where TPrecision : struct, INumber<TPrecision>
 {
     #region Dependencies
 
-    private readonly ILogger<TradeJournal<TPrecision>> logger;
+    private readonly ILogger<BacktestTradeJournal<TPrecision>> logger;
+    private BestJournalsTracker bestJournalsTracker;
 
     #endregion
 
@@ -98,7 +29,7 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
     private readonly TradeJournalOptions options;
 
     private string? pathWithoutExtension { get; set; }
-    private void UpdatePath() => pathWithoutExtension = Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(nameof(Options.JournalDir)), context);
+    private void UpdatePath() => pathWithoutExtension = Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(nameof(Options.JournalDir)), contextName);
     public string? FileName { get; set; }
     public ExchangeSymbol? ExchangeSymbol
     {
@@ -111,16 +42,16 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
         }
     }
 
-    public string Context
+    public string ContextName
     {
-        get => context;
+        get => contextName;
         set
         {
-            context = value;
+            contextName = value;
             UpdatePath();
         }
     }
-    private string context = "Journal-" + Guid.NewGuid();
+    private string contextName = "Journal-" + Guid.NewGuid();
 
     #region Derived
 
@@ -150,11 +81,12 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
     #endregion
 
     #region Lifecycle
-
-    public TradeJournal(IServiceProvider serviceProvider, ILogger<TradeJournal<TPrecision>> logger, TradeJournalOptions options, ExchangeSymbol? exchangeSymbol = null)
+    public BacktestTradeJournal(IServiceProvider serviceProvider, ILogger<BacktestTradeJournal<TPrecision>> logger, TradeJournalOptions options, MultiBacktestContext context, ExchangeSymbol? exchangeSymbol = null)
     {
+        bestJournalsTracker = context.BestJournalsTracker;
         this.logger = logger;
         this.options = options;
+
         if (options.JournalDir == null)
         {
             // REVIEW - find a better way to do this
@@ -164,23 +96,22 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
         UpdatePath();
     }
 
-    //~TradeJournal() => Dispose();
-
     public void Dispose()
     {
         if (entries == null) return;
         DisposeAsync().AsTask().Wait();
     }
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        await CloseAll();
         entries = null!;
+        return ValueTask.CompletedTask;
     }
 
     //private string GetPath(string filename) => Path.Combine(Options.JournalDir ?? throw new ArgumentNullException(nameof(Options.JournalDir)), filename);
 
-    private void OnClosed(string path)
+    private async ValueTask OnClosed(string path)
     {
+        //Context.BestJournalsTracker = new BestJournalsTracker()
         if (FileName != null)
         {
             int i = 0;
@@ -188,35 +119,41 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
             string getPath() => Path.Combine(JournalDirectory ?? throw new ArgumentNullException(nameof(JournalDirectory)), FileName) + (i++ == 0 ? "" : $" ({i:000})") + Path.GetExtension(path);
 
-            if (Options.ReplaceOutput && File.Exists(newPath = getPath()))
+            if (Options.ReplaceOutput && File.Exists(newPath = getPath())) // BLOCKING I/O
             {
-                File.Delete(newPath);
+                File.Delete(newPath); // BLOCKING I/O
             }
             else
             {
                 do
                 {
                     newPath = getPath();
-                } while (File.Exists(newPath));
+                } while (File.Exists(newPath)); // BLOCKING I/O
             }
 
             if (DiscardDetails || !KeepAborted && IsAborted)
             {
-                DeleteWithRetry(path);
+                await DeleteWithRetry(path);
             }
-            else { File.Move(path, newPath); }
+            else
+            {
+                pathsToCleanupOnDiscard?.Add(newPath);
+                File.Move(path, newPath); // BLOCKING I/O
+                pathsToCleanupOnDiscard?.Remove(newPath);
+            } 
         }
     }
     private static readonly bool KeepAborted = false;
 
     public bool IsAborted { get; set; }
     public bool DiscardDetails { get; set; }
-    public async void DeleteWithRetry(string path)
+    public static async ValueTask DeleteWithRetry(string path, bool waitForFileToExist = false)
     {
-        for (int retries = 0; retries < 10; retries++)
+        for (int retries = 0; retries < 30; retries++)
         {
             try
             {
+                if (!waitForFileToExist && !File.Exists(path)) break;
                 File.Delete(path);
                 break;
             }
@@ -224,11 +161,48 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
         }
     }
 
-    public async ValueTask CloseAll()
+#if UNUSED
+    public async ValueTask Close(string context)
     {
-        if (!DiscardDetails)
+        if (fileStreams.TryRemove((context, JournalFormat.Binary), out var fs)) { fs.Dispose(); }
+        if (fileStreams.TryRemove((context, JournalFormat.Text), out fs)) { fs.Dispose(); }
+        if (csvWriters.TryRemove(context, out var csv))
         {
-            await _Write(forceWriteToDisk: true);
+            await csv.FlushAsync();
+            await csv.DisposeAsync();
+        }
+    }
+#endif
+
+    #region Delete saved files because we no longer exceed
+
+    #endregion
+    static async ValueTask WeGotBumped(object obj)
+    {
+        if (obj is Func<IEnumerable<string>?> func && func() is IEnumerable<string> list)
+        {
+            await Task.Delay(1000);
+            foreach (var path in list.ToArray())
+            {
+                Debug.WriteLine($"Cleaning up discarded journal: {path}");
+                await DeleteWithRetry(path);
+            }
+        }
+    }
+
+    List<string>? pathsToCleanupOnDiscard;
+
+    public async ValueTask Finish(double fitness)
+    {
+        DiscardDetails |= !bestJournalsTracker.PeekShouldAdd(fitness);
+
+        if (!DiscardDetails) { await _Write(forceWriteToDisk: true); }
+
+        DiscardDetails |= !bestJournalsTracker.ShouldAdd(fitness, WeGotBumped, () => pathsToCleanupOnDiscard);
+
+        if (fileStreams.Count > 0)
+        {
+            pathsToCleanupOnDiscard = new(fileStreams.Select(s => s.Value.Name));
         }
 
         {
@@ -238,16 +212,12 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
                 csvWriters = null!;
                 foreach (var kvp in copy)
                 {
-                    await kvp.Value.FlushAsync();
-                    try
+                    if (!DiscardDetails)
                     {
+                        await kvp.Value.FlushAsync();
                     }
-                    catch { }
+
                     kvp.Value.Dispose();
-                    try
-                    {
-                    }
-                    catch { }
                 }
             }
         }
@@ -257,7 +227,7 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
             {
                 fileStreams = null!;
                 foreach (var kvp in copy.Where(c => c.Key.Item2 != JournalFormat.CSV)) { kvp.Value.Dispose(); }
-                foreach (var c in copy) OnClosed(c.Value.Name);
+                foreach (var c in copy) await OnClosed(c.Value.Name);
             }
         }
     }
@@ -266,10 +236,8 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
     #region State
 
-    public JournalStatsCollector JournalStatsCollector => journalStatsCollector;
-    private JournalStatsCollector journalStatsCollector = new();
-    public JournalStats JournalStats => journalStatsCollector.JournalStats;
-
+    private JournalStatsCollector statsCollector = new();
+    public JournalStats JournalStats => statsCollector.JournalStats;
 
     ConcurrentDictionary<(string, JournalFormat), FileStream> fileStreams = new();
     ConcurrentDictionary<string, CsvWriter> csvWriters = new();
@@ -285,7 +253,6 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
     ConcurrentQueue<JournalEntry<TPrecision>> entries = new(); // TODO: Replace with channel
     public bool IsDisposed => entries == null;
 
-
     Dictionary<int, IPosition<TPrecision>> openPositions = new();
 
     void UpdateStats(JournalEntry<TPrecision> entry)
@@ -299,7 +266,7 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
                 break;
             case JournalEntryType.Close:
 
-                journalStatsCollector.OnClose(entry);
+                statsCollector.OnClose(entry);
                 break;
             case JournalEntryType.Modify:
                 break;
@@ -378,17 +345,6 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
         }
     }
 
-    public async ValueTask Close(string context)
-    {
-        if (fileStreams.TryRemove((context, JournalFormat.Binary), out var fs)) { fs.Dispose(); }
-        if (fileStreams.TryRemove((context, JournalFormat.Text), out fs)) { fs.Dispose(); }
-        if (csvWriters.TryRemove(context, out var csv))
-        {
-            await csv.FlushAsync();
-            await csv.DisposeAsync();
-        }
-    }
-
     #endregion
 
     #region (Private) IO
@@ -402,7 +358,7 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
     CsvWriter GetCsvWriter()
     {
-        return csvWriters.GetOrAdd(Context, key =>
+        return csvWriters.GetOrAdd(ContextName, key =>
         {
             //var ext = Options.CsvSeparator switch
             //{
@@ -427,7 +383,7 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
 
     FileStream GetStream(JournalFormat journalFormat)
     {
-        return fileStreams.GetOrAdd((Context, journalFormat), key =>
+        return fileStreams.GetOrAdd((ContextName, journalFormat), key =>
         {
             var ext = journalFormat switch
             {
@@ -461,7 +417,5 @@ public sealed class TradeJournal<TPrecision> : ITradeJournal<TPrecision>, IDispo
     }
 
     #endregion
-
-
 
 }

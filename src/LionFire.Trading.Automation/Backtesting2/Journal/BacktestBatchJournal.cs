@@ -152,7 +152,7 @@ public class BacktestBatchJournal : IAsyncDisposable
 
         while (channel.Reader.TryPeek(out var _))
         {
-            Debug.WriteLine($"{this.GetType().Name} - Waiting for Reader to be emptied.");
+            Debug.WriteLine($"{this.GetType().Name} - Waiting for Reader to be emptied. Remaining: {channel.Reader.Count}");
             await Task.Delay(100);
         }
         if (csv != null) { await csv.DisposeAsync(); }

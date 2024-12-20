@@ -24,7 +24,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
     public OptimizationTask OptimizationTask { get; }
 
-    private ILogger Logger { get; }
+    internal ILogger Logger { get; }
 
     #region Derived
 
@@ -38,16 +38,15 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
     #region Parameters
 
     public PGridSearchStrategy Parameters { get; set; }
-    public POptimization OptimizationParameters { get; }
 
     #endregion
 
     #region Lifecycle
 
-    public GridSearchStrategy(ILogger<GridSearchStrategy> logger, PGridSearchStrategy parameters, POptimization optimizationParameters, OptimizationTask optimizationTask) : base(optimizationTask.Context)
+    public GridSearchStrategy(ILogger<GridSearchStrategy> logger, POptimization optimizationParameters, OptimizationTask optimizationTask) : base(optimizationTask.Context, optimizationParameters)
     {
-        Parameters = parameters ?? throw new ArgumentNullException();
-        OptimizationParameters = optimizationParameters ?? throw new ArgumentNullException();
+        Parameters = optimizationParameters.POptimizationStrategy as PGridSearchStrategy ?? throw new ArgumentException("optimizationParameters.POptimizationStrategy must be PGridSearchStrategy");
+
         OptimizationTask = optimizationTask ?? throw new ArgumentNullException();
         Logger = logger; // optimizationTask.ServiceProvider.GetRequiredService<ILogger<GridSearchStrategy>>();
         State = new GridSearchState(this);
@@ -80,7 +79,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
     public GridSearchState State { get; private set; }
 
-    public long BacktestsComplete => BacktestContext.Parameters.Events.Completed;
+    public long BacktestsComplete => BacktestContext.Events.Completed;
     public long BacktestsQueued { get; set; }
 
     public long MinBacktestsRemaining { get; set; }
@@ -114,13 +113,14 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     };
                 }
             }
-            
 
-            if (State.levels != null)
+            if (State.LevelsOfDetail != null)
             {
                 progress.Completed = BacktestsComplete;
+                progress.FractionallyCompleted = BacktestContext.Events.FractionallyCompleted;
                 progress.Queued = BacktestsQueued;
-                progress.Total = (long)State.levels.Select(l => l.Value.TestPermutationCount).Sum();
+                //progress.Total = (long)State.LevelsOfDetail.Select(l => l.TestPermutationCount).Sum();
+                //progress.PlannedSearchTotal = ; // FUTURE: Everything at level 1+
                 progress.PauseElapsed = PausedTime;
                 progress.IsPaused = IsPaused;
             }
@@ -157,8 +157,8 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
         StartTime = DateTimeOffset.UtcNow;
 
-        List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = State.optimizableParameters;
-        List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = State.unoptimizableParameters;
+        IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = State.OptimizableParameters;
+        IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = State.UnoptimizableParameters;
 
         // Start a loop to read from the ParametersToTest channel
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
@@ -276,7 +276,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
             //localCancellationTokenSource.Cancel();
         });
 
-        HashSet<OptimizationResult> results = new();
+        //HashSet<OptimizationResult> results = new();
         var producerTask = Task.Run(async () =>
         {
             //var linkedCTS = CancellationTokenSource.CreateLinkedTokenSource(new[] { cancellationToken, localCancellationTokenSource.Token });
@@ -290,7 +290,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     foreach (var current in State.CurrentLevel)
                     {
 
-                        Debug.WriteLine(current.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
+                        //Debug.WriteLine(current.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
 
                         await ParametersToTest.Writer.WriteAsync(current, CancellationToken).ConfigureAwait(false);
                         if (remainingBacktestsAllowed-- == 0)

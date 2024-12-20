@@ -36,12 +36,15 @@ public class PBacktestBatchTask2 //: IPBacktestBatchTask2
     #region Time
 
     public TimeFrame? TimeFrame { get; set; }
+    public string TimeFrameString { get => TimeFrame; set => TimeFrame = value; }
 
     public virtual TimeFrame? EffectiveTimeFrame => TimeFrame;
 
     //public TimeFrame TimeFrame => PBot.TimeFrame;
     public DateTimeOffset Start { get; set; }
+    public DateTime? StartDateTime { get=> Start.DateTime; set => Start = value ?? default; }
     public DateTimeOffset EndExclusive { get; set; }
+    public DateTime? EndExclusiveDateTime { get => EndExclusive.DateTime; set => EndExclusive = value ?? default; }
 
     #endregion
 
@@ -59,6 +62,15 @@ public class PBacktestBatchTask2 //: IPBacktestBatchTask2
     /// null if ExchangeSymbols is set instead
     /// </summary>
     public ExchangeSymbol? ExchangeSymbol { get; set; }
+
+
+    #region REVIEW - Unimmutabilizing properties
+
+    public string Exchange { get => ExchangeSymbol.Exchange; set => ExchangeSymbol = new ExchangeSymbol(value, ExchangeSymbol.ExchangeArea, ExchangeSymbol.Symbol); }
+    public string ExchangeArea { get => ExchangeSymbol.ExchangeArea; set => ExchangeSymbol = new ExchangeSymbol(ExchangeSymbol.Exchange, value, ExchangeSymbol.Symbol); }
+    public string Symbol { get => ExchangeSymbol.Symbol; set => ExchangeSymbol = new ExchangeSymbol(ExchangeSymbol.Exchange, ExchangeSymbol.ExchangeArea, value); }
+
+    #endregion
 
     /// <summary>
     /// null if ExchangeSymbol is set instead.  Order is important, with the first symbol typically being the primary one.

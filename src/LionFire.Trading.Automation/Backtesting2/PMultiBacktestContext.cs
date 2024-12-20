@@ -18,12 +18,13 @@ public class MultiBacktestEvents
 
     SourceCache<BacktestBatchProgress, int> batchesInProgress = new(b => b.BatchId);
 
-    public void BatchStarting(BacktestBatchProgress progress) 
+    public void BatchStarting(BacktestBatchProgress progress)
         => batchesInProgress.AddOrUpdate(progress);
 
     public void BatchFinished(BacktestBatchProgress progress) => batchesInProgress.Remove(progress);
 
-    public long Completed => completedCount + (long)batchesInProgress.Items.Select(p => p.EffectiveCompleted).Sum();
+    public long FractionallyCompleted => completedCount + (long)batchesInProgress.Items.Select(p => p.EffectiveCompleted).Sum();
+    public long Completed => completedCount;
     private long completedCount = 0;
 
     public IObservable<long> Completions => completions;
@@ -34,21 +35,25 @@ public class PMultiBacktestContext
 {
     #region Lifecycle
 
-    public PMultiBacktestContext(POptimization pOptimization)
+    public PMultiBacktestContext()
     {
-        POptimization = pOptimization;
+        POptimization = new(this);
     }
 
     public PMultiBacktestContext(Type pBotType, ExchangeSymbol? exchangeSymbol = null, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
-        POptimization = new POptimization(pBotType, ExchangeSymbol)
+        if (start.HasValue)
         {
-            CommonBacktestParameters = new()
-            {
-                Start = start ?? default,
-                EndExclusive = endExclusive ?? default
-            }
-        };
+            CommonBacktestParameters.Start = start.Value;
+        }
+        if (endExclusive.HasValue)
+        {
+            CommonBacktestParameters.EndExclusive = endExclusive.Value;
+        }
+
+        CommonBacktestParameters.ExchangeSymbol = ExchangeSymbol;
+        CommonBacktestParameters.PBotType = pBotType;
+        POptimization = new POptimization(this);
     }
 
     public PMultiBacktestContext(IEnumerable<PBacktestTask2> pBacktestTask2, DateTimeOffset? start, DateTimeOffset? endExclusive)
@@ -57,26 +62,45 @@ public class PMultiBacktestContext
         var pBotType = first.PBot!.GetType();
         var exchangeSymbol = first.ExchangeSymbol ?? ExchangeSymbol.Unknown;
 
-        POptimization = new POptimization(pBotType, exchangeSymbol)
+        if (start.HasValue)
         {
-            CommonBacktestParameters = new()
-            {
-                Start = start ?? default,
-                EndExclusive = endExclusive ?? default
-            }
-        };
+            CommonBacktestParameters.Start = start.Value;
+        }
+        if (endExclusive.HasValue)
+        {
+            CommonBacktestParameters.EndExclusive = endExclusive.Value;
+        }
+
+        CommonBacktestParameters.ExchangeSymbol = ExchangeSymbol;
+        CommonBacktestParameters.PBotType = pBotType;
+        POptimization = new POptimization(this);
     }
 
     #endregion
 
-    public POptimization POptimization { get; set; }
+    public PBacktestBatchTask2 CommonBacktestParameters { get; set; } = new();
+
+    public POptimization POptimization
+    {
+        get => pOptimization;
+        set
+        {
+            if (value.Parent != this)
+            {
+                throw new Exception();
+                //value.Parent = this;
+            }
+            pOptimization = value;
+        }
+    }
+    POptimization pOptimization;
 
     #region Derived
 
     #region Convenience
 
     public Type PBotType => POptimization.PBotType;
-    public ExchangeSymbol ExchangeSymbol => POptimization.ExchangeSymbol;
+    public ExchangeSymbol ExchangeSymbol => CommonBacktestParameters.ExchangeSymbol;
 
     #endregion
 
@@ -99,7 +123,6 @@ public class PMultiBacktestContext
 
     #endregion
 
-    public MultiBacktestEvents Events { get; } = new();
 
 
 }

@@ -17,6 +17,7 @@ using LionFire.Mvvm;
 using System.Reactive.Disposables;
 using ReactiveUI.SourceGenerators;
 using ReactiveAttribute = ReactiveUI.Fody.Helpers.ReactiveAttribute;
+using QuantConnect.Api;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
@@ -28,10 +29,24 @@ public partial class OneShotOptimizeVM : ReactiveObject
     public IServiceProvider ServiceProvider { get; }
     public CustomLoggerProvider CustomLoggerProvider { get; }
 
+    void ResetParameters()
+    {
+        var p = POptimization2;
+
+        var c = PMultiBacktestContext.CommonBacktestParameters;
+        c.ExchangeSymbol = new("Binance", "futures", "BTCUSDT");
+        c.PBotType = BotTypes.FirstOrDefault();
+        c.TimeFrame = TimeFrame.m1;
+        c.Start = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        c.EndExclusive = new(2024, 1, 8, 0, 0, 0, TimeSpan.Zero);
+    }
+
     public OneShotOptimizeVM(IServiceProvider serviceProvider, LionFire.Logging.CustomLoggerProvider customLoggerProvider)
     {
         ServiceProvider = serviceProvider;
         CustomLoggerProvider = customLoggerProvider;
+
+        ResetParameters();
 
         customLoggerProvider.Observable.Subscribe(logEntry =>
         {
@@ -126,28 +141,34 @@ public partial class OneShotOptimizeVM : ReactiveObject
     public Type PBotType { get; set; } = typeof(PAtrBot<double>);
     public string ExchangeArea { get; set; } = "futures";
     public string Symbol { get; set; } = "BTCUSDT";
-    public string TimeFrameString { get; set; } = "m1";
+    public string TimeFrameString { get; set; } = "h1";
 
-    public int BatchSize { get; set; } = 128;
-    public int MaxBacktests { get; set; } = 8_192;
+    public int BatchSize { get; set; } = 1024;//= 128;
+    public double BatchSizeExponential { get => Math.Log2(BatchSize); set => BatchSize = (int)Math.Pow(2.0, value); }
 
-    public DateRange DateRange { get; set; } = new(new(2020, 1, 1), new(2020, 2, 1));
+    public int MinParameterPriority { get; set; } = -10;
+    public long MaxBacktests { get => POptimization2.MaxBacktests; set => POptimization2.MaxBacktests = value; }
+    public double MaxBacktestsExponential { get => Math.Log2(MaxBacktests); set => MaxBacktests = (long)Math.Pow(2.0, value); }
 
-    public TradeJournalOptions TradeJournalOptions { get; set; } = new(); // ENH: get defaults for this and other parameters somewhere/somehow, based on the a template for the user (perhaps the user has many templates)
+
+    public DateRange DateRange { get; set; } = new(new(2020, 1, 1), new(2020, 3, 1));
+
+    public TradeJournalOptions TradeJournalOptions => POptimization2.TradeJournalOptions;
+    // ENH: get defaults for this and other parameters somewhere/somehow, based on the a template for the user (perhaps the user has many templates)
 
     #region Derived
 
-    // REVIEW TODO FIXME: once pOptimization gets created, all options are ignored
+#if OLD
     public POptimization POptimization
     {
         get
         {
-            return pOptimization ??= new POptimization(PBotType, new ExchangeSymbol(Exchange, ExchangeArea, Symbol))
+            return  new POptimization(PBotType, new ExchangeSymbol(Exchange, ExchangeArea, Symbol))
             {
                 MaxBatchSize = BatchSize,
                 MaxBacktests = MaxBacktests,
 
-                EnableParametersAtOrAboveOptimizePriority = -10,
+                MinParameterPriority = MinParameterPriority,
 
                 TradeJournalOptions = TradeJournalOptions,
 
@@ -179,7 +200,12 @@ public partial class OneShotOptimizeVM : ReactiveObject
             };
         }
     }
-    POptimization? pOptimization;
+#endif
+
+    public PMultiBacktestContext PMultiBacktestContext { get; set; } = new();
+    public PBacktestBatchTask2 Common => PMultiBacktestContext.CommonBacktestParameters;
+
+    public POptimization POptimization2 => PMultiBacktestContext.POptimization;
 
     public TimeFrame TimeFrame => TimeFrame.Parse(TimeFrameString);
 
@@ -206,6 +232,11 @@ public partial class OneShotOptimizeVM : ReactiveObject
 
     #region Methods
 
+    public void Clear()
+    {
+        Progress = OptimizationProgress.NoProgress;
+    }
+
     public void Cancel()
     {
         OptimizationTask?.Cancel();
@@ -224,7 +255,8 @@ public partial class OneShotOptimizeVM : ReactiveObject
     public void OnOptimize()
     {
         ConsoleLog.LogInformation("OnOptimize");
-        OptimizationTask = new OptimizationTask(ServiceProvider, POptimization);
+
+        OptimizationTask = new OptimizationTask(ServiceProvider, PMultiBacktestContext);
 
         var task = OptimizationTask.Run();
 

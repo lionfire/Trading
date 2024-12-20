@@ -25,12 +25,18 @@ namespace LionFire.Trading.Automation.Optimization;
 
 public class OptimizationProgress
 {
-    public long Total { get; set; }
+    public long PlannedScanTotal { get; set; }
+    public long ComprehensiveScanTotal { get; set; }
+    public double ComprehensiveScanPerUn => ComprehensiveScanTotal == 0 ? 0 : (PlannedScanTotal / ComprehensiveScanTotal);
+
     public long Skipped { get; set; }
     public long Queued { get; set; }
+    public long FractionallyCompleted { get; set; }
     public long Completed { get; set; }
+    public double FractionalPercent => FractionalPerUn * 100.0;
     public double Percent => PerUn * 100.0;
     public double PerUn => Queued == 0 ? 0 : (double)Completed / Queued;
+    public double FractionalPerUn => Queued == 0 ? 0 : (double)FractionallyCompleted / Queued;
     public long Remaining => Queued - Completed;
     public DateTimeOffset? Start { get; set; }
     public DateTimeOffset? EstimatedEnd { get; set; }
@@ -64,10 +70,11 @@ public class OptimizationTask : ReactiveObject, IRunnable
 
     #region Lifecycle
 
-    public OptimizationTask(IServiceProvider serviceProvider, POptimization parameters)
+    public OptimizationTask(IServiceProvider serviceProvider, PMultiBacktestContext parameters)
     {
         ServiceProvider = serviceProvider;
-        Context = MultiBacktestContext.Create(ServiceProvider, new(parameters ?? throw new ArgumentNullException(nameof(parameters))));
+
+        Context = MultiBacktestContext.Create(ServiceProvider, parameters ?? throw new ArgumentNullException(nameof(parameters)));
         //OptimizationDirectory = GetOptimizationDirectory(Parameters.PBotType);
 
         BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
@@ -99,10 +106,10 @@ public class OptimizationTask : ReactiveObject, IRunnable
         PGridSearchStrategy pGridSearchStrategy = new()
         {
             //Parameters = Parameters.ParameterRanges.ToDictionary(p => p.Name, p => new ParameterOptimizationOptions { MinValue = p.Min, MaxValue = p.Max, MinStep = p.Step, MaxStep = p.Step }),
-
         };
+        Parameters.POptimizationStrategy = pGridSearchStrategy;
 
-        GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, pGridSearchStrategy, Parameters, this);  // new(pGridSearchStrategy, Parameters, this);
+        GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, Parameters, this); 
         OptimizationStrategy = gridSearchStrategy;
 
         RunTask = Task.Run(async () =>
@@ -116,8 +123,6 @@ public class OptimizationTask : ReactiveObject, IRunnable
         });
         return Task.CompletedTask;
     }
-
-    
 
     #endregion
 

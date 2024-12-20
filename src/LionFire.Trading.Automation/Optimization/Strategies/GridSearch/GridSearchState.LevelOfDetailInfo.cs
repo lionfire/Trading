@@ -6,7 +6,7 @@ namespace LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
 
 public partial class GridSearchState
 {
-    public class LevelOfDetail //: IEnumerable<int[]>
+    public class LevelOfDetail : ILevelOfDetail
     {
         #region Identity
 
@@ -15,10 +15,12 @@ public partial class GridSearchState
         #region Parent
 
         [JsonIgnore]
-        public GridSearchState State { get; }
+        public OptimizerLevelsOfDetail OptimizerLevelsOfDetail { get; }
 
+#if UNUSED
         [JsonIgnore]
         public LevelOfDetail ParentLevel => Level == 0 ? this : State.GetLevel(Math.Sign(Level) * (Math.Abs(Level) - 1));
+#endif
 
         #endregion
 
@@ -26,12 +28,12 @@ public partial class GridSearchState
 
         #region Lifecycle
 
-        public LevelOfDetail(int level, GridSearchState gridSearchState)
+        public LevelOfDetail(int level, OptimizerLevelsOfDetail optimizerLevelsOfDetail)
         {
             Level = level;
-            State = gridSearchState;
+            OptimizerLevelsOfDetail = optimizerLevelsOfDetail;
 
-            foreach ((var info, var options) in gridSearchState.optimizableParameters)
+            foreach ((var info, var options) in OptimizerLevelsOfDetail.OptimizableParameters)
             {
                 var state = ParameterLevelOfDetailInfo.Create(level, info, options);
                 Parameters.Add(state);
@@ -74,7 +76,7 @@ public partial class GridSearchState
                 int i = 0;
                 foreach (var p in gridLevelOfDetailState.Parameters)
                 {
-                    Debug.WriteLine($"Parameter: {gridLevelOfDetailState.State.optimizableParameters[i].info.Key}  TestCount: {p.TestCount}");
+                    Debug.WriteLine($"Parameter: {gridLevelOfDetailState.OptimizerLevelsOfDetail.OptimizableParameters[i].info.Key}  TestCount: {p.TestCount}");
                     max[i++] = p.TestCount;
                 }
             }
@@ -103,7 +105,7 @@ public partial class GridSearchState
 
             public void Reset() => current = new int[gridLevelOfDetailState.Parameters.Count];
         }
-        
+
         #endregion
     }
 

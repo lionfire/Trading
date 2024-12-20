@@ -1,4 +1,6 @@
-﻿using LionFire.Trading.Journal;
+﻿using LionFire.ExtensionMethods.Copying;
+using LionFire.Trading.Automation.Optimization.Strategies;
+using LionFire.Trading.Journal;
 
 namespace LionFire.Trading.Automation.Optimization;
 
@@ -7,8 +9,7 @@ public class POptimization
 {
     #region Identity Parameters
 
-    public ExchangeSymbol ExchangeSymbol { get; set; }
-    public Type PBotType { get; }
+    public Type PBotType => Parent.CommonBacktestParameters.PBotType;
 
     //public List<Type> BotTypes { get; set; } // ENH maybe someday though probably not, just a thought: OPTIMIZE - Test multiple bot types in parallel
 
@@ -16,11 +17,15 @@ public class POptimization
 
     #region Lifecycle
 
-    public POptimization(Type pBotType, ExchangeSymbol exchangeSymbol)
+    public POptimization(PMultiBacktestContext parent)
     {
-        PBotType = pBotType;
-        ExchangeSymbol = exchangeSymbol;
+        Parent = parent;
     }
+    //public POptimization(PMultiBacktestContext parent, Type pBotType, ExchangeSymbol exchangeSymbol) : this(parent)
+    //{
+    //    PBotType = pBotType;
+    //    ExchangeSymbol = exchangeSymbol;
+    //}
 
     #endregion
 
@@ -54,7 +59,11 @@ public class POptimization
 
     #region Optimization
 
+    public IPOptimizationStrategy POptimizationStrategy { get; set; } = new PGridSearchStrategy();
+
     public long MaxBacktests { get; set; } = 1_000;
+    public long MaxSearchBacktests { get; set; } = 1_000_000;
+    public long MaxScanBacktests { get; set; } = 1_000_000;
 
     /// <summary>
     /// (ENH - maybe - NOTIMPLEMENTED) For non-comprehensive tests that have a randomization element, this sets the parameters for the initial coarse test.   I don't like this idea.
@@ -63,14 +72,26 @@ public class POptimization
 
     #endregion
 
-    public required PBacktestBatchTask2 CommonBacktestParameters { get; set; }
+    public PBacktestBatchTask2 CommonBacktestParameters => Parent.CommonBacktestParameters;
 
     public int MinLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   
     public int MaxLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   
 
     #region Individual Parameters
 
-    public int EnableParametersAtOrAboveOptimizePriority { get; set; }
+    /// <summary>
+    /// Optimize parameters with an OptimizePriority greater than or equal to this value.
+    /// This is only a default starting point: individual parameters can be enabled or disabled to override this.
+    /// </summary>
+    public int MinParameterPriority
+    {
+        get => minParameterPriority; set
+        {
+            minParameterPriority = value;
+            levelsOfDetail = null;
+        }
+    }
+    private int minParameterPriority;
 
     //public IParameterOptimizationOptions? DefaultParameterOptimizationOptions { get; set; }
 
@@ -83,12 +104,91 @@ public class POptimization
     #region Journal
 
     public TradeJournalOptions TradeJournalOptions { get => tradeJournalOptions ??= new(); set => tradeJournalOptions = value; }
+
     private TradeJournalOptions? tradeJournalOptions;
 
     #endregion
 
+    /// <summary>
+    /// Compile parameter optimization options from various sources, in the following order:
+    /// - ParameterAttribute
+    /// - EnableOptimization from this.MinParameterPriority
+    /// - POptimizationStrategy.Parameters
+    /// - this.ParameterOptimizationOptions
+    /// </summary>
+    /// <param name="info"></param>
+    /// <returns></returns>
+    public IParameterOptimizationOptions GetEffectiveOptions2(HierarchicalPropertyInfo info)
+    {
+        #region Attribute
+
+        IParameterOptimizationOptions fromAttribute = info.ParameterAttribute.GetParameterOptimizationOptions(info.LastPropertyInfo!.PropertyType);
+        ArgumentNullException.ThrowIfNull(fromAttribute);
+
+        var clone = fromAttribute.Clone();
+
+        #endregion
+
+        if (!clone.EnableOptimization.HasValue)
+        {
+            clone.EnableOptimization = info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
+        }
+
+        #region POptimizationStrategy
+
+        IParameterOptimizationOptions? fromOptimizationParameters = POptimizationStrategy.Parameters.TryGetValue(info.Path);
+
+        // FUTURE: Clone per-strategy options somehow 
+        //clone.FitnessOfInterest ??= gridSearchStrategy.Parameters.FitnessOfInterest;
+
+        if (fromOptimizationParameters != null)
+        {
+            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
+        }
+
+        #endregion
+
+        #region ParameterOptimizationOptions
+
+        var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
+        if (fromPOptimization != null)
+        {
+            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
+        }
+
+        #endregion
+
+        return clone;
+    }
+
+    public IEnumerable<int> LevelsOfDetailRange => Enumerable.Range(LevelsOfDetail.MinLevel, 0); // FUTURE: Levels above 0
+    public IEnumerable<ILevelOfDetail> LevelsOfDetailEnumeration => Enumerable.Range(LevelsOfDetail.MinLevel, 1 - LevelsOfDetail.MinLevel).Select(level => LevelsOfDetail.GetLevel(level));
+
+    public OptimizerLevelsOfDetail LevelsOfDetail
+    {
+        get
+        {
+            if (levelsOfDetail == null)
+            {
+                levelsOfDetail = new(this);
+            }
+            return levelsOfDetail;
+        }
+        set
+        {
+            levelsOfDetail = value;
+        }
+    }
+
+    public PMultiBacktestContext Parent { get; }
+
+    private OptimizerLevelsOfDetail? levelsOfDetail;
+
+    #region Misc
 
     public override string ToString() => this.ToXamlProperties();
+
+    #endregion
 }
 
 //public enum ParameterType

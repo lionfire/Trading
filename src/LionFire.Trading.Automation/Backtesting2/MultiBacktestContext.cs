@@ -1,16 +1,19 @@
-﻿using LionFire.Trading.Automation.Optimization;
+﻿using LionFire.Trading.Automation.Journaling.Trades;
+using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Journal;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
 namespace LionFire.Trading.Automation;
 
-public class MultiBacktestContext
+public class MultiBacktestContext 
 {
     #region Dependencies
-
     public IServiceProvider ServiceProvider { get; }
-    public PMultiBacktestContext Parameters { get; }
+
+    #endregion
+
+    #region Configuration
 
     public BacktestOptions BacktestOptions => ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestOptions>>().CurrentValue;
 
@@ -18,6 +21,7 @@ public class MultiBacktestContext
 
     #region Parameters
 
+    public PMultiBacktestContext Parameters { get; }
     public POptimization POptimization => Parameters.POptimization;
 
     public BacktestExecutionOptions ExecutionOptions
@@ -51,11 +55,18 @@ public class MultiBacktestContext
     {
         ServiceProvider = serviceProvider;
         Parameters = parameters;
-        if(Parameters.POptimization == null) { throw new ArgumentNullException(nameof(Parameters.POptimization)); }
+        if (Parameters.POptimization == null) { throw new ArgumentNullException(nameof(Parameters.POptimization)); }
     }
 
     #endregion
 
+    #region State
+
+    public BestJournalsTracker BestJournalsTracker => bestJournalsTracker ??= new(this);
+    private BestJournalsTracker? bestJournalsTracker;
+    public MultiBacktestEvents Events { get; } = new();
+
+    #endregion
 
     #region LogDirectory
 
@@ -108,16 +119,6 @@ public class MultiBacktestContext
     public bool ShouldLogTradeDetails => POptimization.TradeJournalOptions.EffectiveEnabled;
 
     #endregion
-
-    #endregion
-
-    #region (Public) Event Handlers
-
-    public void OnTradeJournalCreated()
-    {
-        //TradeJournalCount++;
-        //if (!ShouldLogTradeDetails) { POptimization.TradeJournalOptions!.Enabled = false; }
-    }
 
     #endregion
 

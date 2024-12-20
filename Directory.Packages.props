@@ -21,6 +21,7 @@
     <PackageVersion Include="BernhardHaus.Collections.WeakDictionary" Version="1.0.3" />
     <PackageVersion Include="Binance.Net" Version="10.10.0" />
     <PackageVersion Include="BinanceDotNet" Version="4.12.0" />
+    <PackageVersion Include="BlazorGridStack" Version="1.0.12" />
     <PackageVersion Include="Blazorise.Bootstrap" Version="1.7.0" />
     <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="1.7.0" />
     <PackageVersion Include="Blazorise.Icons.Material" Version="1.7.0" />

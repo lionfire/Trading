@@ -15,7 +15,6 @@ public interface IParameterOptimizationOptions
 
     double? FitnessOfInterest { get; set; }
 
-
     #region Derived
 
     int? MinOptimizationValues { get; }
@@ -31,8 +30,8 @@ public interface IParameterOptimizationOptions
     #endregion
 
     IParameterOptimizationOptions Clone();
-
 }
+
 public static class ParameterOptimizationOptions
 {
     public static IParameterOptimizationOptions Create(Type valueType)
@@ -46,6 +45,7 @@ public static class ParameterOptimizationOptions
         return (IParameterOptimizationOptions)Activator.CreateInstance(typeof(ParameterOptimizationOptions<>).MakeGenericType(valueType), assignFrom)!;
     }
 }
+
 public class ParameterOptimizationOptions<TValue>
     : IParameterOptimizationOptions
     where TValue : struct, INumber<TValue>

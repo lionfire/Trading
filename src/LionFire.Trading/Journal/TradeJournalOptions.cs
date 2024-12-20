@@ -1,10 +1,11 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using LionFire.Trading.Automation;
+using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading.Journal;
 
 public class TradeJournalOptions
 {
-    public bool Enabled { get; set; } = false;
+    public bool Enabled { get; set; } = true;
     public bool EffectiveEnabled => Enabled && KeepTradeJournalsForTopNResults > 0;
 
     public bool PreferInMemory { get; set; } = true;
@@ -36,7 +37,7 @@ public class TradeJournalOptions
     public double DiscardDetailsWhenFitnessBelow { get; set; } = 0.5;
     public bool DiscardDetailsWhenAborted { get; set; } // FUTURE = true;
     public int KeepDetailsForTopNResultsIncludingAborted { get; set; } = 10;
-    public int KeepTradeJournalsForTopNResults { get; set; } = 20;
+    public int KeepTradeJournalsForTopNResults { get; set; } = 5; // TODO: 20-40
     public int BufferEntries { get; set; } = 100_000;
 
     //public long MaxDiskSpaceForDetails { get; set; } = 20 * 1024 * 1024; // ENH
