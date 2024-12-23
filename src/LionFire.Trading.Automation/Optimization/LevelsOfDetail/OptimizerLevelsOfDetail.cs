@@ -95,7 +95,7 @@ public class OptimizerLevelsOfDetail
 
     #region CurrentLevel
 
-    public LevelOfDetail CurrentLevel => GetLevel(currentLevel);
+    public GridLevelOfDetail CurrentLevel => GetLevel(currentLevel);
     public int CurrentLevelIndex => currentLevel;
     int currentLevel = 0;
 
@@ -118,9 +118,9 @@ public class OptimizerLevelsOfDetail
     }
     //=> levels?.Count > 0 != true ? 0 : levels.First().Key;
 
-    public LevelOfDetail GetLevel(int level)
+    public GridLevelOfDetail GetLevel(int level)
     {
-        if (level == 0) return zero ??= new LevelOfDetail(0, this);
+        if (level == 0) return zero ??= new GridLevelOfDetail(0, this);
         if (levels == null)
         {
             levels = new();
@@ -128,17 +128,17 @@ public class OptimizerLevelsOfDetail
         }
         if (!levels.TryGetValue(level, out var result))
         {
-            result = new LevelOfDetail(level, this);
+            result = new GridLevelOfDetail(level, this);
             levels.Add(level, result);
         }
         return result;
     }
-    public SortedList<int /* level */, LevelOfDetail>? levels = null;
-    LevelOfDetail zero;
+    public SortedList<int /* level */, GridLevelOfDetail>? levels = null;
+    GridLevelOfDetail zero;
 
-    public IEnumerable<LevelOfDetail> LevelsOfDetail => levels?.Values ?? [zero];
-    public IEnumerable<LevelOfDetail> ScanLevels => levels?.Where(l => l.Key <= 0).Select(l => l.Value) ?? [GetLevel(0)];
-    public IEnumerable<LevelOfDetail> SearchLevels => levels?.Where(l => l.Key > 0).Select(l => l.Value) ?? [];
+    public IEnumerable<GridLevelOfDetail> LevelsOfDetail => levels?.Values ?? [zero];
+    public IEnumerable<GridLevelOfDetail> ScanLevels => levels?.Where(l => l.Key <= 0).Select(l => l.Value) ?? [GetLevel(0)];
+    public IEnumerable<GridLevelOfDetail> SearchLevels => levels?.Where(l => l.Key > 0).Select(l => l.Value) ?? [];
 
 
     #endregion

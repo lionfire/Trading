@@ -17,8 +17,8 @@ public interface IParameterOptimizationOptions
 
     #region Derived
 
-    int? MinOptimizationValues { get; }
-    int MaxOptimizationValues { get; }
+    ulong? EffectiveMinCount { get; }
+    ulong EffectiveMaxCount { get; }
 
     //int StepsPossible { get; }
 
@@ -139,8 +139,8 @@ public class ParameterOptimizationOptions<TValue>
     }
 
     public double? DistributionParameter { get; set; }
-    public ulong? MinProbes { get; set; }
-    public ulong? MaxProbes { get; set; }
+    public ulong? MinCount { get; set; }
+    public ulong? MaxCount { get; set; }
     public double? FitnessOfInterest { get; set; }
 
     public bool AllowNegativeValues { get; set; }
@@ -159,8 +159,11 @@ public class ParameterOptimizationOptions<TValue>
     public static TValue DataTypeMaxValue => (TValue)typeof(TValue).GetField(nameof(int.MaxValue), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
     public static TValue DataTypeMinValue => (TValue)typeof(TValue).GetField(nameof(int.MinValue), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
 
-    public int? MinOptimizationValues => (int)Convert.ToUInt32(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxOptimizationStep)));
-    public int MaxOptimizationValues => (int)Convert.ToUInt32(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep));
+    public ulong MinCountFromMaxStep => Convert.ToUInt64(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxOptimizationStep)));
+    public ulong? EffectiveMinCount => Math.Max(MinCount ?? 0, MinCountFromMaxStep);
+    
+    public ulong MaxCountFromMinStep => Convert.ToUInt64(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep));
+    public ulong EffectiveMaxCount => Math.Min((MaxCount ?? ulong.MaxValue), MaxCountFromMinStep);
 
     #endregion
 

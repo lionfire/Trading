@@ -4,9 +4,7 @@ using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
 
-public partial class GridSearchState
-{
-    public class LevelOfDetail : ILevelOfDetail
+    public class GridLevelOfDetail : ILevelOfDetail
     {
         #region Identity
 
@@ -28,7 +26,7 @@ public partial class GridSearchState
 
         #region Lifecycle
 
-        public LevelOfDetail(int level, OptimizerLevelsOfDetail optimizerLevelsOfDetail)
+        public GridLevelOfDetail(int level, OptimizerLevelsOfDetail optimizerLevelsOfDetail)
         {
             Level = level;
             OptimizerLevelsOfDetail = optimizerLevelsOfDetail;
@@ -58,17 +56,17 @@ public partial class GridSearchState
 
         public IEnumerator<int[]> GetEnumerator()
         {
-            return new OptimizationEnumerator(this);
+            return new StepEnumerator(this);
         }
         //IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-        private class OptimizationEnumerator : IEnumerator<int[]>
+        private class StepEnumerator : IEnumerator<int[]>
         {
-            private LevelOfDetail gridLevelOfDetailState;
+            private GridLevelOfDetail gridLevelOfDetailState;
 
             int[] max;
 
-            public OptimizationEnumerator(LevelOfDetail gridLevelOfDetailState)
+            public StepEnumerator(GridLevelOfDetail gridLevelOfDetailState)
             {
                 this.gridLevelOfDetailState = gridLevelOfDetailState;
                 current = new int[gridLevelOfDetailState.Parameters.Count];
@@ -77,7 +75,7 @@ public partial class GridSearchState
                 foreach (var p in gridLevelOfDetailState.Parameters)
                 {
                     Debug.WriteLine($"Parameter: {gridLevelOfDetailState.OptimizerLevelsOfDetail.OptimizableParameters[i].info.Key}  TestCount: {p.TestCount}");
-                    max[i++] = p.TestCount;
+                    max[i++] = (int)p.TestCount;
                 }
             }
 
@@ -110,5 +108,3 @@ public partial class GridSearchState
     }
 
 
-
-}

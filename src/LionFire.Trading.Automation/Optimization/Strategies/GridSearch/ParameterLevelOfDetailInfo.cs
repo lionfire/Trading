@@ -29,7 +29,7 @@ public interface IParameterLevelOfDetailInfo
 {
     string Key { get; }
     string ValueType { get; }
-    int TestCount { get; }
+    ulong TestCount { get; }
     object GetValue(int index);
 }
 
@@ -37,10 +37,11 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
      where TValue : struct, INumber<TValue>
 {
     public string Key => Info.Key;
-    
+
     [JsonIgnore] // Only for debugging
     public string ValueType => typeof(TValue).Name;
 
+    private readonly int Level;
     public readonly HierarchicalPropertyInfo Info;
     private readonly ParameterOptimizationOptions<TValue> Options;
 
@@ -53,24 +54,30 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
     private readonly TValue step;
     public TValue Exponent => exponent;
     private readonly TValue exponent;
+
     public IEnumerable<TValue> Values
     {
         get
         {
-            for (int i = 0; i < TestCount; i++)
+            for (ulong i = 0; i < TestCount; i++)
             {
-                yield return GetValue(i);
+                var result = GetValue((int)i);
+                if (result > max) break;
+                yield return result;
             }
         }
     }
+
     public double ExponentAdjustment => exponentAdjustment;
     private readonly double exponentAdjustment;
     public double LevelMultiplier => levelMultiplier;
     private readonly double levelMultiplier;
 
+
     public ParameterLevelOfDetailInfo(int level, HierarchicalPropertyInfo info, IParameterOptimizationOptions options)
     {
         if (!options.IsEligibleForOptimization) throw new ArgumentException(nameof(options.IsEligibleForOptimization));
+        this.Level = level;
         Info = info;
         Options = (ParameterOptimizationOptions<TValue>)options;
         max = Options.EffectiveMaxValue;
@@ -84,24 +91,26 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
             throw new NotImplementedException();
         }
 
-        if ((info.ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.OrthogonalCategory)))
+        #region testCount
+
+        if ((Info.ParameterAttribute.OptimizerHints.HasFlag(OptimizationDistributionKind.OrthogonalCategory)))
         {
             // Don't sample these. Always include them all, on every level.
             throw new NotImplementedException();
         }
         else
         {
-            var dssc = info.ParameterAttribute.DefaultSearchSpacesCount;
-            if (info.ParameterAttribute.IsCategory && dssc > 0)
+            var defaultSearchSpacesCount = Info.ParameterAttribute.DefaultSearchSpacesCount;
+            if (Info.ParameterAttribute.IsCategory && defaultSearchSpacesCount > 0)
             {
-                var inverseLevel = -level;
-                var maxSpaceIndex = dssc - 1;
+                var inverseLevel = -Level;
+                var maxSpaceIndex = defaultSearchSpacesCount - 1;
                 var dsscIndex = Math.Min(inverseLevel, maxSpaceIndex);
                 var difference = inverseLevel - maxSpaceIndex;
                 // ENH: Trim the remaining parameters if difference > 0
 
-                TValue[] values = CategoryValues = (TValue[])info.ParameterAttribute.DefaultSearchSpaces![dsscIndex];
-                testCount = values.Length;
+                TValue[] values = CategoryValues = (TValue[])Info.ParameterAttribute.DefaultSearchSpaces![dsscIndex];
+                testCount = (ulong)values.Length;
 
                 GetValue = i => values[i];
 
@@ -109,44 +118,63 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
 
                 max = TValue.Zero;
                 step = TValue.Zero;
-                
+
                 #endregion
             }
             else
             {
-                if (Options.MinOptimizationValues.HasValue)
+                if (Options.EffectiveMinCount.HasValue)
                 {
-                    testCount = (Options.MinOptimizationValues.Value + Options.MaxOptimizationValues) / 2;
-                } else
-                {
-                    testCount = Options.MaxOptimizationValues;
+                    testCount = (Options.EffectiveMinCount.Value + Options.EffectiveMaxCount) / 2;
                 }
-                //testCount = Options.MinOptimizationValues ?? throw new ArgumentNullException(nameof(Options.MinOptimizationValues));
-                checked // REVIEW - is this necessary?
+                else
                 {
-                    if (Options.MaxProbes.HasValue)
-                    {
-                        testCount = Math.Min(testCount, (int)Options.MaxProbes.Value);
-                    }
-                    if (Options.MinProbes.HasValue)
-                    {
-                        testCount = Math.Max(testCount, (int)Options.MinProbes.Value);
-                    }
-                }
-                if (Options.MinOptimizationValues.HasValue)
-                {
-                    testCount = Math.Max(testCount, Options.MinOptimizationValues.Value);
-                }
-                if(Options.MaxOptimizationValues > 0)
-                {
-                    testCount = Math.Min(testCount, Options.MaxOptimizationValues);
+                    testCount = Options.EffectiveMaxCount;
                 }
 
-                levelMultiplier = Math.Pow(2, -level);
+                #region Enforce hard min/max limits. Min takes precedence.
 
-                var divisor = Math.Pow(2, -level);
+                checked
+                {
+                    if (Options.MaxCount.HasValue)
+                    {
+                        testCount = Math.Min(testCount, Options.MaxCount.Value);
+                    }
+                    if (Options.MinCount.HasValue)
+                    {
+                        testCount = Math.Max(testCount, Options.MinCount.Value);
+                    }
+                }
+
+                #endregion
+
+
+                #region Enforce Effective min/max limits
+
+                if (Options.EffectiveMinCount.HasValue)
+                {
+                    testCount = Math.Max(testCount, Options.EffectiveMinCount.Value);
+                }
+                if (Options.EffectiveMaxCount > 0)
+                {
+                    testCount = Math.Min(testCount, Options.EffectiveMaxCount);
+                }
+
+                #endregion
+
+                levelMultiplier = Math.Pow(2, -Level);
+
+                var divisor = Math.Pow(2, -Level);
                 var remainder = testCount % divisor;
-                testCount = (int)double.Ceiling(testCount / divisor);
+                //step = (Max - Min) / TValue.CreateChecked(testCount); 
+                testCount = (ulong)double.Ceiling(testCount / divisor);
+
+                step = (Max - Min) / TValue.CreateChecked(testCount);
+
+                if (!IsFloatingPoint<TValue>())
+                {
+                    step += TValue.CreateChecked(1.0);
+                }
 
                 // TODO: extra test at the end if it doesn't perfectly line up
                 //if (divisor != 0) count++;
@@ -161,6 +189,7 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
                     exponentAdjustment = Convert.ToDouble(range) / rangeForLog;
 
                     GetValue = GetDistributionValue;
+                    testCount = (ulong)(GetLastDistributionValue(max) + 1);
                 }
                 else
                 {
@@ -168,21 +197,30 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
                     exponentAdjustment = 0; // 0 means ignore this parameter (effective exponentAdjustment of 1)
                 }
 
-                if (levelMultiplier != 1)
-                {
-                    var copy = GetValue;
-                    GetValue = i => copy((int)(i * levelMultiplier)); // TODO: fix artefacts?
-                }
+                //if (levelMultiplier != 1)
+                //{
+                //    var copy = GetValue;
+                //    GetValue = i => copy((int)(i * levelMultiplier)); // TODO: fix artefacts?
+                //}
             }
         }
-    }
 
+        #endregion
+
+    }
+    static bool IsFloatingPoint<T>()
+    {
+        return 
+            typeof(T) == typeof(float)
+            || typeof(T) == typeof(double)
+            || typeof(T) == typeof(decimal);
+    }
 
     #region State
 
     //public readonly BitArray IsComplete;
-    public int TestCount => testCount;
-    private int testCount;
+    public ulong TestCount => testCount;
+    private ulong testCount;
 
     private readonly TValue[]? CategoryValues; // UNUSED
 
@@ -199,6 +237,17 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
         + TValue.CreateChecked((Math.Log(
             index * Convert.ToDouble(step)))
             * exponentAdjustment);
+    public int GetLastDistributionValue(TValue max)
+    {
+        for (int index = 0; index < int.MaxValue; index++)
+        {
+            if (GetDistributionValue(index) > max)
+            {
+                return index - 1;
+            }
+        }
+        throw new Exception("Could not determine last value");
+    }
 
     #endregion
 

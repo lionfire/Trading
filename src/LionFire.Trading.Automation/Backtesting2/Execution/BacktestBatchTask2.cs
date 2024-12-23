@@ -130,7 +130,7 @@ public class BacktestBatchTask2<TPrecision>
                 ?? context.ExchangeSymbol
                 ?? ExchangeSymbol.Unknown;
 
-            PBotType = firstParameter?.PBot.GetType() ?? typeof(DBNull);
+            PBotType = firstParameter?.PBot?.GetType() ?? typeof(DBNull);
             BotType = firstParameter?.PBot?.MaterializedType ?? typeof(DBNull);
 
 

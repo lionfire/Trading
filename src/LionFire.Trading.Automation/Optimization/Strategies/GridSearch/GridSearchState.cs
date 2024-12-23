@@ -61,7 +61,7 @@ public partial class GridSearchState
 
     #region CurrentLevel
 
-    public LevelOfDetail CurrentLevel => GetLevel(currentLevel);
+    public GridLevelOfDetail CurrentLevel => GetLevel(currentLevel);
     public int CurrentLevelIndex => currentLevel;
     int currentLevel = 0;
 
@@ -71,7 +71,7 @@ public partial class GridSearchState
 
     // TODO - cleanup this proxy - RENAME
     OptimizerLevelsOfDetail proxy => gridSearchStrategy.OptimizationParameters.LevelsOfDetail;
-    public LevelOfDetail GetLevel(int level)=> proxy.GetLevel(level);
+    public GridLevelOfDetail GetLevel(int level)=> proxy.GetLevel(level);
     //{
     //    if (level == 0) return zero ??= new LevelOfDetail(0, LevelsOfDetail2);
     //    if (levels == null)
@@ -89,7 +89,7 @@ public partial class GridSearchState
     //public SortedList<int /* level */, LevelOfDetail>? levels = null;
     //LevelOfDetail zero => proxy.GetLevel(0);
 
-    public IEnumerable<LevelOfDetail> LevelsOfDetail => proxy.LevelsOfDetail;// levels?.Values ?? [zero];
+    public IEnumerable<GridLevelOfDetail> LevelsOfDetail => proxy.LevelsOfDetail;// levels?.Values ?? [zero];
 
     #endregion
 

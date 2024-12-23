@@ -74,8 +74,10 @@ public class POptimization
 
     public PBacktestBatchTask2 CommonBacktestParameters => Parent.CommonBacktestParameters;
 
+#if UNUSED // Reconsider both of these
     public int MinLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   
     public int MaxLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   
+#endif
 
     #region Individual Parameters
 

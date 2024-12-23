@@ -1,35 +1,13 @@
 ﻿@inherits ReactiveComponentBase<OneShotOptimizeVM>
 @rendermode InteractiveServer
 
+<MudExpansionPanel Text="Parameter Selection" @bind-Expanded=ShowParameterSelection>
+    <ParameterSelection ViewModel="ViewModel" />
+</MudExpansionPanel>
+
 <MudExpansionPanels MultiExpansion=true>
 
 
-    <MudExpansionPanel Text="Results">
-        <MudGrid>
-            <MudItem sm="1">
-                <MudSwitch T="bool" @bind-Value="ViewModel!.TradeJournalOptions.Enabled" Label="Trade Journals" Dense="@true" />
-                <MudSlider T="int" @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
-                <MudNumericField @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
-            </MudItem>
-        </MudGrid>
-    </MudExpansionPanel>
-
-    <MudExpansionPanel Text="Parameter Selection" @bind-Expanded=ShowParameterSelection>
-        <ParameterSelection ViewModel="ViewModel" />
-    </MudExpansionPanel>
-
-    <MudExpansionPanel Text="Performance Tuning">
-        <PerformanceTuning ViewModel="ViewModel" />
-    </MudExpansionPanel>
-
-    <MudExpansionPanel Text="Properties">
-        <div class="overflow-auto">
-            <ObjectExplorer CurrentObject="ViewModel" />
-        </div>
-        @* <MudSlider Min="0" Max="int.MaxValue" @bind-Value="ViewModel!.MaxDetailedJournals" Label="Max Trade Journals" Dense="@true" />
-        <MudSlider Min="1" Max="8192" @bind-Value="ViewModel!.BatchSize" Label="Batch size" Dense="@true" />
-        <MudSlider T="int" Min="1"  Max="int.MaxValue" @bind-Value="ViewModel!.BatchSize" Label="Max backtests" Dense="@true" /> *@
-    </MudExpansionPanel>
 </MudExpansionPanels>
 
 

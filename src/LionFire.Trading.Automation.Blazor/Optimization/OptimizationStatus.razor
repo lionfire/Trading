@@ -6,10 +6,20 @@
 <div class="py-4 LevelsOfDetail">
     <MudGrid>
         <MudItem sm="1">
-            <MudTextField @bind-Value="ViewModel!.POptimization2.MaxBacktests" Label="Max Backtests" Dense="@true" />
-            <MudSlider T="double" @bind-Value="ViewModel.MaxBacktestsExponential"
-                       Min=6 Max=34
-                       Label="Max Backtests" Dense="@true" />
+            <div>
+
+                <MudTextField @bind-Value="ViewModel!.POptimization2.MaxBacktests" Label="Max Backtests" Dense="@true" />
+                <MudSlider T="double" @bind-Value="ViewModel.MaxBacktestsExponential"
+                           Min=6 Max=34
+                           Label="Max Backtests" Dense="@true" />
+                <div class="lf-field row">
+                    <div class="value">@((ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
+                    <div class="label">Comprehensiveness</div>
+                </div>
+                <MudProgressLinear Value="ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn" Min="0" Max="1" 
+               Color="ComprehensivenessColor" 
+                />
+            </div>
         </MudItem>
 
         @foreach (var level in ViewModel!.POptimization2.LevelsOfDetailEnumeration.WithIndex())
@@ -20,14 +30,11 @@
             </MudItem>
         }
 
-        <div class="lf-field">
+        @*         <div class="lf-field">
             <div class="label">Comprehensive Scan</div>
             <div class="value">@ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanTotal</div>
-        </div>
-        <div class="lf-field">
-            <div class="label">Comprehensiveness</div>
-            <div class="value">@((ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
-        </div>
+        </div> *@
+        <MudProgressLinear Vertical=true Value="@((ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn))" />
     </MudGrid>
 </div>
 

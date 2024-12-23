@@ -1,25 +1,37 @@
 @inherits ReactiveComponentBase<OneShotOptimizeVM>
 
 <MudCard>
-    <MudCardHeader>
-        Bot Parameters
-    </MudCardHeader>
-    <MudGrid>
+    <MudGrid Class="gap-x-3 gap-y-1">
         <MudItem sm="1">
             <MudTextField @bind-Value="ViewModel!.POptimization2.MinParameterPriority" Label="Min Parameter Priority" Dense="@true" />
             <MudSlider T="int" @bind-Value="ViewModel.POptimization2.MinParameterPriority"
                        Min=-50 Max=50
                        Label="Min Parameter Priority" Dense="@true" />
         </MudItem>
-
-        @if (ViewModel!.POptimization2.ParameterOptimizationOptions != null)
-        {
-            @foreach (var p in ViewModel!.POptimization2.ParameterOptimizationOptions)
-            {
-                <div>@p.Key - TODO NEXT</div>
-            }
-        }
-
     </MudGrid>
+
+    <MudText Typo="Typo.h5">To Optimize</MudText>
+    <MudGrid Class="gap-x-3 gap-y-1">
+        @foreach (var p in ViewModel!.POptimization2.LevelsOfDetail.OptimizableParameters.Where(ShouldShow).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt))
+        {
+            <ParameterToOptimize ViewModel="ViewModel" Parameter="p" />
+        }
+    </MudGrid>
+
+    <MudText Typo="Typo.h5">Fixed Values</MudText>
+    <MudGrid Class="gap-x-3 gap-y-1">
+        @foreach (var p in ViewModel!.POptimization2.LevelsOfDetail.OptimizableParameters.Where(p => !ShouldShow(p)).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt))
+        {
+            <ParameterToOptimize ViewModel="ViewModel" Parameter="p" />
+        }
+    </MudGrid>
+
     @* <InspectorView Object="ViewModel!.POptimization" /> *@
 </MudCard>
+
+@code {
+    public bool ShouldShow((HierarchicalPropertyInfo info, IParameterOptimizationOptions options) p)
+    {
+        return p.info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority || p.options?.EnableOptimization == true;
+    }
+}

@@ -64,8 +64,8 @@ public class Optimize_ : BinanceDataTest
         {
             ["Period"] = new ParameterOptimizationOptions<int>
             {
-                MaxProbes = 20,
-                MinProbes = 20,
+                MaxCount = 20,
+                MinCount = 20,
                 MinValue = 2,
                 MaxValue = 40,
                 OptimizationStep = 3

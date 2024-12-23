@@ -1,0 +1,46 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+
+<MudItem sm="2" Class="@((info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority ? "Enabled border-solid mud-border-primary" : "Disabled border-dotted mud-border-secondary") + "  border-2 ")">
+
+    <div class="d-flex flex-row justify-start align-start">
+
+        <MudCheckBox @bind-Value=options.EnableOptimization />
+        <MudTooltip Text="@info.Path">
+            <MudText Typo=Typo.h6 class="ParameterName">
+                @info.EffectiveName
+            </MudText>
+        </MudTooltip>
+    </div>
+    <div class="lf-field row">
+        <label>Priority</label>
+        <div class="value"> @info.ParameterAttribute.OptimizePriorityInt </div>
+    </div>
+
+    @* @string.Join(", ",p.info.PropertyInfos.Select(p=>p.Name)) *@
+    @* <ObjectExplorer CurrentObject="p.options"/> *@
+
+    @* TODO: 
+            - distribution function: linear, x^2, x^3, etc.
+            - distribution range: min, max
+            - distribution count: number of values to test
+
+        *@
+
+    @* TODO - show distribution of parameters to test *@
+    @* <MudChart>
+
+        </MudChart> *@
+</MudItem>
+
+@code {
+
+    [Parameter]
+    public (HierarchicalPropertyInfo info, IParameterOptimizationOptions options) Parameter { get; set; }
+
+    #region Convenience
+
+    public HierarchicalPropertyInfo info => Parameter.info;
+    public IParameterOptimizationOptions options => Parameter.options;
+
+    #endregion
+}

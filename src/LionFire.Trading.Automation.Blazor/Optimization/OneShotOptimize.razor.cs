@@ -41,7 +41,7 @@ public partial class OneShotOptimize
         {
             if (isRunning)
             {
-                ShowParameters = false;
+                //ShowParameters = false;
                 ShowResults = true;
                 InvokeAsync(StateHasChanged);
             }
