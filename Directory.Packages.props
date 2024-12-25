@@ -175,8 +175,10 @@
     <PackageVersion Include="QuickFix.Net.NETCore" Version="1.8.1" />
     <PackageVersion Include="QuickFix.Net.NETCore.FIX44" Version="1.8.1" />
     <PackageVersion Include="Radzen.Blazor" Version="5.6.4" />
+    <PackageVersion Include="ReactiveUI" Version="20.1.63" />
     <PackageVersion Include="ReactiveUI.Blazor" Version="20.1.63" />
     <PackageVersion Include="ReactiveUI.SourceGenerators" Version="2.0.17" />
+    <PackageVersion Include="ReactiveUI.SourceGenerators.Analyzers.CodeFixes" Version="2.0.17" />
     <PackageVersion Include="RestSharp.NetCore" Version="105.2.3" />
     <PackageVersion Include="RethinkDb.Driver" Version="2.3.150" />
     <PackageVersion Include="ScottPlot" Version="5.0.46" />

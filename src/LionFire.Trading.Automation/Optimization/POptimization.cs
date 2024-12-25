@@ -1,11 +1,12 @@
 ﻿using LionFire.ExtensionMethods.Copying;
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Journal;
+using ReactiveUI;
 
 namespace LionFire.Trading.Automation.Optimization;
 
 // ENH: Validatable, make all properties mutable and not required in ctor.  (Or consider a new pattern: a pair of classes, one frozen and one mutable.)
-public class POptimization
+public class POptimization : ReactiveObject
 {
     #region Identity Parameters
 
@@ -87,13 +88,15 @@ public class POptimization
     /// </summary>
     public int MinParameterPriority
     {
-        get => minParameterPriority; set
+        get => minParameterPriority;
+        set
         {
             minParameterPriority = value;
             levelsOfDetail = null;
         }
     }
     private int minParameterPriority;
+    public int InverseMinParameterPriority { get => -MinParameterPriority; set => MinParameterPriority = -value; }
 
     //public IParameterOptimizationOptions? DefaultParameterOptimizationOptions { get; set; }
 
@@ -112,16 +115,22 @@ public class POptimization
     #endregion
 
     /// <summary>
-    /// Compile parameter optimization options from various sources, in the following order:
+    /// Initialize ParameterOptimizationOptions if needed, from various sources, in the following order:
     /// - ParameterAttribute
     /// - EnableOptimization from this.MinParameterPriority
     /// - POptimizationStrategy.Parameters
-    /// - this.ParameterOptimizationOptions
     /// </summary>
     /// <param name="info"></param>
     /// <returns></returns>
     public IParameterOptimizationOptions GetEffectiveOptions2(HierarchicalPropertyInfo info)
     {
+        ParameterOptimizationOptions ??= new();
+        var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
+        if (fromPOptimization != null)
+        {
+            return fromPOptimization;
+        }
+
         #region Attribute
 
         IParameterOptimizationOptions fromAttribute = info.ParameterAttribute.GetParameterOptimizationOptions(info.LastPropertyInfo!.PropertyType);
@@ -131,10 +140,10 @@ public class POptimization
 
         #endregion
 
-        if (!clone.EnableOptimization.HasValue)
-        {
-            clone.EnableOptimization = info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
-        }
+        //if (!clone.EnableOptimization.HasValue)
+        //{
+        //    clone.EnableOptimization = info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
+        //}
 
         #region POptimizationStrategy
 
@@ -152,11 +161,13 @@ public class POptimization
 
         #region ParameterOptimizationOptions
 
-        var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
-        if (fromPOptimization != null)
-        {
-            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
-        }
+        ParameterOptimizationOptions.TryAdd(info.Path, clone);
+
+        //var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
+        //if (fromPOptimization != null)
+        //{
+        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
+        //}
 
         #endregion
 
@@ -165,6 +176,14 @@ public class POptimization
 
     public IEnumerable<int> LevelsOfDetailRange => Enumerable.Range(LevelsOfDetail.MinLevel, 0); // FUTURE: Levels above 0
     public IEnumerable<ILevelOfDetail> LevelsOfDetailEnumeration => Enumerable.Range(LevelsOfDetail.MinLevel, 1 - LevelsOfDetail.MinLevel).Select(level => LevelsOfDetail.GetLevel(level));
+
+    public void OnLevelsOfDetailChanged()
+    {
+        levelsOfDetail = null;
+        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailEnumeration));
+        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailRange));
+        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetail));
+    }
 
     public OptimizerLevelsOfDetail LevelsOfDetail
     {

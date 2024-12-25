@@ -1,37 +1,76 @@
 @inherits ReactiveComponentBase<OneShotOptimizeVM>
 
 <MudCard>
-    <MudGrid Class="gap-x-3 gap-y-1">
-        <MudItem sm="1">
-            <MudTextField @bind-Value="ViewModel!.POptimization2.MinParameterPriority" Label="Min Parameter Priority" Dense="@true" />
-            <MudSlider T="int" @bind-Value="ViewModel.POptimization2.MinParameterPriority"
-                       Min=-50 Max=50
-                       Label="Min Parameter Priority" Dense="@true" />
+    <MudGrid id="ParameterPreselection" Class="gap-x-3 gap-y-3">
+        <MudItem sm="4">
+            <div class="lf-field row align-center">
+                <label style="order:-10;">Minimum Priority</label>
+                <MudTextField style="width: 4ch;" @bind-Value="ViewModel!.POptimization2.MinParameterPriority" data-Label="Min Parameter Priority" Dense="@true" />
+                <MudIconButton Class=@("mr-4 " + (ViewModel.POptimization2.InverseMinParameterPriority == -(ViewModel!.MaxParameterPriority) ? "invisible" : "")) Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> ViewModel.POptimization2.InverseMinParameterPriority = -(ViewModel!.MaxParameterPriority))" />
+                <MudSlider T="int" @bind-Value="ViewModel.POptimization2.InverseMinParameterPriority"
+                           Min=@(-(ViewModel!.MaxParameterPriority + 1)) Max=@(-(ViewModel!.MinParameterPriority - 1))
+                           Label="Min Parameter Priority" Dense="@true" />
+            </div>
         </MudItem>
     </MudGrid>
 
-    <MudText Typo="Typo.h5">To Optimize</MudText>
-    <MudGrid Class="gap-x-3 gap-y-1">
-        @foreach (var p in ViewModel!.POptimization2.LevelsOfDetail.OptimizableParameters.Where(ShouldShow).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt))
-        {
-            <ParameterToOptimize ViewModel="ViewModel" Parameter="p" />
-        }
-    </MudGrid>
+    <div>
+        <MudText Typo="Typo.h5">To Optimize</MudText>
+    </div>
+
+    <div class="mt-4 ml-4">
+        <MudGrid Class="gap-x-3 gap-y-1" Spacing="4">
+            @foreach (var p in AllParameters.Where(ShouldShow).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.info.Path))
+            {
+                <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.options.ValueType)" Parameters="@GetParameters(p)" />
+
+                @* <ParameterToOptimize TValue=@p.options.TValue ViewModel="ViewModel" Parameter="p" /> *@
+            }
+        </MudGrid>
+    </div>
 
     <MudText Typo="Typo.h5">Fixed Values</MudText>
-    <MudGrid Class="gap-x-3 gap-y-1">
-        @foreach (var p in ViewModel!.POptimization2.LevelsOfDetail.OptimizableParameters.Where(p => !ShouldShow(p)).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt))
-        {
-            <ParameterToOptimize ViewModel="ViewModel" Parameter="p" />
-        }
-    </MudGrid>
+    <div class="mt-4 ml-4">
+        <MudGrid Class="gap-x-3 gap-y-1" Spacing="4">
+            @foreach (var p in AllParameters.Where(p => !ShouldShow(p)).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.info.Path))
+            {
+                <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.options.ValueType)" Parameters="@GetParameters(p, fixedValue: true)" />
+                @* <ParameterToOptimize FixedValue="true" ViewModel="ViewModel" Parameter="p" /> *@
+            }
+        </MudGrid>
+    </div>
 
     @* <InspectorView Object="ViewModel!.POptimization" /> *@
 </MudCard>
 
 @code {
+
+    IEnumerable<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> AllParameters => ViewModel!.POptimization2.LevelsOfDetail.OptimizableParameters.Concat(ViewModel!.POptimization2.LevelsOfDetail.UnoptimizableParameters);
+
     public bool ShouldShow((HierarchicalPropertyInfo info, IParameterOptimizationOptions options) p)
     {
-        return p.info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority || p.options?.EnableOptimization == true;
+        return p.options.EnableOptimization.HasValue ? p.options.EnableOptimization.Value : p.info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority || p.options?.EnableOptimization == true;
+    }
+
+    private Dictionary<string, object> GetParameters((HierarchicalPropertyInfo info, IParameterOptimizationOptions options) p, bool fixedValue = false)
+    {
+
+        var x = EventCallback.Factory.Create<bool>(this, v => { p.options.EnableOptimization = v; OnSetEnabled(); });
+
+        // var x = (EventCallback<bool>)(Action<bool>)(v => { p.options.EnableOptimization = v; OnSetEnabled(); });
+
+        return new Dictionary<string, object>
+        {
+            { "ViewModel", ViewModel! },
+            { "Parameter", p },
+            { "FixedValue", fixedValue },
+            { "ItemSize", fixedValue ? 2 : 5 },
+            { "SetEnabled", x }
+        };
+    }
+
+    void OnSetEnabled()
+    {
+        _ = InvokeAsync(StateHasChanged);
     }
 }

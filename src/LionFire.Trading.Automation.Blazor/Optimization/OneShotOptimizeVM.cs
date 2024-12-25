@@ -146,7 +146,9 @@ public partial class OneShotOptimizeVM : ReactiveObject
     public int BatchSize { get; set; } = 1024;//= 128;
     public double BatchSizeExponential { get => Math.Log2(BatchSize); set => BatchSize = (int)Math.Pow(2.0, value); }
 
-    public int MinParameterPriority { get; set; } = -10;
+    public int MinParameterPriority => POptimization2.LevelsOfDetail.BotParameterPropertiesInfo.PathDictionary.Values.Select(v=>v.ParameterAttribute?.OptimizePriorityInt ?? 0).Min();
+    public int MaxParameterPriority => POptimization2.LevelsOfDetail.BotParameterPropertiesInfo.PathDictionary.Values.Select(v=>v.ParameterAttribute?.OptimizePriorityInt ?? 0).Max();
+
     public long MaxBacktests { get => POptimization2.MaxBacktests; set => POptimization2.MaxBacktests = value; }
     public double MaxBacktestsExponential { get => Math.Log2(MaxBacktests); set => MaxBacktests = (long)Math.Pow(2.0, value); }
 

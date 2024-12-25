@@ -82,7 +82,7 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
         Options = (ParameterOptimizationOptions<TValue>)options;
         max = Options.EffectiveMaxValue;
         min = Options.EffectiveMinValue;
-        step = Options.EffectiveOptimizationStep;
+        step = Options.EffectiveStep;
 
         if (level > 0)
         {

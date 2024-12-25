@@ -1,0 +1,50 @@
+@using System.Numerics
+@typeparam TValue where TValue : struct, INumber<TValue>
+
+<div class=@("d-flex gap-2 align-center " + (Reverse ? "flex-row-reverse" : "flex-row"))>
+    <MudSlider T="TValue" @bind-Value="effectiveValue" Color="HasValue ? Color.Primary : Color.Dark" />
+    @EffectiveValue
+    <MudIconButton Class="@(HasValue ? "" : "invisible")" Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> value = default)" Disabled=!HasValue />
+    @if (!string.IsNullOrEmpty(Text))
+    {
+        <label style="@(TextOrderStyle)">@Text</label>
+    }
+</div>
+
+@code {
+
+    [Parameter]
+    public int TextOrder { get; set; }
+    public string TextOrderStyle => TextOrder == 0 ? "" : $"order: {TextOrder}; ";
+
+    [Parameter]
+    public string? Text { get; set; }
+    [Parameter]
+    public bool Reverse { get; set; }
+    [Parameter]
+    public (HierarchicalPropertyInfo info, IParameterOptimizationOptions options) Parameter { get; set; }
+
+    [Parameter]
+    public TValue EffectiveValue { get; set; }
+    TValue effectiveValue { get => EffectiveValue; set { EffectiveValueChanged.InvokeAsync(value); } }
+    [Parameter]
+    public EventCallback<TValue> EffectiveValueChanged { get; set; }
+
+    [Parameter]
+    public TValue? Value { get; set; }
+    TValue? value { get => Value; set { ValueChanged.InvokeAsync(value); } }
+    [Parameter]
+    public EventCallback<TValue?> ValueChanged { get; set; }
+
+    [Parameter]
+    public bool HasValue { get; set; }
+    [Parameter]
+    public EventCallback<bool> HasValueChanged { get; set; }
+
+    #region Convenience
+
+    public HierarchicalPropertyInfo info => Parameter.info;
+    public ParameterOptimizationOptions<TValue> Options => (ParameterOptimizationOptions<TValue>)Parameter.options;
+
+    #endregion
+}

@@ -68,7 +68,7 @@ public class Optimize_ : BinanceDataTest
                 MinCount = 20,
                 MinValue = 2,
                 MaxValue = 40,
-                OptimizationStep = 3
+                Step = 3
             },
             //["OpenThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 2 },
             //["CloseThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 3 },

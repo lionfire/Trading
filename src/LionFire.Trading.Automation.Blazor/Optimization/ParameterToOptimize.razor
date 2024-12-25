@@ -1,29 +1,70 @@
+@using System.Numerics
 @inherits ReactiveComponentBase<OneShotOptimizeVM>
+@typeparam TValue where TValue : struct, INumber<TValue>
 
-<MudItem sm="2" Class="@((info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority ? "Enabled border-solid mud-border-primary" : "Disabled border-dotted mud-border-secondary") + "  border-2 ")">
+<MudItem sm="@ItemSize" Class="@((!FixedValue ? "Enabled border-solid mud-border-primary" : "Disabled border-solid mud-border-dark") + "  border-2 pr-6 pb-3")">
 
     <div class="d-flex flex-row justify-start align-start">
-
-        <MudCheckBox @bind-Value=options.EnableOptimization />
         <MudTooltip Text="@info.Path">
             <MudText Typo=Typo.h6 class="ParameterName">
                 @info.EffectiveName
             </MudText>
         </MudTooltip>
+
+        <MudSpacer />
+
+        <MudTooltip Text="Override Minimum Priority">
+            <MudToggleIconButton ToggledIcon="@Icons.Material.Filled.PushPin"
+                                 Icon="@Icons.Material.Outlined.PushPin"
+                                 @bind-Toggled="Pinned" Size="Size.Small" />
+        </MudTooltip>
+        <MudTooltip Text="Exclude this parameter from optimization and use a single value">
+            <MudIconButton Icon="@(FixedValue ? Icons.Material.Filled.SettingsPower : Icons.Material.Filled.Close)" OnClick="ToggleEnabled" Size="Size.Small" />
+        </MudTooltip>
     </div>
     <div class="lf-field row">
-        <label>Priority</label>
         <div class="value"> @info.ParameterAttribute.OptimizePriorityInt </div>
+        <label>Priority</label>
     </div>
 
-    @* @string.Join(", ",p.info.PropertyInfos.Select(p=>p.Name)) *@
-    @* <ObjectExplorer CurrentObject="p.options"/> *@
+    @if (FixedValue)
+    {
+        <text>Value</text>
+        <div class="d-flex flex-row gap-2 align-center">
+            <MudIconButton Icon="@Icons.Material.Filled.RemoveCircle" Size="Size.Small" OnClick="(_=>Options.DefaultValue = null)" />
+            <MudSlider T="TValue" @bind-Value="Options.EffectiveDefaultValue" Color="Options.HasDefaultValue ? Color.Primary : Color.Dark" />
+            @Options.DefaultValue
+        </div>
+    }
+    else
+    {
+        <div class="d-flex flex-row gap-4" style="min-width: 400px;">
+            @* <text>Min</text> *@
+            <NumericValueSelector Text="Min"  TValue="TValue" Parameter="Parameter" @bind-Value="Options.MinValue" @bind-EffectiveValue="Options.EffectiveMinValue" HasValue="Options.HasMinValue" Reverse="true" />
+            @* <text>Max</text> *@
+            <NumericValueSelector Text="Max" TValue="TValue" Parameter="Parameter" @bind-Value="Options.MaxValue" @bind-EffectiveValue="Options.EffectiveMaxValue" HasValue="Options.HasMaxValue" />
+            @* <text>Step</text> *@
+            <NumericValueSelector Text="Step" TValue="TValue" Parameter="Parameter" @bind-Value="Options.Step" @bind-EffectiveValue="Options.EffectiveStep" HasValue="Options.HasStep" />
+        </div>
+        @* <div class="d-flex flex-row gap-2 align-center">
+            <MudSlider T="TValue" @bind-Value="Options.EffectiveMinValue" Color="Options.HasMinValue ? Color.Primary : Color.Dark" />
+            @Options.EffectiveMinValue
+            <MudIconButton Class="@(Options.HasMinValue ? "" : "invisible")" Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=>Options.MinValue = null)" Disabled=!Options.HasMinValue />
+        </div>
+        <div>
+            <MudIconButton Icon="@Icons.Material.Outlined.RemoveCircleOutline" Size="Size.Small" OnClick="(_=>Options.MaxValue = null)" Disabled=!Options.HasMaxValue />
+            <MudSlider T="TValue" @bind-Value="Options.EffectiveMaxValue" Color="Options.HasMaxValue ? Color.Primary : Color.Dark" />
+        </div>
+        <div>
+            <MudIconButton Icon="@Icons.Material.Outlined.RemoveCircleOutline" Size="Size.Small" OnClick="(_=>Options.Step = null)" Disabled=!Options.HasStep />
+            <MudSlider T="TValue" @bind-Value="Options.EffectiveStep" Color="Options.HasStep ? Color.Primary : Color.Dark" />
+        </div> *@
+    }
 
     @* TODO: 
             - distribution function: linear, x^2, x^3, etc.
             - distribution range: min, max
             - distribution count: number of values to test
-
         *@
 
     @* TODO - show distribution of parameters to test *@
@@ -33,14 +74,84 @@
 </MudItem>
 
 @code {
+    #region Parameters
+
+    [Parameter]
+    public int ItemSize { get; set; } = 5;
 
     [Parameter]
     public (HierarchicalPropertyInfo info, IParameterOptimizationOptions options) Parameter { get; set; }
 
-    #region Convenience
+    [Parameter]
+    public bool FixedValue { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> SetEnabled { get; set; }
+
+    #region Derived
 
     public HierarchicalPropertyInfo info => Parameter.info;
-    public IParameterOptimizationOptions options => Parameter.options;
+    public ParameterOptimizationOptions<TValue> Options => (ParameterOptimizationOptions<TValue>)Parameter.options;
+
+    bool Enabled => !FixedValue;
+
+    // public TValue? Min
+    // {
+    //     get => Options.MinValue;
+    //     set => Options.MinValue = value;
+    // }
+    // public TValue EffectiveMin
+    // {
+    //     get => Options.EffectiveMinValue;
+    //     set => Options.EffectiveMinValue = value;
+    // }
+    // public bool HasMin
+    // {
+    //     get => Options.HasMinValue;
+    // }
+
+    #endregion
+
+    #endregion
+
+    #region Lifecycle
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (Parameter.options != null && Parameter.options.GetType() != typeof(ParameterOptimizationOptions<TValue>)) throw new ArgumentException("TValue mismatch");
+
+        return base.OnParametersSetAsync();
+    }
+
+    #endregion
+
+    #region Properties
+
+    public bool Pinned
+    {
+        get => Options.EnableOptimization.HasValue;
+        set
+        {
+            if (value)
+            {
+                Options.EnableOptimization = !FixedValue;
+            }
+            else
+            {
+                Options.EnableOptimization = null;
+            }
+        }
+    }
+
+    #endregion
+
+    #region Methods
+
+    void ToggleEnabled()
+    {
+        Options.EnableOptimization = !Enabled;
+        if (SetEnabled.HasDelegate) SetEnabled.InvokeAsync(Options.EnableOptimization.Value);
+    }
 
     #endregion
 }
