@@ -10,7 +10,9 @@ Host.CreateApplicationBuilder(args)
     .LionFire(9850, lf => lf
         .ForIHostApplicationBuilder(builder => builder
              //.Trading()
-            .UseOrleansClient_LF()
+             .UseOrleansClient_LF()
+             //.If(lf.Configuration["OrleansClient:Enable"], lf=> lf
+             //   .UseOrleansClient_LF())
         )
         //.FireLynxApp()
         .If(Convert.ToBoolean(lf.Configuration["Orleans:Enable"]), lf => lf.Silo())
