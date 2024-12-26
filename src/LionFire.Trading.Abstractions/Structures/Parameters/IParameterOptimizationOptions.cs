@@ -1,16 +1,18 @@
 ﻿using ReactiveUI;
+using System.Reactive;
 
 namespace LionFire.Trading;
 
-public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<IReactiveObject>
+public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<IReactiveObject>, IReactiveObject
 {
     Type ValueType { get; }
     int? OptimizeOrder { get; set; }
     double? DistributionParameter { get; }
     //object? MinStep { get; }
     //object? MaxStep { get; }
-    //object? MaxValue { get; }
-    //object? MinValue { get; }
+    object? MaxValueObj { get; }
+    object? StepObj { get; }
+    object? MinValueObj { get; }
     //int? MinProbes { get; }
     //int? MaxProbes { get; }
 
@@ -31,4 +33,6 @@ public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<
     #endregion
 
     IParameterOptimizationOptions Clone();
+
+    IObservable<Unit> SomethingChanged { get; }
 }

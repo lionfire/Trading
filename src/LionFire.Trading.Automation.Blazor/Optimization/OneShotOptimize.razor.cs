@@ -1,8 +1,10 @@
+using LionFire.Logging;
 using LionFire.Mvvm;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Automation.Optimization;
 using Microsoft.AspNetCore.Components;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using QuantConnect;
 using ReactiveUI;
@@ -34,6 +36,7 @@ public partial class OneShotOptimize
     }
     protected override Task OnParametersSetAsync()
     {
+        ViewModel ??= new(ServiceProvider, ServiceProvider.GetRequiredService<CustomLoggerProvider>());
         ViewModel!.DebouncedChanges.Subscribe(_ => OnChange());
         ViewModel!.Changes.Subscribe(_ => OnChange());
 

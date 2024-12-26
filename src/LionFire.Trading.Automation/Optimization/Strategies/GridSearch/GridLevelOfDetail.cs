@@ -1,4 +1,7 @@
-﻿using System.Collections;
+﻿using LionFire.Hosting;
+using Microsoft.CodeAnalysis;
+using Microsoft.Extensions.Options;
+using System.Collections;
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 
@@ -30,8 +33,9 @@ public class GridLevelOfDetail : ILevelOfDetail
     {
         Level = level;
         OptimizerLevelsOfDetail = optimizerLevelsOfDetail;
-
-        foreach ((var info, var options) in OptimizerLevelsOfDetail.AllParameters.Where(p => p.options.IsEligibleForOptimization && (p.options.EnableOptimization != false)))
+        foreach ((var info, var options) in OptimizerLevelsOfDetail.AllParameters
+            .Where(p => optimizerLevelsOfDetail.POptimization.EffectiveEnableOptimization(p.info, p.options))
+            )
         {
             var state = ParameterLevelOfDetailInfo.Create(level, info, options);
             Parameters.Add(state);

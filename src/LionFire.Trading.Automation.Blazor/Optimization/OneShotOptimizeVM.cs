@@ -59,11 +59,11 @@ public partial class OneShotOptimizeVM : ReactiveObject
         });
         this.WhenAnyValue(x => x.OptimizationTask!.OptimizationMultiBatchJournal!).Subscribe(oc =>
         {
-            Debug.WriteLine("OMBJ");
+            Debug.WriteLine("WhenAnyValue OMBJ");
         });
         this.WhenAnyValue(x => x.OptimizationTask!).Subscribe(oc =>
         {
-            Debug.WriteLine("OT");
+            Debug.WriteLine("WhenAnyValue OptimizationTask");
         });
         debouncedChanges = changesToDebounce.Throttle(TimeSpan.FromMilliseconds(500));
         disposables.Add(this.WhenAnyValue(x => x.IsRunning).Subscribe(v => OnIsRunningValue(v)));
@@ -237,6 +237,8 @@ public partial class OneShotOptimizeVM : ReactiveObject
     public void Clear()
     {
         Progress = OptimizationProgress.NoProgress;
+        PMultiBacktestContext = new();
+        ResetParameters();
     }
 
     public void Cancel()

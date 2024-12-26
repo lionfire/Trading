@@ -1,6 +1,7 @@
 ﻿using LionFire.Serialization.Csv;
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
+using ReactiveUI;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reactive.Disposables;
@@ -67,7 +68,8 @@ public class OptimizerLevelsOfDetail : INotifyPropertyChanged, IDisposable
             levels = null;
             zero = null;
         }
-
+        OptimizableParameters.Clear();
+        UnoptimizableParameters.Clear();
         #region OptimizableParameters and UnoptimizableParameters
 
         foreach (var kvp in BotParameterPropertiesInfo
@@ -90,7 +92,28 @@ public class OptimizerLevelsOfDetail : INotifyPropertyChanged, IDisposable
         {
             if (firstRun)
             {
+                //this.WhenAny(kvp.Value.options, _ => _.Value).Subscribe(_ =>
+                //{
+                //    Reset();
+                //    POptimization.OnLevelsOfDetailChanged();
+                //});
+
+                disposables.Add(kvp.Value.options.WhenAny(x => x, x => 0).Subscribe(_ =>
+                {
+                    Reset();
+                    POptimization.OnLevelsOfDetailChanged();
+                }));
+                disposables.Add(kvp.Value.options.WhenAnyValue(x => x.MinValueObj).Subscribe(_ =>
+                {
+                    Reset();
+                    POptimization.OnLevelsOfDetailChanged();
+                }));
                 disposables.Add(kvp.Value.options.Changed.Subscribe(_ =>
+                {
+                    Reset();
+                    POptimization.OnLevelsOfDetailChanged();
+                }));
+                disposables.Add(kvp.Value.options.Changing.Subscribe(_ => // TEMP 
                 {
                     Reset();
                     POptimization.OnLevelsOfDetailChanged();

@@ -117,15 +117,18 @@ public class POptimization : ReactiveObject
     /// <summary>
     /// Initialize ParameterOptimizationOptions if needed, from various sources, in the following order:
     /// - ParameterAttribute
-    /// - EnableOptimization from this.MinParameterPriority
-    /// - POptimizationStrategy.Parameters
+    /// //- EnableOptimization from this.MinParameterPriority
+    /// //- POptimizationStrategy.Parameters
     /// </summary>
     /// <param name="info"></param>
     /// <returns></returns>
     public IParameterOptimizationOptions GetEffectiveOptions2(HierarchicalPropertyInfo info)
     {
         ParameterOptimizationOptions ??= new();
-        var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
+
+        var fromPOptimization = ParameterOptimizationOptions.TryGetValue(info.Path)
+            //?? ParameterOptimizationOptions?.TryGetValue(info.Key)
+            ;
         if (fromPOptimization != null)
         {
             return fromPOptimization;
@@ -147,15 +150,15 @@ public class POptimization : ReactiveObject
 
         #region POptimizationStrategy
 
-        IParameterOptimizationOptions? fromOptimizationParameters = POptimizationStrategy.Parameters.TryGetValue(info.Path);
+        //IParameterOptimizationOptions? fromOptimizationParameters = POptimizationStrategy.Parameters.TryGetValue(info.Path);
 
-        // FUTURE: Clone per-strategy options somehow 
-        //clone.FitnessOfInterest ??= gridSearchStrategy.Parameters.FitnessOfInterest;
+        //// FUTURE: Clone per-strategy options somehow 
+        ////clone.FitnessOfInterest ??= gridSearchStrategy.Parameters.FitnessOfInterest;
 
-        if (fromOptimizationParameters != null)
-        {
-            AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
-        }
+        //if (fromOptimizationParameters != null)
+        //{
+        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
+        //}
 
         #endregion
 
@@ -171,7 +174,7 @@ public class POptimization : ReactiveObject
 
         #endregion
 
-        return clone;
+        return ParameterOptimizationOptions[info.Path];
     }
 
     public IEnumerable<int> LevelsOfDetailRange => Enumerable.Range(LevelsOfDetail.MinLevel, 0); // FUTURE: Levels above 0
@@ -205,9 +208,18 @@ public class POptimization : ReactiveObject
 
     private OptimizerLevelsOfDetail? levelsOfDetail;
 
+    public bool EffectiveEnableOptimization(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)
+    {
+        if (!options.IsEligibleForOptimization) return false;
+        if (options.EnableOptimization == false) return false;
+
+        return info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
+    }
+
     #region Misc
 
     public override string ToString() => this.ToXamlProperties();
+
 
     #endregion
 }

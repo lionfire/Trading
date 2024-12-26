@@ -2,6 +2,9 @@
 using ReactiveUI.SourceGenerators;
 using ReactiveUI;
 using System.Numerics;
+using System.Diagnostics;
+using System.Reactive.Subjects;
+using System.Reactive;
 
 namespace LionFire.Trading;
 
@@ -51,15 +54,36 @@ public partial class ParameterOptimizationOptions<TValue>
     , IParameterOptimizationOptions
     where TValue : struct, INumber<TValue>
 {
+    public IObservable<Unit> SomethingChanged => somethingChanged;
+    private Subject<Unit> somethingChanged = new();
+
     public Type ValueType => typeof(TValue);
-    public ParameterOptimizationOptions() { }
-    public ParameterOptimizationOptions(IParameterOptimizationOptions assignFrom)
-    {
-        if (assignFrom != null)
+    public ParameterOptimizationOptions() {
+        this.PropertyChanged += ParameterOptimizationOptions_PropertyChanged;
+        this.WhenAny(x=>x, x => x).Subscribe(x =>
         {
-            AssignFromExtensions.AssignPropertiesFrom(this, assignFrom);
-        }
+            Debug.WriteLine("WhenAny: " + x);
+            somethingChanged?.OnNext(Unit.Default);
+        });
+        this.WhenAnyValue(x => x.MaxValue).Subscribe(x =>
+        {
+            Debug.WriteLine("WhenAnyValue MaxValue: " + x);
+            somethingChanged?.OnNext(Unit.Default);
+        });
     }
+
+    private void ParameterOptimizationOptions_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        Debug.WriteLine("ParameterOptimizationOptions_PropertyChanged: " + e.PropertyName);
+    }
+
+    //public ParameterOptimizationOptions(IParameterOptimizationOptions assignFrom) : this()
+    //{
+    //    if (assignFrom != null)
+    //    {
+    //        AssignFromExtensions.AssignPropertiesFrom(this, assignFrom);
+    //    }
+    //}
 
     #region Derived
 
@@ -91,6 +115,9 @@ public partial class ParameterOptimizationOptions<TValue>
 
     public int? OptimizeOrder { get; set; }
 
+    public object? MaxValueObj => MaxValue;
+    public object? StepObj => Step;
+    public object? MinValueObj => MinValue;
 
     #region Min
 
@@ -98,7 +125,21 @@ public partial class ParameterOptimizationOptions<TValue>
 
     public TValue? HardMinValue { get; set; }
 
-    [Reactive]
+    //[Reactive]
+    public TValue? MinValue
+    {
+        get => _minValue;
+        set
+        {
+            var changed = _minValue != value;
+            this.RaiseAndSetIfChanged(ref _minValue, value);
+            if (changed)
+            {
+                this.RaisePropertyChanged(nameof(EffectiveMinValue));
+                this.RaisePropertyChanged(nameof(MinValueObj));
+            }
+        }
+    }
     private TValue? _minValue;
 
     public bool HasMinValue => MinValue.HasValue;
@@ -188,7 +229,7 @@ public partial class ParameterOptimizationOptions<TValue>
             {
                 maxSteps /= TValue.CreateChecked(2);
             }
-            return EffectiveRange / maxSteps;
+            return maxSteps <= TValue.Zero ? TValue.AdditiveIdentity : EffectiveRange / maxSteps;
         }
     }
 
@@ -228,7 +269,7 @@ public partial class ParameterOptimizationOptions<TValue>
     public ulong MinCountFromMaxStep => Convert.ToUInt64(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxStep)));
     public ulong? EffectiveMinCount => Math.Max(MinCount ?? 0, MinCountFromMaxStep);
 
-    public ulong MaxCountFromMinStep => (EffectiveMinStep <= TValue.Zero ? Convert.ToUInt64(Convert.ToSingle(EffectiveRange)) :  Convert.ToUInt64(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep)));
+    public ulong MaxCountFromMinStep => (EffectiveMinStep <= TValue.Zero ? Convert.ToUInt64(Convert.ToSingle(EffectiveRange)) : Convert.ToUInt64(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep)));
     public ulong EffectiveMaxCount => Math.Min((MaxCount ?? ulong.MaxValue), MaxCountFromMinStep);
 
     #endregion

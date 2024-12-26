@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿#if UNUSED
+using System.Numerics;
 
 namespace LionFire.Trading;
 
@@ -27,3 +28,4 @@ public class OptionValueModel<TValue>
     public bool AllowNegativeValues { get; set; }
 }
 
+#endif
