@@ -36,10 +36,14 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
 
     #region Parameters
 
-    [Parameter(HardMinValue = 2, HardMaxValue = null, DefaultMin = 3, DefaultMax = 1024, OptimizerHints = OptimizationDistributionKind.Period, SearchLogarithmExponent = 2.0)]
+    [Parameter(HardMinValue = 2, HardMaxValue = null, DefaultMin = 3, DefaultMax = 1024,
+        ValueMax = 2000,
+        OptimizerHints = OptimizationDistributionKind.Period, SearchLogarithmExponent = 2.0)]
     public int Period { get; set; }
 
-    [Parameter(OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = MAT.Wilders,
+    [Parameter(OptimizePriority = -3, OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = MAT.Wilders,
+        HardMinValue = 0, // TEMP - shouldn't need for Enums.
+        HardMaxValue = 10,
         DefaultSearchSpaces = [
             (MAT[])[ // TODO: Find a nicer way to initialize these
                 MAT.Simple,

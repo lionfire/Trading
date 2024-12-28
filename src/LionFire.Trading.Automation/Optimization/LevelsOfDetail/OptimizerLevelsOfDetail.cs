@@ -2,6 +2,8 @@
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
 using ReactiveUI;
+using ReactiveUI.SourceGenerators;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reactive.Disposables;
@@ -12,25 +14,18 @@ namespace LionFire.Trading.Automation.Optimization;
 
 public interface ILevelOfDetail
 {
-    List<IParameterLevelOfDetailInfo> Parameters { get; }
+    ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> Parameters { get; }
     double TestPermutationCount { get; }
     int Level { get; }
 }
 
-public class OptimizerLevelsOfDetail : INotifyPropertyChanged, IDisposable
+public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
 {
     #region Parameters
 
     #region (Derived)
 
     public POptimization POptimization { get; }
-
-    // OPTIMIZE: Make immutable array
-    // NOTE: at certain levels, optimizableParameters may only have a single value and not be optimizable at that level
-    public readonly List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> OptimizableParameters = new();
-    public readonly List<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> UnoptimizableParameters = new();
-
-    public IEnumerable<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> AllParameters => OptimizableParameters.Concat(UnoptimizableParameters);
 
     /// <summary>
     /// Everything up to and including level 0
@@ -50,8 +45,7 @@ public class OptimizerLevelsOfDetail : INotifyPropertyChanged, IDisposable
 
     #endregion
 
-    public BotParameterPropertiesInfo BotParameterPropertiesInfo => BotParameterPropertiesInfo.Get(POptimization.PBotType);
-
+   
     CompositeDisposable? disposables;
     public OptimizerLevelsOfDetail(POptimization pOptimization)
     {
@@ -61,72 +55,70 @@ public class OptimizerLevelsOfDetail : INotifyPropertyChanged, IDisposable
 
     void Reset() // TODO: Make this class immutable, with no reset. Make a new one instead.
     {
-        bool firstRun = disposables == null;
-        disposables = new();
-        if (!firstRun)
+        bool firstRun ;
+        if (disposables != null)
         {
-            levels = null;
+            firstRun = false;
+            disposables?.Dispose();
+            Levels = null;
             zero = null;
+        }  else
+        {
+            firstRun = true;
         }
-        OptimizableParameters.Clear();
-        UnoptimizableParameters.Clear();
+        disposables = new();
+
+        //parameters.Clear();
+
         #region OptimizableParameters and UnoptimizableParameters
 
-        foreach (var kvp in BotParameterPropertiesInfo
-                .PathDictionary
-                    .Where(kvp => kvp.Value.IsOptimizable
-                        && kvp.Value.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
-                        )
-                    .Select(kvp
-                    => new KeyValuePair<string, (HierarchicalPropertyInfo info, IParameterOptimizationOptions options)>(kvp.Key,
-                            (
-                                info: kvp.Value,
-                                options: POptimization.GetEffectiveOptions2(kvp.Value)
-                             )
-                         )
-                    )
-                    .OrderByDescending(kvp => kvp.Value.options.OptimizeOrder)
-                    .ThenBy(kvp => kvp.Value.info.OptimizeOrderTiebreaker)
-                    .ThenBy(kvp => kvp.Key)
-            )
+        foreach (var kvp in POptimization.Parameters.KeyValues)
+
         {
             if (firstRun)
             {
-                //this.WhenAny(kvp.Value.options, _ => _.Value).Subscribe(_ =>
+                //this.WhenAny(kvp.Value, _ => _.Value).Subscribe(_ =>
                 //{
                 //    Reset();
                 //    POptimization.OnLevelsOfDetailChanged();
                 //});
 
-                disposables.Add(kvp.Value.options.WhenAny(x => x, x => 0).Subscribe(_ =>
+                kvp.Value.SomethingChanged.Subscribe(_ =>
+                {
+                    Reset();
+                    POptimization.OnLevelsOfDetailChanged();
+                });
+                disposables.Add(kvp.Value.WhenAny(x => x, x => x).Subscribe(x =>
                 {
                     Reset();
                     POptimization.OnLevelsOfDetailChanged();
                 }));
-                disposables.Add(kvp.Value.options.WhenAnyValue(x => x.MinValueObj).Subscribe(_ =>
+                disposables.Add(kvp.Value.WhenAnyValue(x => x.MinValueObj).Subscribe(_ =>
                 {
                     Reset();
                     POptimization.OnLevelsOfDetailChanged();
                 }));
-                disposables.Add(kvp.Value.options.Changed.Subscribe(_ =>
+                disposables.Add(kvp.Value.Changed.Subscribe(_ =>
                 {
                     Reset();
                     POptimization.OnLevelsOfDetailChanged();
                 }));
-                disposables.Add(kvp.Value.options.Changing.Subscribe(_ => // TEMP 
+                disposables.Add(kvp.Value.Changing.Subscribe(_ => // TEMP 
                 {
                     Reset();
                     POptimization.OnLevelsOfDetailChanged();
                 }));
             }
 
-            if (kvp.Value.options.IsEligibleForOptimization
-                && (kvp.Value.options.EnableOptimization == true
-                || kvp.Value.info.ParameterAttribute.OptimizePriorityInt >= POptimization.MinParameterPriority
-                )
-                )
-            { OptimizableParameters.Add(kvp.Value); }
-            else { UnoptimizableParameters.Add(kvp.Value); }
+            //parameters.Add(kvp.Value);
+            // OLD
+            //if (kvp.Value.IsEligibleForOptimization
+            //    && (kvp.Value.EnableOptimization == true
+            //    || kvp.Value.info.ParameterAttribute.OptimizePriorityInt >= POptimization.MinParameterPriority
+            //    )
+            //    )
+            //{ OptimizableParameters.Add(kvp.Value); }
+            //else { UnoptimizableParameters.Add(kvp.Value); }
         }
 
         #endregion
@@ -139,14 +131,14 @@ public class OptimizerLevelsOfDetail : INotifyPropertyChanged, IDisposable
 
         #endregion
 
-        OnPropertyChanged(nameof(LevelsOfDetail));
-
+        this.RaisePropertyChanged(nameof(LevelsOfDetail));
     }
 
     public void Dispose()
     {
         disposables?.Dispose();
     }
+
     #region State
 
     #region CurrentLevel
@@ -177,34 +169,31 @@ public class OptimizerLevelsOfDetail : INotifyPropertyChanged, IDisposable
     public GridLevelOfDetail GetLevel(int level)
     {
         if (level == 0) return zero ??= new GridLevelOfDetail(0, this);
-        if (levels == null)
+        if (Levels == null)
         {
-            levels = new();
-            levels.Add(0, zero);
+            Levels = new();
+            Levels.Add(0, zero);
         }
-        if (!levels.TryGetValue(level, out var result))
+        if (!Levels.TryGetValue(level, out var result))
         {
             result = new GridLevelOfDetail(level, this);
-            levels.Add(level, result);
+            Levels.Add(level, result);
         }
         return result;
     }
 
 
 
-    public SortedList<int /* level */, GridLevelOfDetail>? levels = null;
+    //public SortedList<int /* level */, GridLevelOfDetail>? Levels = null;
+    [Reactive]
+    private SortedList<int /* level */, GridLevelOfDetail>? _levels;
     GridLevelOfDetail? zero;
 
-    public event PropertyChangedEventHandler? PropertyChanged;
 
-    void OnPropertyChanged(string propertyName)
-    {
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-    }
 
-    public IEnumerable<GridLevelOfDetail> LevelsOfDetail => levels?.Values ?? [zero];
-    public IEnumerable<GridLevelOfDetail> ScanLevels => levels?.Where(l => l.Key <= 0).Select(l => l.Value) ?? [GetLevel(0)];
-    public IEnumerable<GridLevelOfDetail> SearchLevels => levels?.Where(l => l.Key > 0).Select(l => l.Value) ?? [];
+    public IEnumerable<GridLevelOfDetail> LevelsOfDetail => Levels?.Values ?? [zero];
+    public IEnumerable<GridLevelOfDetail> ScanLevels => Levels?.Where(l => l.Key <= 0).Select(l => l.Value) ?? [GetLevel(0)];
+    public IEnumerable<GridLevelOfDetail> SearchLevels => Levels?.Where(l => l.Key > 0).Select(l => l.Value) ?? [];
 
 
     #endregion

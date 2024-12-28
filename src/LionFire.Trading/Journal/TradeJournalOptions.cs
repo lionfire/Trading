@@ -5,7 +5,7 @@ namespace LionFire.Trading.Journal;
 
 public class TradeJournalOptions
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
     public bool EffectiveEnabled => Enabled && KeepTradeJournalsForTopNResults > 0;
 
     public bool PreferInMemory { get; set; } = true;

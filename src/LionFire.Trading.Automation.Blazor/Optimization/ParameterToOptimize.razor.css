@@ -1,0 +1,11 @@
+.SliderGroup {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 16px;
+    padding: 4px;
+    border: 1px solid #229;
+    border-radius: 4px;
+    justify-content: space-between;
+    align-items: center;
+}

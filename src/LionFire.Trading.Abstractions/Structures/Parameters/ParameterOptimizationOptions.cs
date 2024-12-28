@@ -5,21 +5,30 @@ using System.Numerics;
 using System.Diagnostics;
 using System.Reactive.Subjects;
 using System.Reactive;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading;
 
 public static class ParameterOptimizationOptions
 {
-    public static IParameterOptimizationOptions Create(Type valueType)
+    public static ParameterOptimizationOptions<TValue> Create<TValue>(HierarchicalPropertyInfo info)
+        where TValue : struct, INumber<TValue>
     {
+        return (ParameterOptimizationOptions<TValue>)Create(info);
+    }
+    public static IParameterOptimizationOptions Create(HierarchicalPropertyInfo info)
+    {
+        var valueType = info.ValueType;
         if (valueType.IsEnum) { valueType = Enum.GetUnderlyingType(valueType); }
 
-        return (IParameterOptimizationOptions)Activator.CreateInstance(typeof(ParameterOptimizationOptions<>).MakeGenericType(valueType))!;
+        return (IParameterOptimizationOptions)Activator.CreateInstance(typeof(ParameterOptimizationOptions<>).MakeGenericType(valueType), info)!;
     }
+#if UNUSED
     public static IParameterOptimizationOptions Create(Type valueType, IParameterOptimizationOptions assignFrom)
     {
         return (IParameterOptimizationOptions)Activator.CreateInstance(typeof(ParameterOptimizationOptions<>).MakeGenericType(valueType), assignFrom)!;
     }
+#endif
 }
 
 public partial class ParameterOptimizationOptions<TValue>
@@ -27,13 +36,28 @@ public partial class ParameterOptimizationOptions<TValue>
     , IParameterOptimizationOptions
     where TValue : struct, INumber<TValue>
 {
-    public IObservable<Unit> SomethingChanged => somethingChanged;
-    private Subject<Unit> somethingChanged = new();
 
+    #region Identity
     public Type ValueType => typeof(TValue);
-    public ParameterOptimizationOptions() {
+
+    [JsonIgnore]
+    public string Path { get; }
+
+    [JsonIgnore]
+    public HierarchicalPropertyInfo Info { get; }
+
+    private static HierarchicalPropertyInfo StubInfo = new HierarchicalPropertyInfo(typeof(DBNull));
+    #endregion
+
+    #region Lifecycle
+
+    public ParameterOptimizationOptions(HierarchicalPropertyInfo info)
+    {
+        Path = info.Path;
+        Info = info;
+
         this.PropertyChanged += ParameterOptimizationOptions_PropertyChanged;
-        this.WhenAny(x=>x, x => x).Subscribe(x =>
+        this.WhenAny(x => x, x => x).Subscribe(x =>
         {
             Debug.WriteLine("WhenAny: " + x);
             somethingChanged?.OnNext(Unit.Default);
@@ -45,10 +69,23 @@ public partial class ParameterOptimizationOptions<TValue>
         });
     }
 
+    #endregion
+
+    #region Events
+
+    public IObservable<Unit> SomethingChanged => somethingChanged;
+    private Subject<Unit> somethingChanged = new();
+
+    #endregion
+
+    #region Event handling
+
     private void ParameterOptimizationOptions_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
         Debug.WriteLine("ParameterOptimizationOptions_PropertyChanged: " + e.PropertyName);
     }
+
+    #endregion
 
     //public ParameterOptimizationOptions(IParameterOptimizationOptions assignFrom) : this()
     //{
@@ -58,19 +95,38 @@ public partial class ParameterOptimizationOptions<TValue>
     //    }
     //}
 
+    [Reactive]
+    private bool? _enableOptimization;
+
+
     #region Derived
 
-    public TValue? SingleValue => MinValue.HasValue && MinValue == MaxValue ? MinValue : null;
+    public TValue? SingleValue
+    {
+        get => MinValue.HasValue && MinValue == MaxValue ? MinValue : null;
+        set
+        {
+            var oldHasSingleValue = HasSingleValue;
+            if (value == SingleValue) return;
+            MinValue = MaxValue = value;
+            this.RaisePropertyChanged(nameof(SingleValue));
+            if (oldHasSingleValue != HasSingleValue)
+            {
+                this.RaisePropertyChanged(nameof(HasSingleValue));
+            }
+        }
+    }
     //public TValue? SingleValue => MinValue.HasValue && MinValue == MaxValue ? MinValue : ((MaxValue - MinValue) / TValue.CreateChecked(2.0));
     //public TValue? SingleValue => MinValue.HasValue && MinValue == MaxValue ? MinValue : (DefaultValue ?? MinValue);
     //((MaxValue - MinValue) / TValue.CreateChecked(2.0)));
 
-    object IParameterOptimizationOptions.SingleValue => SingleValue ?? throw new InvalidOperationException($"{nameof(SingleValue)} not available when {nameof(IsEligibleForOptimization)} is false");
+    public bool HasSingleValue => SingleValue.HasValue;
 
-    public bool IsEligibleForOptimization => !SingleValue.HasValue && EnableOptimization != false; // TODO: This should be "can have more than one value"
+    object? IParameterOptimizationOptions.SingleValue => SingleValue;// ?? throw new InvalidOperationException($"{nameof(SingleValue)} not available when {nameof(IsEligibleForOptimization)} is false");
 
-    [Reactive]
-    private bool? _enableOptimization;
+    public bool IsEligibleForOptimization => !SingleValue.HasValue && EnableOptimization != false
+        //&& this.Info.ParameterAttribute != null
+        ; // TODO: This should be "can have more than one value"
 
     public TValue? Range => MaxValue - MinValue;
 
@@ -88,15 +144,31 @@ public partial class ParameterOptimizationOptions<TValue>
 
     public int? OptimizeOrder { get; set; }
 
+    #region TEMP - workaround for ReactiveUI not supporting generic properties
+
     public object? MaxValueObj => MaxValue;
     public object? StepObj => Step;
     public object? MinValueObj => MinValue;
+    #endregion
 
     #region Min
+    public TValue EffectiveValueMin => ValueMin ?? EffectiveHardMinValue;
+    public TValue? ValueMin { get; set; }
+    public TValue EffectiveHardMinValue
+    {
+        get => HardMinValue ?? DefaultMinForDataType;
+        set
+        {
+            HardMinValue = value;
+        }
+    }
+
+    public TValue DefaultMinForDataType => TValue.Zero;
 
     public bool AllowNegativeValues { get; set; }
 
-    public TValue? HardMinValue { get; set; }
+    [Reactive]
+    private TValue? _hardMinValue;
 
     //[Reactive]
     public TValue? MinValue
@@ -105,11 +177,17 @@ public partial class ParameterOptimizationOptions<TValue>
         set
         {
             var changed = _minValue != value;
-            this.RaiseAndSetIfChanged(ref _minValue, value);
+            if (value > MaxValue)
+            {
+                MaxValue = value;
+                changed = true;
+            }
             if (changed)
             {
+                this.RaiseAndSetIfChanged(ref _minValue, value);
                 this.RaisePropertyChanged(nameof(EffectiveMinValue));
-                this.RaisePropertyChanged(nameof(MinValueObj));
+                //this.RaisePropertyChanged(nameof(MinValueObj));
+                OnSomethingChanged();
             }
         }
     }
@@ -127,16 +205,59 @@ public partial class ParameterOptimizationOptions<TValue>
 
     #region Max
 
-    public TValue? HardMaxValue { get; set; }
+    public TValue EffectiveValueMax => ValueMax ?? EffectiveHardMaxValue;
+    public TValue? ValueMax { get; set; }
+    
+    public TValue EffectiveHardMaxValue
+    {
+        get => HardMaxValue ?? DefaultMaxForDataType;
+        set
+        {
+            HardMaxValue = value;
+        }
+    }
+
     [Reactive]
+    private TValue? _hardMaxValue;
+
+    public TValue? MaxValue
+    {
+        get => _maxValue;
+        set
+        {
+            var changed = _maxValue != value;
+            if (value < MinValue)
+            {
+                MinValue = value;
+                changed = true;
+            }
+            if (changed)
+            {
+                this.RaiseAndSetIfChanged(ref _maxValue, value);
+                this.RaisePropertyChanged(nameof(EffectiveMinValue));
+                this.RaisePropertyChanged(nameof(MinValueObj));
+                OnSomethingChanged();
+            }
+
+        }
+    }
+    //[Reactive]
     private TValue? _maxValue;
+    void OnSomethingChanged() => somethingChanged.OnNext(Unit.Default);
 
     public bool HasMaxValue => MaxValue.HasValue;
     public TValue? DefaultMax { get; set; }
     public TValue EffectiveMaxValue
     {
         get => MaxValue ?? DefaultMax ?? HardMaxValue ?? DefaultMaxForDataType;
-        set => MaxValue = value;
+        set
+        {
+            if (value < MinValue)
+            {
+                MinValue = value;
+            }
+            MaxValue = value;
+        }
     }
 
     #endregion
@@ -209,9 +330,36 @@ public partial class ParameterOptimizationOptions<TValue>
     #endregion
 
 
-    #region Distribution function
+    #region Exponent (for Step)
 
-    public double? DistributionParameter { get; set; }
+    [Reactive]
+    private double? _exponent;
+
+    public bool HasExponent => Exponent.HasValue;
+    public double EffectiveExponent
+    {
+        get => Exponent ?? DefaultExponent;
+        set => Exponent = value;
+    }
+    private double DefaultExponent => 1.0;
+
+    public ExponentBasisOrigin ExponentOrigin { get; set; }
+
+    public double? MinExponent { get; set; } = 1.0;
+    public double EffectiveMinExponent
+    {
+        get
+        {
+            if (MinExponent.HasValue) return MinExponent.Value;
+            return 1.0;
+        }
+    }
+
+    public double? MaxExponent { get; set; }
+    public double EffectiveMaxExponent
+    => MaxExponent ?? DefaultMaxExponent;
+
+    private double DefaultMaxExponent => 10.0;
 
     #endregion
 
@@ -239,11 +387,13 @@ public partial class ParameterOptimizationOptions<TValue>
     public static TValue DataTypeMaxValue => (TValue)typeof(TValue).GetField(nameof(int.MaxValue), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
     public static TValue DataTypeMinValue => (TValue)typeof(TValue).GetField(nameof(int.MinValue), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!.GetValue(null)!;
 
-    public ulong MinCountFromMaxStep => Convert.ToUInt64(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxStep)));
+    public ulong MinCountFromMaxStep => EffectiveRange < TValue.Zero ? 1 :
+        (EffectiveMaxStep <= TValue.Zero ? Convert.ToUInt64(Math.Ceiling(Convert.ToSingle(EffectiveRange))) : Convert.ToUInt64(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxStep))));
     public ulong? EffectiveMinCount => Math.Max(MinCount ?? 0, MinCountFromMaxStep);
 
     public ulong MaxCountFromMinStep => (EffectiveMinStep <= TValue.Zero ? Convert.ToUInt64(Convert.ToSingle(EffectiveRange)) : Convert.ToUInt64(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep)));
     public ulong EffectiveMaxCount => Math.Min((MaxCount ?? ulong.MaxValue), MaxCountFromMinStep);
+
 
     #endregion
 
@@ -253,4 +403,11 @@ public partial class ParameterOptimizationOptions<TValue>
     public override string ToString() => this.ToXamlProperties();
 
     #endregion
+}
+
+public enum ExponentBasisOrigin
+{
+    Unspecified,
+    Zero = 1 << 0,
+    MinValue = 1 << 1,
 }

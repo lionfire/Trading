@@ -1,4 +1,7 @@
-﻿namespace LionFire.Trading.Automation;
+﻿using ReactiveUI;
+using ReactiveUI.SourceGenerators;
+
+namespace LionFire.Trading.Automation;
 
 // REFACTOR: Eliminate IPBacktestTask2 and use PBacktestTask2 instead
 //public interface PBacktestTask2
@@ -26,12 +29,14 @@
 //}
 
 // OPTIMIZE: change set properties to init?
-public class PBacktestBatchTask2 //: IPBacktestBatchTask2
+public partial class PBacktestBatchTask2 : ReactiveObject //: IPBacktestBatchTask2
 {
     public bool TicksEnabled() => Features.HasFlag(BotHarnessFeatures.Ticks);
     public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame => ExchangeSymbol == null || TimeFrame == null ? null : new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.ExchangeArea, ExchangeSymbol.Symbol, TimeFrame);
 
-    public Type? PBotType { get; set; }
+    //public Type? PBotType { get; set; }
+    [Reactive]
+    private Type? _pBotType;
 
     #region Time
 

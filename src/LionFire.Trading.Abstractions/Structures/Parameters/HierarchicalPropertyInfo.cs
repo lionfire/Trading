@@ -1,6 +1,6 @@
 ﻿using LionFire.Ontology;
 using LionFire.Trading.Journal;
-using Spectre.Console;
+//using Spectre.Console;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Reflection;
@@ -56,8 +56,9 @@ public class HierarchicalPropertyInfo : IKeyable<string>
 
     #region Derived
 
-    public PropertyInfo? LastPropertyInfo => PropertyInfos.LastOrDefault();
-    public ParameterAttribute ParameterAttribute => parameterAttribute ??= LastPropertyInfo!.GetCustomAttribute<ParameterAttribute>()!;
+    public Type ValueType => LastPropertyInfo.PropertyType;
+    public PropertyInfo LastPropertyInfo => PropertyInfos!.LastOrDefault();
+    public ParameterAttribute ParameterAttribute => parameterAttribute ??= LastPropertyInfo?.GetCustomAttribute<ParameterAttribute>()!;
     private ParameterAttribute? parameterAttribute;
 
     #endregion
@@ -77,6 +78,7 @@ public class HierarchicalPropertyInfo : IKeyable<string>
             return convertToString;
         }
     }
+    private ConvertToStringClass2? convertToString;
 
     public bool IsOptimizable => ParameterAttribute != null;
 
@@ -97,9 +99,8 @@ public class HierarchicalPropertyInfo : IKeyable<string>
         }
     }
 
-    private ConvertToStringClass2? convertToString;
 
-    public void SetValue(object? rootObject, object value, bool createMissingObjects = true)
+    public void SetValue(object? rootObject, object? value, bool createMissingObjects = true)
     {
         object? objectCursor = rootObject;
 
@@ -128,7 +129,7 @@ public class HierarchicalPropertyInfo : IKeyable<string>
 
     #region Conversion of numeric types
 
-    public static void SetPropertyValue(object obj, PropertyInfo propertyInfo, object value)
+    public static void SetPropertyValue(object obj, PropertyInfo propertyInfo, object? value)
     {
         try
         {

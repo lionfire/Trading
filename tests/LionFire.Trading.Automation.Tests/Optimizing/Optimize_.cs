@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using LionFire.Execution;
+using LionFire.Serialization.Csv;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Automation.Bots.Parameters;
@@ -60,19 +61,30 @@ public class Optimize_ : BinanceDataTest
         };
 
         p.GranularityStepMultiplier = 4;
-        p.ParameterOptimizationOptions = new Dictionary<string, IParameterOptimizationOptions>
-        {
-            ["Period"] = new ParameterOptimizationOptions<int>
-            {
-                MaxCount = 20,
-                MinCount = 20,
-                MinValue = 2,
-                MaxValue = 40,
-                Step = 3
-            },
-            //["OpenThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 2 },
-            //["CloseThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 3 },
-        };
+
+        var parameters = BotParameterPropertiesInfo.Get(typeof(PAtrBot<double>))!.PathDictionary;
+
+        p.ParameterOptimizationOptions = new Dictionary<string, IParameterOptimizationOptions>();
+
+        var period = ParameterOptimizationOptions.Create<int>(parameters["ATR.Period"]);
+        period.MaxCount = 20;
+        period.MinCount = 20;
+        period.MinValue = 2;
+        period.MaxValue = 40;
+        period.Step = 3;
+
+        //{
+        //    ["Period"] = new ParameterOptimizationOptions<int>
+        //    {
+        //        MaxCount = 20,
+        //        MinCount = 20,
+        //        MinValue = 2,
+        //        MaxValue = 40,
+        //        Step = 3
+        //    },
+        //    //["OpenThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 2 },
+        //    //["CloseThreshold"] = new ParameterOptimizationOptions<int> { OptimizePriority = 3 },
+        //};
 
 
         //var p = new POptimization(c)

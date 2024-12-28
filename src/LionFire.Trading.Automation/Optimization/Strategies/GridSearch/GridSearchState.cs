@@ -1,9 +1,12 @@
 ﻿using CryptoExchange.Net.CommonObjects;
+using DynamicData;
+using DynamicData.Binding;
 using LionFire.ExtensionMethods.Copying;
 using LionFire.Extensions.Logging;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,16 +26,24 @@ public partial class GridSearchState
 {
     #region Relationships
 
-    private readonly GridSearchStrategy gridSearchStrategy;
-    private ILogger Logger => gridSearchStrategy.Logger;
+    public GridSearchStrategy GridSearchStrategy { get; }
+
+    #region Derived
+
+    public POptimization POptimization => GridSearchStrategy.OptimizationParameters;
+    private ILogger Logger => GridSearchStrategy.Logger;
+
+    #endregion
 
     #endregion
 
     #region TEMP - convenience
 
-    public IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> OptimizableParameters => proxy.OptimizableParameters;
+    //public IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> Parameters => GridSearchStrategy.OptimizationParameters.Parameters;
 
-    public IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> UnoptimizableParameters => proxy.UnoptimizableParameters;
+    public IObservableCollection<IParameterOptimizationOptions > OptimizableParameters => GridSearchStrategy.OptimizationParameters.OptimizableParameters;
+
+    public IObservableCollection<IParameterOptimizationOptions> UnoptimizableParameters => GridSearchStrategy.OptimizationParameters.UnoptimizableParameters;
 
     #endregion
 
@@ -40,17 +51,20 @@ public partial class GridSearchState
 
     public GridSearchState(GridSearchStrategy gridSearchStrategy)
     {
-        this.gridSearchStrategy = gridSearchStrategy;
+        GridSearchStrategy = gridSearchStrategy;
 
-        //LevelsOfDetail2 = new(gridSearchStrategy.OptimizationParameters);// MOVE - Get from Parameters?
-
-        if (OptimizableParameters.Count == 0) throw new ArgumentException("No parameters to optimize");
-
-        //while (CurrentLevel.TestPermutationCount > gridSearchStrategy.OptimizationParameters.MaxBacktests)
-        while (CurrentLevel.Level > proxy.MinLevel)
+        if (OptimizableParameters.Count == 0)
         {
-            Logger.LogInformation("Level {level} has {count} backtests but max is {maxBacktests}, so going down a level of detail", currentLevel, CurrentLevel.TestPermutationCount, gridSearchStrategy.OptimizationParameters.MaxBacktests);
-            currentLevel--;
+            Logger.LogInformation("No parameters to optimize");
+        }
+        else
+        {
+            //while (CurrentLevel.TestPermutationCount > gridSearchStrategy.OptimizationParameters.MaxBacktests)
+            while (CurrentLevel.Level > proxy.MinLevel)
+            {
+                Logger.LogInformation("Level {level} has {count} backtests but max is {maxBacktests}, so going down a level of detail", currentLevel, CurrentLevel.TestPermutationCount, gridSearchStrategy.OptimizationParameters.MaxBacktests);
+                currentLevel--;
+            }
         }
         Logger.LogInformation("Level {level} has {count} backtests.", currentLevel, CurrentLevel.TestPermutationCount);
     }
@@ -70,7 +84,7 @@ public partial class GridSearchState
     #region Levels
 
     // TODO - cleanup this proxy - RENAME
-    OptimizerLevelsOfDetail proxy => gridSearchStrategy.OptimizationParameters.LevelsOfDetail;
+    OptimizerLevelsOfDetail proxy => GridSearchStrategy.OptimizationParameters.LevelsOfDetail;
     public GridLevelOfDetail GetLevel(int level)=> proxy.GetLevel(level);
     //{
     //    if (level == 0) return zero ??= new LevelOfDetail(0, LevelsOfDetail2);

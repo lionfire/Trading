@@ -11,7 +11,8 @@ public class BotParameterPropertiesInfo : BotParameterPropertiesInfoBase
 {
     #region (static)
 
-    public static BotParameterPropertiesInfo Get(Type rootPropertyInstanceType) => cache.GetOrAdd(rootPropertyInstanceType, t => new BotParameterPropertiesInfo(t));
+    public static BotParameterPropertiesInfo? SafeGet(Type? rootPropertyInstanceType) => rootPropertyInstanceType == null ? null : cache.GetOrAdd(rootPropertyInstanceType, t => new BotParameterPropertiesInfo(t));
+    public static BotParameterPropertiesInfo Get(Type rootPropertyInstanceType) => rootPropertyInstanceType == null ? throw new ArgumentNullException() : cache.GetOrAdd(rootPropertyInstanceType, t => new BotParameterPropertiesInfo(t));
     private static ConcurrentDictionary<Type, BotParameterPropertiesInfo> cache = new();
 
     #endregion
@@ -28,11 +29,10 @@ public class BotParameterPropertiesInfo : BotParameterPropertiesInfoBase
     {
         var rootHierarchicalPropertyInfo = new HierarchicalPropertyInfo(ParametersType);
         List<HierarchicalPropertyInfo> results = new();
-        Recurse(rootHierarchicalPropertyInfo, ref results, propertyTypeOverride: rootHierarchicalPropertyInfo.RootPropertyType);
+        RecurseProperties(rootHierarchicalPropertyInfo, ref results, propertyTypeOverride: rootHierarchicalPropertyInfo.RootPropertyType);
         return results;
     }
 }
-
 
 public abstract class BotParameterPropertiesInfoBase
 {
@@ -85,7 +85,7 @@ public abstract class BotParameterPropertiesInfoBase
                             || subProp.PropertyType.GetCustomAttribute<SerializeAsSerializedAttribute>()?.SerializeAsSerialized == true;
     }
 
-    protected void Recurse(HierarchicalPropertyInfo parentHierarchicalPropertyInfo, ref List<HierarchicalPropertyInfo> results, ImmutableList<PropertyInfo>? path = null, Type? propertyTypeOverride = null)
+    protected void RecurseProperties(HierarchicalPropertyInfo parentHierarchicalPropertyInfo, ref List<HierarchicalPropertyInfo> results, ImmutableList<PropertyInfo>? path = null, Type? propertyTypeOverride = null)
     {
         PropertyInfo? parentPropertyInfo = parentHierarchicalPropertyInfo.LastPropertyInfo;
 
@@ -104,7 +104,7 @@ public abstract class BotParameterPropertiesInfoBase
             }
             else
             {
-                Recurse(info, ref results, path);
+                RecurseProperties(info, ref results, path);
             }
         }
     }

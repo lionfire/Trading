@@ -1,3 +1,4 @@
+@using DynamicData
 @inherits ReactiveComponentBase<OneShotOptimizeVM>
 
 <MudCard>
@@ -20,9 +21,9 @@
 
     <div class="mt-4 ml-4">
         <MudGrid Class="gap-x-3 gap-y-1" Spacing="4">
-            @foreach (var p in AllParameters.Where(ShouldShow).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.info.Path))
+            @foreach (var p in AllParameters.KeyValues.Values.Where(ShouldShow).OrderByDescending(p => p.Info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.Info.Path))
             {
-                <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.options.ValueType)" Parameters="@GetParameters(p)" />
+                <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.ValueType)" Parameters="@GetParameters(p)" />
 
                 @* <ParameterToOptimize TValue=@p.options.TValue ViewModel="ViewModel" Parameter="p" /> *@
             }
@@ -32,9 +33,9 @@
     <MudText Typo="Typo.h5">Fixed Values</MudText>
     <div class="mt-4 ml-4">
         <MudGrid Class="gap-x-3 gap-y-1" Spacing="4">
-            @foreach (var p in AllParameters.Where(p => !ShouldShow(p)).OrderByDescending(p => p.info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.info.Path))
+            @foreach (var p in AllParameters.KeyValues.Values.Where(p => !ShouldShow(p)).OrderByDescending(p => p.Info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.Info.Path))
             {
-                <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.options.ValueType)" Parameters="@GetParameters(p, fixedValue: true)" />
+                <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.ValueType)" Parameters="@GetParameters(p, fixedValue: true)" />
                 @* <ParameterToOptimize FixedValue="true" ViewModel="ViewModel" Parameter="p" /> *@
             }
         </MudGrid>
@@ -45,24 +46,24 @@
 
 @code {
 
-    IEnumerable<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> AllParameters => ViewModel!.POptimization2.LevelsOfDetail.OptimizableParameters.Concat(ViewModel!.POptimization2.LevelsOfDetail.UnoptimizableParameters);
+    IObservableCache<IParameterOptimizationOptions, string> AllParameters => ViewModel!.Context.POptimization.Parameters;
 
-    public bool ShouldShow((HierarchicalPropertyInfo info, IParameterOptimizationOptions options) p)
+    public bool ShouldShow(IParameterOptimizationOptions options)
     {
-        return p.options.EnableOptimization.HasValue ? p.options.EnableOptimization.Value : p.info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority || p.options?.EnableOptimization == true;
+        return options.EnableOptimization.HasValue ? options.EnableOptimization.Value : options.Info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority || options?.EnableOptimization == true;
     }
 
-    private Dictionary<string, object> GetParameters((HierarchicalPropertyInfo info, IParameterOptimizationOptions options) p, bool fixedValue = false)
+    private Dictionary<string, object> GetParameters(IParameterOptimizationOptions options, bool fixedValue = false)
     {
 
-        var x = EventCallback.Factory.Create<bool>(this, v => { p.options.EnableOptimization = v; OnSetEnabled(); });
+        var x = EventCallback.Factory.Create<bool>(this, v => { options.EnableOptimization = v; OnSetEnabled(); });
 
-        // var x = (EventCallback<bool>)(Action<bool>)(v => { p.options.EnableOptimization = v; OnSetEnabled(); });
+        // var x = (EventCallback<bool>)(Action<bool>)(v => { options.EnableOptimization = v; OnSetEnabled(); });
 
         return new Dictionary<string, object>
         {
             { "ViewModel", ViewModel! },
-            { "Parameter", p },
+            { "Parameter", options },
             { "FixedValue", fixedValue },
             { "ItemSize", fixedValue ? 2 : 5 },
             { "SetEnabled", x }

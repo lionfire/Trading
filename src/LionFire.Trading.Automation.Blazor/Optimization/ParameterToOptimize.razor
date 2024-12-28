@@ -39,12 +39,14 @@
     else
     {
         <div class="d-flex flex-row gap-4" style="min-width: 400px;">
-            @* <text>Min</text> *@
-            <NumericValueSelector Text="Min"  TValue="TValue" Parameter="Parameter" @bind-Value="Options.MinValue" @bind-EffectiveValue="Options.EffectiveMinValue" HasValue="Options.HasMinValue" Reverse="true" />
-            @* <text>Max</text> *@
-            <NumericValueSelector Text="Max" TValue="TValue" Parameter="Parameter" @bind-Value="Options.MaxValue" @bind-EffectiveValue="Options.EffectiveMaxValue" HasValue="Options.HasMaxValue" />
-            @* <text>Step</text> *@
-            <NumericValueSelector Text="Step" TValue="TValue" Parameter="Parameter" @bind-Value="Options.Step" @bind-EffectiveValue="Options.EffectiveStep" HasValue="Options.HasStep" />
+            <div class="SliderGroup">
+                <NumericValueSelector Text="Min" TValue="TValue" Parameter="Parameter" @bind-Value="Options.MinValue" @bind-EffectiveValue="Options.EffectiveMinValue" HasValue="Options.HasMinValue" Reverse="true" Min="Options.EffectiveValueMin" Max="Options.EffectiveValueMax" />
+                <NumericValueSelector Text="Max" TValue="TValue" Parameter="Parameter" @bind-Value="Options.MaxValue" @bind-EffectiveValue="Options.EffectiveMaxValue" HasValue="Options.HasMaxValue" Min="Options.EffectiveValueMin" Max="Options.EffectiveValueMax" />
+            </div>
+            <div class="SliderGroup">
+                <NumericValueSelector Text="Step" TValue="TValue" Parameter="Parameter" @bind-Value="Options.Step" @bind-EffectiveValue="Options.EffectiveStep" HasValue="Options.HasStep" Min="Options.EffectiveMinStep" Max="Options.EffectiveMaxStep" />
+                <NumericValueSelector Text="Exponent" TValue="double" Parameter="Parameter" @bind-Value="Options.Exponent" @bind-EffectiveValue="Options.EffectiveExponent" HasValue="Options.HasExponent" Min="Options.EffectiveMinExponent" Max="Options.EffectiveMaxExponent" />
+            </div>
         </div>
         @* <div class="d-flex flex-row gap-2 align-center">
             <MudSlider T="TValue" @bind-Value="Options.EffectiveMinValue" Color="Options.HasMinValue ? Color.Primary : Color.Dark" />
@@ -80,7 +82,7 @@
     public int ItemSize { get; set; } = 5;
 
     [Parameter]
-    public (HierarchicalPropertyInfo info, IParameterOptimizationOptions options) Parameter { get; set; }
+    public IParameterOptimizationOptions Parameter { get; set; }
 
     [Parameter]
     public bool FixedValue { get; set; }
@@ -90,8 +92,8 @@
 
     #region Derived
 
-    public HierarchicalPropertyInfo info => Parameter.info;
-    public ParameterOptimizationOptions<TValue> Options => (ParameterOptimizationOptions<TValue>)Parameter.options;
+    public HierarchicalPropertyInfo info => Parameter.Info;
+    public ParameterOptimizationOptions<TValue> Options => (ParameterOptimizationOptions<TValue>)Parameter;
 
     bool Enabled => !FixedValue;
 
@@ -118,7 +120,7 @@
 
     protected override Task OnParametersSetAsync()
     {
-        if (Parameter.options != null && Parameter.options.GetType() != typeof(ParameterOptimizationOptions<TValue>)) throw new ArgumentException("TValue mismatch");
+        if (Parameter != null && Parameter.GetType() != typeof(ParameterOptimizationOptions<TValue>)) throw new ArgumentException("TValue mismatch");
 
         return base.OnParametersSetAsync();
     }

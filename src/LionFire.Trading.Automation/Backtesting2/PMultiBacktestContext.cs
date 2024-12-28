@@ -1,10 +1,12 @@
 ﻿using DynamicData;
+using LionFire.ReactiveUI_;
 using LionFire.Trading.Automation.Optimization;
 using System.Collections.Concurrent;
 using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Security.AccessControl;
+using YamlDotNet.Core.Tokens;
 
 namespace LionFire.Trading.Automation;
 
@@ -31,7 +33,7 @@ public class MultiBacktestEvents
     private Subject<long> completions = new();
 }
 
-public class PMultiBacktestContext
+public class PMultiBacktestContext : DisposableBaseViewModel
 {
     #region Lifecycle
 
@@ -78,7 +80,12 @@ public class PMultiBacktestContext
 
     #endregion
 
-    public PBacktestBatchTask2 CommonBacktestParameters { get; set; } = new();
+    public PBacktestBatchTask2 CommonBacktestParameters
+    {
+        get => commonBacktestParameters;
+        set => RaiseAndSetNestedViewModelIfChanged(ref commonBacktestParameters, value);
+    }
+    private PBacktestBatchTask2 commonBacktestParameters = new();
 
     public POptimization POptimization
     {
@@ -90,7 +97,7 @@ public class PMultiBacktestContext
                 throw new Exception();
                 //value.Parent = this;
             }
-            pOptimization = value;
+            RaiseAndSetNestedViewModelIfChanged(ref pOptimization, value);
         }
     }
     POptimization pOptimization;
@@ -106,6 +113,7 @@ public class PMultiBacktestContext
 
     public Type BotType => botType ??= TryGetBotType(PBotType);
     private Type? botType;
+
     private static Type TryGetBotType(Type pBotType)
     {
         Type? botType;

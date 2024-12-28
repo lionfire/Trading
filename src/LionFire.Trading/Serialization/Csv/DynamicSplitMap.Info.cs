@@ -52,7 +52,7 @@ public partial class DynamicSplitMap<T>
 
             List<HierarchicalPropertyInfo> results = new();
             var rootHierarchicalPropertyInfo = new HierarchicalPropertyInfo(null, [pi]);
-            Recurse(rootHierarchicalPropertyInfo, ref results, propertyTypeOverride: ParametersType);
+            RecurseProperties(rootHierarchicalPropertyInfo, ref results, propertyTypeOverride: ParametersType);
             return results;
         }
 

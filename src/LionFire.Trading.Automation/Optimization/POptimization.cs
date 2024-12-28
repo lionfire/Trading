@@ -1,16 +1,28 @@
-﻿using LionFire.ExtensionMethods.Copying;
+﻿using DynamicData;
+using DynamicData.Binding;
+using LionFire.ExtensionMethods.Copying;
+using LionFire.Instantiating;
+using LionFire.Serialization.Csv;
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Journal;
 using ReactiveUI;
+using ReactiveUI.SourceGenerators;
+using System;
+using System.Collections.ObjectModel;
+using System.Reactive;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Automation.Optimization;
 
 // ENH: Validatable, make all properties mutable and not required in ctor.  (Or consider a new pattern: a pair of classes, one frozen and one mutable.)
-public class POptimization : ReactiveObject
+public partial class POptimization : ReactiveObject
 {
     #region Identity Parameters
 
-    public Type PBotType => Parent.CommonBacktestParameters.PBotType;
+    [Reactive]
+    private Type _pBotType;
 
     //public List<Type> BotTypes { get; set; } // ENH maybe someday though probably not, just a thought: OPTIMIZE - Test multiple bot types in parallel
 
@@ -18,15 +30,72 @@ public class POptimization : ReactiveObject
 
     #region Lifecycle
 
+    CompositeDisposable disposables = new();
+
     public POptimization(PMultiBacktestContext parent)
     {
         Parent = parent;
+
+        var minParameterPriorityChanged = this.WhenAnyValue(x => x.MinParameterPriority);
+
+        this.WhenAnyValue(x => x.Parent.CommonBacktestParameters.PBotType)
+            .Subscribe(t => PBotType = t).DisposeWith(disposables);
+
+        parameters.Connect()
+            .AutoRefreshOnObservable(_ => minParameterPriorityChanged)
+            .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.EnableOptimization))
+            .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.IsEligibleForOptimization))
+            .Transform(poo => (poo, EffectiveEnableOptimization(poo)), true)
+            .Filter(tuple => tuple.Item2)
+            .Transform(tuple => tuple.poo)
+            .Bind(optimizableParameters)
+            .Subscribe()
+            .DisposeWith(disposables);
+
+        parameters.Connect()
+            .AutoRefreshOnObservable(_ => minParameterPriorityChanged)
+            .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.EnableOptimization))
+            .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.IsEligibleForOptimization))
+            .Transform(poo => (poo, EffectiveEnableOptimization(poo)), true)
+            .Filter(tuple => !tuple.Item2)
+            .Transform(tuple => tuple.poo)
+            .Bind(unoptimizableParameters)
+            .Subscribe()
+            .DisposeWith(disposables);
+
+
+        this.WhenAnyValue(x => x.PBotType)
+            .Select(BotParameterPropertiesInfo.SafeGet)
+            .Subscribe(properties =>
+            {
+                parameters.Edit(u =>
+                {
+                    u.Clear();
+                    if (properties != null)
+                    {
+                        u.AddOrUpdate(properties.PathDictionary.Values
+                            .Where(info => info.IsOptimizable
+                                && info.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
+                            )
+                            .Select(info =>
+                            {
+                                var poo = CreatePoo(info);
+                                poo.SomethingChanged.Subscribe(_ => RaiseParametersChanged()).DisposeWith(disposables);
+                                return poo;
+                            }));
+                    }
+                    this.RaisePropertyChanged(nameof(Parameters));
+                });
+            })
+            .DisposeWith(disposables);
+
+        // Prior logic, not sure where it goes now:
+        //        .PathDictionary
+        //            .OrderByDescending(kvp => kvp.Value.options.OptimizeOrder)
+        //            .ThenBy(kvp => kvp.Value.info.OptimizeOrderTiebreaker)
+        //            .ThenBy(kvp => kvp.Key)
     }
-    //public POptimization(PMultiBacktestContext parent, Type pBotType, ExchangeSymbol exchangeSymbol) : this(parent)
-    //{
-    //    PBotType = pBotType;
-    //    ExchangeSymbol = exchangeSymbol;
-    //}
+
 
     #endregion
 
@@ -82,6 +151,10 @@ public class POptimization : ReactiveObject
 
     #region Individual Parameters
 
+    public IObservable<Unit> ParametersChanged => parametersChanged;
+    private Subject<Unit> parametersChanged = new();
+    public void RaiseParametersChanged() => parametersChanged.OnNext(Unit.Default);
+
     /// <summary>
     /// Optimize parameters with an OptimizePriority greater than or equal to this value.
     /// This is only a default starting point: individual parameters can be enabled or disabled to override this.
@@ -93,6 +166,7 @@ public class POptimization : ReactiveObject
         {
             minParameterPriority = value;
             levelsOfDetail = null;
+            this.RaiseAndSetIfChanged(ref minParameterPriority, value);
         }
     }
     private int minParameterPriority;
@@ -103,6 +177,13 @@ public class POptimization : ReactiveObject
     // Key: ParameterType
     public Dictionary<string, IParameterOptimizationOptions>? ParameterOptimizationOptions { get; set; }
     //public required List<IPParameterOptimization> ParameterRanges { get; set; }
+
+    public IObservableCache<IParameterOptimizationOptions, string> Parameters => parameters;
+    private SourceCache<IParameterOptimizationOptions, string> parameters = new(poo => poo.Path);
+    public IObservableCollection<IParameterOptimizationOptions> OptimizableParameters => optimizableParameters;
+    private ObservableCollectionExtended<IParameterOptimizationOptions> optimizableParameters = new();
+    public IObservableCollection<IParameterOptimizationOptions> UnoptimizableParameters => unoptimizableParameters;
+    private ObservableCollectionExtended<IParameterOptimizationOptions> unoptimizableParameters = new();
 
     #endregion
 
@@ -122,24 +203,31 @@ public class POptimization : ReactiveObject
     /// </summary>
     /// <param name="info"></param>
     /// <returns></returns>
-    public IParameterOptimizationOptions GetEffectiveOptions2(HierarchicalPropertyInfo info)
+    public static IParameterOptimizationOptions CreatePoo(HierarchicalPropertyInfo info)
     {
-        ParameterOptimizationOptions ??= new();
+        //ParameterOptimizationOptions ??= new();
 
-        var fromPOptimization = ParameterOptimizationOptions.TryGetValue(info.Path)
-            //?? ParameterOptimizationOptions?.TryGetValue(info.Key)
-            ;
-        if (fromPOptimization != null)
-        {
-            return fromPOptimization;
-        }
+        //var fromPOptimization = ParameterOptimizationOptions.TryGetValue(info.Path)
+        //?? ParameterOptimizationOptions?.TryGetValue(info.Key)
+        ;
+        //if (fromPOptimization != null)
+        //{
+        //    return fromPOptimization;
+        //}
+
+        IParameterOptimizationOptions parameterOptimizationOptions = LionFire.Trading.ParameterOptimizationOptions.Create(info);
+        
+
+        //ParameterOptimizationOptions.Create(info.ValueType, "<AttributePrototype>");
+
+        AssignFromExtensions.AssignNonDefaultPropertiesFrom(parameterOptimizationOptions!, info.ParameterAttribute);
 
         #region Attribute
 
-        IParameterOptimizationOptions fromAttribute = info.ParameterAttribute.GetParameterOptimizationOptions(info.LastPropertyInfo!.PropertyType);
-        ArgumentNullException.ThrowIfNull(fromAttribute);
+        //IParameterOptimizationOptions fromAttribute = info.ParameterAttribute.GetParameterOptimizationOptions(info.LastPropertyInfo!.PropertyType);
+        //ArgumentNullException.ThrowIfNull(fromAttribute);
 
-        var clone = fromAttribute.Clone();
+        //var clone = fromAttribute.Clone();
 
         #endregion
 
@@ -164,7 +252,8 @@ public class POptimization : ReactiveObject
 
         #region ParameterOptimizationOptions
 
-        ParameterOptimizationOptions.TryAdd(info.Path, clone);
+        //clone.Path = info.Path;
+        //ParameterOptimizationOptions.TryAdd(info.Path, clone);
 
         //var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
         //if (fromPOptimization != null)
@@ -174,7 +263,8 @@ public class POptimization : ReactiveObject
 
         #endregion
 
-        return ParameterOptimizationOptions[info.Path];
+        return parameterOptimizationOptions;
+        //return ParameterOptimizationOptions[info.Path];
     }
 
     public IEnumerable<int> LevelsOfDetailRange => Enumerable.Range(LevelsOfDetail.MinLevel, 0); // FUTURE: Levels above 0
@@ -208,12 +298,12 @@ public class POptimization : ReactiveObject
 
     private OptimizerLevelsOfDetail? levelsOfDetail;
 
-    public bool EffectiveEnableOptimization(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)
+    public bool EffectiveEnableOptimization(IParameterOptimizationOptions options)
     {
         if (!options.IsEligibleForOptimization) return false;
         if (options.EnableOptimization == false) return false;
 
-        return info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
+        return options.Info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
     }
 
     #region Misc

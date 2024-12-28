@@ -169,11 +169,14 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
                 //step = (Max - Min) / TValue.CreateChecked(testCount); 
                 testCount = (ulong)double.Ceiling(testCount / divisor);
 
-                step = (Max - Min) / TValue.CreateChecked(testCount);
+                var diff = Max - Min;
+                
+                testCount = Convert.ToUInt64(diff <= TValue.Zero ? 1 : (Convert.ToDouble(diff) / Convert.ToDouble(step)));
+                //step = diff <= TValue.Zero ? TValue.Zero : (diff / TValue.CreateChecked(testCount));
 
-                if (!IsFloatingPoint<TValue>())
+                if (!TypeReflectionX.IsFloatingPoint<TValue>() && step != TValue.Zero)
                 {
-                    step += TValue.CreateChecked(1.0);
+                    testCount += 1; // TValue.CreateChecked(1.0);
                 }
 
                 // TODO: extra test at the end if it doesn't perfectly line up
@@ -181,9 +184,11 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
 
                 //IsComplete = new BitArray(count);
 
-                if (Options.DistributionParameter.HasValue && Options.DistributionParameter.Value != 1)
+                if (false && Options.EffectiveExponent != 1.0)
                 {
-                    Debug.WriteLine("UNTESTED: DistributionParameter != 1");
+                    // TODO Options.ExponentOrigin: Exponent basis point. (e.g. Zero, or EffectiveMinValue).  Maybe enum for this.
+
+                    Debug.WriteLine("UNTESTED: DistributionParameter != 1 (TValue.MultiplicativeIdentity)");
 
                     var rangeForLog = Math.Log((testCount - 1) * Convert.ToDouble(step));
                     exponentAdjustment = Convert.ToDouble(range) / rangeForLog;
@@ -208,13 +213,7 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
         #endregion
 
     }
-    static bool IsFloatingPoint<T>()
-    {
-        return 
-            typeof(T) == typeof(float)
-            || typeof(T) == typeof(double)
-            || typeof(T) == typeof(decimal);
-    }
+
 
     #region State
 
@@ -253,5 +252,16 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
 
     //public TValue Min { get; set; }
     //public TValue Max { get; set; }
+}
+
+public static class TypeReflectionX
+{
+    public static bool IsFloatingPoint<T>()
+    {
+        return
+            typeof(T) == typeof(float)
+            || typeof(T) == typeof(double)
+            || typeof(T) == typeof(decimal);
+    }
 }
 

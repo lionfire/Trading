@@ -28,6 +28,8 @@ public sealed class ParameterAttribute : Attribute
     public object? DefaultValue { get; set; }
     public object? HardMinValue { get; set; }
     public object? HardMaxValue { get; set; }
+    public object? ValueMax { get; set; }
+    public object? ValueMin { get; set; }
     public object? Step { get; set; }
     public object? MinStep { get; set; }
     public object? MaxStep { get; set; }
@@ -77,17 +79,17 @@ public sealed class ParameterAttribute : Attribute
     public int DefaultSearchSpacesCount => DefaultSearchSpaces?.Length ?? 0;
 
 
-    public IParameterOptimizationOptions GetParameterOptimizationOptions(Type valueType)
-    {
-        if (parameterOptimizationOptions == null)
-        {
-            //parameterOptimizationOptions = (IParameterOptimizationOptions)Activator.CreateInstance(typeof(ParameterOptimizationOptions<>).MakeGenericType(valueType))!;
-            parameterOptimizationOptions = LionFire.Trading.ParameterOptimizationOptions.Create(valueType);
-            AssignFromExtensions.AssignNonDefaultPropertiesFrom(parameterOptimizationOptions!, this);
-        }
-        return parameterOptimizationOptions;
-    }
-    private IParameterOptimizationOptions? parameterOptimizationOptions;
+    //public IParameterOptimizationOptions GetParameterOptimizationOptions(Type valueType)
+    //{
+    //    if (parameterOptimizationOptions == null)
+    //    {
+    //        //parameterOptimizationOptions = (IParameterOptimizationOptions)Activator.CreateInstance(typeof(ParameterOptimizationOptions<>).MakeGenericType(valueType))!;
+    //        parameterOptimizationOptions = LionFire.Trading.ParameterOptimizationOptions.Create(valueType, "<AttributePrototype>");
+    //        AssignFromExtensions.AssignNonDefaultPropertiesFrom(parameterOptimizationOptions!, this);
+    //    }
+    //    return parameterOptimizationOptions;
+    //}
+    //private IParameterOptimizationOptions? parameterOptimizationOptions;
 }
 
 

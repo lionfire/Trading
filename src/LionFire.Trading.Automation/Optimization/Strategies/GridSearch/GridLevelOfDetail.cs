@@ -1,13 +1,17 @@
-﻿using LionFire.Hosting;
+﻿using DynamicData;
+using DynamicData.Binding;
+using LionFire.Hosting;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Options;
 using System.Collections;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Reactive.Linq;
 using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
 
-public class GridLevelOfDetail : ILevelOfDetail
+public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
 {
     #region Identity
 
@@ -33,20 +37,29 @@ public class GridLevelOfDetail : ILevelOfDetail
     {
         Level = level;
         OptimizerLevelsOfDetail = optimizerLevelsOfDetail;
-        foreach ((var info, var options) in OptimizerLevelsOfDetail.AllParameters
-            .Where(p => optimizerLevelsOfDetail.POptimization.EffectiveEnableOptimization(p.info, p.options))
-            )
-        {
-            var state = ParameterLevelOfDetailInfo.Create(level, info, options);
-            Parameters.Add(state);
-        }
+        //foreach (var options in OptimizerLevelsOfDetail.POptimization.OptimizableParameters.KeyValues.Values)
+        ////foreach ((var info, var options) in OptimizerLevelsOfDetail.AllParameters
+        ////.Where(p => optimizerLevelsOfDetail.POptimization.EffectiveEnableOptimization(p.options))
+        ////)
+        //{
+        //    var state = ParameterLevelOfDetailInfo.Create(level, options.Info, options);
+        //    ParametersList.Add(state);
+        //}
+
+        OptimizerLevelsOfDetail.POptimization.OptimizableParameters
+          .ToObservableChangeSet<IObservableCollection<IParameterOptimizationOptions>, IParameterOptimizationOptions>()
+          .Filter(options => options.IsEligibleForOptimization)
+          .Transform(options => ParameterLevelOfDetailInfo.Create(level, options.Info, options))
+          .Bind(out parameters)
+          .Subscribe();
     }
 
     #endregion
 
     #region State
 
-    public List<IParameterLevelOfDetailInfo> Parameters { get; set; } = new();
+    public ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> Parameters => parameters;
+    private ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> parameters;
 
     #region Derived
 
@@ -62,6 +75,9 @@ public class GridLevelOfDetail : ILevelOfDetail
     {
         return new StepEnumerator(this);
     }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
     //IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     private class StepEnumerator : IEnumerator<int[]>
@@ -73,13 +89,17 @@ public class GridLevelOfDetail : ILevelOfDetail
         public StepEnumerator(GridLevelOfDetail gridLevelOfDetailState)
         {
             this.gridLevelOfDetailState = gridLevelOfDetailState;
+            
             current = new int[gridLevelOfDetailState.Parameters.Count];
             max = new int[gridLevelOfDetailState.Parameters.Count];
+
+            //for(int d = 0; d < gridLevelOfDetailState.Parameters.Count; d++) { 
+            //}
             int i = 0;
             foreach (var p in gridLevelOfDetailState.Parameters)
             {
-                Debug.WriteLine($"Parameter: {gridLevelOfDetailState.OptimizerLevelsOfDetail.OptimizableParameters[i].info.Key}  TestCount: {p.TestCount}");
-                max[i++] = (int)p.TestCount;
+                current[i] = -1; 
+                max[i++] = (int)p.TestCount - 1;
             }
         }
 
@@ -94,13 +114,13 @@ public class GridLevelOfDetail : ILevelOfDetail
         {
             for (int i = 0; i < current.Length; i++)
             {
-                if (current[i] < max[i] - 1)
+                if (current[i] < max[i])
                 {
                     current[i]++;
                     //Debug.WriteLine("Iterator: " + string.Join(", ", current));
                     return true;
                 }
-                current[i] = 0;
+                current[i] = -1;
             }
             return false;
         }

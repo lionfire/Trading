@@ -3,7 +3,9 @@ using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Automation.Optimization;
 using MudBlazor;
 using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
+//using ReactiveUI.Fody.Helpers;
+//using ReactiveAttribute = ReactiveUI.Fody.Helpers.ReactiveAttribute;
+using ReactiveUI.SourceGenerators;
 using LionFire.Blazor.Components.Terminal;
 using System.Reactive.Subjects;
 using System.Reactive;
@@ -15,13 +17,13 @@ using LionFire.Trading.Journal;
 using System.Reactive.Linq;
 using LionFire.Mvvm;
 using System.Reactive.Disposables;
-using ReactiveUI.SourceGenerators;
-using ReactiveAttribute = ReactiveUI.Fody.Helpers.ReactiveAttribute;
 using QuantConnect.Api;
+using LionFire.Blazor.Components;
+using LionFire.ReactiveUI_;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
-public partial class OneShotOptimizeVM : ReactiveObject
+public partial class OneShotOptimizeVM : DisposableBaseViewModel
 {
     public LogVM LinesVM { get; } = new();
     public ILogger ConsoleLog => LinesVM;
@@ -33,7 +35,7 @@ public partial class OneShotOptimizeVM : ReactiveObject
     {
         var p = POptimization2;
 
-        var c = PMultiBacktestContext.CommonBacktestParameters;
+        var c = Context.CommonBacktestParameters;
         c.ExchangeSymbol = new("Binance", "futures", "BTCUSDT");
         c.PBotType = BotTypes.FirstOrDefault();
         c.TimeFrame = TimeFrame.m1;
@@ -68,11 +70,19 @@ public partial class OneShotOptimizeVM : ReactiveObject
         debouncedChanges = changesToDebounce.Throttle(TimeSpan.FromMilliseconds(500));
         disposables.Add(this.WhenAnyValue(x => x.IsRunning).Subscribe(v => OnIsRunningValue(v)));
 
+        this.WhenAnyValue(x => x.Context.POptimization.Parameters).Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
     }
     CompositeDisposable disposables = new();
 
     [Reactive]
-    public OptimizationProgress Progress { get; set; } = OptimizationProgress.NoProgress;
+    private OptimizationProgress _progress = OptimizationProgress.NoProgress;
+
+    void OnParametersChanged()
+    {
+        Debug.WriteLine($"Context.POptimization.Parameters: {Context.POptimization.Parameters.Count}");
+        this.RaisePropertyChanged(nameof(MinParameterPriority));
+        this.RaisePropertyChanged(nameof(MaxParameterPriority));
+    }
 
     private void OnIsRunningValue(bool val)
     {
@@ -99,7 +109,8 @@ public partial class OneShotOptimizeVM : ReactiveObject
     #region State
 
     [Reactive]
-    public bool IsCompleted { get; set; }
+    private bool _isCompleted;
+
     //[Reactive]
     //public bool IsRunning { get; set; }
 
@@ -112,9 +123,10 @@ public partial class OneShotOptimizeVM : ReactiveObject
     private bool _isRunning;
 
     [Reactive]
-    public bool IsAborted { get; set; }
+    private bool _isAborted;
+
     [Reactive]
-    public bool IsAborting { get; set; }
+    private bool _isAborting;
 
     //[Reactive]
     //public int TestsQueued { get; set; }
@@ -130,24 +142,40 @@ public partial class OneShotOptimizeVM : ReactiveObject
     Subject<Unit> changes = new();
 
     [Reactive]
-    public OptimizationTask? OptimizationTask { get; set; }
+    private OptimizationTask? _optimizationTask;
+
+    // TODO
+    //public B NestedViewModel
+    //{
+    //    get { return _nestedViewModel; }
+    //    set { RaiseAndSetNestedViewModelIfChanged(ref _nestedViewModel, value); }
+    //}
+    //private B _nestedViewModel;
 
     public IObservableCache<BacktestBatchJournalEntry, (int, long)>? Backtests { get; set; }
 
     #region Input Binding
 
-    public string Exchange { get; set; } = "Binance";
+    [Reactive]
+    private string _exchange = "Binance";
 
-    public Type PBotType { get; set; } = typeof(PAtrBot<double>);
-    public string ExchangeArea { get; set; } = "futures";
-    public string Symbol { get; set; } = "BTCUSDT";
-    public string TimeFrameString { get; set; } = "h1";
+    [Reactive]
+    private Type _PBotType = typeof(PAtrBot<double>);
+
+    [Reactive]
+    private string _exchangeArea = "futures";
+
+    [Reactive]
+    private string _symbol = "BTCUSDT";
+
+    [Reactive]
+    private string _timeFrameString = "h1";
 
     public int BatchSize { get; set; } = 1024;//= 128;
     public double BatchSizeExponential { get => Math.Log2(BatchSize); set => BatchSize = (int)Math.Pow(2.0, value); }
 
-    public int MinParameterPriority => POptimization2.LevelsOfDetail.BotParameterPropertiesInfo.PathDictionary.Values.Select(v=>v.ParameterAttribute?.OptimizePriorityInt ?? 0).Min();
-    public int MaxParameterPriority => POptimization2.LevelsOfDetail.BotParameterPropertiesInfo.PathDictionary.Values.Select(v=>v.ParameterAttribute?.OptimizePriorityInt ?? 0).Max();
+    public int MinParameterPriority => Context.POptimization.Parameters.Count == 0 ? 0 : Context.POptimization.Parameters.KeyValues.Values.Min(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
+    public int MaxParameterPriority => Context.POptimization.Parameters.Count == 0 ? 0 : Context.POptimization.Parameters.KeyValues.Values.Max(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
 
     public long MaxBacktests { get => POptimization2.MaxBacktests; set => POptimization2.MaxBacktests = value; }
     public double MaxBacktestsExponential { get => Math.Log2(MaxBacktests); set => MaxBacktests = (long)Math.Pow(2.0, value); }
@@ -204,10 +232,16 @@ public partial class OneShotOptimizeVM : ReactiveObject
     }
 #endif
 
-    public PMultiBacktestContext PMultiBacktestContext { get; set; } = new();
-    public PBacktestBatchTask2 Common => PMultiBacktestContext.CommonBacktestParameters;
+    public PMultiBacktestContext Context
+    {
+        get => context;
+        set => RaiseAndSetNestedViewModelIfChanged(ref context, value);
+    }
+    private PMultiBacktestContext context = new();
 
-    public POptimization POptimization2 => PMultiBacktestContext.POptimization;
+    public PBacktestBatchTask2 Common => Context.CommonBacktestParameters;
+
+    public POptimization POptimization2 => Context.POptimization;
 
     public TimeFrame TimeFrame => TimeFrame.Parse(TimeFrameString);
 
@@ -237,7 +271,9 @@ public partial class OneShotOptimizeVM : ReactiveObject
     public void Clear()
     {
         Progress = OptimizationProgress.NoProgress;
-        PMultiBacktestContext = new();
+        OptimizationTask = null;
+
+        Context = new();
         ResetParameters();
     }
 
@@ -260,7 +296,9 @@ public partial class OneShotOptimizeVM : ReactiveObject
     {
         ConsoleLog.LogInformation("OnOptimize");
 
-        OptimizationTask = new OptimizationTask(ServiceProvider, PMultiBacktestContext);
+        Progress = OptimizationProgress.NoProgress;
+
+        OptimizationTask = new OptimizationTask(ServiceProvider, Context);
 
         var task = OptimizationTask.Run();
 

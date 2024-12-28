@@ -2,7 +2,7 @@
 @typeparam TValue where TValue : struct, INumber<TValue>
 
 <div class=@("d-flex gap-2 align-center " + (Reverse ? "flex-row-reverse" : "flex-row"))>
-    <MudSlider T="TValue" @bind-Value="effectiveValue" Color="HasValue ? Color.Primary : Color.Dark" />
+    <MudSlider T="TValue" @bind-Value="effectiveValue" Color="HasValue ? Color.Primary : Color.Dark" Min="Min" Max="Max" />
     @EffectiveValue
     <MudIconButton Class="@(HasValue ? "" : "invisible")" Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> value = default)" Disabled=!HasValue />
     @if (!string.IsNullOrEmpty(Text))
@@ -22,14 +22,13 @@
     [Parameter]
     public bool Reverse { get; set; }
     [Parameter]
-    public (HierarchicalPropertyInfo info, IParameterOptimizationOptions options) Parameter { get; set; }
+    public IParameterOptimizationOptions? Parameter { get; set; }
 
     [Parameter]
     public TValue EffectiveValue { get; set; }
     TValue effectiveValue { get => EffectiveValue; set { EffectiveValueChanged.InvokeAsync(value); } }
     [Parameter]
     public EventCallback<TValue> EffectiveValueChanged { get; set; }
-
     [Parameter]
     public TValue? Value { get; set; }
     TValue? value { get => Value; set { ValueChanged.InvokeAsync(value); } }
@@ -41,10 +40,15 @@
     [Parameter]
     public EventCallback<bool> HasValueChanged { get; set; }
 
+    [Parameter]
+    public TValue Min{ get; set; }
+    [Parameter]
+    public TValue Max{ get; set; }
+
     #region Convenience
 
-    public HierarchicalPropertyInfo info => Parameter.info;
-    public ParameterOptimizationOptions<TValue> Options => (ParameterOptimizationOptions<TValue>)Parameter.options;
+    public HierarchicalPropertyInfo info => Parameter?.Info;
+    public ParameterOptimizationOptions<TValue>? Options => (ParameterOptimizationOptions<TValue>?)Parameter;
 
     #endregion
 }

@@ -32,14 +32,14 @@
                                     @* <div class="label">Completish</div> *@
                                     <div class="value" title="Queued">@ViewModel.Progress.Queued</div>
                                 </div>
-                                <MudProgressLinear style="align-self: start;" Color="Color.Primary" Value="@ViewModel.Progress.Queued" Max="@ViewModel.POptimization2.LevelsOfDetail.PlannedScanTotal" Size="Size.Small">
+                                <MudProgressLinear style="align-self: start;" Color="Color.Primary" Value="@ViewModel.Progress.Queued" Max="@ViewModel.Context.POptimization.LevelsOfDetail.PlannedScanTotal" Size="Size.Small">
                                     @*    <MudText Typo="Typo.subtitle1" Color="Color.Tertiary">
                                         <b>@ViewModel.Progress.Queued</b>
                                     </MudText> *@
                                 </MudProgressLinear>
                                 <div class="lf-field" title="Planned">
                                     @* <div class="label">Fractional Progress</div> *@
-                                    <div class="value">@ViewModel.POptimization2.LevelsOfDetail.PlannedScanTotal</div>
+                                    <div class="value">@ViewModel.Context.POptimization.LevelsOfDetail.PlannedScanTotal</div>
                                 </div>
                             }
 
@@ -141,7 +141,7 @@
             {
             }
         }
-        <MudButton OnClick="@(()=>ViewModel!.POptimization2.OnLevelsOfDetailChanged())" Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Large">
+        <MudButton OnClick="@(()=>ViewModel!.Context.POptimization.OnLevelsOfDetailChanged())" Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Large">
             <text>OnLevelsOfDetailChanged</text>
         </MudButton>
         <MudButton OnClick="@ViewModel!.Clear" Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Large">

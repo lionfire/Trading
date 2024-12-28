@@ -1,6 +1,7 @@
 ﻿
 using DynamicData;
 using Hjson;
+using LionFire.ExtensionMethods.Collections;
 using LionFire.ExtensionMethods.Copying;
 using LionFire.Extensions.Logging;
 using LionFire.Serialization.Csv;
@@ -157,14 +158,17 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
         StartTime = DateTimeOffset.UtcNow;
 
-        IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> optimizableParameters = State.OptimizableParameters;
-        IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> unoptimizableParameters = State.UnoptimizableParameters;
+        var optimizableParameters = State.OptimizableParameters;
+        var unoptimizableParameters = State.UnoptimizableParameters;
 
         // Start a loop to read from the ParametersToTest channel
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
         int maxBatchSize = OptimizationParameters.MaxBatchSize;
 
-        Channel<int[]> ParametersToTest = Channel.CreateBounded<int[]>(new BoundedChannelOptions(maxBatchSize * 2) { FullMode = BoundedChannelFullMode.Wait, SingleReader = true, SingleWriter = true });
+        var ParametersToTest = Channel.CreateBounded<List<int>>(new BoundedChannelOptions(maxBatchSize * 2) { FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true, SingleWriter = true, AllowSynchronousContinuations = true
+            //SingleReader = false, SingleWriter = false, AllowSynchronousContinuations = false
+        });
 
         bool consumerFinished = false;
         int backtestsEnqueued = 0;
@@ -180,19 +184,26 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                 batchStaging.Clear();
 
                 int zeroesCount = 0;
-                await foreach (var parameters in ParametersToTest.Reader.ReadAllAsync(CancellationToken).ConfigureAwait(false))
+                await foreach (var parameters /*Bundle */in ParametersToTest.Reader.ReadAllAsync(CancellationToken)
+                .ConfigureAwait(false)
+                )
                 {
-                    if (!parameters.Where(p => p != 0).Any())
+                    //foreach (var parameters in parametersBundle)
                     {
-                        if (zeroesCount++ > 1)
+                        //if (!parameters.Where(p => p != 0).Any())
+                        //{
+                        //    if (zeroesCount++ > 1)
+                        //    {
+                        //        Debug.WriteLine("All zeros count: " + zeroesCount);
+                        //    }
+                        //}
+                        if (CancellationToken.IsCancellationRequested) { Debug.WriteLine("CancellationToken is canceled"); }
+                        Debug.WriteLine("R: " + parameters.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
+                        batchStaging.Add(parameters.ToArray());
+                        if (batchStaging.Count >= OptimizationTask.Parameters.MaxBatchSize)
                         {
-                            Debug.WriteLine("All zeros count: " + zeroesCount);
+                            break;
                         }
-                    }
-                    batchStaging.Add(parameters);
-                    if (batchStaging.Count >= OptimizationTask.Parameters.MaxBatchSize)
-                    {
-                        break;
                     }
                 }
 
@@ -218,15 +229,15 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                             {
                                 var pBot = Activator.CreateInstance(OptimizationParameters.PBotType);
 
-                                foreach (var kvp in unoptimizableParameters)
+                                foreach (var poo in unoptimizableParameters)
                                 {
-                                    kvp.info.SetValue(pBot, kvp.options.DefaultValue);
+                                    poo.Info.SetValue(pBot, poo.SingleValue ?? poo.DefaultValue);
                                 }
 
                                 int parameterIndex = 0;
                                 foreach (var kvp in optimizableParameters)
                                 {
-                                    kvp.info.SetValue(pBot, State.CurrentLevel.Parameters[parameterIndex]
+                                    kvp.Info.SetValue(pBot, State.CurrentLevel.Parameters[parameterIndex]
                                         .GetValue(batchStaging[batchStagingIndex][parameterIndex]));
                                     parameterIndex++;
                                 }
@@ -287,18 +298,33 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
             {
                 while (State.CurrentLevelIndex <= 0 && !consumerFinished && remainingBacktestsAllowed > 0 && !CancellationToken.IsCancellationRequested)
                 {
-                    foreach (var current in State.CurrentLevel)
+                    foreach (var bundle in State.CurrentLevel
+                    //.Batch(16)
+                    )
                     {
-
-                        //Debug.WriteLine(current.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
-
-                        await ParametersToTest.Writer.WriteAsync(current, CancellationToken).ConfigureAwait(false);
-                        if (remainingBacktestsAllowed-- == 0)
+                        //foreach (var current in bundle)
                         {
-                            Logger.LogWarning($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
-                            Debug.WriteLine($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
-                            // TODO: Set a warning flag on the results
-                            break;
+                            //var bundleCopy = bundle;
+                            //var list = bundle.ToList();
+                            //var list = new List<int[]>();
+                            //list.Add(bundleCopy);
+                            var list = new List<int>();
+                            list.Add(bundle);
+
+
+                            //Debug.WriteLine("W:" + bundleCopy.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
+
+                            await ParametersToTest.Writer.WriteAsync(list, CancellationToken)
+                            .ConfigureAwait(false)
+                            ;
+                            //Debug.WriteLine("Write channel parameters: " + copy.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
+                            if (remainingBacktestsAllowed-- == 0)
+                            {
+                                Logger.LogWarning($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
+                                Debug.WriteLine($"Backtest limit reached: {OptimizationParameters.MaxBacktests}");
+                                // TODO: Set a warning flag on the results
+                                break;
+                            }
                         }
                     }
                     break; // TODO NEXT: Go up a level, or optimize promising regions
@@ -317,8 +343,10 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
             //    await ParametersToTest.Writer.WriteAsync(parameters);
             //}
             //await Task.Yield();
+            //await Task.Delay(10000 ); // TEMP
             ParametersToTest.Writer.Complete();
             Logger.LogInformation("Writing to ParametersToTest complete.");
+            Debug.WriteLine("Writing to ParametersToTest complete.");
         });
 
         await producerTask;

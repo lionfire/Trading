@@ -5,9 +5,17 @@ namespace LionFire.Trading;
 
 public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<IReactiveObject>, IReactiveObject
 {
+    #region Identity
+
+    string Path { get; }
+
+    HierarchicalPropertyInfo Info { get; }
+
+    #endregion
+
     Type ValueType { get; }
     int? OptimizeOrder { get; set; }
-    double? DistributionParameter { get; }
+    double? Exponent { get; }
     //object? MinStep { get; }
     //object? MaxStep { get; }
     object? MaxValueObj { get; }
@@ -27,7 +35,7 @@ public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<
 
     bool IsEligibleForOptimization { get; }
     bool? EnableOptimization { get; set; }
-    object SingleValue { get; }
+    object? SingleValue { get; }
     object? DefaultValue { get; }
 
     #endregion
