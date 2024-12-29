@@ -141,9 +141,18 @@
             {
             }
         }
-        <MudButton OnClick="@(()=>ViewModel!.Context.POptimization.OnLevelsOfDetailChanged())" Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Large">
-            <text>OnLevelsOfDetailChanged</text>
-        </MudButton>
+        
+        <div>
+            <div class="lf-field row">
+                <div class="value">@((ViewModel.Context.POptimization.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
+                <div class="label">Comprehensiveness</div>
+            </div>
+            <MudProgressLinear Value="ViewModel.Context.POptimization.LevelsOfDetail.ComprehensiveScanPerUn" Min="0" Max="1"
+                               Color="ComprehensivenessColor" />
+            <MudProgressCircular Min="0" Max="1" Value="ViewModel.Context.POptimization.LevelsOfDetail.ComprehensiveScanPerUn" />
+        </div>
+
+
         <MudButton OnClick="@ViewModel!.Clear" Color="Color.Tertiary" Variant="Variant.Outlined" Size="Size.Large">
             <text>Clear</text>
         </MudButton>

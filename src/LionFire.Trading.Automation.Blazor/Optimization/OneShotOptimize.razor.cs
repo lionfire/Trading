@@ -53,4 +53,12 @@ public partial class OneShotOptimize
 
         return base.OnParametersSetAsync();
     }
+
+    // DUPLICATE of OptimizationStatus.razor.cs
+    MudBlazor.Color ComprehensivenessColor => ViewModel!.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn switch
+    {
+        >= 1 => Color.Success,
+        <= 0.1 => Color.Error,
+        _ => Color.Warning,
+    };
 }

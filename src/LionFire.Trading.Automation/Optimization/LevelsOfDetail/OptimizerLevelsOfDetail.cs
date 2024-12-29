@@ -45,24 +45,27 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
 
     #endregion
 
-   
-    CompositeDisposable? disposables;
+
+    CompositeDisposable? disposables = new();
     public OptimizerLevelsOfDetail(POptimization pOptimization)
     {
         POptimization = pOptimization;
-        Reset();
+        Init();
     }
 
-    void Reset() // TODO: Make this class immutable, with no reset. Make a new one instead.
+    void Init() // TODO: Make this class immutable, with no reset. Make a new one instead.
     {
-        bool firstRun ;
+            Levels = null;
+            zero = null;
+#if OLD
+
+        bool firstRun;
         if (disposables != null)
         {
             firstRun = false;
             disposables?.Dispose();
-            Levels = null;
-            zero = null;
-        }  else
+        }
+        else
         {
             firstRun = true;
         }
@@ -77,22 +80,26 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
         {
             if (firstRun)
             {
-                //this.WhenAny(kvp.Value, _ => _.Value).Subscribe(_ =>
-                //{
-                //    Reset();
-                //    POptimization.OnLevelsOfDetailChanged();
-                //});
+                kvp.Value.PropertyChanged += (s, e) =>
+                {
+                    Debug.WriteLine("PropertyChanged: " + e.PropertyName);
+                };
+                kvp.Value.WhenAny(x => x, _ => _.Value).Subscribe(_ =>
+                {
+                    Reset();
+                    POptimization.OnLevelsOfDetailChanged();
+                });
 
                 kvp.Value.SomethingChanged.Subscribe(_ =>
                 {
                     Reset();
                     POptimization.OnLevelsOfDetailChanged();
                 });
-                disposables.Add(kvp.Value.WhenAny(x => x, x => x).Subscribe(x =>
+                kvp.Value.WhenAny(x => x, x => x).Subscribe(x =>
                 {
                     Reset();
                     POptimization.OnLevelsOfDetailChanged();
-                }));
+                }).DisposeWith(disposables);
                 disposables.Add(kvp.Value.WhenAnyValue(x => x.MinValueObj).Subscribe(_ =>
                 {
                     Reset();
@@ -123,6 +130,7 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
 
         #endregion
 
+#endif
         #region Levels of Detail
 
         currentLevel = MinLevel;

@@ -70,6 +70,8 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         debouncedChanges = changesToDebounce.Throttle(TimeSpan.FromMilliseconds(500));
         disposables.Add(this.WhenAnyValue(x => x.IsRunning).Subscribe(v => OnIsRunningValue(v)));
 
+        Context.POptimization.ParametersChanged.Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
+
         this.WhenAnyValue(x => x.Context.POptimization.Parameters).Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
     }
     CompositeDisposable disposables = new();

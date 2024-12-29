@@ -9,6 +9,7 @@ using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
@@ -63,6 +64,10 @@ public partial class POptimization : ReactiveObject
             .Subscribe()
             .DisposeWith(disposables);
 
+        ParametersChanged.Subscribe(_ =>
+        {
+            OnLevelsOfDetailChanged();
+        }).DisposeWith(disposables);
 
         this.WhenAnyValue(x => x.PBotType)
             .Select(BotParameterPropertiesInfo.SafeGet)
@@ -80,7 +85,7 @@ public partial class POptimization : ReactiveObject
                             .Select(info =>
                             {
                                 var poo = CreatePoo(info);
-                                poo.SomethingChanged.Subscribe(_ => RaiseParametersChanged()).DisposeWith(disposables);
+                                poo.PropertyChanged += (s, e) => RaiseParametersChanged();
                                 return poo;
                             }));
                     }
@@ -216,7 +221,7 @@ public partial class POptimization : ReactiveObject
         //}
 
         IParameterOptimizationOptions parameterOptimizationOptions = LionFire.Trading.ParameterOptimizationOptions.Create(info);
-        
+
 
         //ParameterOptimizationOptions.Create(info.ValueType, "<AttributePrototype>");
 
@@ -272,27 +277,18 @@ public partial class POptimization : ReactiveObject
 
     public void OnLevelsOfDetailChanged()
     {
+        Debug.WriteLine("POptimization.OnLevelsOfDetailChanged");
         levelsOfDetail = null;
         ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailEnumeration));
         ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailRange));
         ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetail));
     }
 
-    public OptimizerLevelsOfDetail LevelsOfDetail
-    {
-        get
-        {
-            if (levelsOfDetail == null)
-            {
-                levelsOfDetail = new(this);
-            }
-            return levelsOfDetail;
-        }
-        set
-        {
-            levelsOfDetail = value;
-        }
-    }
+    #region Derived
+
+    public OptimizerLevelsOfDetail LevelsOfDetail => levelsOfDetail ??= new(this);
+
+    #endregion
 
     public PMultiBacktestContext Parent { get; }
 

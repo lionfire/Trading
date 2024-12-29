@@ -15,7 +15,11 @@ public partial class OptimizationStatus(ILogger<OptimizeParameters> Logger)
     {
         if (firstRender)
         {
-            this.ViewModel!.POptimization2.ParametersChanged.Subscribe(_ => StateHasChanged());
+            this.ViewModel!.POptimization2.ParametersChanged.Subscribe(_ =>
+            {
+                ViewModel.Context.POptimization.OnLevelsOfDetailChanged();
+                StateHasChanged();
+            });
         }
         return base.OnAfterRenderAsync(firstRender);
     }
