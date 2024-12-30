@@ -198,7 +198,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                         //    }
                         //}
                         if (CancellationToken.IsCancellationRequested) { Debug.WriteLine("CancellationToken is canceled"); }
-                        Debug.WriteLine("R: " + parameters.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
+                        //Debug.WriteLine("R: " + parameters.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
                         batchStaging.Add(parameters.ToArray());
                         if (batchStaging.Count >= OptimizationTask.Parameters.MaxBatchSize)
                         {

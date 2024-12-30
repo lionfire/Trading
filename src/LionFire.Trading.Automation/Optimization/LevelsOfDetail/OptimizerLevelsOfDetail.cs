@@ -14,7 +14,7 @@ namespace LionFire.Trading.Automation.Optimization;
 
 public interface ILevelOfDetail
 {
-    ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> Parameters { get; }
+    IReadOnlyList<IParameterLevelOfDetailInfo> Parameters { get; }
     double TestPermutationCount { get; }
     int Level { get; }
 }
@@ -26,6 +26,7 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
     #region (Derived)
 
     public POptimization POptimization { get; }
+    public IEnumerable<IParameterOptimizationOptions> Optimizable { get; }
 
     /// <summary>
     /// Everything up to and including level 0
@@ -45,18 +46,20 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
 
     #endregion
 
-
     CompositeDisposable? disposables = new();
-    public OptimizerLevelsOfDetail(POptimization pOptimization)
+    public OptimizerLevelsOfDetail(POptimization pOptimization, IEnumerable<IParameterOptimizationOptions> optimizable)
     {
         POptimization = pOptimization;
-        Init();
+        Optimizable = optimizable;
+        currentLevel = MinLevel;
+        //Init();
     }
 
+#if OLD
     void Init() // TODO: Make this class immutable, with no reset. Make a new one instead.
     {
-            Levels = null;
-            zero = null;
+            //Levels = null;
+            //zero = null;
 #if OLD
 
         bool firstRun;
@@ -131,7 +134,7 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
         #endregion
 
 #endif
-        #region Levels of Detail
+    #region Levels of Detail
 
         currentLevel = MinLevel;
 
@@ -139,11 +142,19 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
 
         #endregion
 
-        this.RaisePropertyChanged(nameof(LevelsOfDetail));
+        //this.RaisePropertyChanged(nameof(LevelsOfDetail));
     }
-
+#endif
     public void Dispose()
     {
+        if (Levels != null)
+        {
+            foreach (var level in Levels.Values)
+            {
+                level.Dispose();
+            }
+        }
+        zero?.Dispose();
         disposables?.Dispose();
     }
 
@@ -165,8 +176,16 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
         {
             var result = 0;
 
+            double priorTestPermutationCount = double.MaxValue;
+
             for (var level = GetLevel(result); level.TestPermutationCount > POptimization.MaxBacktests; level = GetLevel(--result))
             {
+                if (level.TestPermutationCount >= priorTestPermutationCount)
+                {
+                    throw new InvalidOperationException($"Loop detected.  Too many levels of detail being generated without progress: Level {result} and {result + 1} both have {level.TestPermutationCount} tests");
+                }
+                priorTestPermutationCount = level.TestPermutationCount;
+                //if(result < -10_000) { throw new InvalidOperationException("Possible loop detected.  Too many levels of detail being generated."); }
                 //Debug.WriteLine($"[OptimizerLevelsOfDetail] Level {result} has {level.TestPermutationCount} backtests but max is {POptimization.MaxBacktests}, so going down a level of detail");
             }
             return result;

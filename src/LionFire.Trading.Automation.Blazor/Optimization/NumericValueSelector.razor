@@ -2,8 +2,12 @@
 @typeparam TValue where TValue : struct, INumber<TValue>
 
 <div class=@("d-flex gap-2 align-center " + (Reverse ? "flex-row-reverse" : "flex-row"))>
-    <MudSlider T="TValue" @bind-Value="effectiveValue" Color="HasValue ? Color.Primary : Color.Dark" Min="Min" Max="Max" />
-    @EffectiveValue
+    <MudSlider T="TValue" @bind-Value="effectiveValue" Color="HasValue ? Color.Primary : Color.Dark" Min="Min" Max="Max" Step="EffectiveStep" ValueLabel="true" Size="@Size" />
+    @* <div style=@($"min-width: {EffectiveCharacterWidth}ch")>
+        @EffectiveValue
+    </div> *@
+    <div style="width: 4px;"/>
+    <MudNumericField Variant="Variant.Text" Style=@($"min-width: {EffectiveCharacterWidth}ch") @bind-Value=EffectiveValue Min="EffectiveHardMin" Max="EffectiveHardMax" Step="EffectiveStep" />
     <MudIconButton Class="@(HasValue ? "" : "invisible")" Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> value = default)" Disabled=!HasValue />
     @if (!string.IsNullOrEmpty(Text))
     {
@@ -12,6 +16,34 @@
 </div>
 
 @code {
+    [Parameter]
+    public Size Size { get; set; } = Size.Medium;
+
+    [Parameter]
+    public int? CharacterWidth { get; set; }
+    public int EffectiveCharacterWidth => CharacterWidth ?? 10; // TODO: Default to how many characters Max or Min Values are.
+
+    [Parameter]
+    public TValue? Step { get; set; }
+    public TValue EffectiveStep
+    {
+        get
+        {
+            if (Step.HasValue) return Step.Value;
+            if ((Max - Min) <= TValue.CreateChecked(1.0))
+            {
+                return TValue.CreateChecked(0.05);
+            }
+            else if ((Max - Min) < TValue.CreateChecked(5.0))
+            {
+                return TValue.CreateChecked(0.1);
+            }
+            else
+            {
+                return TValue.CreateChecked(1);
+            }
+        }
+    }
 
     [Parameter]
     public int TextOrder { get; set; }
@@ -41,9 +73,15 @@
     public EventCallback<bool> HasValueChanged { get; set; }
 
     [Parameter]
-    public TValue Min{ get; set; }
+    public TValue? HardMin { get; set; }
+    public TValue EffectiveHardMin => HardMin ?? Min;
     [Parameter]
-    public TValue Max{ get; set; }
+    public TValue? HardMax { get; set; }
+    public TValue EffectiveHardMax => HardMax ?? Max;
+    [Parameter]
+    public TValue Min { get; set; }
+    [Parameter]
+    public TValue Max { get; set; }
 
     #region Convenience
 

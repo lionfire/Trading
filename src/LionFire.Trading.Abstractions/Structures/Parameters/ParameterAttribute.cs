@@ -26,8 +26,8 @@ public sealed class ParameterAttribute : Attribute
     }
 
     public object? DefaultValue { get; set; }
-    public object? HardMinValue { get; set; }
-    public object? HardMaxValue { get; set; }
+    public object? HardValueMin { get; set; } 
+    public object? HardValueMax { get; set; } 
     public object? ValueMax { get; set; }
     public object? ValueMin { get; set; }
     public object? Step { get; set; }
@@ -73,7 +73,11 @@ public sealed class ParameterAttribute : Attribute
 
     public object? MinProbes { get; set; }
     public object? MaxProbes { get; set; }
-    public object? DistributionParameter { get; set; }
+    public object? Exponent { get; set; }
+    public object? DefaultExponent { get; set; }
+    public object? MinExponent { get; set; }
+    public object? MaxExponent { get; set; }
+
     public bool IsCategory => OptimizerHints == OptimizationDistributionKind.Category || OptimizerHints == OptimizationDistributionKind.SpectralCategory;
 
     public int DefaultSearchSpacesCount => DefaultSearchSpaces?.Length ?? 0;

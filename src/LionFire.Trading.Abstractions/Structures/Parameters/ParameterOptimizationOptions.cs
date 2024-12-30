@@ -57,16 +57,16 @@ public partial class ParameterOptimizationOptions<TValue>
         Info = info;
 
         this.PropertyChanged += ParameterOptimizationOptions_PropertyChanged;
-        this.WhenAny(x => x, x => x).Subscribe(x =>
-        {
-            Debug.WriteLine("WhenAny: " + x);
-            somethingChanged?.OnNext(Unit.Default);
-        });
-        this.WhenAnyValue(x => x.MaxValue).Subscribe(x =>
-        {
-            Debug.WriteLine("WhenAnyValue MaxValue: " + x);
-            somethingChanged?.OnNext(Unit.Default);
-        });
+        //this.WhenAny(x => x, x => x).Subscribe(x =>
+        //{
+        //    Debug.WriteLine("WhenAny: " + x);
+        //    somethingChanged?.OnNext(Unit.Default);
+        //});
+        //this.WhenAnyValue(x => x.MaxValue).Subscribe(x =>
+        //{
+        //    Debug.WriteLine($"POO[{info.Key}] - WhenAnyValue MaxValue: " + x);
+        //    somethingChanged?.OnNext(Unit.Default);
+        //});
     }
 
     #endregion
@@ -120,7 +120,25 @@ public partial class ParameterOptimizationOptions<TValue>
     //public TValue? SingleValue => MinValue.HasValue && MinValue == MaxValue ? MinValue : (DefaultValue ?? MinValue);
     //((MaxValue - MinValue) / TValue.CreateChecked(2.0)));
 
-    public bool HasSingleValue => SingleValue.HasValue;
+    public bool HasSingleValue
+    {
+        get => SingleValue.HasValue;
+        set
+        {
+            if (value == HasSingleValue) return;
+            if (value)
+            {
+                SingleValue = (EffectiveMaxValue - EffectiveMinValue) / TValue.CreateChecked(2.0);
+            }
+            else
+            {
+                EffectiveMaxValue = DefaultMax ?? HardValueMax ?? DefaultMaxForDataType;
+                EffectiveMinValue = DefaultMin ?? HardValueMin ?? DefaultMinForDataType;
+            }
+        }
+    }
+    public TValue DefaultSingleValue => EffectiveDefaultValue;
+
 
     object? IParameterOptimizationOptions.SingleValue => SingleValue;// ?? throw new InvalidOperationException($"{nameof(SingleValue)} not available when {nameof(IsEligibleForOptimization)} is false");
 
@@ -152,14 +170,14 @@ public partial class ParameterOptimizationOptions<TValue>
     #endregion
 
     #region Min
-    public TValue EffectiveValueMin => ValueMin ?? EffectiveHardMinValue;
+    public TValue EffectiveValueMin => ValueMin ?? EffectiveHardValueMin;
     public TValue? ValueMin { get; set; }
-    public TValue EffectiveHardMinValue
+    public TValue EffectiveHardValueMin
     {
-        get => HardMinValue ?? DefaultMinForDataType;
+        get => HardValueMin ?? DefaultMinForDataType;
         set
         {
-            HardMinValue = value;
+            HardValueMin = value;
         }
     }
 
@@ -168,7 +186,7 @@ public partial class ParameterOptimizationOptions<TValue>
     public bool AllowNegativeValues { get; set; }
 
     [Reactive]
-    private TValue? _hardMinValue;
+    private TValue? _hardValueMin;
 
     //[Reactive]
     public TValue? MinValue
@@ -177,7 +195,7 @@ public partial class ParameterOptimizationOptions<TValue>
         set
         {
             var changed = _minValue != value;
-            if (value > MaxValue)
+            if (value > MaxValue || value > EffectiveMaxValue)
             {
                 MaxValue = value;
                 changed = true;
@@ -187,7 +205,7 @@ public partial class ParameterOptimizationOptions<TValue>
                 this.RaiseAndSetIfChanged(ref _minValue, value);
                 this.RaisePropertyChanged(nameof(EffectiveMinValue));
                 //this.RaisePropertyChanged(nameof(MinValueObj));
-                OnSomethingChanged();
+                //OnSomethingChanged();
             }
         }
     }
@@ -197,7 +215,7 @@ public partial class ParameterOptimizationOptions<TValue>
     public TValue? DefaultMin { get; set; }
     public TValue EffectiveMinValue
     {
-        get => MinValue ?? DefaultMin ?? HardMinValue ?? (AllowNegativeValues ? DataTypeMinValue : TValue.Zero);
+        get => MinValue ?? DefaultMin ?? HardValueMin ?? (AllowNegativeValues ? DataTypeMinValue : TValue.Zero);
         set => MinValue = value;
     }
 
@@ -205,20 +223,20 @@ public partial class ParameterOptimizationOptions<TValue>
 
     #region Max
 
-    public TValue EffectiveValueMax => ValueMax ?? EffectiveHardMaxValue;
+    public TValue EffectiveValueMax => ValueMax ?? EffectiveHardValueMax;
     public TValue? ValueMax { get; set; }
-    
-    public TValue EffectiveHardMaxValue
+
+    public TValue EffectiveHardValueMax
     {
-        get => HardMaxValue ?? DefaultMaxForDataType;
+        get => HardValueMax ?? DefaultMaxForDataType;
         set
         {
-            HardMaxValue = value;
+            HardValueMax = value;
         }
     }
 
     [Reactive]
-    private TValue? _hardMaxValue;
+    private TValue? _hardValueMax;
 
     public TValue? MaxValue
     {
@@ -234,9 +252,9 @@ public partial class ParameterOptimizationOptions<TValue>
             if (changed)
             {
                 this.RaiseAndSetIfChanged(ref _maxValue, value);
-                this.RaisePropertyChanged(nameof(EffectiveMinValue));
-                this.RaisePropertyChanged(nameof(MinValueObj));
-                OnSomethingChanged();
+                this.RaisePropertyChanged(nameof(EffectiveMaxValue));
+                //this.RaisePropertyChanged(nameof(MaxValueObj));
+                //OnSomethingChanged();
             }
 
         }
@@ -249,10 +267,10 @@ public partial class ParameterOptimizationOptions<TValue>
     public TValue? DefaultMax { get; set; }
     public TValue EffectiveMaxValue
     {
-        get => MaxValue ?? DefaultMax ?? HardMaxValue ?? DefaultMaxForDataType;
+        get => MaxValue ?? DefaultMax ?? HardValueMax ?? DefaultMaxForDataType;
         set
         {
-            if (value < MinValue)
+            if (value < MinValue || value < EffectiveMinValue)
             {
                 MinValue = value;
             }
@@ -273,7 +291,7 @@ public partial class ParameterOptimizationOptions<TValue>
     public TValue? DefaultValue { get; set; }
     public TValue EffectiveDefaultValue
     {
-        get => DefaultValue ?? EffectiveMinValue; // TODO - what should the fallback default value be?
+        get => DefaultValue ?? (DefaultMax ?? HardValueMax ?? DefaultMaxForDataType) - (DefaultMin ?? HardValueMin ?? DefaultMinForDataType) / TValue.CreateChecked(2.0);
         set => DefaultValue = value;
     }
     public bool HasDefaultValue => DefaultValue.HasValue;
@@ -318,19 +336,24 @@ public partial class ParameterOptimizationOptions<TValue>
     {
         get
         {
-            var maxSteps = EffectiveMinStep <= TValue.Zero ? EffectiveRange : EffectiveRange / EffectiveMinStep;
+            var maxSteps = EffectiveMinStep <= TValue.Zero ? EffectiveRange : (EffectiveRange / EffectiveMinStep);
             while (maxSteps > TValue.CreateChecked(DefaultMinOptimizationSteps))
             {
                 maxSteps /= TValue.CreateChecked(2);
             }
-            return maxSteps <= TValue.Zero ? TValue.AdditiveIdentity : EffectiveRange / maxSteps;
+            return maxSteps <= TValue.Zero ? TValue.CreateChecked(1) : (EffectiveRange / maxSteps);
         }
     }
 
     #endregion
 
 
+    #region Step Distribution
+
+
     #region Exponent (for Step)
+
+    public double ExponentSliderStep { get; set; } = 0.1;
 
     [Reactive]
     private double? _exponent;
@@ -338,10 +361,11 @@ public partial class ParameterOptimizationOptions<TValue>
     public bool HasExponent => Exponent.HasValue;
     public double EffectiveExponent
     {
-        get => Exponent ?? DefaultExponent;
+        get => Exponent ?? DefaultExponent ?? DefaultDefaultExponent;
         set => Exponent = value;
     }
-    private double DefaultExponent => 1.0;
+    public double? DefaultExponent { get; set; }
+    public double DefaultDefaultExponent => 1.0;
 
     public ExponentBasisOrigin ExponentOrigin { get; set; }
 
@@ -360,6 +384,9 @@ public partial class ParameterOptimizationOptions<TValue>
     => MaxExponent ?? DefaultMaxExponent;
 
     private double DefaultMaxExponent => 10.0;
+
+    #endregion
+
 
     #endregion
 
@@ -391,7 +418,7 @@ public partial class ParameterOptimizationOptions<TValue>
         (EffectiveMaxStep <= TValue.Zero ? Convert.ToUInt64(Math.Ceiling(Convert.ToSingle(EffectiveRange))) : Convert.ToUInt64(Math.Ceiling(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMaxStep))));
     public ulong? EffectiveMinCount => Math.Max(MinCount ?? 0, MinCountFromMaxStep);
 
-    public ulong MaxCountFromMinStep => (EffectiveMinStep <= TValue.Zero ? Convert.ToUInt64(Convert.ToSingle(EffectiveRange)) : Convert.ToUInt64(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep)));
+    public ulong MaxCountFromMinStep => EffectiveMinStep == TValue.Zero ? 1 : Convert.ToUInt64(Math.Abs(Convert.ToSingle(EffectiveRange) / Convert.ToSingle(EffectiveMinStep)));
     public ulong EffectiveMaxCount => Math.Min((MaxCount ?? ulong.MaxValue), MaxCountFromMinStep);
 
 

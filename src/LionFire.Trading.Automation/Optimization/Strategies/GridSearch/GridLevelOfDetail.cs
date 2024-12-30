@@ -6,6 +6,7 @@ using Microsoft.Extensions.Options;
 using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Text.Json.Serialization;
 
@@ -46,24 +47,42 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
         //    ParametersList.Add(state);
         //}
 
-        OptimizerLevelsOfDetail.POptimization.OptimizableParameters
-          .ToObservableChangeSet<IObservableCollection<IParameterOptimizationOptions>, IParameterOptimizationOptions>()
-          .Filter(options => options.IsEligibleForOptimization)
-          .Transform(options => ParameterLevelOfDetailInfo.Create(level, options.Info, options))
-          .Bind(out parameters)
-          .Subscribe();
+        parameters = new List<IParameterLevelOfDetailInfo>(OptimizerLevelsOfDetail.Optimizable.Select(options => ParameterLevelOfDetailInfo.Create(level, options.Info, options)));
+
+
+        //Task.Run(() =>
+        //{
+        //    OptimizerLevelsOfDetail.POptimization.OptimizableParameters
+        //  .ToObservableChangeSet<IObservableCollection<IParameterOptimizationOptions>, IParameterOptimizationOptions>()
+        //  //.Filter(options => options.IsEligibleForOptimization)
+        //  .Transform(options => ParameterLevelOfDetailInfo.Create(level, options.Info, options))
+        //  .Bind(out parameters)
+        //  .Subscribe()
+        //  .DisposeWith(disposables);
+        //})
+        //    //.Wait()
+        //    ;
+    }
+
+    //CompositeDisposable disposables = new();
+
+    public void Dispose()
+    {
+        //disposables?.Dispose();
     }
 
     #endregion
 
     #region State
 
-    public ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> Parameters => parameters;
-    private ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> parameters;
+    //public ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> Parameters => parameters;
+    //private ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> parameters;
+    public IReadOnlyList<IParameterLevelOfDetailInfo> Parameters => parameters;
+    private List<IParameterLevelOfDetailInfo> parameters;
 
     #region Derived
 
-    public double TestPermutationCount => Parameters.Aggregate(1.0, (acc, x) => acc * x.TestCount);
+    public double TestPermutationCount => (Parameters == null || !Parameters.Any()) ? 0.0 : Parameters.Aggregate(1.0, (acc, x) => acc * x.TestCount);
 
     #endregion
 
@@ -89,7 +108,7 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
         public StepEnumerator(GridLevelOfDetail gridLevelOfDetailState)
         {
             this.gridLevelOfDetailState = gridLevelOfDetailState;
-            
+
             current = new int[gridLevelOfDetailState.Parameters.Count];
             max = new int[gridLevelOfDetailState.Parameters.Count];
 
@@ -98,7 +117,7 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
             int i = 0;
             foreach (var p in gridLevelOfDetailState.Parameters)
             {
-                current[i] = -1; 
+                current[i] = -1;
                 max[i++] = (int)p.TestCount - 1;
             }
         }
@@ -120,7 +139,7 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
                     //Debug.WriteLine("Iterator: " + string.Join(", ", current));
                     return true;
                 }
-                current[i] = -1;
+                current[i] = 0;
             }
             return false;
         }

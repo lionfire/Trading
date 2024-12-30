@@ -9,6 +9,7 @@ using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Reactive;
 using System.Reactive.Disposables;
@@ -46,9 +47,21 @@ public partial class POptimization : ReactiveObject
             .AutoRefreshOnObservable(_ => minParameterPriorityChanged)
             .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.EnableOptimization))
             .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.IsEligibleForOptimization))
-            .Transform(poo => (poo, EffectiveEnableOptimization(poo)), true)
+            //.Throttle(TimeSpan.FromMilliseconds(75))
+            .Transform(poo =>
+            {
+                Debug.WriteLine($"POptimization Rx bind for optimizableParameters.  Transforming: {poo.Info.Key} - {EffectiveEnableOptimization(poo)}");
+                return (poo, EffectiveEnableOptimization(poo));
+            }, true)
             .Filter(tuple => tuple.Item2)
             .Transform(tuple => tuple.poo)
+            .SortBy(poo => -(poo.OptimizeOrder ?? 0))
+            .SortBy(poo => poo.Info.OptimizeOrderTiebreaker)
+            .SortBy(poo => poo.Info.Key)
+            //        .PathDictionary
+            //            .OrderByDescending(kvp => kvp.Value.options.OptimizeOrder)
+            //            .ThenBy(kvp => kvp.Value.info.OptimizeOrderTiebreaker)
+            //            .ThenBy(kvp => kvp.Key)
             .Bind(optimizableParameters)
             .Subscribe()
             .DisposeWith(disposables);
@@ -57,22 +70,42 @@ public partial class POptimization : ReactiveObject
             .AutoRefreshOnObservable(_ => minParameterPriorityChanged)
             .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.EnableOptimization))
             .AutoRefreshOnObservable(x => x.WhenAnyValue(p => p.IsEligibleForOptimization))
-            .Transform(poo => (poo, EffectiveEnableOptimization(poo)), true)
+            .Transform(poo =>
+            {
+                Debug.WriteLine($"POptimization Rx bind for optimizableParameters.  Transforming: {poo.Info.Key} - {EffectiveEnableOptimization(poo)}");
+                return (poo, EffectiveEnableOptimization(poo));
+            }, true)
             .Filter(tuple => !tuple.Item2)
             .Transform(tuple => tuple.poo)
             .Bind(unoptimizableParameters)
             .Subscribe()
             .DisposeWith(disposables);
 
-        ParametersChanged.Subscribe(_ =>
+        ParametersChanged
+            .Throttle(TimeSpan.FromMilliseconds(300))
+            .Subscribe(_ =>
         {
-            OnLevelsOfDetailChanged();
+            Debug.WriteLine($"POptimization Rx bind: ParametersChanged => OnLevelsOfDetailChanged.");
+            OnLevelsOfDetailInputsChanged();
         }).DisposeWith(disposables);
+
+        //this.WhenAnyValue(x => x.OptimizableParameters)
+        //       .Select(parameters => new OptimizerLevelsOfDetail(this, parameters))
+        //       .ToProperty(this, x => x.LevelsOfDetail, out _levelsOfDetail)
+        //       .DisposeWith(disposables);
+        _levelsOfDetail = new(this, []);
+        (optimizableParameters).CollectionChanged += (s, e) =>
+        {
+            InitLevelsOfDetail();
+        };
+
 
         this.WhenAnyValue(x => x.PBotType)
             .Select(BotParameterPropertiesInfo.SafeGet)
             .Subscribe(properties =>
             {
+                Debug.WriteLine($"POptimization Rx bind: PBotType => parameters");
+
                 parameters.Edit(u =>
                 {
                     u.Clear();
@@ -93,12 +126,7 @@ public partial class POptimization : ReactiveObject
                 });
             })
             .DisposeWith(disposables);
-
-        // Prior logic, not sure where it goes now:
-        //        .PathDictionary
-        //            .OrderByDescending(kvp => kvp.Value.options.OptimizeOrder)
-        //            .ThenBy(kvp => kvp.Value.info.OptimizeOrderTiebreaker)
-        //            .ThenBy(kvp => kvp.Key)
+   
     }
 
 
@@ -169,9 +197,12 @@ public partial class POptimization : ReactiveObject
         get => minParameterPriority;
         set
         {
+            if (minParameterPriority == value) return;
             minParameterPriority = value;
-            levelsOfDetail = null;
-            this.RaiseAndSetIfChanged(ref minParameterPriority, value);
+
+            OnLevelsOfDetailInputsChanged();
+            this.RaisePropertyChanged(nameof(MinParameterPriority));
+            this.RaisePropertyChanged(nameof(InverseMinParameterPriority));
         }
     }
     private int minParameterPriority;
@@ -225,6 +256,8 @@ public partial class POptimization : ReactiveObject
 
         //ParameterOptimizationOptions.Create(info.ValueType, "<AttributePrototype>");
 
+        using var _ = parameterOptimizationOptions.SuppressChangeNotifications();
+
         AssignFromExtensions.AssignNonDefaultPropertiesFrom(parameterOptimizationOptions!, info.ParameterAttribute);
 
         #region Attribute
@@ -275,31 +308,58 @@ public partial class POptimization : ReactiveObject
     public IEnumerable<int> LevelsOfDetailRange => Enumerable.Range(LevelsOfDetail.MinLevel, 0); // FUTURE: Levels above 0
     public IEnumerable<ILevelOfDetail> LevelsOfDetailEnumeration => Enumerable.Range(LevelsOfDetail.MinLevel, 1 - LevelsOfDetail.MinLevel).Select(level => LevelsOfDetail.GetLevel(level));
 
-    public void OnLevelsOfDetailChanged()
+    private void InitLevelsOfDetail()
     {
-        Debug.WriteLine("POptimization.OnLevelsOfDetailChanged");
-        levelsOfDetail = null;
-        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailEnumeration));
-        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailRange));
-        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetail));
+        LevelsOfDetail = new OptimizerLevelsOfDetail(this, optimizableParameters
+            .Where(p => p.IsEligibleForOptimization)
+            );
     }
+
+    public void OnLevelsOfDetailInputsChanged()
+    {
+        //Debug.WriteLine("POptimization.OnLevelsOfDetailChanged: levelsOfDetail invalidated");
+        //levelsOfDetail?.Dispose();
+        //levelsOfDetail = null;
+
+        lock (_debounceLodLock)
+        {
+            if (debounceLod == null)
+            {
+                debounceLod = new Timer(_ =>
+                {
+                    Debug.WriteLine($"POptimization.OnLevelsOfDetailChanged: notifying. Parameters: {Parameters.Count}, Optimizable: {OptimizableParameters.Count}");
+                    InitLevelsOfDetail();
+                    ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailEnumeration));
+                    ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailRange));
+                    ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetail));
+
+                    debounceLod?.Dispose();
+                    debounceLod = null;
+                }, null, 300, Timeout.Infinite);
+            }
+        }
+    }
+    Timer? debounceLod;
+    object _debounceLodLock = new();
 
     #region Derived
 
-    public OptimizerLevelsOfDetail LevelsOfDetail => levelsOfDetail ??= new(this);
+    //public OptimizerLevelsOfDetail LevelsOfDetail => _levelsOfDetail.Value;
+    //private readonly ObservableAsPropertyHelper<OptimizerLevelsOfDetail> _levelsOfDetail;
+    [Reactive]
+    private OptimizerLevelsOfDetail _levelsOfDetail;
 
     #endregion
 
     public PMultiBacktestContext Parent { get; }
 
-    private OptimizerLevelsOfDetail? levelsOfDetail;
 
     public bool EffectiveEnableOptimization(IParameterOptimizationOptions options)
     {
         if (!options.IsEligibleForOptimization) return false;
         if (options.EnableOptimization == false) return false;
 
-        return options.Info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
+        return options.EnableOptimization == true || options.Info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
     }
 
     #region Misc

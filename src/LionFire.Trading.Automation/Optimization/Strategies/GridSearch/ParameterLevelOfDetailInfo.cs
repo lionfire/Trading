@@ -68,8 +68,8 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
         }
     }
 
-    public double ExponentAdjustment => exponentAdjustment;
-    private readonly double exponentAdjustment;
+    public double ExponentDouble => exponentDouble;
+    private readonly double exponentDouble;
     public double LevelMultiplier => levelMultiplier;
     private readonly double levelMultiplier;
 
@@ -162,6 +162,9 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
 
                 #endregion
 
+                var diff = Max - Min;
+                testCount = Convert.ToUInt64(diff <= TValue.Zero ? 1 : (Convert.ToDouble(diff) / Convert.ToDouble(step)));
+
                 levelMultiplier = Math.Pow(2, -Level);
 
                 var divisor = Math.Pow(2, -Level);
@@ -169,9 +172,6 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
                 //step = (Max - Min) / TValue.CreateChecked(testCount); 
                 testCount = (ulong)double.Ceiling(testCount / divisor);
 
-                var diff = Max - Min;
-                
-                testCount = Convert.ToUInt64(diff <= TValue.Zero ? 1 : (Convert.ToDouble(diff) / Convert.ToDouble(step)));
                 //step = diff <= TValue.Zero ? TValue.Zero : (diff / TValue.CreateChecked(testCount));
 
                 if (!TypeReflectionX.IsFloatingPoint<TValue>() && step != TValue.Zero)
@@ -184,22 +184,23 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
 
                 //IsComplete = new BitArray(count);
 
-                if (false && Options.EffectiveExponent != 1.0)
+                // ENH: support a combination of distributions:
+                // - additive (step)
+                // - exponential
+                // - fibonacci
+                if (Options.EffectiveExponent != 1.0 && Options.EffectiveExponent != 0.0)
                 {
-                    // TODO Options.ExponentOrigin: Exponent basis point. (e.g. Zero, or EffectiveMinValue).  Maybe enum for this.
-
-                    Debug.WriteLine("UNTESTED: DistributionParameter != 1 (TValue.MultiplicativeIdentity)");
-
-                    var rangeForLog = Math.Log((testCount - 1) * Convert.ToDouble(step));
-                    exponentAdjustment = Convert.ToDouble(range) / rangeForLog;
-
                     GetValue = GetDistributionValue;
-                    testCount = (ulong)(GetLastDistributionValue(max) + 1);
+
+                    // TODO Options.ExponentOrigin: Exponent basis point. (e.g. Zero, or EffectiveMinValue).  Maybe enum for this.  For now, assume EffectiveMinValue.
+                    exponentDouble = Options.EffectiveExponent;
+                    //testCount = Convert.ToUInt64(Math.Floor(Math.Pow(Convert.ToDouble(diff), 1.0 / exponentDouble)));
+                    testCount = diff < TValue.Zero ? 1L : Convert.ToUInt64(Math.Log(Convert.ToDouble(diff)) / Math.Log(exponentDouble));
                 }
                 else
                 {
                     GetValue = GetLinearValue;
-                    exponentAdjustment = 0; // 0 means ignore this parameter (effective exponentAdjustment of 1)
+                    exponentDouble = 0; // 0 means ignore this parameter (effective exponentAdjustment of 1)
                 }
 
                 //if (levelMultiplier != 1)
@@ -232,10 +233,8 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
     public readonly Func<int, TValue> GetValue;
 
     public TValue GetLinearValue(int index) => min + TValue.CreateChecked(index) * step;
-    public TValue GetDistributionValue(int index) => min
-        + TValue.CreateChecked((Math.Log(
-            index * Convert.ToDouble(step)))
-            * exponentAdjustment);
+    public TValue GetDistributionValue(int index) => min + TValue.CreateChecked(Math.Pow(exponentDouble, index) - 1.0);
+
     public int GetLastDistributionValue(TValue max)
     {
         for (int index = 0; index < int.MaxValue; index++)
