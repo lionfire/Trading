@@ -1,0 +1,40 @@
+﻿@page "/workers"
+
+@* @namespace LionFire.Valor.Meta.Blazor.Pages *@
+
+@inject IGrainFactory GrainFactory
+@inject ILogger<Workers> Logger
+@inject IServiceProvider ServiceProvider
+@inject IClusterClient ClusterClient
+@inject GrainClassMap GrainClassMap
+@inject ITypeNameMultiRegistry TypeNames
+
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Routing
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@using System.Net.Http
+@using System.Threading.Tasks
+@using Orleans
+@using Orleans.Metadata
+@using LionFire.Blazor.Components
+@using LionFire.Orleans_.Mvvm
+@using LionFire.Types;
+@using LionFire.Reflection
+@using LionFire.Mvvm
+@using LionFire.Data.Mvvm
+
+<KeyedCollectionView @ref=ItemsEditor
+                     Items="Items"
+                     TKey="IAddressable"
+                     TValue="IWorkerInfoG"
+                     TValueVM="WorkerInfoGVM">
+</KeyedCollectionView>
+
+
+

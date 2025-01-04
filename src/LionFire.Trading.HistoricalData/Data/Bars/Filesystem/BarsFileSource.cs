@@ -86,12 +86,16 @@ public class BarsFileSource : IChunkedBars, IListableBarsSource
             {
                 var (info, bars) = KlineFileDeserializer.Deserialize(path);
                 if (bars == null) return null;
+                if (info == null) return null;
 
                 return new BarsResult<IKline>
                 {
                     Start = range.Start,
                     EndExclusive = range.EndExclusive,
                     TimeFrame = range.TimeFrame,
+                    FirstOpenTime = info.FirstOpenTime,
+                    LastOpenTime = info.LastOpenTime,
+                    //Gaps = info.Gaps,
                     Values = bars,
                     //NativeType = typeof(IBinanceKline),
                 };

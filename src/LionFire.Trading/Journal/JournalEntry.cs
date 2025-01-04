@@ -6,9 +6,7 @@ using System.Threading;
 
 namespace LionFire.Trading;
 
-[MemoryPackable]
-public partial class JournalEntry<TPrecision>
-    where TPrecision : struct, INumber<TPrecision>
+public abstract class JournalEntry
 {
     #region Properties
 
@@ -21,7 +19,23 @@ public partial class JournalEntry<TPrecision>
     public long? PositionId { get; set; }
     public long? OrderId { get; set; }
     public long? TransactionId { get; set; }
+
+    #endregion
+    public abstract float? NetProfitFloat { get; }
+    public abstract float? RealizedGrossProfitDeltaFloat { get; }
+  
+}
+
+    [MemoryPackable]
+public partial class JournalEntry<TPrecision> : JournalEntry
+    where TPrecision : struct, INumber<TPrecision>
+{
+
+    #region Properties
+
     public TPrecision? NetProfit { get; set; }
+    public override float? NetProfitFloat { get => Convert.ToSingle(NetProfit); }
+
     public TPrecision? GrossProfit { get; set; }
     public TPrecision? Commission { get; set; }
     public TPrecision? Balance { get; set; }
@@ -31,6 +45,7 @@ public partial class JournalEntry<TPrecision>
     public TPrecision? Quantity { get; set; }
     public TPrecision? QuantityChange { get; set; }
     public TPrecision RealizedGrossProfitDelta { get; set; }
+    public override float? RealizedGrossProfitDeltaFloat => Convert.ToSingle(RealizedGrossProfitDelta);
 
     #endregion
 
@@ -39,7 +54,7 @@ public partial class JournalEntry<TPrecision>
     [MemoryPackIgnore]
     public IPosition<TPrecision>? Position { get; set; }
 
-    #endregion
+    #endregion 
 
     #region Lifecycle
 

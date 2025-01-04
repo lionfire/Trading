@@ -270,13 +270,19 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     #region Methods
 
+    public void DoGC()
+    {
+        GC.Collect();
+    }
     public void Clear()
     {
         Progress = OptimizationProgress.NoProgress;
         OptimizationTask = null;
-
+        Context.Dispose();
+        GC.Collect();
         Context = new();
         ResetParameters();
+
     }
 
     public void Cancel()

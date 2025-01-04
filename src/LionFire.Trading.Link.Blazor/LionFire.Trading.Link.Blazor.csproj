@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<TargetFramework>net9.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<SupportedPlatform Include="browser" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+		<PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.Options" />
+		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="System.Linq.Async" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\core\src\LionFire.AspNetCore\LionFire.AspNetCore.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Blazor.Components.MudBlazor\LionFire.Blazor.Components.MudBlazor.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Blazor.Components\LionFire.Blazor.Components.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Core\LionFire.Core.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Data.Async.Reactive\LionFire.Data.Async.ReactiveUI.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Data.Async.UI\LionFire.Data.Async.UI.csproj" />
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Orleans.Mvvm\LionFire.Orleans.Mvvm.csproj" />
+		<ProjectReference Include="..\..\..\core\src\LionFire.Orleans\LionFire.Orleans.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
+	</ItemGroup>
+</Project>

@@ -2,7 +2,8 @@
 
 Worker for:
  - Optimization
- - (Future) Bots
+ - Scanners
+ - Bots (live/demo)
 
 ## Usage
 

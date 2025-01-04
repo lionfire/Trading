@@ -10,9 +10,11 @@ using QuantConnect;
 using ReactiveUI;
 using System;
 
+using System.Runtime.InteropServices;
+
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
-public partial class OneShotOptimize
+public partial class OneShotOptimize 
 {
     [Inject]
     BacktestQueue BacktestQueue { get; set; } = null!;
@@ -26,14 +28,24 @@ public partial class OneShotOptimize
     bool ShowBacktests { get; set; } = false;
     bool ShowLog { get; set; } = true;
 
-    public string GeneralParametersSummary => $"{ViewModel!.PBotType.Name} — {ViewModel!.Symbol} {ViewModel!.TimeFrame} — {ViewModel!.TimeFrame.GetExpectedBarCount(ViewModel!.Common.Start , ViewModel!.Common.EndExclusive)} bars";
+    public string GeneralParametersSummary => $"{ViewModel!.PBotType.Name} — {ViewModel!.Symbol} {ViewModel!.TimeFrame} — {ViewModel!.TimeFrame.GetExpectedBarCount(ViewModel!.Common.Start, ViewModel!.Common.EndExclusive)} bars";
 
-    private SortMode _sortMode = SortMode.Multiple;
 
     void OnChange()
     {
         InvokeAsync(StateHasChanged);
     }
+
+    #region Lifecycle
+
+    protected override Task OnInitializedAsync()
+    {
+      
+        return base.OnInitializedAsync();
+    }
+
+    #endregion
+
     protected override Task OnParametersSetAsync()
     {
         ViewModel ??= new(ServiceProvider, ServiceProvider.GetRequiredService<CustomLoggerProvider>());
@@ -49,7 +61,7 @@ public partial class OneShotOptimize
                 InvokeAsync(StateHasChanged);
             }
         });
-        ViewModel.WhenAnyValue(x=>x.Progress).Subscribe(_ => OnChange());
+        ViewModel.WhenAnyValue(x => x.Progress).Subscribe(_ => OnChange());
 
         return base.OnParametersSetAsync();
     }
@@ -61,4 +73,8 @@ public partial class OneShotOptimize
         <= 0.1 => Color.Error,
         _ => Color.Warning,
     };
+
+    int _activeTabIndex { get; set; }
+
 }
+

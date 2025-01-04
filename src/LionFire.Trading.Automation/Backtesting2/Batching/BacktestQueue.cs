@@ -228,7 +228,8 @@ public partial class BacktestQueue : IHostedService
         //{
 
         RunningJobs.Remove(job.Guid, out var _);
-        FinishedJobs.AddOrThrow(job.Guid, job);
+        //FinishedJobs.AddOrThrow(job.Guid, job); // TODO: Keep finished jobs for a short time?  For UI notifications?  They should probably be converted into a lightweight summary for this, and a reference to on-disk details. 
+        Jobs.TryRemove(job.Guid, out var _);
         TryStartNextJobs();
         //});
     }

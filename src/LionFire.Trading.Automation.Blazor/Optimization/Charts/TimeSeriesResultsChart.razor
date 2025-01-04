@@ -1,0 +1,220 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using Plotly.Blazor
+@using ReactiveUI.SourceGenerators
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.Traces
+@using Plotly.Blazor.Traces.ScatterLib
+@using Plotly.Blazor.LayoutLib.XAxisLib
+
+<MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@Refresh" />
+<div class="d-flex flex-row" style="max-width: 350px;">
+    <MudText Typo="Typo.h6">Minimum Fitness</MudText>
+    @MinFitness
+    <MudSlider T="float" Min="-2" Max="5" @bind-Value="MinFitness" @bind-NullableValue="NullableMinFitness" />
+    <MudButton OnClick="@(() => NullableMinFitness =null)">Reset</MudButton>
+    <div>
+        @Included of @(Included + Excluded)
+    </div>
+</div>
+
+
+<PlotlyChart @bind-Config=" config" @bind-Layout="Layout" @bind-Data="data" @ref="chart" />
+
+@code {
+    [CascadingParameter]
+    private MudTheme Theme { get; set; }
+
+    PlotlyChart? chart;
+    Config? config;
+    Layout? Layout { get; set; }
+    IList<ITrace>? data;
+
+    public float MinFitness { get; set; } = 0;
+    public float? NullableMinFitness { get; set; } = null;
+
+
+    public void Refresh()
+    {
+        data = GetData();
+        chart.React();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+
+        config = new Config
+            {
+                Responsive = true
+            };
+
+        Layout ??= new Layout
+            {
+                XAxis = [new XAxis
+                {
+                    AutoRange = AutoRangeEnum.True,
+                    Range = [ViewModel?.Context.POptimization.CommonBacktestParameters.StartDateTime.ToString(), ViewModel?.Context.POptimization.CommonBacktestParameters.EndExclusiveDateTime.ToString()],
+                    RangeSelector = new Plotly.Blazor.LayoutLib.XAxisLib.RangeSelector{
+
+                    },
+                    RangeSlider = new Plotly.Blazor.LayoutLib.XAxisLib.RangeSlider {
+                        AutoRange = true
+                    },
+                    Type = Plotly.Blazor.LayoutLib.XAxisLib.TypeEnum.Date
+                }],
+                Title = new Plotly.Blazor.LayoutLib.Title
+                {
+                    Text = ViewModel!.Context.POptimization.PBotType.Name
+                },
+
+                // PaperBgColor = Theme.PaletteDark.Surface.ToString(),
+                // PlotBgColor = Theme.PaletteDark.Surface.ToString(),
+                PaperBgColor = "#1A1A27",
+                PlotBgColor = "#1A1A27",
+
+            };
+        data = GetData();
+        // data = new List<ITrace>
+        // {
+        //     new Scatter
+        //     {
+        //         Name = "ScatterTrace",
+        //         Mode = ModeFlag.Lines | ModeFlag.Markers,
+        //         X = new List<object>{1,2,3},
+        //         Y = new List<object>{1,2,3}
+        //     }
+        // };
+
+        await base.OnInitializedAsync();
+    }
+    // protected override async Task OnAfterRenderAsync(bool firstRender)
+    // {
+    //     if (firstRender)
+    //     {
+    //         await AddData();
+    //     }
+    //     if (ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache != null && ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache.Items.Count > added)
+    //     {
+    //         await AddData();
+    //     }
+    //     await base.OnAfterRenderAsync(firstRender);
+    // }
+
+
+    // private (List<object>, List<object>) GenerateData(int start, int end)
+    // {
+    //     var x = new List<object>();
+    //     var y = new List<object>();
+    //     int point = 0;
+    //     for (int i = start; i < end; i++)
+    //     {
+    //         x.Add(i);
+    //         y.Add(point += Random.Shared.Next(-5, 5));
+    //     }
+    //     return (x, y);
+    // }
+
+    int added = 0;
+
+    public int Excluded{ get; set; }
+    public int Included { get; set; }
+    private IList<ITrace> GetData()
+    {
+        Excluded = 0;
+        Included = 0;
+
+        List<ITrace> data = new List<ITrace>();
+        if (ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache == null) return data;
+
+        foreach (var result in ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items)
+        {
+            if (NullableMinFitness.HasValue)
+            {
+                if (result.AD < NullableMinFitness.Value || result.IsAborted) 
+                {
+                    Excluded++;
+                    continue;
+                }
+            }
+            Included++;
+            List<object> x = new();
+            List<object> y = new();
+            float balance = 0f;
+
+            if (result.JournalEntries == null) continue;
+            foreach (var j in result.JournalEntries.Cast<JournalEntry>())
+            {
+                if (!j.RealizedGrossProfitDeltaFloat.HasValue || j.RealizedGrossProfitDeltaFloat.Value == 0f) continue;
+                x.Add(j.Time.DateTime.ToString());
+                balance += j.RealizedGrossProfitDeltaFloat.Value;
+                y.Add(balance);
+            }
+
+            // var (x, y) = GenerateData(0, 100);
+            data.Add(new Scatter
+                {
+                    Name = $"{result.StringId}",
+                    Mode = ModeFlag.Lines,
+                    // Mode = ModeFlag.Lines | ModeFlag.Markers,
+                    X = x,
+                    Y = y,
+                    Line = new Line
+                    {
+                        Width = 1.0m,
+                        Color = LineColor(result)
+                    }
+                });
+            added++;
+        }
+        return data;
+    }
+
+    string LineColor(BacktestBatchJournalEntry result)
+    {
+        if (result.IsAborted)
+        {
+            return "#000000";
+        }
+        if (result.AD > 3.0) return "#4040FF";
+        if (result.AD > 2.0) return "#10F010";
+        if (result.AD > 0.5) return "#30b030";
+        if (result.AD > 0.0) return "#004000";
+        if (result.AD > -0.5) return "#400000";
+        if (result.AD > -1.5) return "#800000";
+        return "#a00000";
+    }
+    // private async ValueTask<bool> AddData()
+    // {
+    //     if (ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache == null) return false;
+    //     int i = 0;
+    //     foreach (var result in ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items.Skip(added))
+    //     {
+    //         try
+    //         {
+    //             var (x, y) = GenerateData(0, 100);
+    //             // data.Add();
+    //             await chart.AddTrace(new Scatter
+    //                 {
+    //                     Name = $"{result.StringId}",
+    //                     Mode = ModeFlag.Lines,
+    //                     // Mode = ModeFlag.Lines | ModeFlag.Markers,
+    //                     X = x,
+    //                     Y = y,
+    //                     Line = new Line
+    //                     {
+    //                         Color = result.AD > 0 ? "#00a000" : "#a00000",
+    //                     }
+    //                 });
+    //             added++;
+    //         }
+    //         catch (Exception ex)
+    //         {
+    //             Console.WriteLine(ex);
+    //             return true;
+    //         }
+
+    //     }
+    //     return false;
+    // }
+
+}

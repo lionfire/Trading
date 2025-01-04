@@ -251,6 +251,10 @@ public sealed partial class BacktestTradeJournal<TPrecision> : IBacktestTradeJou
     private ExchangeSymbol? exchangeSymbol;
 
     ConcurrentQueue<JournalEntry<TPrecision>> entries = new(); // TODO: Replace with channel
+
+    public IEnumerable<JournalEntry<TPrecision>> MemoryEntries => memoryEntries ?? Enumerable.Empty<JournalEntry<TPrecision>>();
+    ConcurrentQueue<JournalEntry<TPrecision>>? memoryEntries = new(); 
+
     public bool IsDisposed => entries == null;
 
     Dictionary<int, IPosition<TPrecision>> openPositions = new();
@@ -295,6 +299,9 @@ public sealed partial class BacktestTradeJournal<TPrecision> : IBacktestTradeJou
     public void Write(JournalEntry<TPrecision> entry)
     {
         UpdateStats(entry);
+        memoryEntries?.Enqueue(entry);
+        if (entry.EntryType == JournalEntryType.Abort) IsAborted = true;
+
         if (!Options.EffectiveEnabled) return;
         entries.Enqueue(entry);
         if (entries.Count > Options.BufferEntries) { _Write(forceWriteToDisk: true).FireAndForget(); }

@@ -754,7 +754,10 @@ public class BacktestBatchTask2<TPrecision>
                     MaxBalanceDrawdown = Convert.ToDouble(b.Controller.Account.MaxBalanceDrawdown),
                     MaxBalanceDrawdownPerunum = Convert.ToDouble(b.Controller.Account.MaxBalanceDrawdownPerunum),
                     MaxEquityDrawdown = Convert.ToDouble(b.Controller.Account.MaxEquityDrawdown),
-                    MaxEquityDrawdownPerunum = Convert.ToDouble(b.Controller.Account.MaxEquityDrawdownPerunum)
+                    MaxEquityDrawdownPerunum = Convert.ToDouble(b.Controller.Account.MaxEquityDrawdownPerunum),
+
+                    IsAborted = b.Controller.Journal.IsAborted,
+                    JournalEntries = b.Controller.Journal.MemoryEntries
 
                     // TODO NEXT: Parameters
                 };

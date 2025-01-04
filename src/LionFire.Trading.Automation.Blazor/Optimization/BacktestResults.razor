@@ -1,0 +1,41 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using LionFire.Trading.Automation.Blazor.Optimization.Charts
+
+<MudIconButton OnClick="@(()=>_open ^= true)" Icon="@Icons.Material.Outlined.Expand" />
+
+<TimeSeriesResultsChart ViewModel="ViewModel" 
+/>
+    @* ="min-height: calc(100% - 100px);" *@
+
+<MudDrawer @bind-Open="@_open" Anchor="@_anchor" Elevation="1" 
+Variant="@DrawerVariant.Persistent" OverlayAutoClose="@_overlayAutoClose"
+>
+    <MudDrawerHeader>
+        <MudText Typo="Typo.h6">Results</MudText>
+    </MudDrawerHeader>
+    @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache?.Items != null)
+    {
+        <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
+            <Columns>
+                <PropertyColumn Property="x => x.BatchId" />
+                <PropertyColumn Property="x => x.Id" />
+                <PropertyColumn Property="x => x.Fitness" />
+                <PropertyColumn Property="x => x.AD" />
+                <PropertyColumn Property="x => x.AMWT" />
+                <PropertyColumn Property="x => x.Wins" />
+                <PropertyColumn Property="x => x.WinRate" />
+                <PropertyColumn Property="x => x.Losses" />
+                <PropertyColumn Property="x => x.TotalTrades" />
+
+              @*   @foreach(var parameter in ViewModel.Context.POptimization.OptimizableParameters)
+                {
+                    <PropertyColumn Property="x => x.Parameters[parameter.Path]" />
+                } *@
+            </Columns>
+        </MudDataGrid>
+    }
+    else
+    {
+        <text>(no results)</text>
+    }
+</MudDrawer>

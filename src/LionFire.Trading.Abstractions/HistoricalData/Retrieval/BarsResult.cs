@@ -75,7 +75,10 @@ public sealed class BarsResult<TKline> : IBarsResult<TKline>
     /// Note: this can become false over time.  It never goes back to true.
     /// 
     /// </summary>
-    public bool IsUpToDate => Values.Count == TimeFrame.GetExpectedBarCountForNow(First ?? Start, EndExclusive);
+    public bool IsUpToDate => 
+        DateTimeOffset.UtcNow < (LastOpenTime + TimeFrame.TimeSpan) 
+        ?  Values.Count == TimeFrame.GetExpectedBarCountForNow(First ?? Start, EndExclusive)
+        : LastOpenTime >= EndExclusive - TimeFrame.TimeSpan;
 
     public IEnumerable<(DateTimeOffset, DateTimeOffset)> Gaps
     {
@@ -93,6 +96,9 @@ public sealed class BarsResult<TKline> : IBarsResult<TKline>
             }
         }
     }
+
+    public DateTime FirstOpenTime { get; set; }
+    public DateTime LastOpenTime { get; set; }
 
 
     //IsForeverUpToDate || DateTime.UtcNow < (LastBarCloseTime + TimeFrame.TimeSpan!.Value);

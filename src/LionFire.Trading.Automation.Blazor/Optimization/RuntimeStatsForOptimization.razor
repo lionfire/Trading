@@ -1,0 +1,99 @@
+@using LionFire.Blazor.Components.Terminal
+@using MudBlazor.Components
+@using Humanizer
+@using ReactiveUI
+@using System.Diagnostics
+
+@implements IDisposable
+
+<div id="StatsForOptimization">
+    @* TODO: Hover only button with down arrow button, to the right of the label *@
+    <div class="HoverOutline" "display: contents;" onclick="@DoGC">
+        <div class="lf-field flex-column">
+            <label>
+                Working set
+            </label>
+            <div class="value">
+                @(RuntimeStats.WorkingSet64.Bytes().Humanize())
+            </div>
+        </div>
+    </div>
+
+    @*     <div class="lf-field flex-column">
+        <label>
+            Private memory
+        </label>
+        <div class="value">
+            @(RuntimeStats.PrivateMemorySize.Bytes().Humanize())
+        </div>
+    </div> *@
+
+    @*    <div class="lf-field flex-column">
+        <label>
+            Virtual memory
+        </label>
+        <div class="value">
+            @(RuntimeStats.VirtualMemorySize64.Bytes().Humanize())
+        </div>
+    </div> *@
+
+    <div class="lf-field flex-column">
+        <label>
+            CPU
+        </label>
+        <div class="value">
+            @(RuntimeStats.CpuUsage.ToString("P0"))
+        </div>
+    </div>
+
+    @*   <div class="lf-field flex-column">
+        <label>
+            Large Object Heap
+        </label>
+        <div class="value">
+            @(RuntimeStats.LargeObjectHeapSize)
+        </div>
+    </div> *@
+</div>
+
+@code {
+
+    RuntimeStats RuntimeStats => RuntimeStats.Instance;
+
+    protected override Task OnInitializedAsync()
+    {
+        this.RuntimeStats.PropertyChanged += (s, e) =>
+        {
+            InvokeAsync(StateHasChanged).Ignore();
+        };
+
+        // _ = Task.Run(async () =>
+        // {
+        //     var t = new PeriodicTimer(TimeSpan.FromSeconds(1));
+        //     while (!isDisposed)
+        //     {
+        //         InvokeAsync(StateHasChanged).Ignore();
+        //         await t.WaitForNextTickAsync();
+        //     }
+        // });
+        return base.OnInitializedAsync();
+    }
+
+    private bool isDisposed = false;
+
+    void IDisposable.Dispose()
+    {
+        isDisposed = true;
+        // Additional cleanup code here
+    }
+
+    void DoGC()
+    {
+        var sw = Stopwatch.StartNew();
+        Debug.WriteLine("DoGC...");
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        Debug.WriteLine($"DoGC...done in {sw.ElapsedMilliseconds}ms");
+    }
+}

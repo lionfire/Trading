@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -21,4 +22,5 @@ public interface IBacktestTradeJournal<TPrecision> : IAsyncDisposable
     TradeJournalOptions Options { get; }
     JournalStats JournalStats { get; }
 
+    IEnumerable<JournalEntry<TPrecision>> MemoryEntries { get; }
 }
