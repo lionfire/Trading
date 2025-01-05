@@ -1,4 +1,3 @@
-
 using LionFire.Blazor.Components;
 using LionFire.Data.Async.Gets;
 using LionFire.Data.Collections;
@@ -31,17 +30,26 @@ public class WorkerStatus
 {
 }
 
-public interface ISimServerO : IGrainObserver, IWorkerInfoG
+public interface IWorkerO : IGrainObserver, IWorkerInfoG
 {
-    Task<SimServerStartResult> StartBot(Guid id);
+    //Task<SimServerStartResult> StartBot(Guid id);
 
 
     //Task Restart();
     //Task Shutdown();
 }
 
-public class SimServerO : ISimServerO
+public class WorkerO : IWorkerO
 {
+    public ValueTask<string> Id()
+    {
+        throw new NotImplementedException();
+    }
+
+    public Task<WorkerStatus> Status()
+    {
+        throw new NotImplementedException();
+    }
 }
 
 public class WorkerInfoGVM : AsyncUIVM<IWorkerInfoG>, IViewModel<IWorkerInfoG>
@@ -69,3 +77,4 @@ public class WorkerInfoGVM : AsyncUIVM<IWorkerInfoG>, IViewModel<IWorkerInfoG>
     public DynamicGetter<IWorkerInfoG, WorkerStatus> WorkerStatus { get; }
 
 }
+
