@@ -1,0 +1,17 @@
+@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM>
+
+    @using LionFire.Blazor.Components
+
+
+<KeyedCollectionView @ref=ItemsEditor
+                     Items="ViewModel!.Items"
+                     TKey="string"
+                     TValue="BotEntity"
+                     TValueVM="BotVM">
+</KeyedCollectionView>
+
+
+@code {
+    KeyedCollectionView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
+
+}

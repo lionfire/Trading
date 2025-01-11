@@ -1,0 +1,27 @@
+@page "/vos/explore/{*vosPath}"
+@page "/vos"
+@using LionFire.Vos.Blazor.Pages
+@*@model VosViewModel*@
+
+@* Copied from LionFire.Vos.Blazor.Host's VosView' *@
+
+<h3>VosView2</h3>
+<br />
+@if (string.IsNullOrEmpty(VosPath))
+{
+    @:None
+}
+else
+{
+    @VosPath
+}
+@*VosPath:  @vospath*@
+<br />
+
+<VosExplorer />
+@*<component type="typeof(VosExplorer)" render-mode="Server" />*@
+
+@code  {
+    [Parameter]
+    public string VosPath { get; set; }
+}

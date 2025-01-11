@@ -7,6 +7,14 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <Content Remove="Components\Pages\Vos.razor" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="Components\Pages\Vos.razor" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<SupportedPlatform Include="browser" />
 	</ItemGroup>
 
@@ -15,6 +23,7 @@
 		<PackageReference Include="Microsoft.Orleans.Core.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.Options" />
 		<PackageReference Include="MudBlazor" />
+		<PackageReference Include="ReactiveUI.Blazor" />
 		<PackageReference Include="System.Linq.Async" />
 	</ItemGroup>
 
@@ -27,6 +36,8 @@
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Data.Async.UI\LionFire.Data.Async.UI.csproj" />
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Orleans.Mvvm\LionFire.Orleans.Mvvm.csproj" />
 		<ProjectReference Include="..\..\..\core\src\LionFire.Orleans\LionFire.Orleans.csproj" />
+		<ProjectReference Include="..\..\..\core\src\LionFire.Vos.Blazor\LionFire.Vos.Blazor.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
 	</ItemGroup>
 </Project>

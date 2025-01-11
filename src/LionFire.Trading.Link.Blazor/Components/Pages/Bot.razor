@@ -1,0 +1,11 @@
+@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotVM>
+@page "/bots/{BotId}"
+
+<h3>Bot @BotId</h3>
+
+@code {
+    [Parameter]
+    public string BotId { get; set; }
+
+    
+}

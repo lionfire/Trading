@@ -38,7 +38,6 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Instantiating.Abstractions\LionFire.Instantiating.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Notifications\LionFire.Notifications.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence\LionFire.Data.Persisters.csproj" />
-    <ProjectReference Include="..\..\..\Core\src\LionFire.Reactive\LionFire.Reactive.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing.Abstractions\LionFire.Referencing.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing\LionFire.Referencing.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.UI.Entities\LionFire.UI.Entities.csproj" />

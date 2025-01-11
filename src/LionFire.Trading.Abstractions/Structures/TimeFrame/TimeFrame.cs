@@ -230,9 +230,9 @@ public class TimeFrame : ISerializableAsString
         return pi?.GetValue(null) as TimeFrame;
     }
 
-    public static implicit operator TimeFrame(string timeFrameCode)
+    public static implicit operator TimeFrame?(string? timeFrameCode)
     {
-        return TryParse(timeFrameCode);
+        return timeFrameCode == null ? null : TryParse(timeFrameCode);
     }
 
     public DateTimeOffset GetOpenTimeBefore(DateTimeOffset date)
@@ -283,10 +283,7 @@ public class TimeFrame : ISerializableAsString
 
     #region Operators
 
-    public static implicit operator string(TimeFrame tf)
-    {
-        return tf?.Name;
-    }
+    public static implicit operator string?(TimeFrame? tf) => tf?.Name;
 
     #endregion
 

@@ -28,8 +28,7 @@ namespace LionFire.Trading.Automation;
 //    DateTimeOffset EndExclusive { get; }
 //}
 
-// OPTIMIZE: change set properties to init?
-public partial class PBacktestBatchTask2 : ReactiveObject //: IPBacktestBatchTask2
+public partial class PBotHarness : ReactiveObject
 {
     public bool TicksEnabled() => Features.HasFlag(BotHarnessFeatures.Ticks);
     public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame => ExchangeSymbol == null || TimeFrame == null ? null : new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.ExchangeArea, ExchangeSymbol.Symbol, TimeFrame);
@@ -41,15 +40,11 @@ public partial class PBacktestBatchTask2 : ReactiveObject //: IPBacktestBatchTas
     #region Time
 
     public TimeFrame? TimeFrame { get; set; }
-    public string TimeFrameString { get => TimeFrame; set => TimeFrame = value; }
+    public string? TimeFrameString { get => TimeFrame; set => TimeFrame = value; }
 
     public virtual TimeFrame? EffectiveTimeFrame => TimeFrame;
 
     //public TimeFrame TimeFrame => PBot.TimeFrame;
-    public DateTimeOffset Start { get; set; }
-    public DateTime? StartDateTime { get=> Start.DateTime; set => Start = value ?? default; }
-    public DateTimeOffset EndExclusive { get; set; }
-    public DateTime? EndExclusiveDateTime { get => EndExclusive.DateTime; set => EndExclusive = value ?? default; }
 
     #endregion
 
@@ -71,9 +66,9 @@ public partial class PBacktestBatchTask2 : ReactiveObject //: IPBacktestBatchTas
 
     #region REVIEW - Unimmutabilizing properties
 
-    public string Exchange { get => ExchangeSymbol.Exchange; set => ExchangeSymbol = new ExchangeSymbol(value, ExchangeSymbol.ExchangeArea, ExchangeSymbol.Symbol); }
-    public string ExchangeArea { get => ExchangeSymbol.ExchangeArea; set => ExchangeSymbol = new ExchangeSymbol(ExchangeSymbol.Exchange, value, ExchangeSymbol.Symbol); }
-    public string Symbol { get => ExchangeSymbol.Symbol; set => ExchangeSymbol = new ExchangeSymbol(ExchangeSymbol.Exchange, ExchangeSymbol.ExchangeArea, value); }
+    public string? Exchange { get => ExchangeSymbol?.Exchange; set => ExchangeSymbol = new ExchangeSymbol(value!, ExchangeSymbol?.ExchangeArea!, ExchangeSymbol?.Symbol!); }
+    public string? ExchangeArea { get => ExchangeSymbol?.ExchangeArea; set => ExchangeSymbol = new ExchangeSymbol(ExchangeSymbol?.Exchange!, value!, ExchangeSymbol?.Symbol!); }
+    public string? Symbol { get => ExchangeSymbol?.Symbol; set => ExchangeSymbol = new ExchangeSymbol(ExchangeSymbol?.Exchange!, ExchangeSymbol?.ExchangeArea!, value!); }
 
     #endregion
 
@@ -81,6 +76,21 @@ public partial class PBacktestBatchTask2 : ReactiveObject //: IPBacktestBatchTas
     /// null if ExchangeSymbol is set instead.  Order is important, with the first symbol typically being the primary one.
     /// </summary>
     public ExchangeSymbol[]? ExchangeSymbols { get; set; }
+
+    #endregion
+
+}
+
+// OPTIMIZE: change set properties to init?
+public partial class PBacktestBatchTask2 : PBotHarness //: IPBacktestBatchTask2
+{
+
+    #region Time
+    
+    public DateTimeOffset Start { get; set; }
+    public DateTime? StartDateTime { get => Start.DateTime; set => Start = value ?? default; }
+    public DateTimeOffset EndExclusive { get; set; }
+    public DateTime? EndExclusiveDateTime { get => EndExclusive.DateTime; set => EndExclusive = value ?? default; }
 
     #endregion
 
