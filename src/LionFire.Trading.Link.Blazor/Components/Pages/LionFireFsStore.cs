@@ -1,4 +1,5 @@
-﻿using DynamicData;
+﻿#if OLD // Discard
+using DynamicData;
 using Hjson;
 using LionFire.Data.Collections;
 using LionFire.Persistence;
@@ -21,36 +22,36 @@ public interface IObjectStore<TDocument>
     public ValueTask<bool> Delete(string key);
 }
 
-public class ObservableReadHandle<TValue, TKey> : IObservableCache<TValue, TKey>
-      where TValue : notnull
-    where TKey : notnull
-{
-}
+//public class ObservableReadHandle<TValue, TKey> : IObservableCache<TValue, TKey>
+//      where TValue : notnull
+//    where TKey : notnull
+//{
+//}
 
-public class DocumentStoreVM<TDocument> : ReactiveObject
-{
-    public string VosRootPath { get; set; } = "/bots";
+//public class DocumentStoreVM<TDocument> : ReactiveObject
+//{
+//    public string VosRootPath { get; set; } = "/bots";
 
-    IObservable<IChangeSet<BotEntity, string>> onChange = simServerRegistrarG.GetUpdates()
-        .ToObservable()
-        .Transform<ISimServerInfoG, ISimServerO, string>(simServerO => simServerO)
-        ;
+//    IObservable<IChangeSet<TDocument, string>> onChange = simServerRegistrarG.GetUpdates()
+//        .ToObservable()
+//        .Transform<ISimServerInfoG, ISimServerO, string>(simServerO => simServerO)
+//        ;
 
-    public DocumentStoreVM()
-    {
-        FileReference r = "z:/bots".ToFileReference(); // TODO: Use VosRootPath instead
-        IReadHandle<Persistence.Metadata<IEnumerable<IListing<object>>>> hList = r.GetListingsHandle();
-        IReadHandle<Metadata<IEnumerable<IListing<BotEntity>>>> hBots = r.GetListingsHandle<BotEntity>();
+//    public DocumentStoreVM()
+//    {
+//        FileReference r = "z:/bots".ToFileReference(); // TODO: Use VosRootPath instead
+//        IReadHandle<Persistence.Metadata<IEnumerable<IListing<object>>>> hList = r.GetListingsHandle();
+//        IReadHandle<Metadata<IEnumerable<IListing<BotEntity>>>> hBots = r.GetListingsHandle<BotEntity>();
 
-        Items = new AsyncReadOnlyKeyedFuncCollection<string, BotEntity>(async () => (await hBots.Get()), onChange);
-        Items.ObservableCache.Connect().Subscribe(changeSet =>
-        {
-            InvokeAsync(StateHasChanged);
-        });
-    }
+//        Items = new AsyncReadOnlyKeyedFuncCollection<string, BotEntity>(async () => (await hBots.Get()), onChange);
+//        Items.ObservableCache.Connect().Subscribe(changeSet =>
+//        {
+//            InvokeAsync(StateHasChanged);
+//        });
+//    }
 
 
-}
+//}
 public class LionFireFsStore<TDocument> : IObjectStore<TDocument>
   where TDocument : notnull
 {
@@ -130,3 +131,5 @@ public class LionFireFsStore<TDocument> : IObjectStore<TDocument>
         throw new NotImplementedException();
     }
 }
+
+#endif

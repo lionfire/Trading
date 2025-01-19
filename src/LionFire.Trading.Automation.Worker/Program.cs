@@ -54,7 +54,8 @@ Host.CreateApplicationBuilder(args)
         
             #endregion
 
-            .Backtesting(lf.Configuration)
+            .ConfigureBacktestingOptions(lf.Configuration)
+            .AddBacktesting()
             .AddAutomation()
         )
     )

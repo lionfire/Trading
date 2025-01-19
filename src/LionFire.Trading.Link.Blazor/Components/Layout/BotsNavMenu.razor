@@ -1,0 +1,29 @@
+﻿@inherits ReactiveInjectableComponentBase<AsyncKeyedCollectionVM<IReference, BotEntity, BotVM>>
+
+@inject IServiceProvider ServiceProvider
+@inject NavigationManager NavigationManager
+
+@using LionFire.Assets
+@using LionFire.Referencing
+@using LionFire.Trading.Automation
+
+
+<div class="Workspaces Bots" style="display: grid;">
+
+    <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined">
+        @* <MudButton>@_buttonText</MudButton> *@
+        <span>New</span>
+        <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" Style="align-self: auto;">
+            @foreach (var creatable in Creatables)
+            {
+                <MudMenuItem OnClick="() => Create(creatable)">@creatable.ParameterType.Name</MudMenuItem>
+            }
+        </MudMenu>
+    </MudButtonGroup>
+
+    @foreach (var item in ViewModel!.ValueVMs.Items)
+    {
+        <MudButton @onclick="() => NavigateToBot(item.Key)">@item.Key</MudButton>
+    })
+</div>
+

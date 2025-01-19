@@ -1,5 +1,5 @@
 ﻿using LionFire.AspNetCore;
-using LionFire.Trading.Worker.Components;
+using LionFire.Trading.Automation.Worker.Components;
 using Microsoft.AspNetCore.Hosting.StaticWebAssets;
 using MudBlazor.Services;
 

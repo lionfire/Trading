@@ -1,14 +1,15 @@
-﻿using LionFire.Mvvm;
+﻿using DynamicData;
+using LionFire.Mvvm;
+using MediatR;
+using Oakton.Descriptions;
+using YamlDotNet.Core.Tokens;
 
-namespace LionFire.Trading.Link.Blazor.Components.Pages;
+namespace LionFire.Trading.Automation;
 
-public class BotVM : IViewModel<BotEntity>
+public class BotVM : KeyValueVM<string, BotEntity>
 {
-    public BotEntity? Value { get; }
-
-    public BotVM(BotEntity botDocument)
+    public BotVM(IServiceProvider serviceProvider, string key, BotEntity value) : base(serviceProvider, key, value)
     {
-        Value = botDocument;
     }
 
     #region Event Handlers
@@ -24,3 +25,4 @@ public class BotVM : IViewModel<BotEntity>
 
     #endregion
 }
+

@@ -1,10 +1,20 @@
 ﻿using LionFire.Trading.Automation;
+using ReactiveUI;
+using ReactiveUI.SourceGenerators;
 
-namespace LionFire.Trading.Link.Blazor.Components.Pages;
+namespace LionFire.Trading.Automation;
 
-public class BotEntity
+public partial class BotEntity : ReactiveObject
 {
     public PBotHarness? PBotHarness { get; set; }
-    public bool Enabled { get; set; }
+
+    [Reactive]
+    bool _enabled;
+
+    [Reactive]
+    private string? _name;
+
+    [Reactive]
+    private string? _comments;
 
 }

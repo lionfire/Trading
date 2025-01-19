@@ -24,12 +24,12 @@ public static class TradingHostingExtensions
             .AddSingleton<IAccountProvider, AccountProvider>()
             ;
 
-    public static IServiceCollection Backtesting(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection ConfigureBacktestingOptions(this IServiceCollection services, IConfiguration configuration)
         => services
             .Configure<BacktestOptions>(configuration.GetSection("LionFire:Trading:Backtesting"))
             ;
     public static ILionFireHostBuilder Backtesting(this ILionFireHostBuilder builder)
         => builder.ForHostBuilder(b => b.ConfigureServices(services => services
-            .Backtesting(builder.Configuration)
+            .ConfigureBacktestingOptions(builder.Configuration)
             ));
 }

@@ -52,7 +52,7 @@ public class WorkerO : IWorkerO
     }
 }
 
-public class WorkerInfoGVM : AsyncUIVM<IWorkerInfoG>, IViewModel<IWorkerInfoG>
+public class WorkerInfoGVM : AsyncItemVM<IWorkerInfoG>
 , IKeyed<string>
 {
     public WorkerInfoGVM(IWorkerInfoG value) : base(value)

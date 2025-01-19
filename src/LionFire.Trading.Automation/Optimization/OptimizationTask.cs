@@ -11,7 +11,7 @@ using LionFire.Trading.Journal;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using ReactiveUI;
-using ReactiveUI.Fody.Helpers;
+using ReactiveUI.SourceGenerators;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,32 +23,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Optimization;
 
-public class OptimizationProgress
-{
-    public long PlannedScanTotal { get; set; }
-    public long ComprehensiveScanTotal { get; set; }
-    public double ComprehensiveScanPerUn => ComprehensiveScanTotal == 0 ? 0 : (PlannedScanTotal / ComprehensiveScanTotal);
-
-    public long Skipped { get; set; }
-    public long Queued { get; set; }
-    public long FractionallyCompleted { get; set; }
-    public long Completed { get; set; }
-    public double FractionalPercent => FractionalPerUn * 100.0;
-    public double Percent => PerUn * 100.0;
-    public double PerUn => Queued == 0 ? 0 : (double)Completed / Queued;
-    public double FractionalPerUn => Queued == 0 ? 0 : (double)FractionallyCompleted / Queued;
-    public long Remaining => Queued - Completed;
-    public DateTimeOffset? Start { get; set; }
-    public DateTimeOffset? EstimatedEnd { get; set; }
-    public TimeSpan? EstimatedDuration => EstimatedEnd - Start;
-
-    public TimeSpan PauseElapsed { get; set; }
-    public bool IsPaused { get; set; }
-
-    public static readonly OptimizationProgress NoProgress = new();
-}
-
-public class OptimizationTask : ReactiveObject, IRunnable
+public partial class OptimizationTask : ReactiveObject, IRunnable
 {
     #region Dependencies
 
@@ -136,8 +111,8 @@ public class OptimizationTask : ReactiveObject, IRunnable
     public MultiBacktestContext Context { get; private set; }
 
     //string? OptimizationDirectory;
-    [Reactive]
-    public BacktestBatchJournal? OptimizationMultiBatchJournal { get; private set; }
+    [Reactive(SetModifier = AccessModifier.Private)]
+    private BacktestBatchJournal? _optimizationMultiBatchJournal;
 
     private IBacktestBatchJob? batchJob = null;
 

@@ -1,15 +1,15 @@
-@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM>
+@page "/bots"
+@* @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM> *@
 
-    @using LionFire.Blazor.Components
+    @using LionFire.Trading.Automation
 
-
-<KeyedCollectionView @ref=ItemsEditor
+@* <KeyedCollectionView @ref=ItemsEditor
                      Items="ViewModel!.Items"
                      TKey="string"
                      TValue="BotEntity"
                      TValueVM="BotVM">
 </KeyedCollectionView>
-
+ *@
 
 @code {
     KeyedCollectionView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
