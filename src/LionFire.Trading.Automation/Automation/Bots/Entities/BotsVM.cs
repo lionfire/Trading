@@ -1,6 +1,5 @@
 ﻿using DynamicData;
-using LionFire.Reactive.Reader;
-using LionFire.Reactive.Writer;
+using LionFire.Reactive.Persistence;
 using LionFire.Trading.Automation;
 using ReactiveUI;
 using System;
@@ -8,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using YamlDotNet.Core.Tokens;
 
 namespace LionFire.Trading.Link.Blazor.Components.Pages;
 
@@ -17,18 +15,18 @@ public class EntitiesVMSlim<TKey, TValue, TValueVM> : ReactiveObject
     where TValue : notnull
     where TValueVM : notnull
 {
+    public IObservableReaderWriter<TKey, TValue> ReaderWriter { get; }
     public IObservableReader<TKey, TValue> Reader { get; }
-    public IObservableWriter<TKey, TValue> Writer { get; }
 
     public Func<TKey, TValue, TValueVM> Factory { get; set; } = DefaultFactory;
     static Func<TKey, TValue, TValueVM> DefaultFactory = (k, v) => (TValueVM)Activator.CreateInstance(typeof(TValueVM), k, v)!;
 
-    public EntitiesVMSlim(IObservableReader<TKey, TValue> reader, IObservableWriter<TKey, TValue> writer)
+    public EntitiesVMSlim(IObservableReader<TKey, TValue> reader)
     {
         this.Reader = reader;
-        this.Writer = writer;
+        this.ReaderWriter = reader as IObservableReaderWriter<TKey, TValue>;
 
-        Items = Reader.Items.Connect()
+        Items = Reader.ObservableCache.Connect()
             .Transform((e, key) => Factory(key, e))
             .AsObservableCache();
 
@@ -47,7 +45,7 @@ public class EntitiesVMSlim<TKey, TValue, TValueVM> : ReactiveObject
 public class BotsVM : EntitiesVMSlim<string, BotEntity, BotVM>
 {
 
-    public BotsVM(IObservableReader<string, BotEntity> reader, IObservableWriter<string, BotEntity> writer) : base(reader, writer)
+    public BotsVM(IObservableReaderWriter<string, BotEntity> reader) : base(reader )
     {
     }
 }

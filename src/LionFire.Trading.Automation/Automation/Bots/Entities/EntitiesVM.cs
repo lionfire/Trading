@@ -3,8 +3,7 @@ using LionFire.Data;
 using LionFire.Data.Async.Gets;
 using LionFire.Data.Collections;
 using LionFire.Mvvm;
-using LionFire.Reactive.Reader;
-using LionFire.Reactive.Writer;
+using LionFire.Reactive.Persistence;
 using LionFire.Structures;
 using MorseCode.ITask;
 
@@ -26,7 +25,7 @@ public class EntitiesVM<TKey, TValue, TValueVM> : AsyncKeyedCollection<TKey, TVa
         this.Reader = reader;
         this.Writer = writer;
 
-        Items = Reader.Items.Connect()
+        Items = Reader.ObservableCache.Connect()
             .Transform((e, key) => Factory(key, e))
             .AsObservableCache();
 

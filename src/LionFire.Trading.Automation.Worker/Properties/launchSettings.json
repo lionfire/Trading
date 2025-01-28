@@ -15,6 +15,7 @@
         "launchBrowser": false,
         "applicationUrl": "http://localhost:9850/optimize/one-shot",
         "environmentVariables": {
+          "DOTNET_releaseChannel": "LocalDev",
           "ASPNETCORE_ENVIRONMENT": "Development",
           "DOTNET_ENVIRONMENT": "Development"
         }
