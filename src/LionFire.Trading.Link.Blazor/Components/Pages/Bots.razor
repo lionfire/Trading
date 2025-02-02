@@ -3,6 +3,8 @@
 
     @using LionFire.Trading.Automation
 
+<h6>Bots for @Workspace</h6>
+
 @* <KeyedCollectionView @ref=ItemsEditor
                      Items="ViewModel!.Items"
                      TKey="string"
@@ -12,6 +14,9 @@
  *@
 
 @code {
-    KeyedCollectionView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
-
+    [CascadingParameter]
+    public string? Workspace { get; set; }
+    KeyedCollectionView<string, BotEntity, BotVM>
+    ? ItemsEditor
+    { get; set; }
 }
