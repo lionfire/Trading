@@ -3,7 +3,7 @@
 
     @using LionFire.Trading.Automation
 
-<h6>Bots for @Workspace</h6>
+<h6>Bots for @WorkspaceId</h6>
 
 @* <KeyedCollectionView @ref=ItemsEditor
                      Items="ViewModel!.Items"
@@ -14,9 +14,8 @@
  *@
 
 @code {
-    [CascadingParameter]
-    public string? Workspace { get; set; }
-    KeyedCollectionView<string, BotEntity, BotVM>
-    ? ItemsEditor
-    { get; set; }
+    [CascadingParameter(Name = "WorkspaceId")]
+    public string? WorkspaceId { get; set; }
+
+    KeyedCollectionView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
 }
