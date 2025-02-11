@@ -33,6 +33,13 @@ public static class AutomationX
             ;
     }
 
+    public static IServiceCollection AddAutomationUI(this IServiceCollection services)
+    {
+        return services
+            .AddTransient<BotsVM>()
+            ;
+    }
+
     private static IServiceCollection AddAutomation_Data(this IServiceCollection services)
     {
         return services
@@ -53,8 +60,8 @@ public static class AutomationX
         // TODO: Vos
 
         return services
-            .AddSingleton<IObservableReader<string, T>>(sp => new HjsonFsDirectoryReaderRx<string, T>(GetAutomationEntityDir<T>(sp)))
-            .AddSingleton<IObservableWriter<string, T>>(sp => new HjsonFsDirectoryWriterRx<string, T>(GetAutomationEntityDir<T>(sp)))
+            .AddSingleton<IObservableReader<string, T>>(sp => ActivatorUtilities.CreateInstance<HjsonFsDirectoryReaderRx<string, T>>(sp, GetAutomationEntityDir<T>(sp)))
+            .AddSingleton<IObservableWriter<string, T>>(sp => ActivatorUtilities.CreateInstance<HjsonFsDirectoryWriterRx<string, T>>(sp, GetAutomationEntityDir<T>(sp)))
             ;
     }
 }

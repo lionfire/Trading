@@ -1,7 +1,9 @@
 @page "/bots"
-@* @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM> *@
+@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM>
 
+@using LionFire.Reactive.Persistence
     @using LionFire.Trading.Automation
+@using Microsoft.Extensions.DependencyInjection
 
 <h6>Bots for @WorkspaceId</h6>
 
@@ -10,12 +12,26 @@
                      TKey="string"
                      TValue="BotEntity"
                      TValueVM="BotVM">
-</KeyedCollectionView>
- *@
+</KeyedCollectionView> *@
+
 
 @code {
+    [CascadingParameter(Name = "WorkspaceServices")]
+    public IServiceProvider? WorkspaceServices { get; set; }
+
     [CascadingParameter(Name = "WorkspaceId")]
     public string? WorkspaceId { get; set; }
 
     KeyedCollectionView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        ViewModel!.Reader = WorkspaceServices?.GetService<IObservableReader<string, BotEntity>>();
+    }
 }
