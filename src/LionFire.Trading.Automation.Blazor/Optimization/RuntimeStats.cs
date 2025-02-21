@@ -54,9 +54,9 @@ public partial class RuntimeStats : ReactiveObject, IDisposable
                             PrivateMemorySize = currentProcess.PrivateMemorySize64;
                             VirtualMemorySize64 = currentProcess.VirtualMemorySize64;
                             WorkingSet64 = currentProcess.WorkingSet64;
-                            Debug.WriteLine($"Private memory size: {PrivateMemorySize} bytes");
-                            Debug.WriteLine($"VirtualMemorySize64: {VirtualMemorySize64} bytes");
-                            Debug.WriteLine($"WorkingSet64: {WorkingSet64} bytes");
+                            //Debug.WriteLine($"Private memory size: {PrivateMemorySize} bytes");
+                            //Debug.WriteLine($"VirtualMemorySize64: {VirtualMemorySize64} bytes");
+                            //Debug.WriteLine($"WorkingSet64: {WorkingSet64} bytes");
                         }
                         catch (Exception ex2)
                         {
