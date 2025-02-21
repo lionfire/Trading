@@ -5,10 +5,6 @@ using MudBlazor.Services;
 
 public class TradingWorkerStartup //: WebHostConfig
 {
-    //public TradingWorkerStartup(IConfiguration configuration) : base(configuration)
-    //{
-    //}
-
     public void ConfigureServices(IServiceCollection services)
     {
         services.AddRazorComponents()

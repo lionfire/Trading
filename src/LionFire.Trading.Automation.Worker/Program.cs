@@ -16,7 +16,7 @@ Host.CreateApplicationBuilder(args)
         )
         //.FireLynxApp()
         .If(Convert.ToBoolean(lf.Configuration["Orleans:Enable"]), lf => lf.Silo())
-        .WebHost<TradingWorkerStartup>(w => w.Http().BlazorServer())
+        .WebHost<TradingWorkerStartup>(w => w.Http().BlazorInteractiveServer())
         .ConfigureServices(services => services
 
         #region Data
