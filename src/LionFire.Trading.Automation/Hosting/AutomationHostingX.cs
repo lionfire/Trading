@@ -2,7 +2,7 @@
 using LionFire.Reactive.Persistence;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Hosting;
-using LionFire.Trading.Link.Blazor.Components.Pages;
+using LionFire.UI.Workspaces;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Hosting;
 
-public static class AutomationX
+public static class AutomationHostingX
 {
     public static IServiceCollection AddBacktesting(this IServiceCollection services)
     {
@@ -37,31 +37,34 @@ public static class AutomationX
     {
         return services
             .AddTransient<BotsVM>()
+            .AddTransient<BotVM>()
+            .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, BotsWorkspaceServiceConfigurator>()
             ;
     }
 
     private static IServiceCollection AddAutomation_Data(this IServiceCollection services)
     {
         return services
-            .AddEntityDir<BotEntity>()
+            //.AddEntityDir<BotEntity>()
             ;
     }
 
-    private static string GetAutomationEntityDir<T>(IServiceProvider serviceProvider)
-    {
-        var rootDir = serviceProvider.GetRequiredService<IOptionsSnapshot<AutomationDataOptions>>().Value.RootDir;
-        if (rootDir == null) throw new Exception("No rootDir");
+    //private static string GetAutomationEntityDir<T>(IServiceProvider serviceProvider)
+    //{
+    //    var rootDir = serviceProvider.GetRequiredService<IOptionsSnapshot<AutomationDataOptions>>().Value.RootDir;
+    //    if (rootDir == null) throw new Exception("No rootDir");
 
-        return Path.Combine(rootDir, typeof(T).Name);
-    }
-    public static IServiceCollection AddEntityDir<T>(this IServiceCollection services)
-        where T : notnull
-    {
-        // TODO: Vos
+    //    return Path.Combine(rootDir, typeof(T).Name);
+    //}
 
-        return services
-            .AddSingleton<IObservableReader<string, T>>(sp => ActivatorUtilities.CreateInstance<HjsonFsDirectoryReaderRx<string, T>>(sp, GetAutomationEntityDir<T>(sp)))
-            .AddSingleton<IObservableWriter<string, T>>(sp => ActivatorUtilities.CreateInstance<HjsonFsDirectoryWriterRx<string, T>>(sp, GetAutomationEntityDir<T>(sp)))
-            ;
-    }
+    //public static IServiceCollection AddEntityDir<T>(this IServiceCollection services)
+    //    where T : notnull
+    //{
+    //    // TODO: Vos
+
+    //    return services
+    //        .AddSingleton<IObservableReader<string, T>>(sp => ActivatorUtilities.CreateInstance<HjsonFsDirectoryReaderRx<string, T>>(sp, GetAutomationEntityDir<T>(sp)))
+    //        .AddSingleton<IObservableWriter<string, T>>(sp => ActivatorUtilities.CreateInstance<HjsonFsDirectoryWriterRx<string, T>>(sp, GetAutomationEntityDir<T>(sp)))
+    //        ;
+    //}
 }

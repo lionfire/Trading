@@ -51,6 +51,7 @@
 
   <ItemGroup>
     <Folder Include="Bots\Backtesting\" />
+    <Folder Include="LionFire\Ontology\" />
     <Folder Include="Portfolios\" />
   </ItemGroup>
 

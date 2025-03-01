@@ -1,0 +1,19 @@
+@page "/optimization"
+
+@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<OptimizationProjectVM>
+
+@using LionFire.Reactive.Persistence
+@using LionFire.Trading
+    @using LionFire.Trading.Automation
+@using Microsoft.Extensions.DependencyInjection
+
+<h6>Bots for @WorkspaceId</h6>
+
+<KeyedCollectionView @ref=ItemsEditor
+                     Items="ViewModel!.Items"
+                     TKey="string"
+                     TValue="BotEntity"
+                     TValueVM="BotVM">
+</KeyedCollectionView>
+
+

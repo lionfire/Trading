@@ -2,18 +2,19 @@
 @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM>
 
 @using LionFire.Reactive.Persistence
-    @using LionFire.Trading.Automation
+@using LionFire.Trading.Automation
 @using Microsoft.Extensions.DependencyInjection
 
 <h6>Bots for @WorkspaceId</h6>
 
-@* <KeyedCollectionView @ref=ItemsEditor
-                     Items="ViewModel!.Items"
-                     TKey="string"
-                     TValue="BotEntity"
-                     TValueVM="BotVM">
-</KeyedCollectionView> *@
-
+@* Reader="WorkspaceServices?.GetService<BotsProvider>()?.Reader" *@
+    @* Reader="ViewModel!.ReaderWriter ?? ViewModel!.Reader" *@
+<AsyncVMSourceCacheView @ref=ItemsEditor
+    Services="WorkspaceServices"
+    TKey="string"
+    TValue="BotEntity"
+    TValueVM="BotVM">
+</AsyncVMSourceCacheView>
 
 @code {
     [CascadingParameter(Name = "WorkspaceServices")]
@@ -22,7 +23,9 @@
     [CascadingParameter(Name = "WorkspaceId")]
     public string? WorkspaceId { get; set; }
 
-    KeyedCollectionView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
+    // BotsProvider? BotsProvider { get; set; }
+
+    AsyncVMSourceCacheView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
 
     protected override void OnInitialized()
     {
@@ -32,6 +35,9 @@
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
-        ViewModel!.Reader = WorkspaceServices?.GetService<IObservableReader<string, BotEntity>>();
+
+        // BotsProvider = WorkspaceServices?.GetService<BotsProvider>();
+
+        // ViewModel!.Reader = WorkspaceServices?.GetService<IObservableReader<string, BotEntity>>();
     }
 }

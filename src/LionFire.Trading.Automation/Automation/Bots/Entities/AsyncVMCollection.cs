@@ -7,9 +7,10 @@ using LionFire.Reactive.Persistence;
 using LionFire.Structures;
 using MorseCode.ITask;
 
-namespace LionFire.Trading.Link.Blazor.Components.Pages;
+namespace LionFire.Mvvm;
 
-public class EntitiesVM<TKey, TValue, TValueVM> : AsyncKeyedCollection<TKey, TValueVM>
+[Obsolete("Use ObservableVMs instead")]
+public class AsyncVMCollection<TKey, TValue, TValueVM> : AsyncKeyedCollection<TKey, TValueVM>
     where TKey : notnull
     where TValue : notnull
     where TValueVM : notnull, IKeyed<TKey>, IViewModel<TValue>
@@ -20,7 +21,7 @@ public class EntitiesVM<TKey, TValue, TValueVM> : AsyncKeyedCollection<TKey, TVa
     public Func<TKey, TValue, TValueVM> Factory { get; set; } = DefaultFactory;
     static Func<TKey, TValue, TValueVM> DefaultFactory = (k, v) => (TValueVM)Activator.CreateInstance(typeof(TValueVM), k, v)!;
 
-    public EntitiesVM(IObservableReader<TKey, TValue> reader, IObservableWriter<TKey, TValue> writer)
+    public AsyncVMCollection(IObservableReader<TKey, TValue> reader, IObservableWriter<TKey, TValue> writer)
     {
         this.Reader = reader;
         this.Writer = writer;
@@ -62,7 +63,7 @@ public class EntitiesVM<TKey, TValue, TValueVM> : AsyncKeyedCollection<TKey, TVa
     virtual protected TKey GetKey(TValueVM valueVM) => valueVM.Key;
 
     virtual protected TValue GetEntity(TValueVM valueVM) => valueVM.Value!;
-    
+
     #endregion
 
 }

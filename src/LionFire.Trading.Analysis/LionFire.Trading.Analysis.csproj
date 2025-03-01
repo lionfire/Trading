@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+	  <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+	  <RootNamespace>LionFire</RootNamespace>
+	  <Configurations>Debug;Release</Configurations>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Base\LionFire.Base.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Filesystem\LionFire.Persistence.Filesystem.csproj" />
+    <ProjectReference Include="..\..\..\Trading\src\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Trading\src\LionFire.Trading\LionFire.Trading.csproj" />
+  </ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="CommunityToolkit.Mvvm" />
+		<PackageReference Include="LinqStatistics" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.Options" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
+		<PackageReference Include="NLog" />
+		<PackageReference Include="Polly" />
+		<PackageReference Include="Polly.Contrib.WaitAndRetry" />
+		<PackageReference Include="ReactiveUI.SourceGenerators">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="ReactiveUI.SourceGenerators.Analyzers.CodeFixes">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+</Project>
