@@ -1,21 +1,22 @@
-using CsvHelper.Configuration;
 using CsvHelper;
-using System.IO;
-using System.Threading.Channels;
-using System.Globalization;
-using System.Threading;
-using System.Text.Json;
-using LionFire.Serialization.Csv;
-using System.Diagnostics;
-using System.IO.Compression;
+using CsvHelper.Configuration;
 using DynamicData;
-using ReactiveUI;
-using LionFire.Trading.Automation;
-using Polly;
-using LionFire.Structures;
-using Polly.Registry;
+using LionFire.IO;
 using LionFire.Persistence.Persisters;
 using LionFire.Resilience;
+using LionFire.Serialization.Csv;
+using LionFire.Structures;
+using LionFire.Trading.Automation;
+using Polly;
+using Polly.Registry;
+using ReactiveUI;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.IO.Compression;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Channels;
 
 public class BacktestBatchJournal : IAsyncDisposable
 {
@@ -56,7 +57,7 @@ public class BacktestBatchJournal : IAsyncDisposable
     public BacktestBatchJournal(MultiBacktestContext context, Type pBotType, ResiliencePipelineProvider<string> resiliencePipelineProvider, ILogger<BacktestBatchJournal> logger,
         bool retainInMemory = false)
     {
-        fsRetry = resiliencePipelineProvider.GetPipeline(FilesystemResilience.Retry);
+        fsRetry = resiliencePipelineProvider.GetPipeline(FilesystemRetryPolicy.Default);
 
         Context = context;
 

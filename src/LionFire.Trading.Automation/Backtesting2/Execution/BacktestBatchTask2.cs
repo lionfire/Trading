@@ -4,6 +4,7 @@ using Hjson;
 using LionFire.Execution;
 using LionFire.ExtensionMethods;
 using LionFire.Hosting;
+using LionFire.IO;
 using LionFire.Structures;
 using LionFire.Threading;
 using LionFire.Trading.Automation.Bots;
@@ -108,7 +109,7 @@ public class BacktestBatchTask2<TPrecision>
 
     private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) : base(serviceProvider, parameters, context)
     {
-        if (serviceProvider.GetService<ResiliencePipelineProvider<string>>()?.TryGetPipeline(FilesystemPersistenceResilience.RetryPolicyKey, out var p) == true)
+        if (serviceProvider.GetService<ResiliencePipelineProvider<string>>()?.TryGetPipeline(FilesystemRetryPolicy.Default, out var p) == true)
         {
             FilesystemRetryPipeline = p;
         }
