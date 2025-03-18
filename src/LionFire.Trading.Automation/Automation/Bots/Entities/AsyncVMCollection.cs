@@ -1,4 +1,5 @@
 ﻿using DynamicData;
+using DynamicData.Kernel;
 using LionFire.Data;
 using LionFire.Data.Async.Gets;
 using LionFire.Data.Collections;
@@ -18,15 +19,15 @@ public class AsyncVMCollection<TKey, TValue, TValueVM> : AsyncKeyedCollection<TK
     public IObservableReader<TKey, TValue> Reader { get; }
     public IObservableWriter<TKey, TValue> Writer { get; }
 
-    public Func<TKey, TValue, TValueVM> Factory { get; set; } = DefaultFactory;
-    static Func<TKey, TValue, TValueVM> DefaultFactory = (k, v) => (TValueVM)Activator.CreateInstance(typeof(TValueVM), k, v)!;
+    public Func<TKey, Optional<TValue>, TValueVM> Factory { get; set; } = DefaultFactory;
+    static Func<TKey, Optional<TValue>, TValueVM> DefaultFactory = (k, v) => (TValueVM)Activator.CreateInstance(typeof(TValueVM), k, v.HasValue ? v.Value : null)!;
 
     public AsyncVMCollection(IObservableReader<TKey, TValue> reader, IObservableWriter<TKey, TValue> writer)
     {
         this.Reader = reader;
         this.Writer = writer;
 
-        Items = Reader.ObservableCache.Connect()
+        Items = Reader.Values.Connect()
             .Transform((e, key) => Factory(key, e))
             .AsObservableCache();
 

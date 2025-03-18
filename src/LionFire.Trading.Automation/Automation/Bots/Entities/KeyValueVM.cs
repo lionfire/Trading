@@ -7,7 +7,7 @@ public class KeyValueVM<TKey, TValue> : VMBase<TKey, TValue>
     public override TKey Key { get; }
     public override TValue Value { get; }
 
-    public KeyValueVM(IServiceProvider serviceProvider, TKey key, TValue value) : base(serviceProvider)
+    public KeyValueVM(TKey key, TValue value) 
     {
         this.Key = key;
         this.Value = value;

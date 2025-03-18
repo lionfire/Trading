@@ -12,14 +12,14 @@ public abstract class VMBase<TKey, TValue> : ReactiveObject
 
     public abstract TValue Value { get; }
 
-    public IServiceProvider ServiceProvider { get; }
+    //public IServiceProvider ServiceProvider { get; }
 
-    IObservableReader<TKey, TValue>? observableReader;
+    //IObservableReader<TKey, TValue>? observableReader;
 
-    public VMBase(IServiceProvider serviceProvider)
-    {
-        ServiceProvider = serviceProvider;
-        observableReader = serviceProvider.GetService<IObservableReader<TKey, TValue>>();
-    }
+    //public VMBase(IServiceProvider serviceProvider)
+    //{
+    //    ServiceProvider = serviceProvider;
+    //    observableReader = serviceProvider.GetService<IObservableReader<TKey, TValue>>();
+    //}
 }
 

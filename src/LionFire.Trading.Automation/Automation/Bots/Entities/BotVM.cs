@@ -8,7 +8,7 @@ namespace LionFire.Trading.Automation;
 
 public class BotVM : KeyValueVM<string, BotEntity>
 {
-    public BotVM(IServiceProvider serviceProvider, string key, BotEntity value) : base(serviceProvider, key, value)
+    public BotVM(string key, BotEntity value) : base(key, value)
     {
     }
 

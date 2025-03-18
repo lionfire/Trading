@@ -13,6 +13,7 @@ public static class TradingUIHostingX
     public static IServiceCollection AddTradingUI(this IServiceCollection services)
     {
         return services
+            .AddMvvm()
             .AddAsyncDataMvvm()
             .AddTransient<ScannerVM>()
             ;

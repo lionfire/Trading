@@ -32,7 +32,7 @@ public partial class OptimizationProject : ReactiveObject
     #region Properties
 
     public SourceCache<BotTypeReference, string> BotTypes { get; private set; }
-    public List<BotTypeReference> BotTypesList { get => BotTypes?.Items ?? []; set => BotTypes = new SourceCache<BotTypeReference, string>(x => x.Key); }
+    public IReadOnlyList<BotTypeReference> BotTypesList { get => BotTypes?.Items ?? []; set => BotTypes = new SourceCache<BotTypeReference, string>(x => x.Key); }
 
     //public SourceCache<string, string> Assemblies { get; private set; } // FUTURE
 

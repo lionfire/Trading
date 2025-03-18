@@ -1,10 +1,9 @@
 @page "/bots/{BotId}"
+@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<ObservableReaderWriterItemVM<string, BotEntity, BotVM>>
 
 @using LionFire.Mvvm
 @using LionFire.Trading.Automation
 @using MudBlazor.Components
-
-@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<ObservableReaderWriterVM<string, BotEntity, BotVM>>
 
 <h3>Bot @BotId</h3>
 

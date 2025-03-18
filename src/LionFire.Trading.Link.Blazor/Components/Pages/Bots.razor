@@ -5,16 +5,29 @@
 @using LionFire.Trading.Automation
 @using Microsoft.Extensions.DependencyInjection
 
-<h6>Bots for @WorkspaceId</h6>
-
-@* Reader="WorkspaceServices?.GetService<BotsProvider>()?.Reader" *@
-    @* Reader="ViewModel!.ReaderWriter ?? ViewModel!.Reader" *@
-<AsyncVMSourceCacheView @ref=ItemsEditor
-    Services="WorkspaceServices"
-    TKey="string"
-    TValue="BotEntity"
-    TValueVM="BotVM">
-</AsyncVMSourceCacheView>
+<div class="pa-6">
+    <ObservableDataView @ref=ItemsEditor
+                        Data="ViewModel!.Data"
+                        TKey="string"
+                        TValue="BotEntity"
+                        TValueVM="BotVM">
+        <Columns>
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Key" />
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Name" />
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Comments" />
+            <TemplateColumn T="BotVM"
+            >
+                @* T="BotVM" *@
+                <CellTemplate >
+                    <div>Description:
+                        @context.Item.Value.Description
+                    <MudSwitch T="bool" >Enabled</MudSwitch>
+                    </div>
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+    </ObservableDataView>
+</div>
 
 @code {
     [CascadingParameter(Name = "WorkspaceServices")]
@@ -23,9 +36,7 @@
     [CascadingParameter(Name = "WorkspaceId")]
     public string? WorkspaceId { get; set; }
 
-    // BotsProvider? BotsProvider { get; set; }
-
-    AsyncVMSourceCacheView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
+    ObservableDataView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
 
     protected override void OnInitialized()
     {
@@ -35,9 +46,6 @@
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
-
-        // BotsProvider = WorkspaceServices?.GetService<BotsProvider>();
-
-        // ViewModel!.Reader = WorkspaceServices?.GetService<IObservableReader<string, BotEntity>>();
+        ViewModel!.Init(WorkspaceServices);
     }
 }

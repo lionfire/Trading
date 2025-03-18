@@ -1,5 +1,7 @@
 ﻿using LionFire.Ontology;
 using LionFire.Trading.Automation;
+using Newtonsoft.Json;
+using Nito.Disposables;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using AliasAttribute = LionFire.Ontology.AliasAttribute;
@@ -21,5 +23,10 @@ public partial class BotEntity : ReactiveObject
 
     [Reactive]
     private string? _comments;
+
+    //[JsonProperty("Description")]
+    public string? Description { get; set; }
+
+    void X() { Comments = "a"; }
 
 }
