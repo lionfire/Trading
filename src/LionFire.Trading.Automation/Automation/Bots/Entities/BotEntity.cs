@@ -10,7 +10,6 @@ namespace LionFire.Trading.Automation;
 
 
 [Alias("Bot")]
-//[Plural("Bots")]
 public partial class BotEntity : ReactiveObject
 {
     public PBotHarness? PBotHarness { get; set; }
@@ -24,9 +23,7 @@ public partial class BotEntity : ReactiveObject
     [Reactive]
     private string? _comments;
 
-    //[JsonProperty("Description")]
-    public string? Description { get; set; }
-
-    void X() { Comments = "a"; }
+    [Reactive]
+    private string? _description;
 
 }

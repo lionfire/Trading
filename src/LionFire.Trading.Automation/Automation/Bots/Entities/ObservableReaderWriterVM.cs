@@ -1,5 +1,6 @@
 ﻿using LionFire.Reactive.Persistence;
 using ReactiveUI;
+using System.ComponentModel;
 using System.Reactive.Linq;
 
 namespace LionFire.Mvvm;
@@ -31,17 +32,9 @@ public partial class ObservableReaderWriterItemVM<TKey, TValue, TValueVM> : Obse
     {
         Writer = writer;
 
-        this.WhenAnyValue(x => x.Value).Subscribe(v =>
-        {
-            if (v != null)
-            {
-                Console.WriteLine("TODO - Write");
-                //Write().AsTask().Wait();
-            }
-        });
+
     }
-
-
+    IDisposable? rnpcSubscription = null;
 
     public ValueTask Write()
     {
