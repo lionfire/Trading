@@ -10,9 +10,12 @@
                         Data="ViewModel!.Data"
                         TKey="string"
                         TValue="BotEntity"
-                        TValueVM="BotVM">
+                        TValueVM="BotVM"
+                        AllowedEditModes=EditMode.All
+                        EditMode="DataGridEditMode.Cell">
         <Columns>
-            <PropertyColumn T="BotVM" TProperty="string" Editable="false" Property="x => x.Key" />
+            <PropertyColumn T="BotVM" TProperty="string"  Property="x => x.Key" />
+            @* Editable="false" *@
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Name" />
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Comments" />
             <PropertyColumn T="BotVM" TProperty="bool" Property="x => x.Value.Enabled" />
