@@ -56,7 +56,7 @@ Host.CreateApplicationBuilder(args)
 
             .ConfigureBacktestingOptions(lf.Configuration)
             .AddBacktesting()
-            .AddAutomation()
+            .AddAutomationRuntime()
         )
     )
     .Build()

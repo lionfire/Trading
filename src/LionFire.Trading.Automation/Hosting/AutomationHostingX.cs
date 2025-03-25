@@ -3,6 +3,7 @@ using LionFire.Reactive.Persistence;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Hosting;
 using LionFire.UI.Workspaces;
+using LionFire.Workspaces;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -26,28 +27,40 @@ public static class AutomationHostingX
             //    )
             ;
     }
-    public static IServiceCollection AddAutomation(this IServiceCollection services)
-    {
-        return services
-            .AddAutomation_Data()
-            ;
-    }
+
+    //public static IServiceCollection AddAutomation(this IServiceCollection services)
+    //{
+    //    return services
+    //        .AddAutomationRuntime()
+    //        .AddAutomationModel()
+    //        ;
+    //}
 
     public static IServiceCollection AddAutomationUI(this IServiceCollection services)
     {
         return services
+            .AddAutomationModel()
             .AddTransient<BotsVM>()
             .AddTransient<BotVM>()
+            ;
+    }
+
+    private static IServiceCollection AddAutomationModel(this IServiceCollection services)
+    {
+        return services
             .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, BotsWorkspaceServiceConfigurator>()
             ;
     }
 
-    private static IServiceCollection AddAutomation_Data(this IServiceCollection services)
+    public static IServiceCollection AddAutomationRuntime(this IServiceCollection services)
     {
         return services
-            //.AddEntityDir<BotEntity>()
+            .AddAutomationModel()
+            .AddHostedSingleton<AutomationRuntime>()
             ;
     }
+
+
 
     //private static string GetAutomationEntityDir<T>(IServiceProvider serviceProvider)
     //{

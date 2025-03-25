@@ -12,25 +12,70 @@
                         TValue="BotEntity"
                         TValueVM="BotVM"
                         AllowedEditModes=EditMode.All
-                        EditMode="DataGridEditMode.Cell">
+    >
+                        @* EditMode="DataGridEditMode.Cell" *@
         <Columns>
-            <PropertyColumn T="BotVM" TProperty="string"  Property="x => x.Key" />
+            <HierarchyColumn T="BotVM" />
+
+
+            @* <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Key" /> *@
             @* Editable="false" *@
+            <TemplateColumn T="BotVM">
+                <HeaderTemplate>
+                    Status
+                </HeaderTemplate>
+                <CellTemplate>
+                    <MudIcon Icon="@Icons.Material.Outlined.Circle"/>
+                    <MudIcon Icon="@Icons.Material.Filled.Circle" />
+                    <MudIcon Color="@Color.Primary" Icon="@Icons.Material.Outlined.Circle"/>
+                    <MudIcon Color=@Color.Primary Icon="@Icons.Material.Filled.Circle" />
+                    <MudIcon Color="@Color.Secondary" Icon="@Icons.Material.Outlined.Circle"/>
+                    <MudIcon Color=@Color.Secondary Icon="@Icons.Material.Filled.Circle" />
+                    <MudIcon Color="@Color.Tertiary" Icon="@Icons.Material.Outlined.Circle"/>
+                    <MudIcon Color=@Color.Tertiary Icon="@Icons.Material.Filled.Circle" />
+                    <MudIcon Color="@Color.Error" Icon="@Icons.Material.Outlined.Circle"/>
+                    <MudIcon Color=@Color.Error Icon="@Icons.Material.Filled.Circle" />
+                </CellTemplate>
+            </TemplateColumn>
+
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Name" />
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Comments" />
             <PropertyColumn T="BotVM" TProperty="bool" Property="x => x.Value.Enabled" />
-            <TemplateColumn T="BotVM"
-            >
+            <TemplateColumn T="BotVM">
+                <HeaderTemplate>
+                    Enabled
+                </HeaderTemplate>
                 @* T="BotVM" *@
-                <CellTemplate >
+                <CellTemplate>
                     <div>
                         @* Description: *@
                         @* @context.Item.Value.Description *@
-                    <MudSwitch T="bool" >Enabled</MudSwitch>
+                        <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled">Enabled</MudSwitch>
                     </div>
                 </CellTemplate>
             </TemplateColumn>
         </Columns>
+        <ChildRowContent>
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@context.Item.Value.Name</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText>Enabled: <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled">Enabled</MudSwitch></MudText>
+                    <MudText>Comments: @context.Item.Value.Comments</MudText>
+                </MudCardContent>
+            </MudCard>
+        </ChildRowContent>
+        <ContextMenu>
+            <MudMenuItem Icon="@Icons.Material.Filled.Delete">
+                Delete @context.Value.Name
+            </MudMenuItem>
+            @* <MudMenuItem Icon="@Icons.Material.Filled.Info" OnClick="@ShowHiddenInfo">
+                View Details for @_contextRow?.HwId
+            </MudMenuItem> *@
+        </ContextMenu>
     </ObservableDataView>
 </div>
 

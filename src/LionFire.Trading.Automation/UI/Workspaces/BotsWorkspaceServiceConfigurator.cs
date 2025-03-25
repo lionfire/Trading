@@ -1,9 +1,9 @@
 ﻿using LionFire.IO.Reactive.Filesystem;
 using LionFire.Ontology;
 using LionFire.Persistence.Filesystem;
-using LionFire.Reactive.Persistence;
 using LionFire.Referencing;
 using LionFire.UI.Workspaces;
+using LionFire.Workspaces;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Serialization.Buffers;
 
@@ -54,27 +54,5 @@ public class BotsWorkspaceServiceConfigurator : IWorkspaceServiceConfigurator
     }
 
     #endregion
-}
-
-public class BotsProvider : ObservableEntitiesProvider<string, BotEntity>
-{
-    public BotsProvider(IServiceProvider serviceProvider) : base(serviceProvider)
-    {
-    }
-}
-
-public class ObservableEntitiesProvider<TKey, TValue>
-    where TKey : notnull
-    where TValue : notnull
-{
-    public ObservableEntitiesProvider(IServiceProvider serviceProvider)
-    {
-        ReaderWriter = serviceProvider.GetService<IObservableReaderWriter<TKey, TValue>>();
-        Reader ??= serviceProvider.GetRequiredService<IObservableReader<TKey, TValue>>();
-    }
-
-    public IObservableReaderWriter<TKey, TValue>? ReaderWriter { get; }
-
-    public IObservableReader<TKey, TValue>? Reader { get; }
 }
 

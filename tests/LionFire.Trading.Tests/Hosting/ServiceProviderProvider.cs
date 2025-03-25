@@ -33,7 +33,7 @@ public static class ServiceProviderProvider
 
             .AddBinance()
 
-            .AddAutomation()
+            .AddAutomationRuntime()
             .AddBacktesting()
             .ConfigureBacktestingOptions(Configuration)
             ;

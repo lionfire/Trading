@@ -10,7 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\..\Core\src\LionFire.Reactive.Framework\LionFire.Reactive.Framework.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Structures\LionFire.Structures.csproj" />
-    <ProjectReference Include="..\..\..\core\src\LionFire.UI.Workspaces\LionFire.UI.Workspaces.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Workspaces.Abstractions\LionFire.Workspaces.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Indicators\LionFire.Trading.Indicators.csproj" />
   </ItemGroup>

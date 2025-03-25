@@ -41,7 +41,6 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing.Abstractions\LionFire.Referencing.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Referencing\LionFire.Referencing.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.UI.Entities\LionFire.UI.Entities.csproj" />
-    <ProjectReference Include="..\..\..\Core\src\LionFire.UI.Workspaces\LionFire.UI.Workspaces.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Link.Abstractions\LionFire.Trading.Link.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Environment\LionFire.Environment.csproj" />
