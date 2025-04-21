@@ -12,8 +12,8 @@
                         TValue="BotEntity"
                         TValueVM="BotVM"
                         AllowedEditModes=EditMode.All
-    >
-                        @* EditMode="DataGridEditMode.Cell" *@
+                        ReadOnly=false>
+        @* EditMode="DataGridEditMode.Cell" *@
         <Columns>
             <HierarchyColumn T="BotVM" />
 
@@ -25,35 +25,34 @@
                     Status
                 </HeaderTemplate>
                 <CellTemplate>
-                    <MudIcon Icon="@Icons.Material.Outlined.Circle"/>
-                    <MudIcon Icon="@Icons.Material.Filled.Circle" />
-                    <MudIcon Color="@Color.Primary" Icon="@Icons.Material.Outlined.Circle"/>
-                    <MudIcon Color=@Color.Primary Icon="@Icons.Material.Filled.Circle" />
-                    <MudIcon Color="@Color.Secondary" Icon="@Icons.Material.Outlined.Circle"/>
+                    <MudIcon Icon="@Icons.Material.Outlined.Circle" />
+                    @* <MudIcon Icon="@Icons.Material.Filled.Circle" /> *@
+                    @* <MudIcon Color="@Color.Primary" Icon="@Icons.Material.Outlined.Circle" /> *@
+                    @* <MudIcon Color=@Color.Primary Icon="@Icons.Material.Filled.Circle" /> *@
+                    @* <MudIcon Color="@Color.Secondary" Icon="@Icons.Material.Outlined.Circle" />
                     <MudIcon Color=@Color.Secondary Icon="@Icons.Material.Filled.Circle" />
-                    <MudIcon Color="@Color.Tertiary" Icon="@Icons.Material.Outlined.Circle"/>
+                    <MudIcon Color="@Color.Tertiary" Icon="@Icons.Material.Outlined.Circle" />
                     <MudIcon Color=@Color.Tertiary Icon="@Icons.Material.Filled.Circle" />
-                    <MudIcon Color="@Color.Error" Icon="@Icons.Material.Outlined.Circle"/>
-                    <MudIcon Color=@Color.Error Icon="@Icons.Material.Filled.Circle" />
+                    <MudIcon Color="@Color.Error" Icon="@Icons.Material.Outlined.Circle" />
+                    <MudIcon Color=@Color.Error Icon="@Icons.Material.Filled.Circle" /> *@
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn T="BotVM">
+                <HeaderTemplate>
+                    Enabled
+                </HeaderTemplate>
+                <CellTemplate>
+                    @if (context.Item?.Value != null)
+                    {
+                        <div>
+                            <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled"></MudSwitch>
+                        </div>
+                    }
                 </CellTemplate>
             </TemplateColumn>
 
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Name" />
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Comments" />
-            <PropertyColumn T="BotVM" TProperty="bool" Property="x => x.Value.Enabled" />
-            <TemplateColumn T="BotVM">
-                <HeaderTemplate>
-                    Enabled
-                </HeaderTemplate>
-                @* T="BotVM" *@
-                <CellTemplate>
-                    <div>
-                        @* Description: *@
-                        @* @context.Item.Value.Description *@
-                        <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled">Enabled</MudSwitch>
-                    </div>
-                </CellTemplate>
-            </TemplateColumn>
         </Columns>
         <ChildRowContent>
             <MudCard>

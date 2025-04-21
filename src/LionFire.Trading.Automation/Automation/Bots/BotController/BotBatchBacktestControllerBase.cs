@@ -28,6 +28,16 @@ public class BacktestBatchResults : BacktestBatchInfo
     public TimeFrame TimeFrame { get; set; }
 }
 
+public abstract class BotBatchControllerBase : IBotBatchController
+{
+
+}
+
+public abstract class LiveBotBatchControllerBase : BotBatchControllerBase
+{
+
+}
+
 /// <summary>
 /// Batch processing of multiple bots:
 /// - InputEnumerators are enumerated in lock step
@@ -35,7 +45,7 @@ public class BacktestBatchResults : BacktestBatchInfo
 /// <remarks>
 /// REVIEW: This base class should maybe be combined with BacktestBatchTask2 
 /// </remarks>
-public abstract class BotBatchControllerBase : IBotBatchController
+public abstract class BotBatchBacktestControllerBase : BotBatchControllerBase
 {
     #region Identity
 
@@ -82,7 +92,7 @@ public abstract class BotBatchControllerBase : IBotBatchController
 
     #region Lifecycle
 
-    public BotBatchControllerBase(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context)
+    public BotBatchBacktestControllerBase(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context)
     {
         ServiceProvider = serviceProvider;
         PBacktests = parameters;

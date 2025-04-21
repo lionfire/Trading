@@ -60,7 +60,7 @@ public static class BotInfos
     
     #endregion
 
-#if UNUSED // OLD From BotBatchControllerBase
+#if UNUSED // OLD From BotBatchBacktestControllerBase
     public partial class BotBatchControllerBase
     {
 

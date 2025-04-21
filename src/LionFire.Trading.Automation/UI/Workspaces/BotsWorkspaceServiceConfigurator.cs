@@ -37,7 +37,7 @@ public class BotsWorkspaceServiceConfigurator : IWorkspaceServiceConfigurator
         {
             services
                .RegisterObservablesInSubDirForType<BotEntity>(userWorkspacesService.ServiceProvider, workspaceReference)
-               .AddSingleton<BotsProvider>()
+               //.AddSingleton<BotsProvider>()
                ;
         }
 

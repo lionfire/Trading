@@ -27,7 +27,7 @@ where TValue : notnull
             autoLoadAllSubscription?.Dispose();
             if (value)
             {
-                autoLoadAllSubscription = Data.ListenAll();
+                autoLoadAllSubscription = Data.ListenAllKeys();
             }
         }
     }
@@ -44,7 +44,7 @@ where TValue : notnull
     public ObservableReaderVM(IObservableReader<TKey, TValue> data)
     {
         Data = data;
-        //data.ListenAll();
+        //data.ListenAllKeys();
 
         
     }

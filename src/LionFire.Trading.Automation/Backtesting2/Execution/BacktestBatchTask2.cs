@@ -48,7 +48,7 @@ namespace LionFire.Trading.Automation;
 /// - inputs (such as indicators, even if they have different lookback requirements)
 /// </summary>
 public class BacktestBatchTask2<TPrecision>
-: BotBatchControllerBase
+: BotBatchBacktestControllerBase
 , IBacktestBatch
     where TPrecision : struct, INumber<TPrecision>
 {

@@ -18,7 +18,7 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
     #region Relationships
 
     public IBotBatchController BotBatchController => botBatchController;
-    private BotBatchControllerBase botBatchController;
+    private BotBatchBacktestControllerBase botBatchController;
     public IBot2 Bot { get; }
     public PBacktestAccount<TPrecision> PBacktestAccount { get; }
     public BacktestTradeJournal<TPrecision> Journal { get; }
@@ -45,7 +45,7 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
 
     private BacktestBotController(IBotBatchController botBatchController, IBot2 bot, PBacktestAccount<TPrecision> pBacktestAccount, BacktestTradeJournal<TPrecision> journal)
     {
-        this.botBatchController = (BotBatchControllerBase)botBatchController;
+        this.botBatchController = (BotBatchBacktestControllerBase)botBatchController;
         Bot = bot;
         PBacktestAccount = pBacktestAccount;
         Journal = journal;
