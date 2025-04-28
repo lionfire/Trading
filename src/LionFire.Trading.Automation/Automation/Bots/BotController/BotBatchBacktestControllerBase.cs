@@ -9,32 +9,17 @@ using LionFire.Trading.ValueWindows;
 using Microsoft.Extensions.DependencyInjection;
 using Nito.AsyncEx;
 using System.Collections.Concurrent;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace LionFire.Trading.Automation;
 
-public class BacktestBatchInfo
+public abstract class BotHarnessBase
 {
-    public TimeFrame? TimeFrame { get; set; }
-    public DateTimeOffset Start { get; set; }
-    public DateTimeOffset EndExclusive { get; set; }
-    public bool TicksEnabled { get; set; }
-}
+    #region Identity
 
-public class BacktestBatchResults : BacktestBatchInfo
-{
-    public string? BotDll { get; set; }
-    public TimeFrame TimeFrame { get; set; }
-}
+    public abstract BotExecutionMode BotExecutionMode { get; }
 
-public abstract class BotBatchControllerBase : IBotBatchController
-{
-
-}
-
-public abstract class LiveBotBatchControllerBase : BotBatchControllerBase
-{
+    #endregion
 
 }
 
@@ -45,11 +30,9 @@ public abstract class LiveBotBatchControllerBase : BotBatchControllerBase
 /// <remarks>
 /// REVIEW: This base class should maybe be combined with BacktestBatchTask2 
 /// </remarks>
-public abstract class BotBatchBacktestControllerBase : BotBatchControllerBase
+public abstract class BotBatchBacktestControllerBase : BotHarnessBase, IBotBatchController
 {
     #region Identity
-
-    public abstract BotExecutionMode BotExecutionMode { get; }
 
     public MultiBacktestContext Context { get; }
 
@@ -61,12 +44,25 @@ public abstract class BotBatchBacktestControllerBase : BotBatchControllerBase
 
     #endregion
 
-    public T GetInfo<T>() where T : BacktestBatchInfo, new() => new()
+    public static string MachineName
+    {
+        get => machineName ?? Environment.MachineName;
+        set => machineName = value;
+    }
+    private static string? machineName;
+
+
+    public T GetBatchInfo<T>() where T : BacktestBatchInfo, new() => new()
     {
         TimeFrame = TimeFrame,
         Start = Start,
         EndExclusive = EndExclusive,
         TicksEnabled = TicksEnabled,
+
+        BotAssemblyNameString = PBacktests.First(b => b.PBot != null).PBot!.GetType().Assembly.FullName ?? throw new ArgumentNullException("PBacktests[...].PBot"),
+        BacktestExecutionDate = DateTime.UtcNow,
+        MachineName = MachineName,
+
     };
 
     #region Parameters

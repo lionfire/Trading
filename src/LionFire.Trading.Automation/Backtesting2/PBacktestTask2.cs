@@ -88,9 +88,17 @@ public partial class PBacktestBatchTask2 : PBotHarness //: IPBacktestBatchTask2
     #region Time
     
     public DateTimeOffset Start { get; set; }
-    public DateTime? StartDateTime { get => Start.DateTime; set => Start = value ?? default; }
+    public DateTime? StartDateTime { get => Start.DateTime; set => Start = Coerce(value); }
     public DateTimeOffset EndExclusive { get; set; }
-    public DateTime? EndExclusiveDateTime { get => EndExclusive.DateTime; set => EndExclusive = value ?? default; }
+    public DateTime? EndExclusiveDateTime { get => EndExclusive.DateTime; set => EndExclusive = Coerce(value); }
+
+    public static DateTimeOffset Coerce(DateTime? dateTime)
+    {
+        if (!dateTime.HasValue) return default;
+        var dt = dateTime.Value;
+        if (dt.Kind == DateTimeKind.Unspecified) dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+        return dt;
+    }
 
     #endregion
 

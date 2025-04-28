@@ -83,7 +83,7 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 
     #endregion
 
-    #region Validaiton
+    #region Validation
 
     public void ThrowIfInvalid()
     {
@@ -186,8 +186,8 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
         //Thread.SpinWait(150);
         //Thread.SpinWait(50);
-        if (OpenScore >= Parameters.Points!.OpenThreshold) { TryOpen(); }
-        if (CloseScore >= Parameters.Points.CloseThreshold) { TryClose(); }
+        if (CloseScore >= Parameters.Points!.CloseThreshold) { TryClose(); }
+        else if (OpenScore >= Parameters.Points.OpenThreshold) { TryOpen(); }
 
         var sl = Direction switch
         {

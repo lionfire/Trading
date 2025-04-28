@@ -1,15 +1,13 @@
 @inherits ReactiveComponentBase<OneShotOptimizeVM>
 @using LionFire.Trading.Automation.Blazor.Optimization.Charts
 
-<MudIconButton OnClick="@(()=>_open ^= true)" Icon="@Icons.Material.Outlined.Expand" />
+<MudIconButton OnClick="@(() => _open ^= true)" Icon="@Icons.Material.Outlined.Expand" />
 
-<TimeSeriesResultsChart ViewModel="ViewModel" 
-/>
-    @* ="min-height: calc(100% - 100px);" *@
+<TimeSeriesResultsChart ViewModel="ViewModel" />
+@* ="min-height: calc(100% - 100px);" *@
 
-<MudDrawer @bind-Open="@_open" Anchor="@_anchor" Elevation="1" 
-Variant="@DrawerVariant.Persistent" OverlayAutoClose="@_overlayAutoClose"
->
+<MudDrawer @bind-Open="@_open" Anchor="@_anchor" Elevation="1"
+           Variant="@DrawerVariant.Persistent" OverlayAutoClose="@_overlayAutoClose">
     <MudDrawerHeader>
         <MudText Typo="Typo.h6">Results</MudText>
     </MudDrawerHeader>
@@ -17,17 +15,28 @@ Variant="@DrawerVariant.Persistent" OverlayAutoClose="@_overlayAutoClose"
     {
         <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
             <Columns>
-                <PropertyColumn Property="x => x.BatchId" />
-                <PropertyColumn Property="x => x.Id" />
-                <PropertyColumn Property="x => x.Fitness" />
-                <PropertyColumn Property="x => x.AD" />
-                <PropertyColumn Property="x => x.AMWT" />
-                <PropertyColumn Property="x => x.Wins" />
-                <PropertyColumn Property="x => x.WinRate" />
-                <PropertyColumn Property="x => x.Losses" />
-                <PropertyColumn Property="x => x.TotalTrades" />
+                <PropertyColumn Property="x => x.BatchId" Hidden=true Hideable="true" />
+                <PropertyColumn Property="x => x.Id" Hideable="true" Hidden="true" />
+                <PropertyColumn Property="x => x.Fitness" Hideable="true" />
+                <PropertyColumn Property="x => x.AD" Format="N1" CellClass="text-align-right"  />
+                <PropertyColumn Property="x => x.TotalTrades / ((ViewModel.DateRange.End - ViewModel.DateRange.Start).Value.TotalDays)" Format="N2" Title="TPD" Hideable="true" />
+                <PropertyColumn Property="x => x.TotalTrades" Hideable="true" />
+                <PropertyColumn Property="x => x.WinRate" Format="P1" Hideable="true" />
+                <PropertyColumn Property="x => x.AMWT" Format="N0" Hideable="true" />
+                <PropertyColumn Property="x => x.Wins" Hideable="true" Hidden="true" />
+                <PropertyColumn Property="x => x.Losses" Hideable="true" Hidden="true" />
+                <PropertyColumn Property="x => x.Breakevens" Hideable="true" Hidden="true" />
+                <PropertyColumn Property="x => x.ClosedTrades" Hideable="true" Hidden="true" />
 
-              @*   @foreach(var parameter in ViewModel.Context.POptimization.OptimizableParameters)
+                <TemplateColumn Title="Flags">
+                    <CellTemplate>
+                        @if (context.Item.IsAborted)
+                        {
+                            <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.CancelPresentation" Color="@Color.Dark" Style="background-color: #000000; padding: 0 2px; box-sizing: content-box; border-radius: 3px; fill: #920013;" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                @*   @foreach(var parameter in ViewModel.Context.POptimization.OptimizableParameters)
                 {
                     <PropertyColumn Property="x => x.Parameters[parameter.Path]" />
                 } *@

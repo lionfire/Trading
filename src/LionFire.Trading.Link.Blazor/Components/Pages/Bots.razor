@@ -51,8 +51,11 @@
                 </CellTemplate>
             </TemplateColumn>
 
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Symbol" Title="Type" />
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.BotTypeName" Title="Type" />
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Name" />
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Comments" />
+                @* TODO: Some summary stats:  AD, MHWT, W%, TPM *@
         </Columns>
         <ChildRowContent>
             <MudCard>

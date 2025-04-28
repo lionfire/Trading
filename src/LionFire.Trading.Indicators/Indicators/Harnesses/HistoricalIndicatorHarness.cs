@@ -79,7 +79,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
         var data = await input.Get(start, endExclusive).ConfigureAwait(false);
 
-        if (!data.IsSuccess || data.Values.Any() != true) throw new Exception($"Failed to get data: {data.FailReason}");
+        if (!data.IsSuccess || data.Values.Any() != true) throw new NoDataException($"Failed to get data: {data.FailReason}");
 
         return data.Values;
     }
@@ -198,3 +198,9 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
 }
 
+public class NoDataException : Exception
+{
+    public NoDataException(string message) : base(message)
+    {
+    }
+}

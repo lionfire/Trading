@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 
 namespace LionFire.Trading;
 
+// REVIEW: Support nulls?
 [GenerateSerializer]
 [Alias("exchange-symbol-timeframe")]
 public record  ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol), IPKlineInput

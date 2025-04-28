@@ -47,7 +47,7 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
         //    ParametersList.Add(state);
         //}
 
-        parameters = new List<IParameterLevelOfDetailInfo>(OptimizerLevelsOfDetail.Optimizable.Select(options => ParameterLevelOfDetailInfo.Create(level, options.Info, options)));
+        parameters = new List<IParameterLevelOfDetailInfo>(OptimizerLevelsOfDetail.Optimizable.ToArray().Select(options => ParameterLevelOfDetailInfo.Create(level, options.Info, options)));
 
 
         //Task.Run(() =>
@@ -117,7 +117,7 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
             int i = 0;
             foreach (var p in gridLevelOfDetailState.Parameters)
             {
-                current[i] = -1;
+                current[i] = i == 0 ? -1 : 0;
                 max[i++] = (int)p.TestCount - 1;
             }
         }

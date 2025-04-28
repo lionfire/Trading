@@ -14,11 +14,21 @@ public class BacktestBatchJournalEntry
     /// </summary>
     public double AMWT { get; set; }
     public int Wins { get; set; }
-    public double WinRate => Wins / (double)TotalTrades;
+    public double WinRate => Wins / (double)ClosedTrades;
+    public double CloseRate => ClosedTrades / (double)TotalTrades;
     public int Losses { get; set; }
     public int Breakevens { get; set; }
     public int UnknownTrades { get; set; }
-    public int TotalTrades => Wins+Losses+Breakevens + UnknownTrades;
+    public int TotalTrades => Wins + Losses + Breakevens + UnknownTrades;
+    public int ClosedTrades => Wins + Losses + Breakevens;
+
+    /// <summary>
+    /// Injected as needed
+    /// </summary>
+    [Ignore]
+    public TimeSpan? Duration { get; set; }
+    [Ignore]
+    public double TradesPerMonth => Duration.HasValue ? (TotalTrades * 30.0 / Duration.Value.TotalDays) : double.NaN;
 
     public double MaxBalanceDrawdown { get; set; }
     public double MaxBalanceDrawdownPerunum { get; set; }
@@ -36,5 +46,5 @@ public class BacktestBatchJournalEntry
     public bool IsAborted { get; set; }
 
     [Ignore]
-    public IEnumerable<object>? JournalEntries { get; set;  }
+    public IEnumerable<object>? JournalEntries { get; set; }
 }

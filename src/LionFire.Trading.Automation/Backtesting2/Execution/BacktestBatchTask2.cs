@@ -47,9 +47,9 @@ namespace LionFire.Trading.Automation;
 /// Reused:
 /// - inputs (such as indicators, even if they have different lookback requirements)
 /// </summary>
-public class BacktestBatchTask2<TPrecision>
-: BotBatchBacktestControllerBase
-, IBacktestBatch
+public sealed class BacktestBatchTask2<TPrecision>
+    : BotBatchBacktestControllerBase
+    , IBacktestBatch
     where TPrecision : struct, INumber<TPrecision>
 {
     #region Identity
@@ -827,12 +827,12 @@ public class BacktestBatchTask2<TPrecision>
     HjsonOptions hjsonOptions = new HjsonOptions() { EmitRootBraces = false };
     private async ValueTask SaveBatchInfo()
     {
-        var r = GetInfo<BacktestBatchResults>();
-        r.BotDll = this.bots.FirstOrDefault()?.GetType().Assembly.FullName;
+        var r = GetBatchInfo<BacktestBatchInfo>();
 
         var json = JsonConvert.SerializeObject(r, new JsonSerializerSettings
         {
             DefaultValueHandling = DefaultValueHandling.Ignore,
+            
         });
 
         var hjsonValue = Hjson.JsonValue.Parse(json);

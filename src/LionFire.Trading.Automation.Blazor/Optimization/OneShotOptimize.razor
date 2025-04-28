@@ -14,7 +14,7 @@
 @* <LionFire.Trading.Automation.Blazor.Infra.CpuChart/> *@
 
 
-<div style="height: 100%;" class="d-flex flex-column gap-2">
+<div class="d-flex flex-column flex-grow-1 gap-2">
 
     @* ▉▉▉▉___  Toolbar: [Abort] [Optimize] *@
     <MudPaper id="TopActionAndProgressBar" Class="gap-6 d-flex flex-row justify-end pa-6">
@@ -176,7 +176,8 @@
         <GeneralParameters ViewModel="ViewModel" />
     </MudPaper>
 
-    <div style="overflow-y: auto; min-height: calc(100% - 100px);">
+    <div style="overflow-y: auto; ">
+        @* min-height: calc(100% - 100px); *@
         <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Border="true" Outlined="true" PanelClass="px-4 py-6 object-fill" ApplyEffectsToContainer="true" Style="min-height: calc(100% - 100px); height: calc(100% - 100px);">
             <ChildContent>
                 <MudTabPanel Text="Parameters">
