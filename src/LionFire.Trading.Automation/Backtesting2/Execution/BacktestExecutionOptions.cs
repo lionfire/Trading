@@ -56,10 +56,10 @@ public class BacktestExecutionOptions : ICloneable
 
     public bool BotSubDir { get; set; } = true;
 
-    public bool ExchangeSubDir { get; set; } 
-    public bool ExchangeAreaSubDir { get; set; }
     public bool SymbolSubDir { get; set; } = true;
-
+    public bool TimeFrameDir { get; set; } = true;
+    public bool DateRangeDir { get; set; } = true;
+    public bool ExchangeAndAreaSubDir { get; set; } = true;
 
     #endregion
     

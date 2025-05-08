@@ -14,6 +14,7 @@ using LionFire.Validation;
 using LionFire.Persistence;
 using LionFire.UI.Windowing;
 using System.Diagnostics;
+using LionFire.ExtensionMethods.Validation;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -77,7 +78,7 @@ namespace LionFire.Trading.Workspaces
 
         #region Validation
 
-        public ValidationContext Validate(ValidationContext validationContext)
+        public ValidationContext ValidateThis(ValidationContext validationContext)
         {
             return TWorkspaceExtensions.Validate(this, validationContext);
         }

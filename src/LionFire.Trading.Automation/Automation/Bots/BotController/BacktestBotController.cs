@@ -89,6 +89,8 @@ public sealed class BacktestBotController<TPrecision> : IBotController<TPrecisio
             EntryType = JournalEntryType.Start,
             Time = BotBatchController.Start,
         });
+
+
     }
 
     static int x = 0;

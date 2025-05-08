@@ -64,7 +64,7 @@ public sealed partial class BacktestTradeJournal<TPrecision> : IBacktestTradeJou
     //        {
     //            path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange");
     //        }
-    //        if (Options.ExchangeAreaSubDir && ExchangeSymbol?.ExchangeArea != null)
+    //        if (Options.ExchangeAndAreaSubDir && ExchangeSymbol?.ExchangeArea != null)
     //        {
     //            path = System.IO.Path.Combine(path, ExchangeSymbol.ExchangeArea);
     //        }
@@ -296,6 +296,10 @@ public sealed partial class BacktestTradeJournal<TPrecision> : IBacktestTradeJou
 
     }
 
+    /// <summary>
+    /// Contains async, but is fire and forget.
+    /// </summary>
+    /// <param name="entry"></param>
     public void Write(JournalEntry<TPrecision> entry)
     {
         UpdateStats(entry);

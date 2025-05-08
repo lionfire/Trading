@@ -25,6 +25,7 @@ using LionFire.Execution.Executables;
 using LionFire.DependencyInjection;
 using System.Threading;
 using LionFire.Dependencies;
+using LionFire.ExtensionMethods.Validation;
 
 namespace LionFire.Trading.Workspaces
 {
@@ -311,7 +312,7 @@ namespace LionFire.Trading.Workspaces
 
         public async Task<bool> Initialize()
         {
-            this.Validate().PropertyNonDefault(nameof(Workspace), Workspace).EnsureValid();
+            this.Validate().PropertyNotDefault(nameof(Workspace), Workspace).EnsureValid();
 
             State = ExecutionStateEx.Initializing;
 

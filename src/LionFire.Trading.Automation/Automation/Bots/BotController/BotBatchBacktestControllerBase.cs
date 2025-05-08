@@ -51,18 +51,18 @@ public abstract class BotBatchBacktestControllerBase : BotHarnessBase, IBotBatch
     }
     private static string? machineName;
 
-
-    public T GetBatchInfo<T>() where T : BacktestBatchInfo, new() => new()
+    public T GetOptimizationRunInfo<T>() where T : OptimizationRunInfo, new() => new()
     {
         TimeFrame = TimeFrame,
         Start = Start,
         EndExclusive = EndExclusive,
         TicksEnabled = TicksEnabled,
+        ExchangeSymbol = BatchParameters.ExchangeSymbol ?? throw new ArgumentNullException("ExchangeSymbol"),
+        //BotName = ,
 
         BotAssemblyNameString = PBacktests.First(b => b.PBot != null).PBot!.GetType().Assembly.FullName ?? throw new ArgumentNullException("PBacktests[...].PBot"),
         BacktestExecutionDate = DateTime.UtcNow,
         MachineName = MachineName,
-
     };
 
     #region Parameters

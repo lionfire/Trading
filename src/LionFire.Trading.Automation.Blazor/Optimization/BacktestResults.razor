@@ -19,7 +19,7 @@
                 <PropertyColumn Property="x => x.Id" Hideable="true" Hidden="true" />
                 <PropertyColumn Property="x => x.Fitness" Hideable="true" />
                 <PropertyColumn Property="x => x.AD" Format="N1" CellClass="text-align-right"  />
-                <PropertyColumn Property="x => x.TotalTrades / ((ViewModel.DateRange.End - ViewModel.DateRange.Start).Value.TotalDays)" Format="N2" Title="TPD" Hideable="true" />
+                <PropertyColumn Property="x => x.TotalTrades / ((ViewModel.DateRange.End! - ViewModel.DateRange.Start!).Value.TotalDays)" Format="N2" Title="TPD" Hideable="true" />
                 <PropertyColumn Property="x => x.TotalTrades" Hideable="true" />
                 <PropertyColumn Property="x => x.WinRate" Format="P1" Hideable="true" />
                 <PropertyColumn Property="x => x.AMWT" Format="N0" Hideable="true" />
@@ -40,6 +40,13 @@
                 {
                     <PropertyColumn Property="x => x.Parameters[parameter.Path]" />
                 } *@
+                <TemplateColumn>
+                    <CellTemplate>
+                        <MudToggleIconButton Icon="@Icons.Material.Filled.Download" ToggledIcon="@Icons.Material.Filled.DownloadDone" ToggledColor=@Color.Primary Size="Size.Small" Color="Color.Dark" 
+                        Toggled=@(IsInPortfolio(context.Item)) 
+                        @ontoggle=@(()=>ViewModel.OnToggle(context.Item)) />
+                    </CellTemplate>
+                </TemplateColumn>
             </Columns>
         </MudDataGrid>
     }

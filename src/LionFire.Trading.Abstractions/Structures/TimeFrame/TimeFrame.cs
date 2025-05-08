@@ -117,8 +117,10 @@ public class TimeFrame : ISerializableAsString
         mn1 = new TimeFrame("mn1");
     }
 
-    public long? GetExpectedBarCount(DateTimeOffset start, DateTimeOffset endExclusive)
-        => TimeSpan <= TimeSpan.Zero ? null : (long?)((endExclusive - start) / TimeSpan);
+    public long? GetExpectedBarCount(DateTimeOffset? start, DateTimeOffset? endExclusive)
+        => (TimeSpan <= TimeSpan.Zero || !start.HasValue || !endExclusive.HasValue)
+        ? null 
+        : (long?)((endExclusive - start) / TimeSpan);
     public long? GetExpectedBarCountForNow(DateTimeOffset start, DateTimeOffset endExclusive)
     {
         var now = DateTimeOffset.UtcNow;

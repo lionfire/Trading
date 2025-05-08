@@ -11,3 +11,13 @@ public enum BotHarnessFeatures
     /// </summary>
     OrderBook = 1 << 2,
 }
+
+public static class BotHarnessFeaturesExtensions
+{
+    public static bool HasFlag(this BotHarnessFeatures features, BotHarnessFeatures flag)
+    {
+        return (features & flag) == flag;
+    }
+
+    public static bool Ticks(this BotHarnessFeatures features) => features.HasFlag(BotHarnessFeatures.Ticks);
+}

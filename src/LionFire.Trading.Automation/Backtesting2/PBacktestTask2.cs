@@ -81,6 +81,17 @@ public partial class PBotHarness : ReactiveObject
 
 }
 
+public static class DateCoercion
+{
+    public static DateTimeOffset Coerce(DateTime? dateTime)
+    {
+        if (!dateTime.HasValue) return default;
+        var dt = dateTime.Value;
+        if (dt.Kind == DateTimeKind.Unspecified) dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
+        return dt;
+    }
+}
+
 // OPTIMIZE: change set properties to init?
 public partial class PBacktestBatchTask2 : PBotHarness //: IPBacktestBatchTask2
 {
@@ -92,14 +103,8 @@ public partial class PBacktestBatchTask2 : PBotHarness //: IPBacktestBatchTask2
     public DateTimeOffset EndExclusive { get; set; }
     public DateTime? EndExclusiveDateTime { get => EndExclusive.DateTime; set => EndExclusive = Coerce(value); }
 
-    public static DateTimeOffset Coerce(DateTime? dateTime)
-    {
-        if (!dateTime.HasValue) return default;
-        var dt = dateTime.Value;
-        if (dt.Kind == DateTimeKind.Unspecified) dt = DateTime.SpecifyKind(dt, DateTimeKind.Utc);
-        return dt;
-    }
-
+    public static DateTimeOffset Coerce(DateTime? dateTime) => DateCoercion.Coerce(dateTime);
+    
     #endregion
 
     #region Performance tuning
@@ -125,15 +130,20 @@ public class PBacktestTask2 : PBacktestBatchTask2
 
 
     public PBacktestTask2() { }
-    public PBacktestTask2(PBacktestBatchTask2 pBacktestBatchTask2)
+    public PBacktestTask2(PMultiBacktest pMultiBacktest)
     {
-        Start = pBacktestBatchTask2.Start;
-        EndExclusive = pBacktestBatchTask2.EndExclusive;
-        ExchangeSymbol = pBacktestBatchTask2.ExchangeSymbol;
-        ExchangeSymbols = pBacktestBatchTask2.ExchangeSymbols;
-        Features = pBacktestBatchTask2.Features;
-        TimeFrame = pBacktestBatchTask2.TimeFrame;
-        ShortChunks = pBacktestBatchTask2.ShortChunks;
+        if(!pMultiBacktest.IsValid)
+        {
+            throw new ArgumentException("All parameters must be set");
+        }
+
+        Start = pMultiBacktest.Start!.Value;
+        EndExclusive = pMultiBacktest.EndExclusive!.Value;
+        ExchangeSymbol = pMultiBacktest.ExchangeSymbolTimeFrame;
+        //ExchangeSymbols = pMultiBacktest.ExchangeSymbols; // FUTURE
+        Features = pMultiBacktest.Features;
+        TimeFrame = pMultiBacktest.ExchangeSymbolTimeFrame!.TimeFrame;
+        //ShortChunks = pMultiBacktest.ShortChunks; // OLD
 
     }
 
@@ -147,7 +157,7 @@ public class PBacktestTask2 : PBacktestBatchTask2
 
     public override TimeFrame? EffectiveTimeFrame => TimeFrame ?? PBot?.TimeFrame;
 
-    public Action OnFinished { get; internal set; }
+    public Action? OnFinished { get; internal set; }
 }
 
 public sealed class PBacktestTask2<TPBot> : PBacktestTask2 

@@ -3,6 +3,7 @@ using LionFire.Trading.ValueWindows;
 
 namespace LionFire.Trading.Automation;
 
+[ContainsParameters]
 public abstract class PStandardBot2<TConcrete, TValue> : PBarsBot2<TConcrete, TValue>
     where TConcrete : PStandardBot2<TConcrete, TValue>
 {

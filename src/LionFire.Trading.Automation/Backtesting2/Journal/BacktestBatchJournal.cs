@@ -31,7 +31,7 @@ public class BacktestBatchJournal : IAsyncDisposable
 
     public string JournalFilename { get; set; } = "backtests";
     public MultiBacktestContext Context { get; }
-    public string BatchDirectory => Context.LogDirectory;
+    public string BatchDirectory => Context.OutputDirectory;
     public Type PBotType { get; }
     public bool RetainInMemory { get; }
     public bool ZipOnDispose { get; set; } = true;
@@ -61,7 +61,7 @@ public class BacktestBatchJournal : IAsyncDisposable
 
         Context = context;
 
-        var path = Path.Combine(Context.LogDirectory, JournalFilename + ".csv");
+        var path = Path.Combine(Context.OutputDirectory, JournalFilename + ".csv");
         var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
         var writer = new StreamWriter(fs);
         csv = new CsvWriter(writer, CsvConfiguration);

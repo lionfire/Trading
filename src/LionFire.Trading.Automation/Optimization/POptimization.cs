@@ -5,6 +5,7 @@ using LionFire.Instantiating;
 using LionFire.Serialization.Csv;
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Journal;
+using LionFire.Validation;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using System;
@@ -20,11 +21,16 @@ namespace LionFire.Trading.Automation.Optimization;
 
 // ENH: Validatable, make all properties mutable and not required in ctor.  (Or consider a new pattern: a pair of classes, one frozen and one mutable.)
 public partial class POptimization : ReactiveObject
+    , IValidatable
 {
+    public ValidationContext ValidateThis(ValidationContext c)
+        => c
+            .PropertyNotNull(nameof(PBotType), PBotType)
+            ;
+
     #region Identity Parameters
 
-    [Reactive]
-    private Type _pBotType;
+    public Type? PBotType => Parent.PMultiBacktest.PBotType;
 
     //public List<Type> BotTypes { get; set; } // ENH maybe someday though probably not, just a thought: OPTIMIZE - Test multiple bot types in parallel
 
@@ -36,12 +42,13 @@ public partial class POptimization : ReactiveObject
 
     public POptimization(PMultiBacktestContext parent)
     {
-        Parent = parent;
+        Parent = parent ?? throw new ArgumentNullException(nameof(parent));
 
         var minParameterPriorityChanged = this.WhenAnyValue(x => x.MinParameterPriority);
 
-        this.WhenAnyValue(x => x.Parent.CommonBacktestParameters.PBotType)
-            .Subscribe(t => PBotType = t).DisposeWith(disposables);
+        // OLD
+        //this.WhenAnyValue(x => x.Parent.PMultiBacktest.PBotType)
+        //.Subscribe(t => PBotType = t).DisposeWith(disposables);
 
         parameters.Connect()
             .AutoRefreshOnObservable(_ => minParameterPriorityChanged)
@@ -126,7 +133,7 @@ public partial class POptimization : ReactiveObject
                 });
             })
             .DisposeWith(disposables);
-   
+
     }
 
 
@@ -175,7 +182,7 @@ public partial class POptimization : ReactiveObject
 
     #endregion
 
-    public PBacktestBatchTask2 CommonBacktestParameters => Parent.CommonBacktestParameters;
+    public PMultiBacktest CommonBacktestParameters => Parent.PMultiBacktest;
 
 #if UNUSED // Reconsider both of these
     public int MinLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   

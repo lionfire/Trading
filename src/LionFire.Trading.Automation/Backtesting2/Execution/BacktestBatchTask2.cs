@@ -29,6 +29,7 @@ using LionFire.Collections;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using LionFire.Trading.Automation.Journaling.Trades;
+using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation;
 
@@ -92,13 +93,11 @@ public sealed class BacktestBatchTask2<TPrecision>
 
     #endregion
 
-    ResiliencePipeline? FilesystemRetryPipeline;
-
     #region Lifecycle
 
     public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
-        context ??= MultiBacktestContext.Create(serviceProvider, new(parameters, start, endExclusive));
+        context ??= await MultiBacktestContext.Create(serviceProvider, new(parameters, start, endExclusive));
 
         if (executionOptions != null) { context.ExecutionOptions = executionOptions; }
 
@@ -109,11 +108,6 @@ public sealed class BacktestBatchTask2<TPrecision>
 
     private BacktestBatchTask2(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext context, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null) : base(serviceProvider, parameters, context)
     {
-        if (serviceProvider.GetService<ResiliencePipelineProvider<string>>()?.TryGetPipeline(FilesystemRetryPolicy.Default, out var p) == true)
-        {
-            FilesystemRetryPipeline = p;
-        }
-
         try
         {
             BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
@@ -143,7 +137,7 @@ public sealed class BacktestBatchTask2<TPrecision>
             }
             else
             {
-                BatchDirectory = Context.LogDirectory;
+                BatchDirectory = Context.OutputDirectory;
                 if (!Directory.Exists(BatchDirectory)) { Directory.CreateDirectory(BatchDirectory); } // BLOCKING I/O
                 Journal = ActivatorUtilities.CreateInstance<BacktestBatchJournal>(ServiceProvider, Context, PBotType);
                 DisposeJournal = true;
@@ -632,11 +626,13 @@ public sealed class BacktestBatchTask2<TPrecision>
     #region (Private) Run
 
     BacktestBatchProgress Progress;
-    
-    private void Run()
+
+    private async Task Run()
     {
+        var infoTask = Context.TrySetOptimizationRunInfo(() => GetOptimizationRunInfo<OptimizationRunInfo>());
         Task.Run(async () =>
         {
+
             try
             {
                 Progress = new() { BatchId = BatchId };
@@ -687,7 +683,7 @@ public sealed class BacktestBatchTask2<TPrecision>
                 )
             {
                 counter++;
-                if(counter % 1_000 == 0)
+                if (counter % 1_000 == 0)
                 {
                     if (EndExclusive != Start) // This should be checked elsewhere
                     {
@@ -800,6 +796,8 @@ public sealed class BacktestBatchTask2<TPrecision>
         }
 
         #endregion
+
+        await infoTask.ConfigureAwait(false);
     }
 
     #endregion
@@ -814,7 +812,7 @@ public sealed class BacktestBatchTask2<TPrecision>
         this.Context.Events.OnCompleted(backtests.Count);
         await base.OnFinished();
 
-        await SaveBatchInfo();
+        //    await SaveBatchInfo(); // OLD
 
         if (DisposeJournal)
         {
@@ -824,10 +822,11 @@ public sealed class BacktestBatchTask2<TPrecision>
 
     public bool DisposeJournal { get; set; } = true;
 
-    HjsonOptions hjsonOptions = new HjsonOptions() { EmitRootBraces = false };
+
+#if OLD
     private async ValueTask SaveBatchInfo()
     {
-        var r = GetBatchInfo<BacktestBatchInfo>();
+        var r = GetOptimizationRunInfo<OptimizationRunInfo>();
 
         var json = JsonConvert.SerializeObject(r, new JsonSerializerSettings
         {
@@ -853,6 +852,7 @@ public sealed class BacktestBatchTask2<TPrecision>
             Context.BatchInfoFileWriter.SaveIfDifferent(hjson);
         }
     }
+#endif
 
     #region Inputs
 

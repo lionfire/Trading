@@ -1,11 +1,14 @@
 ﻿using LionFire.IO.Reactive.Hjson;
 using LionFire.Reactive.Persistence;
 using LionFire.Trading.Automation;
+using LionFire.Trading.Automation.Portfolios;
 using LionFire.Trading.Hosting;
 using LionFire.UI.Workspaces;
 using LionFire.Workspaces;
+using LionFire.Workspaces.Services;
 using Microsoft.CodeAnalysis.Operations;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,26 +42,41 @@ public static class AutomationHostingX
     public static IServiceCollection AddAutomationUI(this IServiceCollection services)
     {
         return services
-            .AddAutomationModel()
             .AddTransient<BotsVM>()
             .AddTransient<BotVM>()
             ;
     }
 
-    private static IServiceCollection AddAutomationModel(this IServiceCollection services)
+    public static IServiceCollection AddWorkspaceChildType<T>(this IServiceCollection services)
+        where T : notnull
     {
         return services
-            .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, BotsWorkspaceServiceConfigurator>()
+                .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, WorkspaceChildTypeConfigurator<T>>()
             ;
     }
+    public static IServiceCollection AddAutomationModel(this IServiceCollection services)
+    {
+        return services
+            .AddWorkspaceChildType<Portfolio>()
+            .AddWorkspaceChildType<BotEntity>()
 
+            // OLD
+            //.TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, BotsWorkspaceServiceConfigurator>()
+            //.TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, PortfoliosWorkspaceServiceConfigurator>()
+
+            .AddWorkspaceDocumentService<string, BotEntity>()
+            .AddWorkspaceDocumentService<string, Portfolio>()
+            ;
+    }
+    
     public static IServiceCollection AddAutomationRuntime(this IServiceCollection services)
     {
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceDocumentRunner<string, BotEntity>, WorkspaceDocumentRunner<string, BotEntity, BotRunner>>());
         return services
-            .AddAutomationModel()
-            .AddHostedSingleton<AutomationRuntime>()
+            //.AddHostedSingleton<AutomationRuntime>()
             ;
     }
+    
 
 
 

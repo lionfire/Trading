@@ -128,6 +128,9 @@ public class Backtest_Batch_ : BinanceDataTest
     {
         //var d = new BacktestTheoryData();
 
+        var Start = new DateTimeOffset(2023, 4, 1, 0, 0, 0, TimeSpan.Zero);
+        var EndExclusive = new DateTimeOffset(2023, 7, 1, 0, 0, 0, TimeSpan.Zero);
+
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
 
 
@@ -141,9 +144,12 @@ public class Backtest_Batch_ : BinanceDataTest
         {
             var exchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1);
 
-            var job = await batchQueue.EnqueueJob(MultiBacktestContext.Create(ServiceProvider,
-                new PMultiBacktestContext(typeof(PAtrBot<double>), exchangeSymbolTimeFrame)
-            ),
+            var job = await batchQueue.EnqueueJob(await MultiBacktestContext.Create(ServiceProvider,
+                new PMultiBacktest(typeof(PAtrBot<double>), exchangeSymbolTimeFrame,
+               Start,
+               EndExclusive
+                ))
+            ,
             batch =>
             {
                 PBacktestTask2<PAtrBot<double>> createBacktest(string symbol, uint atrPeriod)
@@ -163,8 +169,8 @@ public class Backtest_Batch_ : BinanceDataTest
                         },
 
                         //Start = new DateTimeOffset(2024, 6, 1, 0, 0, 0, TimeSpan.Zero),
-                        Start = new DateTimeOffset(2023, 4, 1, 0, 0, 0, TimeSpan.Zero),
-                        EndExclusive = new DateTimeOffset(2023, 7, 1, 0, 0, 0, TimeSpan.Zero),
+                        Start = Start,
+                        EndExclusive = EndExclusive,
                         //EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
                         //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),
                         //EndExclusive = new DateTimeOffset(2024, 7, 23, 0, 0, 0, TimeSpan.Zero),
@@ -223,32 +229,40 @@ public class Backtest_Batch_ : BinanceDataTest
     {
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
 
-        Assert.Throws<ArgumentException>(() =>
+        var exchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1);
+        var Start = new DateTimeOffset(2020, 9, 9, 9, 9, 9, TimeSpan.Zero);
+        var EndExclusive = new DateTimeOffset(2020, 11, 11, 11, 11, 11, TimeSpan.Zero);
+
+        Assert.ThrowsAsync<ArgumentException>(async () =>
         {
-            var job = batchQueue.EnqueueJob(MultiBacktestContext.Create(ServiceProvider, new(typeof(PAtrBot<double>))), batch =>
+            var job = batchQueue.EnqueueJob(await MultiBacktestContext.Create(ServiceProvider, new(
+                new PMultiBacktest(typeof(PAtrBot<double>), exchangeSymbolTimeFrame, Start, EndExclusive)
+                )), batch =>
             {
                 batch.BacktestBatches = [[
                 new PBacktestTask2<PAtrBot<double>>
                  {
-                     PBot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 14)
+                     PBot = new PAtrBot<double>(exchangeSymbolTimeFrame, 14)
                         {
                             //TimeFrame = TimeFrame.m1,
                             //Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
                             //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
                         },
-                     Start = new DateTimeOffset(2020, 9, 9, 9, 9, 9, TimeSpan.Zero),
-                     EndExclusive = new DateTimeOffset(2020, 11,11, 11, 11, 11, TimeSpan.Zero),
+                     Start = Start,
+                     EndExclusive = EndExclusive,
                      Features = BotHarnessFeatures.Bars,
                  },
                 new PBacktestTask2<PAtrBot<double>>
                  {
-                     PBot = new PAtrBot<double>(new ExchangeSymbolTimeFrame("Binance", "futures", "BTCUSDT", TimeFrame.m1), 15)
+                     PBot = new PAtrBot<double>(exchangeSymbolTimeFrame, 15)
                         {
                             //TimeFrame = TimeFrame.m1,
                             //Bars = new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close),
                             //Inputs = [new SymbolValueAspect<double>("Binance", "futures", "BTCUSDT", TimeFrame.m1, DataPointAspect.Close)],
                         },
+                     // Invalid: different range
                      Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
+                     // Invalid: different range
                      EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
                      Features = BotHarnessFeatures.Bars,
                  },

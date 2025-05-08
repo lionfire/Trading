@@ -86,7 +86,7 @@ public partial class RuntimeStats : ReactiveObject, IDisposable
                             try
                             {
                                 CpuUsage = cpuCounter!.NextValue() / 100.0 / (double)System.Environment.ProcessorCount;
-                                Debug.WriteLine($"CPU Usage: {CpuUsage}%");
+                                //Debug.WriteLine($"CPU Usage: {CpuUsage}%");
                             }
                             catch (Exception ex2)
                             {

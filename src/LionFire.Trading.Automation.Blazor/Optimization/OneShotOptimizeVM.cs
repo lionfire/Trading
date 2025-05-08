@@ -20,6 +20,7 @@ using System.Reactive.Disposables;
 using QuantConnect.Api;
 using LionFire.Blazor.Components;
 using LionFire.ReactiveUI_;
+using LionFire.Trading.Automation.Portfolios;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
@@ -31,16 +32,32 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     public IServiceProvider ServiceProvider { get; }
     public CustomLoggerProvider CustomLoggerProvider { get; }
 
+    #region Ambient
+
+    public Portfolio? Portfolio { get; set; }
+
+    #endregion
+
     void ResetParameters()
     {
         var p = POptimization2;
 
-        var c = Context.CommonBacktestParameters;
-        c.ExchangeSymbol = new("Binance", "futures", "BTCUSDT");
+        var c = Context.PMultiBacktest;
+        c.ExchangeSymbolTimeFrame = new("Binance", "futures", "BTCUSDT", TimeFrame.m1);
         c.PBotType = BotTypes.FirstOrDefault();
-        c.TimeFrame = TimeFrame.m1;
-        c.Start = new(2024, 1, 1, 0, 0, 0, TimeSpan.Zero);
-        c.EndExclusive = new(2024, 1, 8, 0, 0, 0, TimeSpan.Zero);
+
+        var now = DateTimeOffset.UtcNow;
+        var startYear = now.Year;
+        var startMonth = now.Month - 6;
+        if(startMonth <= 0)
+        {
+            startYear--;
+            startMonth += 12;
+        }
+
+        c.Start = new(startYear, startMonth, 1, 0, 0, 0, TimeSpan.Zero);
+        c.EndExclusive = new(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
+
     }
 
     public OneShotOptimizeVM(IServiceProvider serviceProvider, LionFire.Logging.CustomLoggerProvider customLoggerProvider)
@@ -241,7 +258,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     }
     private PMultiBacktestContext context = new();
 
-    public PBacktestBatchTask2 Common => Context.CommonBacktestParameters;
+    public PMultiBacktest Common => Context.PMultiBacktest;
 
     public POptimization POptimization2 => Context.POptimization;
 
@@ -345,4 +362,13 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
 
     #endregion
+
+    public void OnToggle(BacktestBatchJournalEntry entry)
+    {
+        Debug.WriteLine("Toggle BacktestBatchJournalEntry: " + entry.Id);
+        if (Portfolio == null) return;
+
+        
+        //Portfolio.OptimizationBacktests
+    }
 }

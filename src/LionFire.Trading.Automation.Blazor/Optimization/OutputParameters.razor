@@ -3,7 +3,7 @@
 
 <MudGrid>
     <MudItem sm="1">
-        <MudSwitch T="bool" @bind-Value="ViewModel!.TradeJournalOptions.Enabled" Label="Trade Journals" Dense="@true" />
+        <MudSwitch T="bool" @bind-Value="ViewModel!.TradeJournalOptions.Enabled" Label="Trade Journals" Dense="@true"   />
         <MudSlider T="int" @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
         <MudNumericField @bind-Value="ViewModel!.TradeJournalOptions.KeepTradeJournalsForTopNResults" Disabled="!ViewModel!.TradeJournalOptions.Enabled" Label="Max Trade Journals" Dense="@true" />
     </MudItem>

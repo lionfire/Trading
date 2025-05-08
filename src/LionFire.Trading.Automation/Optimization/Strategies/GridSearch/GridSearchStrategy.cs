@@ -52,7 +52,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         Logger = logger; // optimizationTask.ServiceProvider.GetRequiredService<ILogger<GridSearchStrategy>>();
         State = new GridSearchState(this);
 
-        if (optimizationTask.Context.LogDirectory != null)
+        if (optimizationTask.Context.OutputDirectory != null)
         {
             foreach (var level in State.LevelsOfDetail)
             {
@@ -68,7 +68,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                 var hjsonValue = Hjson.JsonValue.Parse(json);
                 var hjson = hjsonValue.ToString(new HjsonOptions { EmitRootBraces = false });
 
-                var path = Path.Combine(optimizationTask.Context.LogDirectory, $"GridLevel {level.Level}.hjson");
+                var path = Path.Combine(optimizationTask.Context.OutputDirectory, $"GridLevel {level.Level}.hjson");
                 File.WriteAllText(path, hjson);
             }
         }

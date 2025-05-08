@@ -17,6 +17,11 @@ public record  ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, str
     [JsonIgnore]
     public virtual Type ValueType => typeof(IKline);
 
+    #region Construction
+
+    public static ExchangeSymbolTimeFrame Combine(ExchangeSymbol exchangeSymbol, TimeFrame timeFrame)
+        => new ExchangeSymbolTimeFrame(exchangeSymbol.Exchange, exchangeSymbol.ExchangeArea, exchangeSymbol.Symbol, timeFrame);
+
     public static ExchangeSymbolTimeFrame Parse(string id, ISymbolIdParser symbolIdParser)
     {
         Exception InvalidFormat() => new ArgumentException("Invalid key format.  Expected: <exchange>.<area>:<symbol> <tf>");
@@ -33,6 +38,8 @@ public record  ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, str
 
         return new ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame.Parse(s[1]));
     }
+
+    #endregion
 
     public SymbolBarsRange ToRange(DateTimeOffset start, DateTimeOffset endExclusive) => SymbolBarsRange.FromExchangeSymbolTimeFrame(this, start, endExclusive);
 }

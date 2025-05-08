@@ -3,7 +3,13 @@
 public class BacktestBatchJournalEntry
 {
     public int BatchId { get; set; }
+
+    /// <summary>
+    /// Id within a batch
+    /// </summary>
     public long Id { get; set; }
+
+    [Ignore]
     public string StringId => $"{BatchId}-{Id}";
 
     public double Fitness { get; set; }

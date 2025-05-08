@@ -23,18 +23,23 @@ public class Optimize_ : BinanceDataTest
 
         var ExchangeSymbol = new ExchangeSymbol("Binance", "futures", "BTCUSDT");
 
-        var c = new PMultiBacktestContext()
+        var c = new PMultiBacktestContext(new(typeof(PAtrBot<double>),
+                 ExchangeSymbolTimeFrame.Combine(ExchangeSymbol, TimeFrame.h1),
+                new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero),
+new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
+                BotHarnessFeatures.Bars
+            ))
         {
-            CommonBacktestParameters = new PBacktestBatchTask2
-            {
-                PBotType = typeof(PAtrBot<double>),
-                Start = new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero),
-                EndExclusive = new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
-                Features = BotHarnessFeatures.Bars,
-                TimeFrame = TimeFrame.h1,
-                ExchangeSymbol = ExchangeSymbol,
-                //StartingBalance = 10000,
-            },
+            //PMultiBacktest = new PBacktestBatchTask2
+            //{
+            //    PBotType = typeof(PAtrBot<double>),
+            //    Start = 
+            //    EndExclusive = 
+            //    Features = BotHarnessFeatures.Bars,
+            //    TimeFrame = TimeFrame.h1,
+            //    ExchangeSymbol = ExchangeSymbol,
+            //    //StartingBalance = 10000,
+            //},
         };
 
         var p = c.POptimization;

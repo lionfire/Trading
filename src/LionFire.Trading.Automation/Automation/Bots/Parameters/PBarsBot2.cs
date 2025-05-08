@@ -12,6 +12,7 @@ public interface IPBarsBot2
     void FinalizeInit();
 }
 
+[ContainsParameters]
 public abstract class PBarsBot2<TConcrete, TValue>
     : PSymbolBot2<TConcrete>
     , IPBarsBot2

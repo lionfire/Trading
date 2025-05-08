@@ -9,6 +9,7 @@ using LionFire.Validation;
 using LionFire.Instantiating;
 using System.Collections;
 using LionFire.Trading.Bots;
+using LionFire.ExtensionMethods.Validation;
 
 namespace LionFire.Trading.Bots
 {
@@ -19,9 +20,9 @@ namespace LionFire.Trading.Bots
         protected override async Task OnStarting()
         {
             this.Validate()
-            .PropertyNonDefault(nameof(Template.Symbol), Template.Symbol)
-            .PropertyNonDefault(nameof(Template.TimeFrame), Template.TimeFrame)
-            .EnsureValid();
+                .PropertyNotDefault(nameof(Template.Symbol), Template.Symbol)
+                .PropertyNotDefault(nameof(Template.TimeFrame), Template.TimeFrame)
+                .EnsureValid();
 
             if (!Account.Started.Value)
             {

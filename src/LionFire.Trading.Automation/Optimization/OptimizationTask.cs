@@ -8,6 +8,7 @@ using LionFire.Trading.Automation.Optimization.Enumerators;
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Backtesting2;
 using LionFire.Trading.Journal;
+using LionFire.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
 using ReactiveUI;
@@ -39,7 +40,7 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
 
     public POptimization Parameters => Context.POptimization!;
 
-    public ExchangeSymbol? ExchangeSymbol => Parameters?.CommonBacktestParameters?.ExchangeSymbol;
+    public ExchangeSymbol? ExchangeSymbol => Parameters?.CommonBacktestParameters?.ExchangeSymbolTimeFrame;
 
     #endregion
 
@@ -49,7 +50,7 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
     {
         ServiceProvider = serviceProvider;
 
-        Context = MultiBacktestContext.Create(ServiceProvider, parameters ?? throw new ArgumentNullException(nameof(parameters)));
+        Context = MultiBacktestContext.Create(ServiceProvider, parameters ?? throw new ArgumentNullException(nameof(parameters))).Result; // ASYNC2SYNC
         //OptimizationDirectory = GetOptimizationDirectory(Parameters.PBotType);
 
         BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
@@ -75,6 +76,8 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
             }
             Context.CancellationToken = actualCTS.Token;
         }
+
+        Parameters.ValidateOrThrow();
 
         OptimizationMultiBatchJournal = ActivatorUtilities.CreateInstance<BacktestBatchJournal>(ServiceProvider, Context, Parameters.PBotType, true);
 
