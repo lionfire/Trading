@@ -5,6 +5,8 @@ using System.Linq;
 using System.Reflection;
 using TS = System.TimeSpan;
 using LionFire.Serialization;
+using System.Text.Json.Serialization;
+
 
 #if cAlgo
 //using LFTimeFrame = LionFire.Trading.LionFireTimeFrame;
@@ -343,6 +345,7 @@ public class TimeFrame : ISerializableAsString
         return timeSpan;
     }
 
+    [JsonIgnore]
     public TimeSpan ApproximateTimeSpan => TimeSpan > TimeSpan.Zero ? TimeSpan : -TimeSpan;
 
     /// <summary>

@@ -32,7 +32,7 @@ public class SymbolId : IEquatable<SymbolId>
 
     #region ExchangeAndAreaCode
 
-    public string ExchangeAndAreaCode => $"{Exchange.Substring(0, 3)}.{ExchangeArea.Substring(0, 2)}"; // HACK TODO
+    public string ExchangeAndAreaCode => $"{Exchange?.Substring(0, 3)}.{ExchangeArea?.Substring(0, 2)}"; // HACK TODO
 
     public void SetFromExchangeAndAreaCode(string exchangeCode)
     {

@@ -16,11 +16,11 @@ namespace LionFire.Trading.Backtesting;
 
 public class BacktestFileMigrator : IHostedService
 {
-    InjestOptions InjestConfig;
-    public IOptionsMonitor<InjestOptions> InjestConfigMonitor { get; }
+    IngestOptions InjestConfig;
+    public IOptionsMonitor<IngestOptions> InjestConfigMonitor { get; }
     public ILogger<BacktestFileMigrator> Logger { get; }
 
-    public BacktestFileMigrator(IOptionsMonitor<InjestOptions> backtestConfig, ILogger<BacktestFileMigrator> logger)
+    public BacktestFileMigrator(IOptionsMonitor<IngestOptions> backtestConfig, ILogger<BacktestFileMigrator> logger)
     {
         InjestConfigMonitor = backtestConfig;
         Logger = logger;

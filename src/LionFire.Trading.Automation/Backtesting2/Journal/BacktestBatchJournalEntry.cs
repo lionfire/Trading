@@ -1,7 +1,11 @@
 ﻿using CsvHelper.Configuration.Attributes;
 
+namespace LionFire.Trading.Automation;
+
 public class BacktestBatchJournalEntry
 {
+    public static implicit operator BacktestReference(BacktestBatchJournalEntry entry) => new(entry.BatchId, entry.Id);
+
     public int BatchId { get; set; }
 
     /// <summary>

@@ -23,29 +23,29 @@ public class OptimizationRunAnalysisService : IHostedService
 
     public OptimizationAnalysisOptions AnalysisOptions { get; }
     public BacktestOptions BacktestOptions { get; }
-    public InjestOptions InjestOptions { get; }
+    public IngestOptions IngestOptions { get; }
     public ILogger<OptimizationRunAnalysisService> Logger { get; }
 
     #endregion
 
     #region Lifecycle
 
-    public OptimizationRunAnalysisService(IOptionsMonitor<OptimizationAnalysisOptions> optimizationRunAnalysisOptions, IOptionsMonitor<BacktestOptions> backtestOptions, ILogger<OptimizationRunAnalysisService> logger, IOptionsMonitor<InjestOptions> injestOptions)
+    public OptimizationRunAnalysisService(IOptionsMonitor<OptimizationAnalysisOptions> optimizationRunAnalysisOptions, IOptionsMonitor<BacktestOptions> backtestOptions, ILogger<OptimizationRunAnalysisService> logger, IOptionsMonitor<IngestOptions> ingestOptions)
     {
         AnalysisOptions = optimizationRunAnalysisOptions.CurrentValue;
         BacktestOptions = backtestOptions.CurrentValue;
-        InjestOptions = injestOptions.CurrentValue;
+        IngestOptions = ingestOptions.CurrentValue;
         Logger = logger;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
         //Migrate().FireAndForget();
-        //if (InjestOptions.Enabled) { await StartInjestAsync(cancellationToken); }
+        //if (IngestOptions.Enabled) { await StartIngestAsync(cancellationToken); }
         return Task.CompletedTask;
     }
 
-    protected async Task StartInjestAsync(CancellationToken cancellationToken)
+    protected async Task StartIngestAsync(CancellationToken cancellationToken)
     {
         watcher = new FileSystemWatcher(BacktestOptions.Dir);
         watcher.Created += Watcher_Created;
@@ -54,7 +54,7 @@ public class OptimizationRunAnalysisService : IHostedService
 
         await GetOptimizationRunsNeedingAnalysis().ConfigureAwait(false);
     }
-    protected Task StopInjestAsync(CancellationToken cancellationToken)
+    protected Task StopIngestAsync(CancellationToken cancellationToken)
     {
         if (watcher != null)
         {
@@ -69,12 +69,12 @@ public class OptimizationRunAnalysisService : IHostedService
 
     public Task ForceStart(CancellationToken cancellationToken)
     {
-        return StartInjestAsync(cancellationToken);
+        return StartIngestAsync(cancellationToken);
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        if (InjestOptions.Enabled) { await StopInjestAsync(cancellationToken); }
+        if (IngestOptions.Enabled) { await StopIngestAsync(cancellationToken); }
     }
 
     #endregion
@@ -82,7 +82,7 @@ public class OptimizationRunAnalysisService : IHostedService
     #region State
 
     private FileSystemWatcher? watcher;
-    private Timer InjestTimer;
+    private Timer? IngestTimer;
 
     #endregion
 
@@ -90,10 +90,10 @@ public class OptimizationRunAnalysisService : IHostedService
 
     private void Watcher_Created(object sender, FileSystemEventArgs e)
     {
-        InjestTimer = new Timer(1000 * 60);
-        InjestTimer.Elapsed += InjestTimer_Elapsed;
-        InjestTimer.AutoReset = false;
-        InjestTimer.Enabled = true;
+        IngestTimer = new Timer(1000 * 60);
+        IngestTimer.Elapsed += InjestTimer_Elapsed;
+        IngestTimer.AutoReset = false;
+        IngestTimer.Enabled = true;
     }
 
     int InjestTimerErrorCount = 0;
@@ -114,7 +114,7 @@ public class OptimizationRunAnalysisService : IHostedService
         {
             if (InjestTimerErrorCount < AnalysisOptions.MaxIngestErrors)
             {
-                InjestTimer.Enabled = true;
+                IngestTimer.Enabled = true;
             }
         }
     }
@@ -154,7 +154,7 @@ public class OptimizationRunAnalysisService : IHostedService
     //                            End = split[1],
     //                        };
 
-    //                        var newDir = Path.Combine(InjestOptions.BacktestsRoot, OptimizationRunPath.GetRelativePath(id));
+    //                        var newDir = Path.Combine(IngestOptions.BacktestsRoot, OptimizationRunPath.GetRelativePath(id));
     //                        var parentDir = Path.GetDirectoryName(newDir);
     //                        if (!Directory.Exists(parentDir)) { Directory.CreateDirectory(parentDir); }
     //                        Directory.Move(runDir, newDir);
@@ -194,7 +194,7 @@ public class OptimizationRunAnalysisService : IHostedService
     public string GetAnalyzedPath()
     {
         throw new NotImplementedException();
-        return AnalysisOptions.AnalyzedDir;
+        //return AnalysisOptions.AnalyzedDir;
     }
 
     #region OptimizationRunsNeedingAnalysis

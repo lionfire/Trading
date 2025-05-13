@@ -8,7 +8,7 @@ namespace LionFire.Trading;
 // REVIEW: Support nulls?
 [GenerateSerializer]
 [Alias("exchange-symbol-timeframe")]
-public record  ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, string Symbol, TimeFrame TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol), IPKlineInput
+public record ExchangeSymbolTimeFrame(string? Exchange, string? ExchangeArea, string? Symbol, TimeFrame? TimeFrame) : ExchangeSymbol(Exchange, ExchangeArea, Symbol), IPKlineInput
 {
     //public string ToGrainId() => $"{Exchange}}";
 
@@ -16,6 +16,11 @@ public record  ExchangeSymbolTimeFrame(string Exchange, string ExchangeArea, str
 
     [JsonIgnore]
     public virtual Type ValueType => typeof(IKline);
+
+    string IPKlineInput.Exchange => Exchange ?? throw new ArgumentNullException(nameof(Exchange));
+    string IPKlineInput.ExchangeArea => ExchangeArea ?? throw new ArgumentNullException(nameof(ExchangeArea));
+    string IPKlineInput.Symbol => Symbol ?? throw new ArgumentNullException(nameof(Symbol));
+    TimeFrame IPKlineInput.TimeFrame => TimeFrame ?? throw new ArgumentNullException(nameof(TimeFrame));
 
     #region Construction
 

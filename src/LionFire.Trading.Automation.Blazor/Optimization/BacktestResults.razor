@@ -43,8 +43,8 @@
                 <TemplateColumn>
                     <CellTemplate>
                         <MudToggleIconButton Icon="@Icons.Material.Filled.Download" ToggledIcon="@Icons.Material.Filled.DownloadDone" ToggledColor=@Color.Primary Size="Size.Small" Color="Color.Dark" 
-                        Toggled=@(IsInPortfolio(context.Item)) 
-                        @ontoggle=@(()=>ViewModel.OnToggle(context.Item)) />
+                        Toggled=@(ViewModel!.Portfolio?.IsInPortfolio(ViewModel!.OptimizationRunInfo, context.Item) == true) 
+                                             ToggledChanged=@(() => ViewModel!.Portfolio?.Toggle(ViewModel.OptimizationRunInfo, context.Item)) />
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>

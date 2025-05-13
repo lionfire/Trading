@@ -1,7 +1,9 @@
 ﻿using DynamicData;
 using LionFire.Applications.Trading;
+using LionFire.ExtensionMethods.Validation;
 using LionFire.ReactiveUI_;
 using LionFire.Trading.Automation.Optimization;
+using LionFire.Validation;
 using System.Collections.Concurrent;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -34,8 +36,14 @@ public class MultiBacktestEvents
     private Subject<long> completions = new();
 }
 
-public class PMultiBacktestContext : DisposableBaseViewModel
+public class PMultiBacktestContext : DisposableBaseViewModel, IValidatable
 {
+    public ValidationContext ValidateThis(ValidationContext v) =>
+        v
+            .Validate(PMultiBacktest)
+            .Validate(POptimization)
+        ;
+
     #region Lifecycle
 
     //public PMultiBacktestContext()
@@ -67,7 +75,6 @@ public class PMultiBacktestContext : DisposableBaseViewModel
     //    PMultiBacktest.PBotType = pBotType;
     //    POptimization = new POptimization(this);
     //}
-
 
     public PMultiBacktestContext(IEnumerable<PBacktestTask2> pBacktestTask2, DateTimeOffset? start, DateTimeOffset? endExclusive)
     {
@@ -134,7 +141,7 @@ public class PMultiBacktestContext : DisposableBaseViewModel
             RaiseAndSetNestedViewModelIfChanged(ref pOptimization, value);
         }
     }
-    POptimization pOptimization;
+    POptimization pOptimization = null!;
 
     #region Derived
 
@@ -145,7 +152,7 @@ public class PMultiBacktestContext : DisposableBaseViewModel
     #region Convenience
 
     public Type? PBotType => PMultiBacktest.PBotType;
-    public ExchangeSymbol ExchangeSymbol => PMultiBacktest.ExchangeSymbolTimeFrame!;  // REVIEW nullability
+    //public ExchangeSymbol ExchangeSymbol => PMultiBacktest.ExchangeSymbolTimeFrame!;  // REVIEW nullability
 
     #endregion
 

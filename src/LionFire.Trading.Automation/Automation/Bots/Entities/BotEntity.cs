@@ -1,11 +1,15 @@
 ﻿using DynamicData;
+using LionFire.IO.Reactive.Hjson;
 using LionFire.Ontology;
+using LionFire.Serialization;
 using LionFire.Structures;
 using LionFire.Trading.Automation;
 using Newtonsoft.Json;
 using Nito.Disposables;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
+using System.ComponentModel;
+using System.Globalization;
 using System.Reflection;
 using AliasAttribute = LionFire.Ontology.AliasAttribute;
 
@@ -89,6 +93,49 @@ public record MultiBacktestId (
 
 }
 
+public class ParsableConverter<T> : TypeConverter
+    where T : IParsableSlim<T>
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
+    {
+        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+    }
+
+    public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object? value)
+    {
+        if (value is string str)
+        {
+            try
+            {
+                // Delegate to the Parse method of the type T
+                return T.Parse(str);
+            }
+            catch (Exception ex)
+            {
+                throw new FormatException($"Failed to convert '{str}' to {typeof(T).Name}: {ex.Message}", ex);
+            }
+        }
+
+        return base.ConvertFrom(context, culture, value);
+    }
+
+    public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType)
+    {
+        return destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+    }
+
+    public override object? ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object value, Type? destinationType)
+    {
+        if (destinationType == typeof(string) && value is OptimizationRunReference reference)
+        {
+            return reference.ToString();
+        }
+
+        return base.ConvertTo(context, culture, value, destinationType);
+    }
+}
+
+[TypeConverter(typeof(ParsableConverter<OptimizationRunReference>))]
 public record OptimizationRunReference(
     string Bot,
     string Exchange,
@@ -98,14 +145,17 @@ public record OptimizationRunReference(
     string DateRange,
     string RunId 
     )
+    :IParsableSlim<OptimizationRunReference>
 {
-    public static OptimizationRunReference FromOptimizationRunInfo(OptimizationRunInfo optimizationRunInfo)
+    public static implicit operator OptimizationRunReference(OptimizationRunInfo? optimizationRunInfo) => FromOptimizationRunInfo(optimizationRunInfo);
+
+    public static OptimizationRunReference? FromOptimizationRunInfo(OptimizationRunInfo? optimizationRunInfo)
     {
-        return new OptimizationRunReference(
-            optimizationRunInfo.BotAssemblyNameString ?? "UnknownBot",
-            optimizationRunInfo.ExchangeSymbol?.Exchange ?? "UnknownExchange",
-            optimizationRunInfo.ExchangeSymbol?.ExchangeArea ?? "UnknownExchangeArea",
-            optimizationRunInfo.ExchangeSymbol.Symbol ?? "UnknownSymbol",
+        return optimizationRunInfo == null ? null : new OptimizationRunReference(
+            optimizationRunInfo.BotName ?? "UnknownBot",
+            optimizationRunInfo.Exchange ?? "UnknownExchange",
+            optimizationRunInfo.ExchangeArea ?? "UnknownExchangeArea",
+            optimizationRunInfo.Symbol ?? "UnknownSymbol",
             optimizationRunInfo.TimeFrame?.ToString() ?? "UnknownTimeFrame",
             DateTimeFormatting.ToConciseFileName(optimizationRunInfo.Start, optimizationRunInfo.EndExclusive),
             optimizationRunInfo.Guid.ToString()
@@ -141,27 +191,77 @@ public record OptimizationRunReference(
     //    //};
     //}
 
+    public const string Separator = "/";
+
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder();
         sb.Append(Bot ?? "UnknownBot");
-        sb.Append("/");
+        sb.Append(Separator);
         sb.Append(Symbol ?? "UnknownSymbol");
-        sb.Append("/");
+        sb.Append(Separator);
         sb.Append(TimeFrame ?? "UnknownTimeFrame");
-        sb.Append("/");
+        sb.Append(Separator);
 
         sb.Append(Exchange ?? "UnknownExchange");
-        sb.Append(".");
+        sb.Append(Separator);
         sb.Append(ExchangeArea ?? "UnknownExchangeArea");
-        sb.Append("/");
+        sb.Append(Separator);
 
         sb.Append(DateRange ?? "UnknownDateRange");
-        sb.Append("/");
+        sb.Append(Separator);
         sb.Append(RunId ?? "UnknownRunId");
         return sb.ToString();
     }
+    public static OptimizationRunReference Parse(string s)
+    {
+        var parts = s.Split('/');
+        if (parts.Length != 7)
+        {
+            throw new FormatException($"Invalid format: {s}");
+        }
+        return new OptimizationRunReference(
+            parts[0],
+            parts[1],
+            parts[2],
+            parts[3],
+            parts[4],
+            parts[5],
+            parts[6]
+        );
+    }
 }
+
+
+public class OptimizationRunReferenceConverter : TypeConverter
+{
+    public override bool CanConvertFrom(ITypeDescriptorContext? context, Type sourceType)
+    {
+        return sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+    }
+
+    public override object? ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object? value)
+    {
+        if (value is string str) { return OptimizationRunReference.Parse(str); }
+        return base.ConvertFrom(context, culture, value);
+    }
+
+    public override bool CanConvertTo(ITypeDescriptorContext? context, Type? destinationType)
+    {
+        return destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+    }
+
+    public override object? ConvertTo(ITypeDescriptorContext? context, CultureInfo? culture, object? value, Type? destinationType)
+    {
+        if (destinationType == typeof(string) && value is OptimizationRunReference reference)
+        {
+            return reference.ToString();
+        }
+
+        return base.ConvertTo(context, culture, value, destinationType);
+    }
+}
+
 
 public class OptimizationBacktestReference
 {
@@ -170,7 +270,24 @@ public class OptimizationBacktestReference
     public long BacktestId { get; set; }
 }
 
-public record BacktestReference(int BatchId, long BacktestId);
+[TypeConverter(typeof(ParsableConverter<BacktestReference>))]
+public record BacktestReference(int BatchId, long BacktestId) : IParsableSlim<BacktestReference>
+{
+    public static BacktestReference Parse(string s)
+    {
+        var parts = s.Split('-');
+        if (parts.Length != 2)
+        {
+            throw new FormatException($"Invalid format: {s}");
+        }
+        return new BacktestReference(int.Parse(parts[0]), long.Parse(parts[1]));
+    }
+
+    public override string ToString()
+    {
+        return $"{BatchId}-{BacktestId}";
+    }
+}
 
 public class BacktestHandle
 {

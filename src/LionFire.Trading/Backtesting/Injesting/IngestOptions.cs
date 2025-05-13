@@ -1,4 +1,4 @@
-﻿public class InjestOptions
+﻿public class IngestOptions
 {
     /// <summary>
     /// Set this to true on the injestion host.

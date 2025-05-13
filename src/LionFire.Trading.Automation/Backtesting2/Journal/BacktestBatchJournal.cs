@@ -18,11 +18,15 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 
+
+
 public class BacktestBatchJournal : IAsyncDisposable
 {
     #region Dependencies
 
     ILogger<BacktestBatchJournal> Logger { get; }
+    public IOptionsMonitor<OptimizationOptions> OptimizationOptionsMonitor { get; }
+
     ResiliencePipeline fsRetry;
 
     #endregion
@@ -34,7 +38,7 @@ public class BacktestBatchJournal : IAsyncDisposable
     public string BatchDirectory => Context.OutputDirectory;
     public Type PBotType { get; }
     public bool RetainInMemory { get; }
-    public bool ZipOnDispose { get; set; } = true;
+    public bool ZipOnDispose => OptimizationOptionsMonitor.CurrentValue.ZipOutput;
 
     private readonly CsvConfiguration CsvConfiguration = new CsvConfiguration(CultureInfo.InvariantCulture)
     {
@@ -54,7 +58,7 @@ public class BacktestBatchJournal : IAsyncDisposable
 
     #region Lifecycle
 
-    public BacktestBatchJournal(MultiBacktestContext context, Type pBotType, ResiliencePipelineProvider<string> resiliencePipelineProvider, ILogger<BacktestBatchJournal> logger,
+    public BacktestBatchJournal(MultiBacktestContext context, Type pBotType, ResiliencePipelineProvider<string> resiliencePipelineProvider, ILogger<BacktestBatchJournal> logger, IOptionsMonitor<OptimizationOptions> optimizationOptionsMonitor,
         bool retainInMemory = false)
     {
         fsRetry = resiliencePipelineProvider.GetPipeline(FilesystemRetryPolicy.Default);
@@ -70,6 +74,7 @@ public class BacktestBatchJournal : IAsyncDisposable
         PBotType = pBotType;
         RetainInMemory = retainInMemory;
         Logger = logger;
+        OptimizationOptionsMonitor = optimizationOptionsMonitor;
         if (retainInMemory)
         {
             sourceCache = new(e => (e.BatchId, e.Id));

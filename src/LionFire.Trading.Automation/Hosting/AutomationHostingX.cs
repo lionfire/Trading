@@ -7,6 +7,7 @@ using LionFire.UI.Workspaces;
 using LionFire.Workspaces;
 using LionFire.Workspaces.Services;
 using Microsoft.CodeAnalysis.Operations;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using System;
@@ -19,7 +20,14 @@ namespace LionFire.Hosting;
 
 public static class AutomationHostingX
 {
-    public static IServiceCollection AddBacktesting(this IServiceCollection services)
+    public static IServiceCollection BacktestingModel(this IServiceCollection services, IConfiguration configuration)
+    {
+        return services
+            .Configure<BacktestOptions>(configuration.GetSection(BacktestOptions.ConfigurationLocation)); // REFACTOR: Static interface to do this?
+    }
+
+
+    public static IServiceCollection Backtesting(this IServiceCollection services)
     {
         return services
             .AddSingleton<BacktestQueue>()
@@ -39,7 +47,7 @@ public static class AutomationHostingX
     //        ;
     //}
 
-    public static IServiceCollection AddAutomationUI(this IServiceCollection services)
+    public static IServiceCollection AutomationUI(this IServiceCollection services)
     {
         return services
             .AddTransient<BotsVM>()
@@ -54,9 +62,10 @@ public static class AutomationHostingX
                 .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, WorkspaceChildTypeConfigurator<T>>()
             ;
     }
-    public static IServiceCollection AddAutomationModel(this IServiceCollection services)
+    public static IServiceCollection AutomationModel(this IServiceCollection services, IConfiguration configuration)
     {
         return services
+            .BacktestingModel(configuration)
             .AddWorkspaceChildType<Portfolio>()
             .AddWorkspaceChildType<BotEntity>()
 
@@ -68,15 +77,21 @@ public static class AutomationHostingX
             .AddWorkspaceDocumentService<string, Portfolio>()
             ;
     }
-    
-    public static IServiceCollection AddAutomationRuntime(this IServiceCollection services)
+
+    public static IServiceCollection Automation(this IServiceCollection services, IConfiguration configuration)
     {
+        services
+            .Backtesting()
+            .Optimization(configuration)
+            ;
+
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceDocumentRunner<string, BotEntity>, WorkspaceDocumentRunner<string, BotEntity, BotRunner>>());
+
         return services
             //.AddHostedSingleton<AutomationRuntime>()
             ;
     }
-    
+
 
 
 

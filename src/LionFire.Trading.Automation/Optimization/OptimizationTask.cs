@@ -1,4 +1,5 @@
-﻿using LionFire.Applications;
+﻿using Hjson;
+using LionFire.Applications;
 using LionFire.Applications.Trading;
 using LionFire.DependencyMachines;
 using LionFire.Execution;
@@ -19,6 +20,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -30,9 +33,9 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
 
     public IServiceProvider ServiceProvider { get; }
 
-    public BacktestQueue BacktestBatcher { get; }
-    public BacktestOptions BacktestOptions { get; }
-    public BacktestExecutionOptions ExecutionOptions { get; }
+    public BacktestQueue? BacktestBatcher { get; private set; }
+    public BacktestOptions? BacktestOptions { get; private set; }
+    public BacktestExecutionOptions? ExecutionOptions { get; private set; }
 
     #endregion
 
@@ -43,27 +46,21 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
     public ExchangeSymbol? ExchangeSymbol => Parameters?.CommonBacktestParameters?.ExchangeSymbolTimeFrame;
 
     #endregion
-
+    PMultiBacktestContext pMultiBacktestContext;
     #region Lifecycle
 
     public OptimizationTask(IServiceProvider serviceProvider, PMultiBacktestContext parameters)
     {
         ServiceProvider = serviceProvider;
+        pMultiBacktestContext = parameters ?? throw new ArgumentNullException(nameof(parameters));
 
-        Context = MultiBacktestContext.Create(ServiceProvider, parameters ?? throw new ArgumentNullException(nameof(parameters))).Result; // ASYNC2SYNC
-        //OptimizationDirectory = GetOptimizationDirectory(Parameters.PBotType);
 
-        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
-
-        //if (Parameters.SearchSeed != 0) throw new NotImplementedException(); // NOTIMPLEMENTED
-
-        BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
-        ExecutionOptions = /*executionOptions ?? */ ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
     }
-    public Task StartAsync(CancellationToken cancellationToken = default)
+    public async Task StartAsync(CancellationToken cancellationToken = default)
     {
-        if (Parameters == null) throw new ArgumentNullException(nameof(Parameters));
         //IOptimizerEnumerable optimizerEnumerable = Parameters.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this); // OLD - find this and absorb
+
+        Context = await MultiBacktestContext.Create(ServiceProvider, pMultiBacktestContext);
 
         if (CancellationTokenSource != null) { throw new AlreadyException(); }
         CancellationTokenSource = new();
@@ -77,9 +74,28 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
             Context.CancellationToken = actualCTS.Token;
         }
 
+        if (Parameters == null) throw new ArgumentNullException(nameof(Parameters));
         Parameters.ValidateOrThrow();
 
-        OptimizationMultiBatchJournal = ActivatorUtilities.CreateInstance<BacktestBatchJournal>(ServiceProvider, Context, Parameters.PBotType, true);
+        //OptimizationDirectory = GetOptimizationDirectory(Parameters.PBotType);
+
+        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
+
+        //if (Parameters.SearchSeed != 0) throw new NotImplementedException(); // NOTIMPLEMENTED
+
+        BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
+        ExecutionOptions = /*executionOptions ?? */ ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
+
+        //await Context.TrySetOptimizationRunInfo(() => getOptimizationRunInfo());
+
+
+        Context.ValidateOrThrow();
+
+        OptimizationMultiBatchJournal = ActivatorUtilities.CreateInstance<BacktestBatchJournal>(ServiceProvider, Context, Parameters.PBotType!, true);
+
+        var hjson = JsonValue.Parse(JsonSerializer.Serialize(Context.OptimizationRunInfo)).ToString(new HjsonOptions { EmitRootBraces = false });
+        string OptimizationRunInfoFileName = "OptimizationRunInfo.hjson";
+        await File.WriteAllTextAsync(Path.Combine(Context.OutputDirectory, OptimizationRunInfoFileName), hjson);
 
         PGridSearchStrategy pGridSearchStrategy = new()
         {
@@ -87,7 +103,7 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
         };
         Parameters.POptimizationStrategy = pGridSearchStrategy;
 
-        GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, Parameters, this); 
+        GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, Parameters, this);
         OptimizationStrategy = gridSearchStrategy;
 
         RunTask = Task.Run(async () =>
@@ -99,8 +115,15 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
                 await OptimizationMultiBatchJournal.DisposeAsync();
             }
         });
-        return Task.CompletedTask;
     }
+
+    // TODO: Configure somehow
+    public static string MachineName
+    {
+        get => machineName ?? Environment.MachineName;
+        set => machineName = value;
+    }
+    private static string? machineName;
 
     #endregion
 

@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Persistence.Filesystem\LionFire.Persistence.Filesystem.csproj" />
     <ProjectReference Include="..\..\..\Trading\src\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\..\..\Trading\src\LionFire.Trading\LionFire.Trading.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
   </ItemGroup>
 
 	<ItemGroup>

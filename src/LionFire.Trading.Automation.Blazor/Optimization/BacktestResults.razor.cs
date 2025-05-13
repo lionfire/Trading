@@ -61,17 +61,4 @@ public partial class BacktestResults
 
     #endregion
 
-    public bool IsInPortfolio(BacktestBatchJournalEntry entry)
-    {
-        if (Portfolio == null) return false;
-        throw new NotImplementedException();
-
-        //BacktestBatchInfo run;
-
-        //if (Portfolio.OptimizationBacktests.TryGetValue(run, out var dict))
-        //{
-        //    return dict.ContainsKey(entry.Id) ? dict[entry.Id] : null;
-        //}
-    }
-
 }

@@ -107,7 +107,7 @@ public partial class POptimization : ReactiveObject
         };
 
 
-        this.WhenAnyValue(x => x.PBotType)
+        this.WhenAnyValue(x => x.Parent.PMultiBacktest.PBotType)
             .Select(BotParameterPropertiesInfo.SafeGet)
             .Subscribe(properties =>
             {

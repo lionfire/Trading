@@ -122,7 +122,7 @@ public sealed class BacktestBatchTask2<TPrecision>
 
             ExchangeSymbol = firstParameter?.ExchangeSymbol
                 ?? (firstParameter?.PBot as IPSymbolBot2)?.ExchangeSymbol
-                ?? context.ExchangeSymbol
+                ?? context.ExchangeSymbolTimeFrame
                 ?? ExchangeSymbol.Unknown;
 
             PBotType = firstParameter?.PBot?.GetType() ?? typeof(DBNull);
@@ -629,10 +629,8 @@ public sealed class BacktestBatchTask2<TPrecision>
 
     private async Task Run()
     {
-        var infoTask = Context.TrySetOptimizationRunInfo(() => GetOptimizationRunInfo<OptimizationRunInfo>());
         Task.Run(async () =>
         {
-
             try
             {
                 Progress = new() { BatchId = BatchId };
@@ -797,7 +795,6 @@ public sealed class BacktestBatchTask2<TPrecision>
 
         #endregion
 
-        await infoTask.ConfigureAwait(false);
     }
 
     #endregion

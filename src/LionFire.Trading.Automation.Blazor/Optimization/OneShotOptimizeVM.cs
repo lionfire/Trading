@@ -49,7 +49,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         var now = DateTimeOffset.UtcNow;
         var startYear = now.Year;
         var startMonth = now.Month - 6;
-        if(startMonth <= 0)
+        if (startMonth <= 0)
         {
             startYear--;
             startMonth += 12;
@@ -114,12 +114,13 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             {
                 var timer = new PeriodicTimer(TimeSpan.FromSeconds(0.25));
                 while (isKnownToBeRunning && !IsAborted && OptimizationTask != null)
-                {
-                    Progress = OptimizationTask.OptimizationStrategy.Progress;
-                    changes.OnNext(Unit.Default);
-                    await timer.WaitForNextTickAsync();
 
-                };
+                    if (OptimizationTask.OptimizationStrategy?.Progress != null)
+                    {
+                        Progress = OptimizationTask.OptimizationStrategy?.Progress;
+                    }
+                changes.OnNext(Unit.Default);
+                await timer.WaitForNextTickAsync();
             });
         }
     }
@@ -354,6 +355,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
         Task.Run(async () =>
         {
+            await task;
             await OptimizationTask.RunTask;
             LinesVM.Append("Optimization completed", category: GetType().FullName);
         });
@@ -368,7 +370,12 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         Debug.WriteLine("Toggle BacktestBatchJournalEntry: " + entry.Id);
         if (Portfolio == null) return;
 
-        
-        //Portfolio.OptimizationBacktests
+        OptimizationRunReference? orr = OptimizationTask?.Context?.OptimizationRunInfo;
+
+        Portfolio.Toggle(orr,entry);
+
     }
+
+    public OptimizationRunInfo OptimizationRunInfo => OptimizationTask?.Context?.OptimizationRunInfo;
+
 }

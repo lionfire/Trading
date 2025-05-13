@@ -2,8 +2,11 @@
 
 namespace LionFire.Trading.Automation;
 
+// See also: LionFire.Trading.
 public class BacktestExecutionOptions : ICloneable
 {
+    public const string ConfigurationLocation = "Trading:Backtesting";
+
     /// <summary>
     /// Backtest optimization: use short Chunks instead of long
     /// </summary>

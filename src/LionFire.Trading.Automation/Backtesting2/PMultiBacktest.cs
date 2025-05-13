@@ -1,15 +1,32 @@
-﻿using ReactiveUI;
+﻿using LionFire.Validation;
+using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation;
 
-public partial class PMultiBacktest : ReactiveObject
+public partial class PMultiBacktest : ReactiveObject, IValidatable
 {
+
+    #region Validation
+
+    public ValidationContext ValidateThis(ValidationContext v) =>
+        v.PropertyNotNull(nameof(PBotType), PBotType)
+        .PropertyNotNull(nameof(ExchangeSymbolTimeFrame), ExchangeSymbolTimeFrame)
+        .PropertyNotNull(nameof(Start), Start)
+        .PropertyNotNull(nameof(EndExclusive), EndExclusive)
+        ;
+
     public bool IsValid =>
-        (PBotType != null || ExchangeSymbolTimeFrame != null) &&
-        (Start != null && EndExclusive != null) &&
-        (ExchangeSymbolTimeFrame == null || ExchangeSymbolTimeFrame.Exchange != null);
+        this.Validate().Valid;
+    // OLD IsValid
+    //(PBotType != null || ExchangeSymbolTimeFrame != null) &&
+    //(Start != null && EndExclusive != null) &&
+    //(ExchangeSymbolTimeFrame == null || ExchangeSymbolTimeFrame.Exchange != null);
+
+    #endregion
+
+    #region Lifecycle
 
     public PMultiBacktest(
         Type? PBotType = null,
@@ -25,6 +42,10 @@ public partial class PMultiBacktest : ReactiveObject
         this.EndExclusive = EndExclusive;
         this.Features = Features;
     }
+
+    #endregion
+
+    #region Properties
 
     [Reactive]
     private Type? pBotType;
@@ -65,12 +86,16 @@ public partial class PMultiBacktest : ReactiveObject
     [Reactive]
     private DateTimeOffset? endExclusive;
 
+    #region Derived
+
     public DateTime? StartDateTime { get => Start?.DateTime; set => Start = DateCoercion.Coerce(value); }
     public DateTime? EndExclusiveDateTime { get => EndExclusive?.DateTime; set => EndExclusive = DateCoercion.Coerce(value); }
 
+    #endregion
 
     [Reactive]
     private BotHarnessFeatures features;
 
+    #endregion
 }
 

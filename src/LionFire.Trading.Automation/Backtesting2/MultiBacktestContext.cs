@@ -5,17 +5,19 @@ using LionFire.Structures;
 using LionFire.Trading.Automation.Journaling.Trades;
 using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Journal;
+using LionFire.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Polly;
 using Polly.Registry;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation;
 
-public class MultiBacktestContext
+public class MultiBacktestContext : IValidatable
 {
     #region Dependencies
 
@@ -52,8 +54,8 @@ public class MultiBacktestContext
 
     #region Derived
 
-    public ExchangeSymbol ExchangeSymbol => Parameters.ExchangeSymbol;
-    public Type BotType => Parameters.BotType;
+    public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame => Parameters.PMultiBacktest.ExchangeSymbolTimeFrame;
+    public Type? BotType => Parameters.BotType;
 
     public CancellationToken CancellationToken { get; set; }
 
@@ -65,31 +67,56 @@ public class MultiBacktestContext
 
     public static async Task<MultiBacktestContext> Create(IServiceProvider serviceProvider, PMultiBacktestContext parameters)
     {
-        MultiBacktestContext result = ActivatorUtilities.CreateInstance<MultiBacktestContext>(serviceProvider, parameters);
+        parameters.ValidateOrThrow();
 
         var MachineName = Environment.MachineName; // REVIEW - make configurable
 
         OptimizationRunInfo optimizationRunInfo = new()
         {
-            BotName = BotTyping.TryGetBotType(parameters.PBotType)?.Name ?? throw new ArgumentNullException("BotName"),
+            Guid = Guid.NewGuid(),
+            BotName = BotTyping.TryGetBotType(parameters.PBotType!)?.Name ?? throw new ArgumentNullException("BotName"),
+            BotTypeName = parameters.PBotType!.FullName,
 
-            ExchangeSymbol = parameters.ExchangeSymbol ?? throw new ArgumentNullException("ExchangeSymbol"),
-            TimeFrame = parameters.PMultiBacktest.TimeFrame,
+            ExchangeSymbolTimeFrame = parameters.PMultiBacktest.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException("ExchangeSymbol"),
+
             Start = parameters.PMultiBacktest.Start ?? throw new ArgumentException(nameof(parameters.PMultiBacktest.Start)),
             EndExclusive = parameters.PMultiBacktest.EndExclusive ?? throw new ArgumentException(nameof(parameters.PMultiBacktest.EndExclusive)),
 
             TicksEnabled = parameters.PMultiBacktest.Features.Ticks(),
 
-            BotAssemblyNameString = parameters.PBotType.Assembly.FullName ?? throw new ArgumentNullException("PBacktests[...].PBot"),
-            BacktestExecutionDate = DateTime.UtcNow,
+            BotAssemblyNameString = parameters.PBotType!.Assembly.FullName ?? throw new ArgumentNullException(nameof(OptimizationRunInfo.BotAssemblyNameString)),
+            OptimizationExecutionDate = DateTime.UtcNow,
 
             MachineName = MachineName,
-        };
 
-        result.Guid = Guid.NewGuid();
+        };
+        optimizationRunInfo.TryHydrateBuildDates(parameters.PBotType!);
+
+            //OptimizationRunInfo getOptimizationRunInfo()
+            //{
+            //    var p = Context.Parameters.PMultiBacktest;
+            //    return new()
+            //    {
+            //        ExchangeSymbol = p.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException(nameof(p.ExchangeSymbolTimeFrame)),
+            //        TimeFrame = p.TimeFrame,
+
+            //        Start = p.Start!.Value,
+            //        EndExclusive = p.EndExclusive!.Value,
+            //        TicksEnabled = p.Features.HasFlag(BotHarnessFeatures.Ticks),
+            //        //BotName = ,
+
+            //        BotAssemblyNameString = p.PBotType!.Assembly.FullName ?? throw new ArgumentNullException("PBacktests[...].PBot"),
+            //        OptimizationExecutionDate = DateTime.UtcNow,
+            //        MachineName = MachineName,
+            //    };
+            //}
+
+
+            MultiBacktestContext result = ActivatorUtilities.CreateInstance<MultiBacktestContext>(serviceProvider, parameters);
+        result.Guid = optimizationRunInfo.Guid;
+        result.OptimizationRunInfo = optimizationRunInfo;
 
         await result.Init().ConfigureAwait(false);
-
         return result;
     }
 
@@ -109,9 +136,23 @@ public class MultiBacktestContext
     public async Task Init()
     {
         outputDirectory = await GetGuidOutputDirectory().ConfigureAwait(false);
+        await WriteOptimizationRunInfo();
     }
 
     #endregion
+
+    #region Validation
+
+    public ValidationContext ValidateThis(ValidationContext validationContext)
+    {
+        return validationContext
+            .PropertyNotNull(nameof(OptimizationRunInfo), OptimizationRunInfo)
+            .Validate(POptimization)
+            ;
+    }
+
+    #endregion
+
 
     #region State
 
@@ -160,7 +201,7 @@ public class MultiBacktestContext
         }
 
         if (ExecutionOptions.BotSubDir) { path = System.IO.Path.Combine(path, botTypeName); }
-        if (ExecutionOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Symbol ?? "UnknownSymbol"); }
+        if (ExecutionOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbolTimeFrame?.Symbol ?? "UnknownSymbol"); }
 
         if (ExecutionOptions.TimeFrameDir)
         {
@@ -174,11 +215,11 @@ public class MultiBacktestContext
         if (ExecutionOptions.ExchangeAndAreaSubDir)
         {
             var sb = new System.Text.StringBuilder();
-            sb.Append(ExchangeSymbol?.Exchange ?? "UnknownExchange");
-            if (ExchangeSymbol?.ExchangeArea != null)
+            sb.Append(ExchangeSymbolTimeFrame?.Exchange ?? "UnknownExchange");
+            if (ExchangeSymbolTimeFrame?.ExchangeArea != null)
             {
                 sb.Append(".");
-                sb.Append(ExchangeSymbol.ExchangeArea);
+                sb.Append(ExchangeSymbolTimeFrame.ExchangeArea);
             }
             path = System.IO.Path.Combine(path, sb.ToString());
         }
@@ -209,25 +250,27 @@ public class MultiBacktestContext
 
     #endregion
 
-    public OptimizationRunInfo? OptimizationRunInfo
-    {
-        get => optimizationRunInfo;
-    }
-    private OptimizationRunInfo optimizationRunInfo;
-    private object optimizationRunInfoLock = new();
+    public OptimizationRunInfo? OptimizationRunInfo { get; set; }
+    //    => optimizationRunInfo;
+    //private OptimizationRunInfo optimizationRunInfo;
+    //private object optimizationRunInfoLock = new();
 
     HjsonOptions hjsonOptions = new HjsonOptions() { EmitRootBraces = false };
 
-    public async Task TrySetOptimizationRunInfo(Func<OptimizationRunInfo> getter)
+    private async Task WriteOptimizationRunInfo(
+        //Func<OptimizationRunInfo> getter
+        )
     {
-        lock (optimizationRunInfoLock)
-        {
-            if (optimizationRunInfo != null) return;
-            else optimizationRunInfo = getter();
-        }
+        ArgumentNullException.ThrowIfNull(OptimizationRunInfo);
 
-        await Task.Yield(); // Hjson is synchronous
-        var json = JsonConvert.SerializeObject(optimizationRunInfo, new JsonSerializerSettings
+        //lock (optimizationRunInfoLock)
+        //{
+        //    if (optimizationRunInfo != null) return;
+        //    else optimizationRunInfo = getter();
+        //}
+
+        //await Task.Yield(); // Hjson is synchronous
+        var json = JsonConvert.SerializeObject(OptimizationRunInfo, new JsonSerializerSettings
         {
             DefaultValueHandling = DefaultValueHandling.Ignore,
         });
