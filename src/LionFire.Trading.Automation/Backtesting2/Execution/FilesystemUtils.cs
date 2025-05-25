@@ -4,7 +4,7 @@ namespace LionFire.Trading.Automation;
 
 public static class FilesystemUtils
 {
-    public static string GetUniqueDirectory(string baseDir, string prefix, string suffix, int zeroPadding = 0)
+    public static (string dir, string id) GetUniqueDirectory(string baseDir, string prefix, string suffix, int zeroPadding = 0)
 
     {
         for (int i = 0; ; i++)
@@ -18,7 +18,7 @@ public static class FilesystemUtils
                     Directory.CreateDirectory(dir);
                 }
                 catch { } // EMPTYCATCH
-                return dir;
+                return (dir, name);
             }
         }
     }

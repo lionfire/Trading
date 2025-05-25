@@ -5,6 +5,8 @@ namespace LionFire.Trading.Automation;
 
 public interface IBot2 : IMarketParticipant2
 {
+    static Type ParametersType { get; } = null!;
+
     string BotId { get; set; }
     IPMarketProcessor Parameters { get; set; }
 

@@ -34,7 +34,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     #region Ambient
 
-    public Portfolio? Portfolio { get; set; }
+    public Portfolio2? Portfolio { get; set; }
 
     #endregion
 

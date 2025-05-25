@@ -10,5 +10,4 @@ public class OptimizationOptions
 {
     public const string ConfigurationLocation = "Trading:Optimization";
 
-    public bool ZipOutput { get; set; } = true;
 }

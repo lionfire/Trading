@@ -20,7 +20,7 @@ public partial class BacktestResults
     public string? WorkspaceId { get; set; }
 
     [CascadingParameter(Name = "Portfolio")]
-    public Portfolio? Portfolio { get; set; }
+    public Portfolio2? Portfolio { get; set; }
 
 
     protected override Task OnInitializedAsync()

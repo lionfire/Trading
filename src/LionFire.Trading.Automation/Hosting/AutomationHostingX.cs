@@ -50,6 +50,8 @@ public static class AutomationHostingX
     public static IServiceCollection AutomationUI(this IServiceCollection services)
     {
         return services
+            //.AddTransient<ObservableDataViewVM<,>>()
+            //.AddTransient(typeof(ObservableDataViewVM<,>), typeof(ObservableDataViewVM<,>))
             .AddTransient<BotsVM>()
             .AddTransient<BotVM>()
             ;
@@ -66,7 +68,11 @@ public static class AutomationHostingX
     {
         return services
             .BacktestingModel(configuration)
-            .AddWorkspaceChildType<Portfolio>()
+            .AddSingleton<BotTypeRegistry>()
+            .AddSingleton<BacktestsRepository>()
+            .AddSingleton<BacktestBatchJournalCsvSerialization>()
+
+            .AddWorkspaceChildType<Portfolio2>()
             .AddWorkspaceChildType<BotEntity>()
 
             // OLD
@@ -74,7 +80,7 @@ public static class AutomationHostingX
             //.TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, PortfoliosWorkspaceServiceConfigurator>()
 
             .AddWorkspaceDocumentService<string, BotEntity>()
-            .AddWorkspaceDocumentService<string, Portfolio>()
+            .AddWorkspaceDocumentService<string, Portfolio2>()
             ;
     }
 
@@ -83,6 +89,7 @@ public static class AutomationHostingX
         services
             .Backtesting()
             .Optimization(configuration)
+            .AddSingleton<LiveBotHarnessFactory>()
             ;
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceDocumentRunner<string, BotEntity>, WorkspaceDocumentRunner<string, BotEntity, BotRunner>>());
@@ -114,3 +121,5 @@ public static class AutomationHostingX
     //        ;
     //}
 }
+
+

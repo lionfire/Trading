@@ -117,17 +117,7 @@ public partial class PBacktestBatchTask2 : PBotHarness //: IPBacktestBatchTask2
 
 public class PBacktestTask2 : PBacktestBatchTask2 
 {
-
-    //public static PBacktestTask2<PBot> Create<PBot>(PBot bot, TimeFrame timeFrame, DateTimeOffset start, DateTimeOffset endExclusive)
-    //    where PBot : IPTimeFrameBot2
-    //    => new PBacktestTask2<PBot>
-    //    {
-    //        Bot = bot,
-    //        TimeFrame = timeFrame,
-    //        Start = start,
-    //        EndExclusive = endExclusive,
-    //    };
-
+    #region Lifecycle
 
     public PBacktestTask2() { }
     public PBacktestTask2(PMultiBacktest pMultiBacktest)
@@ -147,10 +137,10 @@ public class PBacktestTask2 : PBacktestBatchTask2
 
     }
 
+    #endregion
+
     #region Bot
 
-    //public Type BotType => botType ?? PBot?.GetType()!;
-    //private Type? botType;
     public IPTimeFrameBot2? PBot { get; set; }
 
     #endregion

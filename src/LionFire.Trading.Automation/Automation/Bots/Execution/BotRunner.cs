@@ -3,8 +3,6 @@ using LionFire.Threading;
 using LionFire.Trading.Automation;
 using Microsoft.Extensions.DependencyInjection;
 
-
-
 public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
 {
     #region (static implementation)
@@ -17,15 +15,17 @@ public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
 
     public IServiceProvider ServiceProvider { get; }
     public ILogger<BotRunner> Logger { get; }
+    public LiveBotHarnessFactory LiveBotHarnessFactory { get; }
 
     #endregion
 
     #region Lifecycle
 
-    public BotRunner(IServiceProvider serviceProvider, ILogger<BotRunner> logger) //: base(enabledPredicate: b => b.Enabled)
+    public BotRunner(IServiceProvider serviceProvider, ILogger<BotRunner> logger, LiveBotHarnessFactory liveBotHarnessFactory) //: base(enabledPredicate: b => b.Enabled)
     {
         ServiceProvider = serviceProvider;
         Logger = logger;
+        LiveBotHarnessFactory = liveBotHarnessFactory;
     }
 
     #endregion
@@ -55,7 +55,7 @@ public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
 
         try
         {
-            harness = LiveBotHarnessFactory.Create(ServiceProvider, value);
+            harness = LiveBotHarnessFactory.Create(value);
         }
         catch (Exception)
         {

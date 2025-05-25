@@ -2,6 +2,7 @@
 using LionFire.DynamicData_;
 using LionFire.FlexObjects;
 using LionFire.Referencing;
+using LionFire.Vos.Schemas;
 using Microsoft.CodeAnalysis;
 using ReactiveUI;
 using System;
@@ -13,15 +14,16 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LionFire.Trading.Automation.Portfolios;
+namespace LionFire.Trading.Automation;
 
 [LionFire.Ontology.Alias("Portfolio")]
-public class Portfolio : ReactiveObject
+[Vos(VosFlags.PreferDirectory)]
+public class Portfolio2 : ReactiveObject
 {
     static ObjectIDGenerator generator = new ObjectIDGenerator();
 
     public long InstanceId { get; set; }
-    public Portfolio()
+    public Portfolio2()
     {
         InstanceId = generator.GetId(this, out bool firstTime);
         if (firstTime)
@@ -36,8 +38,8 @@ public class Portfolio : ReactiveObject
 
     public string? Name { get; set; }
     public string? Comment { get; set; }
-
-    [Set]
+    
+        [Set]
     public SourceCache<
         (OptimizationRunReference key, SourceCache<BacktestReference, BacktestReference>), OptimizationRunReference>? OptimizationBacktestReferences
     { get; set; }
@@ -110,10 +112,23 @@ public class Portfolio : ReactiveObject
             this.RaisePropertyChanged(nameof(OptimizationBacktests));
         }
     }
-    public bool IsInPortfolio(OptimizationRunReference orr, BacktestBatchJournalEntry entry)
+    public bool IsInPortfolioAsReference(OptimizationRunReference orr, BacktestBatchJournalEntry entry)
     {
-        BacktestReference r = entry;
+        if (OptimizationBacktestReferences == null) return false;
 
+        SourceCache<BacktestReference, BacktestReference> level1;
+        var level1O = OptimizationBacktestReferences.Lookup(orr);
+        if (!level1O.HasValue) { return false; }
+        else { level1 = level1O.Value.Item2; }
+
+        BacktestReference r = entry;
+        var level2O = level1.Lookup(r);
+        return level2O.HasValue;
+
+    }
+
+    public bool IsInPortfolioAsEmbedded(OptimizationRunReference orr, BacktestBatchJournalEntry entry)
+    {
         //if (OptimizationBacktests == null) { return false; }
         //if (!OptimizationBacktests.ContainsKey(orr)) { return false; }
         //if (OptimizationBacktests[orr].ContainsKey(r)) { return true; }
@@ -126,13 +141,22 @@ public class Portfolio : ReactiveObject
         if (!level1O.HasValue) { return false; }
         else { level1 = level1O.Value.Item2; }
 
+        BacktestReference r = entry;
         var level2O = level1.Lookup(r);
         if (level2O.HasValue) { return true; }
         else { return false; }
+
+    }
+    public bool IsInPortfolio(OptimizationRunReference orr, BacktestBatchJournalEntry entry)
+    {
+        if (IsInPortfolioAsReference(orr, entry)) return true;
+        if (IsInPortfolioAsEmbedded(orr, entry)) return true;
+
+        return false;
     }
 
     public override string ToString()
     {
-        return $"Portfolio {Name} #{InstanceId} ({OptimizationBacktestReferences?.KeyValues.SelectMany(kv=>kv.Value.Item2.Keys).Count()} backtest refs)";
+        return $"Portfolio {Name} #{InstanceId} ({OptimizationBacktestReferences?.KeyValues.SelectMany(kv => kv.Value.Item2.Keys).Count()} backtest refs)";
     }
 }

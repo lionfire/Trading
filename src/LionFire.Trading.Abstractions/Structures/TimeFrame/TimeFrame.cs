@@ -70,6 +70,7 @@ public static class TimeFrameTimeSpanX
 public class LionFireTimeFrame
 #else
 public class TimeFrame : ISerializableAsString
+    //, IParseableSlim<TimeFrame> // TODO - NEW
 #endif
 {
     public override bool Equals(object o)

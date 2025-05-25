@@ -1,0 +1,59 @@
+﻿@page "/portfolios"
+@using LionFire.Mvvm
+@using LionFire.Trading.Automation
+@using LionFire.Trading.Portfolios
+@* @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<ObservableDataViewVM<string, Portfolio>> *@
+
+                    @* ViewModel="ViewModel" *@
+                    @* Data="ViewModel!.Data" *@
+                    @* DataServiceProvider="WorkspaceServices" *@
+    @* @ref=ItemsEditor *@
+<ObservableDataView 
+                    TKey="string"
+                    TValue="Portfolio2"
+                    TValueVM="Portfolio2VM"
+                    AllowedEditModes=EditMode.All
+                    ReadOnly=false>
+
+</ObservableDataView>
+
+@code {
+    // ENH idea: standardize on AmbientServices, and have ObservableDataView use it.
+    // [CascadingParameter(Name = "WorkspaceServices")]
+    // public IServiceProvider? WorkspaceServices { get; set; }
+
+
+    // ObservableDataView<string, Portfolio, PortfolioVM>? ItemsEditor { get; set; }
+
+    // public class PortfoliosVM : ObservableDataViewVM<string, Portfolio>
+    // //: AsyncVMSourceCacheVM<string, BotEntity, BotVM>
+    // //, IInjectable<Func<TKey, TValue, TValueVM>>
+    // {
+    //     public PortfoliosVM()
+    //     {
+    //     }
+
+    //     //public IObservableReaderWriter<string, BotEntity>? Entities { get; set; }
+    // }
+
+    public class PortfolioVM : KeyValueVM<string, Portfolio>
+    {
+        public PortfolioVM(string key, Portfolio value) : base(key, value)
+        {
+        }
+
+        #region Event Handlers
+
+        public ValueTask OnStart()
+        {
+            return ValueTask.CompletedTask;
+        }
+        public ValueTask OnStop()
+        {
+            return ValueTask.CompletedTask;
+        }
+
+        #endregion
+    }
+
+}

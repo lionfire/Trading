@@ -95,11 +95,13 @@ public sealed class BacktestBatchTask2<TPrecision>
 
     #region Lifecycle
 
-    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, BacktestExecutionOptions? executionOptions = null, DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
+    public static async ValueTask<BacktestBatchTask2<TPrecision>> Create(IServiceProvider serviceProvider, IEnumerable<PBacktestTask2> parameters, MultiBacktestContext? context = null, 
+        //BacktestExecutionOptions? executionOptions = null, 
+        DateChunker? dateChunker = null, BacktestBatchJournal? backtestBatchJournal = null, DateTimeOffset? start = null, DateTimeOffset? endExclusive = null)
     {
         context ??= await MultiBacktestContext.Create(serviceProvider, new(parameters, start, endExclusive));
 
-        if (executionOptions != null) { context.ExecutionOptions = executionOptions; }
+        //if (executionOptions != null) { context.ExecutionOptions = executionOptions; }
 
         var t = new BacktestBatchTask2<TPrecision>(serviceProvider, parameters, context, dateChunker, backtestBatchJournal: backtestBatchJournal);
         await t.Init();

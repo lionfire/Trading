@@ -18,14 +18,13 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Channels;
 
-
-
 public class BacktestBatchJournal : IAsyncDisposable
 {
     #region Dependencies
 
     ILogger<BacktestBatchJournal> Logger { get; }
     public IOptionsMonitor<OptimizationOptions> OptimizationOptionsMonitor { get; }
+    public IOptionsMonitor<BacktestRepositoryOptions> BacktestRepositoryOptionsMonitor { get; }
 
     ResiliencePipeline fsRetry;
 
@@ -33,24 +32,17 @@ public class BacktestBatchJournal : IAsyncDisposable
 
     #region Parameters
 
-    public string JournalFilename { get; set; } = "backtests";
+    public static string DefaultJournalFilename { get; set; } = "backtests";
+    public string JournalFilename { get; set; } = DefaultJournalFilename;
     public MultiBacktestContext Context { get; }
     public string BatchDirectory => Context.OutputDirectory;
     public Type PBotType { get; }
     public bool RetainInMemory { get; }
-    public bool ZipOnDispose => OptimizationOptionsMonitor.CurrentValue.ZipOutput;
-
-    private readonly CsvConfiguration CsvConfiguration = new CsvConfiguration(CultureInfo.InvariantCulture)
-    {
-        //HasHeaderRecord = true,
-        //NewLine = "\n",
-        NewLine = "\r\n",
-        //ShouldQuote = args => false,
-    };
 
     #region Derived
 
     //private ParameterMetadata ParameterMetadata { get; }
+    public bool ZipOnDispose => BacktestRepositoryOptionsMonitor.CurrentValue.ZipOutput;
 
     #endregion
 
@@ -59,6 +51,7 @@ public class BacktestBatchJournal : IAsyncDisposable
     #region Lifecycle
 
     public BacktestBatchJournal(MultiBacktestContext context, Type pBotType, ResiliencePipelineProvider<string> resiliencePipelineProvider, ILogger<BacktestBatchJournal> logger, IOptionsMonitor<OptimizationOptions> optimizationOptionsMonitor,
+        IOptionsMonitor<BacktestRepositoryOptions> backtestRepositoryOptionsMonitor,
         bool retainInMemory = false)
     {
         fsRetry = resiliencePipelineProvider.GetPipeline(FilesystemRetryPolicy.Default);
@@ -68,13 +61,14 @@ public class BacktestBatchJournal : IAsyncDisposable
         var path = Path.Combine(Context.OutputDirectory, JournalFilename + ".csv");
         var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
         var writer = new StreamWriter(fs);
-        csv = new CsvWriter(writer, CsvConfiguration);
+        csv = new CsvWriter(writer, BacktestBatchJournalCsvSerialization.CsvConfiguration);
 
         consumeTask = Consume();
         PBotType = pBotType;
         RetainInMemory = retainInMemory;
         Logger = logger;
         OptimizationOptionsMonitor = optimizationOptionsMonitor;
+        BacktestRepositoryOptionsMonitor = backtestRepositoryOptionsMonitor;
         if (retainInMemory)
         {
             sourceCache = new(e => (e.BatchId, e.Id));

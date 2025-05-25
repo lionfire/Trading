@@ -1,13 +1,14 @@
 @page "/bots"
-@inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM>
+@* @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM> *@
 
 @using LionFire.Reactive.Persistence
 @using LionFire.Trading.Automation
 @using Microsoft.Extensions.DependencyInjection
 
 <div class="pa-6">
+                        @* Data="ViewModel!.Data" *@
     <ObservableDataView @ref=ItemsEditor
-                        Data="ViewModel!.Data"
+                        DataServiceProvider="WorkspaceServices"
                         TKey="string"
                         TValue="BotEntity"
                         TValueVM="BotVM"
@@ -17,7 +18,6 @@
         <Columns>
             <HierarchyColumn T="BotVM" />
 
-
             @* <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Key" /> *@
             @* Editable="false" *@
             <TemplateColumn T="BotVM">
@@ -25,7 +25,9 @@
                     Status
                 </HeaderTemplate>
                 <CellTemplate>
-                    <MudIcon Icon="@Icons.Material.Outlined.Circle" />
+                    <MudLink Href="@($"/bots/{context.Item.Key}")">
+                        <MudIcon Icon="@Icons.Material.Outlined.Circle" />
+                    </MudLink>
                     @* <MudIcon Icon="@Icons.Material.Filled.Circle" /> *@
                     @* <MudIcon Color="@Color.Primary" Icon="@Icons.Material.Outlined.Circle" /> *@
                     @* <MudIcon Color=@Color.Primary Icon="@Icons.Material.Filled.Circle" /> *@
@@ -45,15 +47,34 @@
                     @if (context.Item?.Value != null)
                     {
                         <div>
-                            <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled"></MudSwitch>
+                            <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled" Color="Color.Primary" ThumbIcon="@Icons.Material.Filled.Radar" Size="Size.Small" ></MudSwitch>
+                        </div>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn T="BotVM">
+                <HeaderTemplate>
+                    Live
+                </HeaderTemplate>
+                <CellTemplate>
+                    @if (context.Item?.Value != null)
+                    {
+                        <div>
+                            <MudSwitch T="bool" ThumbIcon="@Icons.Material.Rounded.AttachMoney" @bind-Value="context.Item.Value.Live" Color=@((context.Item.IsLive ? Color.Secondary : Color.Default)) Size="Size.Small" ></MudSwitch>
                         </div>
                     }
                 </CellTemplate>
             </TemplateColumn>
 
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Symbol" Title="Type" />
+
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Exchange" Title="Exchange" />
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.ExchangeArea" Title="Area" />
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Symbol" Title="Symbol" />
+            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.TimeFrame" Title="TimeFrame" />
+
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.BotTypeName" Title="Type" />
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Name" />
+            <PropertyColumn Property="x => x.AD" Title="AD" T="BotVM" TProperty="double?" />
             <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Comments" />
                 @* TODO: Some summary stats:  AD, MHWT, W%, TPM *@
         </Columns>
@@ -82,6 +103,7 @@
 </div>
 
 @code {
+    // ENH idea: standardize on AmbientServices, and have ObservableDataView use it.
     [CascadingParameter(Name = "WorkspaceServices")]
     public IServiceProvider? WorkspaceServices { get; set; }
 
@@ -90,14 +112,15 @@
 
     ObservableDataView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
 
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-    }
+    // protected override void OnParametersSet()
+    // {
+    //     // ViewModel!.ServiceProvider = WorkspaceServices;
+    //     base.OnParametersSet();
+    // }
 
-    protected override void OnParametersSet()
-    {
-        base.OnParametersSet();
-        ViewModel!.Init(WorkspaceServices);
-    }
+    // protected override void OnInitialized()
+    // {
+    //     base.OnInitialized();
+    // }
+
 }

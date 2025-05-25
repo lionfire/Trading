@@ -99,6 +99,8 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
     where TValue : struct, INumber<TValue>
 {
+    public static Type ParametersType => typeof(PAtrBot<TValue>);
+
     #region Inputs
 
     public IReadOnlyValuesWindow<TValue> ATR { get; set; } = null!;

@@ -2,6 +2,32 @@
 
 namespace LionFire.Trading.Automation;
 
+public enum BacktestIdKind
+{
+    Guid,
+    Integer,
+}
+public class BacktestRepositoryOptions 
+{
+    public const string ConfigurationLocation = "Trading:Backtests:Repository";
+
+    #region Paths
+
+    public bool BotSubDir { get; set; } = true;
+
+    public bool SymbolSubDir { get; set; } = true;
+    public bool TimeFrameDir { get; set; } = true;
+    public bool DateRangeDir { get; set; } = true;
+    public bool ExchangeAndAreaSubDir { get; set; } = true;
+
+    public BacktestIdKind BacktestIdKind { get; set; } = BacktestIdKind.Integer;
+    #endregion
+
+    public bool ZipOutput { get; set; } = true;
+
+}
+
+
 // See also: LionFire.Trading.
 public class BacktestExecutionOptions : ICloneable
 {
@@ -55,16 +81,7 @@ public class BacktestExecutionOptions : ICloneable
 
 
 
-    #region Paths
 
-    public bool BotSubDir { get; set; } = true;
-
-    public bool SymbolSubDir { get; set; } = true;
-    public bool TimeFrameDir { get; set; } = true;
-    public bool DateRangeDir { get; set; } = true;
-    public bool ExchangeAndAreaSubDir { get; set; } = true;
-
-    #endregion
     
     public BacktestExecutionOptions Clone() => (BacktestExecutionOptions)MemberwiseClone();
     object ICloneable.Clone() => Clone();

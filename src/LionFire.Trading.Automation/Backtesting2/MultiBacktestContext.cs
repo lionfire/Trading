@@ -24,11 +24,13 @@ public class MultiBacktestContext : IValidatable
     public IServiceProvider ServiceProvider { get; }
     public ResiliencePipeline? FilesystemRetryPipeline { get; }
 
+    public BacktestsRepository BacktestsRepository { get; }
+
     #endregion
 
     #region Id
 
-    public Guid Guid { get; set; }
+    public string Guid { get; set; }
 
     #endregion
 
@@ -73,7 +75,7 @@ public class MultiBacktestContext : IValidatable
 
         OptimizationRunInfo optimizationRunInfo = new()
         {
-            Guid = Guid.NewGuid(),
+            //Guid = Guid.NewGuid(),
             BotName = BotTyping.TryGetBotType(parameters.PBotType!)?.Name ?? throw new ArgumentNullException("BotName"),
             BotTypeName = parameters.PBotType!.FullName,
 
@@ -92,37 +94,37 @@ public class MultiBacktestContext : IValidatable
         };
         optimizationRunInfo.TryHydrateBuildDates(parameters.PBotType!);
 
-            //OptimizationRunInfo getOptimizationRunInfo()
-            //{
-            //    var p = Context.Parameters.PMultiBacktest;
-            //    return new()
-            //    {
-            //        ExchangeSymbol = p.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException(nameof(p.ExchangeSymbolTimeFrame)),
-            //        TimeFrame = p.TimeFrame,
+        //OptimizationRunInfo getOptimizationRunInfo()
+        //{
+        //    var p = Context.Parameters.PMultiBacktest;
+        //    return new()
+        //    {
+        //        ExchangeSymbol = p.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException(nameof(p.ExchangeSymbolTimeFrame)),
+        //        TimeFrame = p.TimeFrame,
 
-            //        Start = p.Start!.Value,
-            //        EndExclusive = p.EndExclusive!.Value,
-            //        TicksEnabled = p.Features.HasFlag(BotHarnessFeatures.Ticks),
-            //        //BotName = ,
+        //        Start = p.Start!.Value,
+        //        EndExclusive = p.EndExclusive!.Value,
+        //        TicksEnabled = p.Features.HasFlag(BotHarnessFeatures.Ticks),
+        //        //BotName = ,
 
-            //        BotAssemblyNameString = p.PBotType!.Assembly.FullName ?? throw new ArgumentNullException("PBacktests[...].PBot"),
-            //        OptimizationExecutionDate = DateTime.UtcNow,
-            //        MachineName = MachineName,
-            //    };
-            //}
+        //        BotAssemblyNameString = p.PBotType!.Assembly.FullName ?? throw new ArgumentNullException("PBacktests[...].PBot"),
+        //        OptimizationExecutionDate = DateTime.UtcNow,
+        //        MachineName = MachineName,
+        //    };
+        //}
 
-
-            MultiBacktestContext result = ActivatorUtilities.CreateInstance<MultiBacktestContext>(serviceProvider, parameters);
-        result.Guid = optimizationRunInfo.Guid;
+        MultiBacktestContext result = ActivatorUtilities.CreateInstance<MultiBacktestContext>(serviceProvider, parameters);
+        //result.Guid = optimizationRunInfo.Guid!;
         result.OptimizationRunInfo = optimizationRunInfo;
 
         await result.Init().ConfigureAwait(false);
         return result;
     }
 
-    public MultiBacktestContext(IServiceProvider serviceProvider, PMultiBacktestContext parameters)
+    public MultiBacktestContext(IServiceProvider serviceProvider, BacktestsRepository backtestsRepository, PMultiBacktestContext parameters)
     {
         ServiceProvider = serviceProvider;
+        BacktestsRepository = backtestsRepository;
 
         if (serviceProvider.GetService<ResiliencePipelineProvider<string>>()?.TryGetPipeline(FilesystemRetryPolicy.Default, out var p) == true)
         {
@@ -135,7 +137,15 @@ public class MultiBacktestContext : IValidatable
 
     public async Task Init()
     {
-        outputDirectory = await GetGuidOutputDirectory().ConfigureAwait(false);
+        var botTypeName = BacktestsRepository.BotTypeRegistry.GetBotName(BotType!);
+        
+        (outputDirectory, Guid) = await BacktestsRepository.GetAndCreateOptimizationRunDirectory(
+            ExchangeSymbolTimeFrame!,
+            botTypeName,
+            Parameters.PMultiBacktest.Start!.Value,
+            Parameters.PMultiBacktest.EndExclusive!.Value
+            //,Guid.ToString()
+            ).ConfigureAwait(false);
         await WriteOptimizationRunInfo();
     }
 
@@ -188,65 +198,7 @@ public class MultiBacktestContext : IValidatable
     }
     private string? outputDirectory;
 
-    private string GetParentDirectory() // BLOCKING I/O
-    {
-        var path = BacktestOptions.Dir;
 
-        string botTypeName = BotType.Name;
-
-        if (BotType.IsGenericType)
-        {
-            int i = botTypeName.IndexOf('`');
-            if (i >= 0) { botTypeName = botTypeName[..i]; }
-        }
-
-        if (ExecutionOptions.BotSubDir) { path = System.IO.Path.Combine(path, botTypeName); }
-        if (ExecutionOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbolTimeFrame?.Symbol ?? "UnknownSymbol"); }
-
-        if (ExecutionOptions.TimeFrameDir)
-        {
-            path = System.IO.Path.Combine(path, Parameters.PMultiBacktest.TimeFrame?.ToString() ?? "UnknownTimeFrame");
-        }
-        if (ExecutionOptions.DateRangeDir)
-        {
-            path = System.IO.Path.Combine(path, DateTimeFormatting.ToConciseFileName(Parameters.PMultiBacktest.Start, Parameters.PMultiBacktest.EndExclusive));
-        }
-        //if (ExecutionOptions.ExchangeSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange"); }
-        if (ExecutionOptions.ExchangeAndAreaSubDir)
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.Append(ExchangeSymbolTimeFrame?.Exchange ?? "UnknownExchange");
-            if (ExchangeSymbolTimeFrame?.ExchangeArea != null)
-            {
-                sb.Append(".");
-                sb.Append(ExchangeSymbolTimeFrame.ExchangeArea);
-            }
-            path = System.IO.Path.Combine(path, sb.ToString());
-        }
-
-        return path;
-    }
-
-    private async Task<string> GetGuidOutputDirectory()
-    {
-        var dir = Path.Combine(GetParentDirectory(), Guid.ToString());
-        await Task.Run(() =>
-        {
-            Debug.WriteLine("Creating directory...   " + dir);
-            Directory.CreateDirectory(dir); // BLOCKING I/O
-            Debug.WriteLine("Creating directory...done.  " + dir);
-        }).ConfigureAwait(false);
-        return dir;
-    }
-
-    private string GetNumberedRunDirectory() // BLOCKING I/O
-    {
-        var path = GetParentDirectory();
-
-        path = FilesystemUtils.GetUniqueDirectory(path, "", "", 4); // BLOCKING I/O
-
-        return path;
-    }
 
     #endregion
 
