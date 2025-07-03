@@ -22,52 +22,17 @@ public abstract class FuturesPositionBase<TPrecision> : PositionBase<TPrecision>
     public bool Isolated { get; set; }
 }
 
-public class SimulatedPosition<TPrecision> : PositionBase<TPrecision>
-    where TPrecision : struct, INumber<TPrecision>
+
+
+// REVIEW - Migrate users of this to SimPositionBase?
+public abstract class PositionBase<TPrecision> : PositionBaseBase<TPrecision>
+where TPrecision : struct, INumber<TPrecision>
 {
-
-    #region Lifecycle
-
-    public SimulatedPosition(IAccount2<TPrecision> account, string symbol) : base(account, symbol)
-    {
-    }
-
-    #endregion
-
-    public override ValueTask<IOrderResult> SetStopLoss(TPrecision price)
-    {
-        StopLoss = price;
-        return ValueTask.FromResult<IOrderResult>(OrderResult.Success);
-    }
-    public override ValueTask<IOrderResult> SetTakeProfit(TPrecision price)
-    {
-        TakeProfit = price;
-        return ValueTask.FromResult<IOrderResult>(OrderResult.Success);
-    }
-
-}
-
-public abstract class PositionBase<TPrecision> : IPosition<TPrecision>
-    where TPrecision : struct, INumber<TPrecision>
-{
-    #region Identity / Immutable
-
-    public int Id { get; set; }
-    public DateTimeOffset EntryTime { get; set; }
-
-
-    public string Symbol { get; set; }
-    //{
-    //    get => SymbolId.Symbol;
-    //    set => SymbolId.Symbol = new SymbolId { Symbol = value };
-    //}
-    public SymbolId SymbolId { get => new() { Symbol = Symbol }; set => throw new NotImplementedException(); }
-
-    #endregion
 
     #region Relationships
 
-    public IAccount2<TPrecision> Account { get; set; }
+    public override IAccount2<TPrecision> Account { get; }
+    public override string Symbol { get; }
 
     #endregion
 
@@ -79,6 +44,26 @@ public abstract class PositionBase<TPrecision> : IPosition<TPrecision>
         Symbol = symbol;
         //SymbolId = new SymbolId { Symbol = symbol }; // REVIEW
     }
+
+    #endregion
+}
+
+public abstract class PositionBaseBase<TPrecision> : IPosition<TPrecision>
+where TPrecision : struct, INumber<TPrecision>
+{
+    #region Identity / Immutable
+
+    public int Id { get; set; }
+    public DateTimeOffset EntryTime { get; set; }
+
+    public SymbolId SymbolId { get => new() { Symbol = Symbol }; set => throw new NotImplementedException(); }
+
+    #endregion
+
+    #region Relationships
+
+    public abstract string Symbol { get; }
+    public abstract IAccount2<TPrecision> Account { get; }
 
     #endregion
 
@@ -138,7 +123,7 @@ public abstract class PositionBase<TPrecision> : IPosition<TPrecision>
     private LongAndShort longOrShort;
     public void ResetDirection()
     {
-        if(Quantity != TPrecision.Zero) throw new InvalidOperationException("Cannot reset direction while position is open");
+        if (Quantity != TPrecision.Zero) throw new InvalidOperationException("Cannot reset direction while position is open");
         longOrShort = LongAndShort.Unspecified;
     }
 
@@ -189,8 +174,16 @@ public abstract class PositionBase<TPrecision> : IPosition<TPrecision>
 
     #endregion
 
-    #region SL/TP
+    #region Close
 
+    public void Close()
+    {
+        throw new NotImplementedException();
+    }
+
+    #endregion
+
+    #region SL/TP
 
     public Nullable<TPrecision> StopLoss { get; set; }
     public abstract ValueTask<IOrderResult> SetStopLoss(TPrecision price);
@@ -203,6 +196,8 @@ public abstract class PositionBase<TPrecision> : IPosition<TPrecision>
     #region Misc
 
     public override string ToString() => $"{TradeType} {Symbol}: {GrossProfit}";
+
+    
 
 
     #endregion

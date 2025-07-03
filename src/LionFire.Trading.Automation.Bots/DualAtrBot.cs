@@ -30,9 +30,11 @@ public class PDualAtrBot<TValue> : PStandardBot2<PDualAtrBot<TValue>, TValue>
 
     #endregion
 
-    [Signal(0)]
+
+    [PSignal]
     public PAverageTrueRange<double, TValue>? SlowATR { get; set; }
-    [Signal(0)]
+
+    [PSignal]
     public PAverageTrueRange<double, TValue>? FastATR { get; set; }
 
     /// <summary>
@@ -76,7 +78,7 @@ public class PDualAtrBot<TValue> : PStandardBot2<PDualAtrBot<TValue>, TValue>
         //InputLookbacks = [(int)slowPeriod + Lookback];
         InputLookbacks = [0, Lookback];
 
-        FinalizeInit();
+        Init();
     }
 
 
@@ -95,7 +97,9 @@ public class DualAtrBot<TValue> : StandardBot2<PDualAtrBot<TValue>, TValue>
 {
     #region Inputs
 
+    [Signal(0)]
     public IReadOnlyValuesWindow<TValue> SlowATR { get; set; } = null!;
+    [Signal(1)]
     public IReadOnlyValuesWindow<TValue> FastATR { get; set; } = null!;
 
     //public IReadOnlyValuesWindow<HLC<double>> Bars { get; set; } = null!;
@@ -135,7 +139,7 @@ public class DualAtrBot<TValue> : StandardBot2<PDualAtrBot<TValue>, TValue>
     //    //var eATR = new BufferingIndicatorHarness<AverageTrueRange<TValue>, PAverageTrueRange<double. TValue>, IKline, TValue>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange<TValue>>(parameters.SlowATR!)
     //    //{
     //    //    Inputs = parameters.Inputs == null ? [] : [parameters.Inputs],
-    //    //    TimeFrame = parameters.TimeFrame,
+    //    //    DefaultTimeFrame = parameters.DefaultTimeFrame,
     //    //});
 
     //    //eATR.GetWindow(OutputExecutionOptions.Memory);

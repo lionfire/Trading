@@ -119,11 +119,12 @@ public class PBoundInput : PBoundSlots, IPInput
 
     public Type ValueType => PUnboundInput.ValueType;
 
+    // REVIEW / Document: what is going on here?  If there are 0 signals, it would seem that this PBountInput can't exist in a valid state, so maybe null and 0 should indicate this with some sort of " {UNBOUND}" marker
     public string Key => Signals?.Count switch
     {
         null => PUnboundInput.Key,
         0 => PUnboundInput.Key,
-        1 => Signals[0].Key + " > " + PUnboundInput.Key,
+        1 => Signals[0]!.Key + " > " + PUnboundInput.Key,
         _ => "[" + string.Join(" ", Signals.Select(s => s.Key)) + "] > " + PUnboundInput.Key,
     };
 

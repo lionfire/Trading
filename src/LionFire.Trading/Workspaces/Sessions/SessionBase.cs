@@ -10,7 +10,7 @@ namespace LionFire.Trading.Sessions
 {
     public class SessionBase : ExecutableExBase, IExecutableEx, IControllableExecutable, INotifyPropertyChanged
     {
-        public IAccount Account { get; set; }
+        public IAccount_Old Account { get; set; }
 
         #region DesiredState
 

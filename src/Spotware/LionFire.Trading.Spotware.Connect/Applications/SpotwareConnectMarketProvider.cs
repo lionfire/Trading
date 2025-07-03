@@ -16,7 +16,7 @@ namespace LionFire.Trading.Spotware.Connect.Applications
 
         #endregion
 
-        public IAccount GetMarket(string configName)
+        public IAccount_Old GetMarket(string configName)
         {
             var split = configName.Split(':');
             if (split.Length < 1) throw new ArgumentException("Format: urischeme:<...>");

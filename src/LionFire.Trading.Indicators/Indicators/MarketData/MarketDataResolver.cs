@@ -59,7 +59,7 @@ public class MarketDataResolver : IMarketDataResolver
                     PInputType = PInputType.MakeGenericType(valueType.GetGenericArguments());
                 }
                 // Assumes constructor:
-                return (IPKlineInput)Activator.CreateInstance(PInputType, estf.Exchange, estf.ExchangeArea, estf.Symbol, estf.TimeFrame)!;
+                return (IPKlineInput)Activator.CreateInstance(PInputType, estf.Exchange, estf.Area, estf.Symbol, estf.TimeFrame)!;
             }
         }
         else

@@ -9,8 +9,8 @@ public static class TradeJournalHostingX
     {
         if (options != null) { services.Configure<TradeJournalOptions>(options); }
 
-        //services.AddTransient<IBacktestTradeJournal<double>, BacktestTradeJournal<double>>();
-        //services.AddTransient<IBacktestTradeJournal<decimal>, BacktestTradeJournal<decimal>>();
+        //services.AddTransient<ISimulationTradeJournal<double>, SimulationTradeJournal<double>>();
+        //services.AddTransient<ISimulationTradeJournal<decimal>, SimulationTradeJournal<decimal>>();
 
         return services;
     }

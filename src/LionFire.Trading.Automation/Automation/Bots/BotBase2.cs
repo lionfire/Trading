@@ -1,25 +1,15 @@
-﻿
-using DynamicData;
-using LionFire.Ontology;
+﻿using DynamicData;
 
 namespace LionFire.Trading.Automation;
 
-// TODO?
-//public abstract class BotBase2<TConcrete, TParameters>
-//    where TConcrete : IBot2
-//{
-//}
-
 public interface IBotContext
 {
+    long Id { get; }
+    IBot2 Bot { get; }
 
+    ValueTask OnFinished();
 }
 
-public class BotContext
-{
-    public required IAccount2 Account { get; set; }
-
-}
 
 public abstract class BotBase2<TParameters, TPrecision>
     : IBot2<TParameters, TPrecision>
@@ -27,6 +17,8 @@ public abstract class BotBase2<TParameters, TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
     //public abstract IReadOnlyList<IInputSignal> InputSignals { get; }
+    public float ListenOrder => ListenerOrders.Bot;
+
 
     #region Identity
 
@@ -36,18 +28,19 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     #region Relationships
 
-    #region IBotController
+    #region BotContext
 
-    public IBotController<TPrecision>? Controller
+    public IBotContext<TPrecision>? Context
     {
-        get => controller;
+        get => context;
         set
         {
-            if (controller != null && controller != value) throw new AlreadySetException();
-            controller = value;
+            if (context != null && context != value) throw new AlreadySetException();
+            context = value;
         }
     }
-    private IBotController<TPrecision>? controller = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    private IBotContext<TPrecision>? context = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    IBotContext IBot2.Context { get => Context ?? throw new InvalidOperationException(); set => throw new NotImplementedException(); }
 
     #endregion
 
@@ -65,7 +58,7 @@ public abstract class BotBase2<TParameters, TPrecision>
         }
     }
     private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have PBacktests set
-    IPMarketProcessor IBot2.Parameters { get => parameters; set => parameters = (TParameters)value; }
+    IPBot2 IBot2.Parameters { get => parameters; set => parameters = (TParameters)value; }
 
     protected virtual void OnParametersSet()
     {
@@ -74,7 +67,7 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     #region Lifecycle
 
-    //public BotBase2(TParameters parameters, IBotController? botController = null)
+    //public BotBase2(TParameters parameters, IBotContext? botController = null)
     //{
     //    this.parameters = parameters;
     //    controller = botController;
@@ -92,10 +85,12 @@ public abstract class BotBase2<TParameters, TPrecision>
     #region State
 
     public IObservableCache<IPosition<TPrecision>, int> Positions => positions;
-    protected SourceCache<IPosition<TPrecision>, int> positions = new(p => p.Id); // OPTIMIZE idea: if it has a dedicated SimulatedAccount, use its position list directly instead of this field.
 
-    //public IEnumerable<IPosition> CompatiblePositions => Positions.Items.Where(p => p.SymbolId.Symbol == Symbol);
-    //public IEnumerable<IPosition> BotPositions => CompatiblePositions.Where(p => p.SymbolId.Symbol == Symbol && p.Label == );
+
+    protected SourceCache<IPosition<TPrecision>, int> positions = new(p => p.Id); // OPTIMIZE idea: if it has a dedicated DefaultAccount, use its position list directly instead of this field.
+
+    //public IEnumerable<IPosition> CompatiblePositions => Positions.Items.Where(p => p.SymbolId.DefaultSymbol == DefaultSymbol);
+    //public IEnumerable<IPosition> BotPositions => CompatiblePositions.Where(p => p.SymbolId.DefaultSymbol == DefaultSymbol && p.Label == );
 
     #endregion
 
@@ -105,19 +100,27 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     public async ValueTask CloseAllPositions()
     {
-        await Task.WhenAll(Positions.Items.Select(p => Controller.Account.ClosePosition(p).AsTask())).ConfigureAwait(false);
+        foreach(var p in positions.KeyValues.Values)
+        {
+            p.Close();
+        }
+        //await Task.WhenAll(Positions.Items.Select(p => Context.DefaultSimAccount?.ClosePosition(p).AsTask())).ConfigureAwait(false);
     }
 
     #endregion
 
     #endregion
 
+
     #region Event Handlers
 
     public virtual void OnBar() { }
     public virtual async ValueTask Stop() // OPTIMIZE: Sync version
     {
-        await CloseAllPositions();
+        if (Parameters.ClosePositionsOnStop)
+        {
+            await CloseAllPositions();
+        }
     }
     public virtual async ValueTask OnBacktestFinished()
     {

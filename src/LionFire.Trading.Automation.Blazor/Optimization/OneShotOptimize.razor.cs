@@ -28,7 +28,7 @@ public partial class OneShotOptimize
     bool ShowBacktests { get; set; } = false;
     bool ShowLog { get; set; } = true;
 
-    public string GeneralParametersSummary => $"{ViewModel!.PBotType.Name} — {ViewModel!.Symbol} {ViewModel!.TimeFrame} — {ViewModel!.TimeFrame.GetExpectedBarCount(ViewModel!.Common.Start, ViewModel!.Common.EndExclusive)} bars";
+    public string GeneralParametersSummary => $"{ViewModel!.PBotType.Name} — {ViewModel!.Symbol} {ViewModel!.TimeFrame} — {ViewModel!.TimeFrame.GetExpectedBarCount(ViewModel!.PMultiSim.Start, ViewModel!.PMultiSim.EndExclusive)} bars";
 
 
     void OnChange()
@@ -48,7 +48,7 @@ public partial class OneShotOptimize
 
     protected override Task OnParametersSetAsync()
     {
-        ViewModel ??= new(ServiceProvider, ServiceProvider.GetRequiredService<CustomLoggerProvider>());
+        ViewModel ??= ActivatorUtilities.CreateInstance<OneShotOptimizeVM>(ServiceProvider);
         ViewModel!.DebouncedChanges.Subscribe(_ => OnChange());
         ViewModel!.Changes.Subscribe(_ => OnChange());
 
@@ -67,7 +67,7 @@ public partial class OneShotOptimize
     }
 
     // DUPLICATE of OptimizationStatus.razor.cs
-    MudBlazor.Color ComprehensivenessColor => ViewModel!.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn switch
+    MudBlazor.Color ComprehensivenessColor => ViewModel!.POptimization.LevelsOfDetail.ComprehensiveScanPerUn switch
     {
         >= 1 => Color.Success,
         <= 0.1 => Color.Error,

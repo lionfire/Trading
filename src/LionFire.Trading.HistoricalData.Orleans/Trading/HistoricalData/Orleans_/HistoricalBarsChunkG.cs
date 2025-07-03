@@ -40,7 +40,7 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
 
     public SymbolBarsRange BarsRange { get; }
     public string Exchange => BarsRange.Exchange;
-    public string ExchangeArea => BarsRange.ExchangeArea;
+    public string ExchangeArea => BarsRange.Area;
     public string Symbol => BarsRange.Symbol;
     public TimeFrame TimeFrame => BarsRange.TimeFrame;
 
@@ -61,7 +61,7 @@ public class HistoricalBarsChunkG : Grain, IHistoricalBarsChunkG
         BarsRange = SymbolBarsRange.Parse(this.GetPrimaryKeyString(), symbolIdParser);
 
         if (!ValidExchangeKeys.Contains(BarsRange.Exchange.ToLowerInvariant())) throw new ArgumentException($"Exchange must be one of: {string.Join(", ", ValidExchangeKeys)}");
-        if (!ValidExchangeAreaKeys.Contains(BarsRange.ExchangeArea)) throw new ArgumentException($"Exchange area must be one of: {string.Join(", ", ValidExchangeAreaKeys)}");
+        if (!ValidExchangeAreaKeys.Contains(BarsRange.Area)) throw new ArgumentException($"Exchange area must be one of: {string.Join(", ", ValidExchangeAreaKeys)}");
         if (!historicalDataChunkRangeProvider.IsValidShortRange(TimeFrame, BarsRange.Start, BarsRange.EndExclusive)) throw new ArgumentException("Not a valid short chunk size.");
     }
 

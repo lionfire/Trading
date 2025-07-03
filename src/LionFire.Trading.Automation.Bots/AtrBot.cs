@@ -11,6 +11,7 @@ using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation.Bots;
 
+// TODO - cleanup, make this an exemplar
 
 public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
     , IPBot2Static
@@ -33,7 +34,7 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
 
     #endregion
 
-    [Signal(0)]
+    [PSignal]
     public PAverageTrueRange<double, TValue>? ATR { get; set; }
 
     /// <summary>
@@ -66,19 +67,22 @@ public class PAtrBot<TValue> : PStandardBot2<PAtrBot<TValue>, TValue>
             //MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
         };
 
-        FinalizeInit();
+        Init();
     }
 
-    public override void FinalizeInit()
+    protected override void InferMissingParameters()
     {
         // REVIEW - does InputLookbacks make sense?
         // ENH - automate setting this somehow
         //InputLookbacks = [(int)period + Lookback];
-        InputLookbacks = [0, Lookback];
+        InputLookbacks = [
+            0,  // Bars
+            Lookback // ATR
+            ];
 
         ATR!.Lookback = Lookback;
 
-        base.FinalizeInit();
+        base.InferMissingParameters();
     }
 
     #endregion
@@ -103,9 +107,9 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
     #region Inputs
 
+    [Signal(0)]
     public IReadOnlyValuesWindow<TValue> ATR { get; set; } = null!;
 
-    //public IReadOnlyValuesWindow<HLC<double>> Bars { get; set; } = null!;
 
     #region OLD
 
@@ -142,7 +146,7 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
     //    //var eATR = new BufferingIndicatorHarness<AverageTrueRange<TValue>, PAverageTrueRange<double. TValue>, IKline, TValue>(serviceProvider, new IndicatorHarnessOptions<PAverageTrueRange<TValue>>(parameters.ATR!)
     //    //{
     //    //    Inputs = parameters.Inputs == null ? [] : [parameters.Inputs],
-    //    //    TimeFrame = parameters.TimeFrame,
+    //    //    DefaultTimeFrame = parameters.DefaultTimeFrame,
     //    //});
 
     //    //eATR.GetWindow(OutputExecutionOptions.Memory);

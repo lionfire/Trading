@@ -13,7 +13,7 @@ public class KlineArrayInfo
         get => new SymbolBarsRange(Exchange, ExchangeArea, Symbol, TimeFrame, Start, EndExclusive);
         set
         {
-            ExchangeArea = value.ExchangeArea;
+            ExchangeArea = value.Area;
             Exchange = value.Exchange;
             Symbol = value.Symbol;
             TimeFrame = value.TimeFrame;

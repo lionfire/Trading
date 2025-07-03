@@ -172,7 +172,7 @@ public abstract class AccountParticipant : ExecutableExBase, IAccountParticipant
     public virtual IEnumerable<IAccountParticipant> Children { get { yield break; } }
 
     [Dependency]
-    public IAccount Account
+    public IAccount_Old Account
     {
         get => account;
         set
@@ -218,7 +218,7 @@ public abstract class AccountParticipant : ExecutableExBase, IAccountParticipant
             OnAttached();
         }
     }
-    private IAccount account;
+    private IAccount_Old account;
     private IDisposable accountDisposer;
 
     List<IDisposable> marketSubscriptions = new List<IDisposable>();

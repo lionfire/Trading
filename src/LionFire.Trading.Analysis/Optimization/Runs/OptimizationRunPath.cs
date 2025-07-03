@@ -4,7 +4,7 @@ public static class OptimizationRunPath
 {
     //public static string GetRelativePath_Old(OptimizationRunId id)
     //{
-    //    return Path.Combine(id.Symbol, id.Bot, id.TimeFrame);
+    //    return Path.Combine(id.DefaultSymbol, id.Bot, id.DefaultTimeFrame);
     //}
     public static string DateFormat = "yyyy.MM.dd";
     public static string GetRelativePath(OptimizationRunId id)

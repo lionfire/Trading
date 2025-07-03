@@ -6,7 +6,7 @@ using System.Collections.Generic;
 namespace LionFire.Trading
 {
     public abstract class ExchangeAccountProvider<AccountType> : IExchangeAccountProvider
-        where AccountType : class, IAccount
+        where AccountType : class, IAccount_Old
     {
         public abstract string Key { get; }
 
@@ -23,7 +23,7 @@ namespace LionFire.Trading
             ServiceProvider = serviceProvider;
         }
 
-        public virtual IAccount GetAccount(string accountName = "default")
+        public virtual IAccount_Old GetAccount(string accountName = "default")
         {
             if (accountName == null) return null;
             lock (_accountsLock)
@@ -54,8 +54,8 @@ namespace LionFire.Trading
             }
         }
 
-        public IReadOnlyDictionary<string, IAccount> Accounts => accounts;
-        private Dictionary<string, IAccount> accounts = new();
+        public IReadOnlyDictionary<string, IAccount_Old> Accounts => accounts;
+        private Dictionary<string, IAccount_Old> accounts = new();
         private object _accountsLock = new();
     }
 }

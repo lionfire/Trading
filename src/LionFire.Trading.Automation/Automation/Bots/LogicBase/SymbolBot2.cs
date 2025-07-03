@@ -41,17 +41,17 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
     public override void Init()
     {
         base.Init();
-        if (Controller == null) throw new ArgumentNullException(nameof(Controller));
+        if (Context == null) throw new ArgumentNullException(nameof(Context));
 
-        //if(Parameters is IPTimeFrameMarketProcessor tf)
+        //if(PMultiSim is IPTimeFrameMarketProcessor tf)
         //{
         //}
-        //if (ExchangeSymbol == null && Parameters is IPSymbolBarsBot2 s)
+        //if (ExchangeSymbol == null && PMultiSim is IPSymbolBarsBot2 s)
         //{
         ExchangeSymbol = Parameters.ExchangeSymbol;
         //}
 
-        Account = Controller.Account as IAccount2<TValue> ?? throw new NotImplementedException();
+        Account = Context.Sim.DefaultAccount as IAccount2<TValue> ?? throw new NotImplementedException();
 
         if (ExchangeSymbol == null) throw new InvalidOperationException($"Failed to resolve {nameof(ExchangeSymbol)}");
         if (Account == null) throw new InvalidOperationException($"Failed to resolve {nameof(Account)}");

@@ -53,7 +53,7 @@
                 XAxis = [new XAxis
                 {
                     AutoRange = AutoRangeEnum.True,
-                    Range = [ViewModel?.Context.POptimization.CommonBacktestParameters.StartDateTime.ToString(), ViewModel?.Context.POptimization.CommonBacktestParameters.EndExclusiveDateTime.ToString()],
+                    Range = [ViewModel?.PMultiSim.StartDateTime.ToString(), ViewModel?.PMultiSim.EndExclusiveDateTime.ToString()],
                     RangeSelector = new Plotly.Blazor.LayoutLib.XAxisLib.RangeSelector{
 
                     },
@@ -64,7 +64,7 @@
                 }],
                 Title = new Plotly.Blazor.LayoutLib.Title
                 {
-                    Text = ViewModel!.Context.POptimization.PBotType.Name
+                    Text = ViewModel!.PMultiSim.PBotType?.Name ?? ("(none)")
                 },
 
                 // PaperBgColor = Theme.PaletteDark.Surface.ToString(),
@@ -93,7 +93,7 @@
     //     {
     //         await AddData();
     //     }
-    //     if (ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache != null && ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache.Items.Count > added)
+    //     if (ViewModel?.OptimizationTask?.BacktestsJournal?.ObservableCache != null && ViewModel?.OptimizationTask?.BacktestsJournal?.ObservableCache.Items.Count > added)
     //     {
     //         await AddData();
     //     }
@@ -124,9 +124,9 @@
         Included = 0;
 
         List<ITrace> data = new List<ITrace>();
-        if (ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache == null) return data;
+        if (ViewModel?.OptimizationTask?.BacktestsJournal?.ObservableCache == null) return data;
 
-        foreach (var result in ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items)
+        foreach (var result in ViewModel.OptimizationTask.BacktestsJournal.ObservableCache.Items)
         {
             if (NullableMinFitness.HasValue)
             {
@@ -185,9 +185,9 @@
     }
     // private async ValueTask<bool> AddData()
     // {
-    //     if (ViewModel?.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache == null) return false;
+    //     if (ViewModel?.OptimizationTask?.BacktestsJournal?.ObservableCache == null) return false;
     //     int i = 0;
-    //     foreach (var result in ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items.Skip(added))
+    //     foreach (var result in ViewModel.OptimizationTask.BacktestsJournal.ObservableCache.Items.Skip(added))
     //     {
     //         try
     //         {

@@ -1,7 +1,11 @@
 ﻿@page "/portfolios"
+
+@inject NavigationManager NavigationManager
+
 @using LionFire.Mvvm
 @using LionFire.Trading.Automation
 @using LionFire.Trading.Portfolios
+
 @* @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<ObservableDataViewVM<string, Portfolio>> *@
 
                     @* ViewModel="ViewModel" *@
@@ -14,6 +18,8 @@
                     TValueVM="Portfolio2VM"
                     AllowedEditModes=EditMode.All
                     ReadOnly=false>
+                    @* RowClick="@((_,e)=> {
+if(!Editiing){NavigationManager.NavigateTo($"/portfolios/{e.Item.Key}"); })" *@
 
 </ObservableDataView>
 

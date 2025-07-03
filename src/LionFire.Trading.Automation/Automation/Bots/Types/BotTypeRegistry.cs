@@ -46,11 +46,31 @@ public class BotTypeRegistry
         return pBotType != null;
     }
 
+    public string GetBotNameFromPBot(Type pBotType)
+    {
+#if DEBUG
+        if (!pBotType.IsAssignableTo(typeof(IPBot2)) && !pBotType.IsAssignableTo(typeof(IPBot2))) throw new ArgumentException("Only intended for IPBot2");
+#endif
+
+        Type botType;
+        if (pBotType.IsAssignableTo(typeof(IPBot2Static)))
+        {
+             botType = (Type)pBotType.GetProperty(nameof(IPBot2Static.StaticMaterializedType), System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                !.GetValue(null)! ?? throw new NotSupportedException($"IPBot2Static does not implement {nameof(IPBot2Static.StaticMaterializedType)} method.");
+        }
+        else
+        {
+            throw new NotImplementedException("IPBot2 must implement IPBot2Static");
+        }
+
+        return GetBotName(botType);
+    }
     public string GetBotName(Type botType)
     {
 #if DEBUG
-        if (!botType.IsAssignableTo(typeof(IBot2))) throw new ArgumentException("Only intended for IBot2");
+        if (!botType.IsAssignableTo(typeof(IBot2)) && !botType.IsAssignableTo(typeof(IPBot2))) throw new ArgumentException("Only intended for IBot2");
 #endif
+
         string result = botType.Name;
 
         if (botType.IsGenericType)

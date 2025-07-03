@@ -34,6 +34,7 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
 
     public override void Init()
     {
+        // Infer Direction from PMultiSim.PositionSize if not set
         Direction = Parameters.Direction switch
         {
             LongAndShort.Long => LongAndShort.Long,
@@ -64,7 +65,7 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
     /// <summary>
     /// 
     /// </summary>
-    /// <param name="amount">Defaults to Parameters.PositionSize</param>
+    /// <param name="amount">Defaults to PMultiSim.PositionSize</param>
     /// <returns></returns>
     public virtual ValueTask<IOrderResult> ClosePositionPortion(double? amount = null)
     {
@@ -74,7 +75,7 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
         return DoubleAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount.Value, PositionOperationFlags.Default | PositionOperationFlags.Close | PositionOperationFlags.CloseOnly);
 
         //if (DoubleAccount.Positions.Count == 0) { return ValueTask.FromResult(OrderResult.NoopSuccess); }
-        //double amountToClose = amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value;
+        //double amountToClose = amount == null ? PMultiSim.PositionSize : PMultiSim.PositionSize * amount.Value;
 
 
         //foreach (var p in DoubleAccount.Positions.KeyValues)
@@ -91,9 +92,9 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
 
         //}
 
-        //if (Parameters.CloseAllAtOnce)
+        //if (PMultiSim.CloseAllAtOnce)
         //{
-        //    //PrimaryAccount.ClosePositionsForSymbol(Symbol, )
+        //    //PrimaryAccount.ClosePositionsForSymbol(DefaultSymbol, )
         //    throw new NotImplementedException();
 
         //}

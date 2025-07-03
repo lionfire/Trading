@@ -18,11 +18,11 @@ public partial class OptimizationStatus(ILogger<OptimizeParameters> Logger)
     {
         //this.ViewModel!.POptimization2.ParametersChanged.Subscribe(_ =>
         //{
-        //    ViewModel.Context.POptimization.OnLevelsOfDetailChanged();
+        //    ViewModel.Sim.POptimization.OnLevelsOfDetailChanged();
         //    StateHasChanged();
         //})
         //    .DisposeWith(disposables);
-        this.ViewModel!.POptimization2.WhenAnyValue(x=>x.LevelsOfDetail).Subscribe(_ =>
+        this.ViewModel!.POptimization.WhenAnyValue(x=>x.LevelsOfDetail).Subscribe(_ =>
         {
             InvokeAsync(StateHasChanged);
         })
@@ -45,7 +45,7 @@ public partial class OptimizationStatus(ILogger<OptimizeParameters> Logger)
     //    return base.OnAfterRenderAsync(firstRender);
     //}
 
-    MudBlazor.Color ComprehensivenessColor => ViewModel!.POptimization2.LevelsOfDetail.ComprehensiveScanPerUn switch
+    MudBlazor.Color ComprehensivenessColor => ViewModel!.POptimization.LevelsOfDetail.ComprehensiveScanPerUn switch
     {
         >= 1 => Color.Success,
         <= 0.1 => Color.Error,

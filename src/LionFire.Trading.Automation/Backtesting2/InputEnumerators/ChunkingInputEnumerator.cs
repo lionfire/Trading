@@ -19,7 +19,13 @@ public interface IChunkingInputEnumerator : IInputEnumerator
 
 }
 
-public class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumeratorBase<TValue, TPrecision>, IChunkingInputEnumerator
+/// <summary>
+/// For listening to market data with a lookback of greater than zero.
+/// The current position may involve looking back past the beginning of the current buffer, so it needs to hold a second ArraySegment.
+/// </summary>
+/// <typeparam name="TValue"></typeparam>
+/// <typeparam name="TPrecision"></typeparam>
+public sealed class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumeratorBase<TValue, TPrecision>, IChunkingInputEnumerator
     where TValue : notnull
     where TPrecision : struct, INumber<TPrecision>
 {
@@ -52,6 +58,7 @@ public class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumeratorBase<T
     }
 
     #region IReadOnlyValuesWindow<T>
+
     public override TValue this[int index]
     {
         get
@@ -87,8 +94,12 @@ public class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumeratorBase<T
             return count;
         }
     }
-    public override bool IsFull => InputBuffer.Array != null && PreviousChunk.Array != null;
+    //public override bool IsFull => InputBuffer.Array != null && PreviousChunk.Array != null; // UNUSED
     public override uint Size => (uint)InputBuffer.Count;
+
+    /// <summary>
+    /// Lookback guarantees a certain amount of prior items visible, but often there is more.  This property indicates how many are available.
+    /// </summary>
     /// <seealso cref="UnprocessedInputCount"/>
     public int ItemsViewable => InputBufferCursorIndex + Math.Min(1, InputBuffer.Count) + PreviousChunk.Count;
 

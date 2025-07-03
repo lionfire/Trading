@@ -3,10 +3,8 @@ using LionFire.Trading.Maths;
 
 namespace LionFire.Trading.Automation.Journaling.Trades;
 
-public sealed partial class BacktestTradeJournal<TPrecision> where TPrecision : struct, INumber<TPrecision>
+public sealed partial class BotTradeJournal<TPrecision> where TPrecision : struct, INumber<TPrecision>
 {
-
-
     public class JournalStatsCollector
     {
         public readonly RollingAverage AverageMinutesPerWinningTrade = new();

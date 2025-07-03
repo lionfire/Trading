@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 namespace LionFire.Trading.Backtesting;
 
 
-public class BacktestAccount : SimulatedAccountBase<TBacktestAccount, BacktestAccount>
+public class BacktestAccount : SimulatedAccountBase_Old<TBacktestAccount, BacktestAccount>
 {
     #region Construction
 

@@ -6,7 +6,7 @@ using NLog.Targets;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
-using static BacktestBatchJournal;
+using static BacktestsJournal;
 
 public class BacktestBatchJournalCsvSerialization //: IAsyncDisposable
 {
@@ -56,7 +56,7 @@ public class BacktestBatchJournalCsvSerialization //: IAsyncDisposable
 
     internal IPBot2 LoadBacktest(Type pBotType, string dir, OptimizationBacktestReference obr)
     {
-        var fileName = BacktestBatchJournal.DefaultJournalFilename + ".csv";
+        var fileName = BacktestsJournal.DefaultJournalFilename + ".csv";
         var csvPath = Path.Combine(dir, fileName);
 
         Stream? stream = null;
@@ -96,9 +96,9 @@ public class BacktestBatchJournalCsvSerialization //: IAsyncDisposable
                 if (batchId == desiredBatchId && id == desiredBacktestId)
                 {
                     var entry = csv.GetRecord<BacktestBatchJournalEntry>();
-                    Debug.WriteLine("TODO - deserialize Parameters: " + entry.Parameters);
+                    Debug.WriteLine("TODO - deserialize PMultiSim: " + entry.Parameters);
 
-                    //var row = csv.Context.Reader.GetRecord<string>();
+                    //var row = csv.MultiSimContext.Reader.GetRecord<string>();
                     //return row; 
                 }
             }

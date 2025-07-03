@@ -4,6 +4,8 @@ namespace LionFire.Trading.Automation;
 
 public abstract class PBot2<TConcrete> : PMarketProcessor, IPBotHierarchical2
 {
+    public bool ClosePositionsOnStop { get; set; }
+
     //public static IReadOnlyList<InputSlot> InputSlots { get; private set; }
 
     //public static IReadOnlyList<InputSlot> InputSlots()

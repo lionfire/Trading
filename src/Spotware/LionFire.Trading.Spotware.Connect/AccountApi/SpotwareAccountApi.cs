@@ -246,7 +246,7 @@ namespace LionFire.Trading.Spotware.Connect.AccountApi
             return tradeType;
         }
 
-        public async static Task<List<PositionDouble>> GetHistoricalPositions(long accountId, string accessToken, IAccount market)
+        public async static Task<List<PositionDouble>> GetHistoricalPositions(long accountId, string accessToken, IAccount_Old market)
         {
             List<PositionDouble> Result = new List<PositionDouble>();
 

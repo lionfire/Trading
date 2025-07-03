@@ -12,8 +12,6 @@ public class TradeJournalOptions
 
     #region Directory
 
-    public string? JournalDir { get; set; }
-
     public bool ReplaceOutput { get; set; } = true;
 
     #endregion

@@ -50,8 +50,8 @@ public class BacktestBatchJournalEntry
     // - Sortino Ratio?
 
     //[Ignore]
-    //public List<object?>? Parameters { get; set; }
-    public object? Parameters { get; set; }
+    //public List<object?>? PMultiSim { get; set; }
+    public IPBot2? Parameters { get; set; }
 
     public bool IsAborted { get; set; }
 

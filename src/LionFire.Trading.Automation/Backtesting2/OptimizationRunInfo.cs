@@ -66,7 +66,7 @@ public class OptimizationRunInfo : IEquatable<OptimizationRunInfo>
     public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame
     {
         get => new ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, TimeFrame);
-        set => (Exchange, ExchangeArea, Symbol, TimeFrame) = value == null ? (null, null, null, null) : (value.Exchange, value.ExchangeArea, value.Symbol, value.TimeFrame);
+        set => (Exchange, ExchangeArea, Symbol, TimeFrame) = value == null ? (null, null, null, null) : (value.Exchange, value.Area, value.Symbol, value.TimeFrame);
     }
 
     public bool TicksEnabled { get; set; }
@@ -75,7 +75,7 @@ public class OptimizationRunInfo : IEquatable<OptimizationRunInfo>
     public string? BotTypeName { get; set; }
 
     /// <summary>
-    /// For the assembly containing the Parameters type (PBot), and probably also the runtime type.
+    /// For the assembly containing the PMultiSim type (PBot), and probably also the runtime type.
     /// </summary>
     public string? BotAssemblyNameString { get; set; }
 

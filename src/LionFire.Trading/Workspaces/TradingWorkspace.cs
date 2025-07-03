@@ -56,7 +56,7 @@ public class TradingWorkspace :
 
     //public IEnumerable<IFeed> NotificationFeeds { get; } // Feed(s) used for Price notfications??
 
-    public IEnumerable<IFeed> GetAccounts(AccountMode accountModes)
+    public IEnumerable<IFeed_Old> GetAccounts(AccountMode accountModes)
     {
         if (accountModes.HasFlag(AccountMode.Live) || accountModes.HasFlag(AccountMode.Any))
         {
@@ -206,10 +206,10 @@ public class TradingWorkspace :
     public ObservableCollection<Session> Sessions { get; private set; } = new ObservableCollection<Session>();
 
 
-    public ObservableCollection<IAccount> LiveAccounts { get; private set; } = new ObservableCollection<IAccount>();
-    public ObservableCollection<IAccount> DemoAccounts { get; private set; } = new ObservableCollection<IAccount>();
-    public ObservableCollection<IAccount> Accounts { get; private set; } = new ObservableCollection<IAccount>();
-    public ObservableCollection<IFeed> Feeds { get; private set; } = new ObservableCollection<IFeed>();
+    public ObservableCollection<IAccount_Old> LiveAccounts { get; private set; } = new ObservableCollection<IAccount_Old>();
+    public ObservableCollection<IAccount_Old> DemoAccounts { get; private set; } = new ObservableCollection<IAccount_Old>();
+    public ObservableCollection<IAccount_Old> Accounts { get; private set; } = new ObservableCollection<IAccount_Old>();
+    public ObservableCollection<IFeed_Old> Feeds { get; private set; } = new ObservableCollection<IFeed_Old>();
 
 
     public ObservableCollection<WorkspaceBot> Bots { get; private set; } = new ObservableCollection<WorkspaceBot>();
@@ -219,15 +219,15 @@ public class TradingWorkspace :
 
     #region Derived
 
-    public IAccount DefaultLiveAccount
+    public IAccount_Old DefaultLiveAccount
     {
         get { return Accounts.Where(a => !a.IsDemo).FirstOrDefault(); }
     }
-    public IAccount DefaultDemoAccount
+    public IAccount_Old DefaultDemoAccount
     {
         get { return Accounts.Where(a => a.IsDemo).FirstOrDefault(); }
     }
-    public IAccount DefaultScannerAccount
+    public IAccount_Old DefaultScannerAccount
     {
         get { return DefaultDemoAccount ?? DefaultLiveAccount; }
     }
@@ -250,17 +250,17 @@ public class TradingWorkspace :
 
     #region Accounts
 
-    private Dictionary<string, IAccount> accountsByName = new Dictionary<string, IAccount>();
+    private Dictionary<string, IAccount_Old> accountsByName = new Dictionary<string, IAccount_Old>();
 
-    private void AddAccount(string accountId, IAccount account)
+    private void AddAccount(string accountId, IAccount_Old account)
     {
         Accounts.Add(account);
         accountsByName.Add(accountId, account);
     }
-    public IAccount GetAccount(string accountName)
+    public IAccount_Old GetAccount(string accountName)
     {
         if (accountName == null) return null;
-        IAccount account;
+        IAccount_Old account;
         accountsByName.TryGetValue(accountName, out account);
         return account;
     }
@@ -301,7 +301,7 @@ public class TradingWorkspace :
             foreach (var accountId in Template.LiveAccounts)
             {
                 var feed = TradingTypeResolver.CreateAccount(accountId);
-                if (feed is IAccount account)
+                if (feed is IAccount_Old account)
                 {
                     LiveAccounts.Add(account);
                     AddAccount(accountId, account);
@@ -315,7 +315,7 @@ public class TradingWorkspace :
             foreach (var accountId in Template.DemoAccounts)
             {
                 var feed = TradingTypeResolver.CreateAccount(accountId);
-                if (feed is IAccount account)
+                if (feed is IAccount_Old account)
                 {
                     DemoAccounts.Add(account);
                     AddAccount(accountId, account);

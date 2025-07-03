@@ -30,7 +30,7 @@ public class BacktestTask : AppTask, IMarketTask
     #region Relationships
 
 
-    IAccount IMarketTask.Account { get { return BacktestAccount; } }
+    IAccount_Old IMarketTask.Account { get { return BacktestAccount; } }
     public BacktestAccount BacktestAccount { get; private set; }
 
     #endregion

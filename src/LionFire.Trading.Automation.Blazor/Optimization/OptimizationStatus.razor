@@ -9,21 +9,21 @@
         <MudItem sm="1">
             <div>
 
-                <MudTextField @bind-Value="ViewModel!.Context.POptimization.MaxBacktests" Label="Max Backtests" Dense="@true" />
+                <MudTextField @bind-Value="ViewModel!.POptimization.MaxBacktests" Label="Max Backtests" Dense="@true" />
                 <MudSlider T="double" @bind-Value="ViewModel.MaxBacktestsExponential"
                            Min=6 Max=34
                            Label="Max Backtests" Dense="@true" />
                 <div class="lf-field row">
-                    <div class="value">@((ViewModel.Context.POptimization.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
+                    <div class="value">@((ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
                     <div class="label">Comprehensiveness</div>
                 </div>
-                <MudProgressLinear Value="ViewModel.Context.POptimization.LevelsOfDetail.ComprehensiveScanPerUn" Min="0" Max="1"
+                <MudProgressLinear Value="ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn" Min="0" Max="1"
                                    Color="ComprehensivenessColor" 
                 />
             </div>
         </MudItem>
 
-        @foreach (var level in ViewModel!.Context.POptimization.LevelsOfDetailEnumeration.WithIndex())
+        @foreach (var level in ViewModel!.POptimization.LevelsOfDetailEnumeration.WithIndex())
         {
             <MudItem Class="Level" sm="1">
                 <MudText Typo="Typo.h6">Level @level.item.Level</MudText>
@@ -35,7 +35,7 @@
             <div class="label">Comprehensive Scan</div>
             <div class="value">@ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanTotal</div>
         </div> *@
-        <MudProgressLinear Vertical=true Value="@((ViewModel.Context.POptimization.LevelsOfDetail.ComprehensiveScanPerUn))" />
+        <MudProgressLinear Vertical=true Value="@((ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn))" />
     </MudGrid>
 </div>
 

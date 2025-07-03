@@ -1,26 +1,28 @@
-﻿using LionFire.Execution;
+﻿using DynamicData;
+using LionFire.Blazor.Components;
+using LionFire.Blazor.Components.Terminal;
+using LionFire.Execution;
+using LionFire.Logging;
+using LionFire.Mvvm;
+using LionFire.Reactive.Persistence;
+using LionFire.ReactiveUI_;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Automation.Optimization;
+using LionFire.Trading.Automation.Portfolios;
+using LionFire.Trading.Journal;
+using Microsoft.Extensions.Logging;
 using MudBlazor;
+using QuantConnect.Api;
 using ReactiveUI;
 //using ReactiveUI.Fody.Helpers;
 //using ReactiveAttribute = ReactiveUI.Fody.Helpers.ReactiveAttribute;
 using ReactiveUI.SourceGenerators;
-using LionFire.Blazor.Components.Terminal;
-using System.Reactive.Subjects;
-using System.Reactive;
-using DynamicData;
+using ScottPlot.Hatches;
 using System.Diagnostics;
-using Microsoft.Extensions.Logging;
-using LionFire.Logging;
-using LionFire.Trading.Journal;
-using System.Reactive.Linq;
-using LionFire.Mvvm;
+using System.Reactive;
 using System.Reactive.Disposables;
-using QuantConnect.Api;
-using LionFire.Blazor.Components;
-using LionFire.ReactiveUI_;
-using LionFire.Trading.Automation.Portfolios;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
@@ -29,8 +31,13 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     public LogVM LinesVM { get; } = new();
     public ILogger ConsoleLog => LinesVM;
 
+    #region Dependencies
+
     public IServiceProvider ServiceProvider { get; }
     public CustomLoggerProvider CustomLoggerProvider { get; }
+    public BotTypeRegistry BotTypeRegistry { get; }
+
+    #endregion
 
     #region Ambient
 
@@ -38,33 +45,14 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     #endregion
 
-    void ResetParameters()
-    {
-        var p = POptimization2;
+    
+    #region Lifecycle
 
-        var c = Context.PMultiBacktest;
-        c.ExchangeSymbolTimeFrame = new("Binance", "futures", "BTCUSDT", TimeFrame.m1);
-        c.PBotType = BotTypes.FirstOrDefault();
-
-        var now = DateTimeOffset.UtcNow;
-        var startYear = now.Year;
-        var startMonth = now.Month - 6;
-        if (startMonth <= 0)
-        {
-            startYear--;
-            startMonth += 12;
-        }
-
-        c.Start = new(startYear, startMonth, 1, 0, 0, 0, TimeSpan.Zero);
-        c.EndExclusive = new(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
-
-    }
-
-    public OneShotOptimizeVM(IServiceProvider serviceProvider, LionFire.Logging.CustomLoggerProvider customLoggerProvider)
+    public OneShotOptimizeVM(IServiceProvider serviceProvider, LionFire.Logging.CustomLoggerProvider customLoggerProvider, BotTypeRegistry botTypeRegistry)
     {
         ServiceProvider = serviceProvider;
         CustomLoggerProvider = customLoggerProvider;
-
+        BotTypeRegistry = botTypeRegistry;
         ResetParameters();
 
         customLoggerProvider.Observable.Subscribe(logEntry =>
@@ -72,11 +60,11 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             LinesVM.Append(logEntry.Message ?? "", logEntry.LogLevel, logEntry.Category ?? "");
         });
 
-        this.WhenAnyValue(x => x.OptimizationTask!.OptimizationMultiBatchJournal!.ObservableCache).Subscribe(oc =>
+        this.WhenAnyValue(x => x.OptimizationTask!.BacktestsJournal!.ObservableCache).Subscribe(oc =>
         {
             Backtests = oc;
         });
-        this.WhenAnyValue(x => x.OptimizationTask!.OptimizationMultiBatchJournal!).Subscribe(oc =>
+        this.WhenAnyValue(x => x.OptimizationTask!.BacktestsJournal!).Subscribe(oc =>
         {
             Debug.WriteLine("WhenAnyValue OMBJ");
         });
@@ -87,9 +75,9 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         debouncedChanges = changesToDebounce.Throttle(TimeSpan.FromMilliseconds(500));
         disposables.Add(this.WhenAnyValue(x => x.IsRunning).Subscribe(v => OnIsRunningValue(v)));
 
-        //Context.POptimization.ParametersChanged.Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
+        //Sim.POptimization.ParametersChanged.Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
 
-        this.WhenAnyValue(x => x.Context.POptimization.Parameters).Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
+        this.WhenAnyValue(x => x.POptimization.Parameters).Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
     }
     CompositeDisposable disposables = new();
 
@@ -98,35 +86,24 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     void OnParametersChanged()
     {
-        Debug.WriteLine($"Context.POptimization.Parameters: {Context.POptimization.Parameters.Count}");
+        Debug.WriteLine($"Sim.POptimization.PMultiSim: {POptimization.Parameters.Count}");
         this.RaisePropertyChanged(nameof(MinParameterPriority));
         this.RaisePropertyChanged(nameof(MaxParameterPriority));
     }
 
-    private void OnIsRunningValue(bool val)
-    {
-        if (isKnownToBeRunning == IsRunning) return;
-        isKnownToBeRunning = IsRunning;
+    #endregion
 
-        if (isKnownToBeRunning)
-        {
-            _ = Task.Run(async () =>
-            {
-                var timer = new PeriodicTimer(TimeSpan.FromSeconds(0.25));
-                while (isKnownToBeRunning && !IsAborted && OptimizationTask != null)
-
-                    if (OptimizationTask.OptimizationStrategy?.Progress != null)
-                    {
-                        Progress = OptimizationTask.OptimizationStrategy?.Progress;
-                    }
-                changes.OnNext(Unit.Default);
-                await timer.WaitForNextTickAsync();
-            });
-        }
-    }
-    private bool isKnownToBeRunning;
-
+   
     #region State
+
+    [Reactive]
+    private OptimizationTask? _optimizationTask;
+
+    #region (Derived)
+
+    public OptimizationRunInfo OptimizationRunInfo => OptimizationTask?.MultiSimContext?.OptimizationRunInfo;
+
+    #endregion
 
     [Reactive]
     private bool _isCompleted;
@@ -161,8 +138,6 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     public IObservable<Unit> Changes => changes;
     Subject<Unit> changes = new();
 
-    [Reactive]
-    private OptimizationTask? _optimizationTask;
 
     // TODO
     //public B NestedViewModel
@@ -194,16 +169,16 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     public int BatchSize { get; set; } = 1024;//= 128;
     public double BatchSizeExponential { get => Math.Log2(BatchSize); set => BatchSize = (int)Math.Pow(2.0, value); }
 
-    public int MinParameterPriority => Context.POptimization.Parameters.Count == 0 ? 0 : Context.POptimization.Parameters.KeyValues.Values.Min(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
-    public int MaxParameterPriority => Context.POptimization.Parameters.Count == 0 ? 0 : Context.POptimization.Parameters.KeyValues.Values.Max(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
+    public int MinParameterPriority => POptimization.Parameters.Count == 0 ? 0 : POptimization.Parameters.KeyValues.Values.Min(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
+    public int MaxParameterPriority => POptimization.Parameters.Count == 0 ? 0 : POptimization.Parameters.KeyValues.Values.Max(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
 
-    public long MaxBacktests { get => POptimization2.MaxBacktests; set => POptimization2.MaxBacktests = value; }
+    public long MaxBacktests { get => POptimization.MaxBacktests; set => POptimization.MaxBacktests = value; }
     public double MaxBacktestsExponential { get => Math.Log2(MaxBacktests); set => MaxBacktests = (long)Math.Pow(2.0, value); }
 
 
     public DateRange DateRange { get; set; } = new(new(2020, 1, 1), new(2020, 3, 1));
 
-    public TradeJournalOptions TradeJournalOptions => POptimization2.TradeJournalOptions;
+    public TradeJournalOptions TradeJournalOptions => POptimization.TradeJournalOptions;
     // ENH: get defaults for this and other parameters somewhere/somehow, based on the a template for the user (perhaps the user has many templates)
 
     #region Derived
@@ -252,16 +227,21 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     }
 #endif
 
-    public PMultiBacktestContext Context
+    //public PBatch Context
+    //{
+    //    get => context;
+    //    set => RaiseAndSetNestedViewModelIfChanged(ref context, value);
+    //}
+    //private PBatch context = new();
+
+    public PMultiSim PMultiSim
     {
-        get => context;
-        set => RaiseAndSetNestedViewModelIfChanged(ref context, value);
+        get => pMultiSim;
+        set => RaiseAndSetNestedViewModelIfChanged(ref pMultiSim, value);
     }
-    private PMultiBacktestContext context = new();
+    private PMultiSim pMultiSim = new();
 
-    public PMultiBacktest Common => Context.PMultiBacktest;
-
-    public POptimization POptimization2 => Context.POptimization;
+    public POptimization POptimization => PMultiSim.POptimization!;
 
     public TimeFrame TimeFrame => TimeFrame.Parse(TimeFrameString);
 
@@ -286,36 +266,60 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     #endregion
 
-    #region Methods
+    #region Event Handling
 
-    public void DoGC()
+    private void OnIsRunningValue(bool val)
     {
-        GC.Collect();
+        if (isKnownToBeRunning == IsRunning) return;
+        isKnownToBeRunning = IsRunning;
+
+        if (isKnownToBeRunning)
+        {
+            _ = Task.Run(async () =>
+            {
+                var timer = new PeriodicTimer(TimeSpan.FromSeconds(0.25));
+                while (isKnownToBeRunning && !IsAborted && OptimizationTask != null)
+
+                    if (OptimizationTask.OptimizationStrategy?.Progress != null)
+                    {
+                        Progress = OptimizationTask.OptimizationStrategy?.Progress;
+                    }
+                changes.OnNext(Unit.Default);
+                await timer.WaitForNextTickAsync();
+            });
+        }
     }
-    public void Clear()
-    {
-        Progress = OptimizationProgress.NoProgress;
-        OptimizationTask = null;
-        Context.Dispose();
-        GC.Collect();
-        Context = new();
-        ResetParameters();
+    private bool isKnownToBeRunning;
 
+    public void OnToggle(BacktestBatchJournalEntry entry)
+    {
+        Debug.WriteLine("Toggle BacktestBatchJournalEntry: " + entry.Id);
+        if (Portfolio == null) return;
+
+        OptimizationRunReference? orr = OptimizationTask?.MultiSimContext?.OptimizationRunInfo;
+
+        Portfolio.Toggle(orr, entry);
     }
-
-    public void Cancel()
+    public async void OnExportToBot(BacktestBatchJournalEntry item, IObservableReaderWriter<string, BotEntity>? bots)
     {
-        OptimizationTask?.Cancel();
+        var bot = new BotEntity
+        {
+            //Name = $"{OptimizationRunInfo.OptimizationExecutionDate.ToShortDateString()}",
+            Name = $"{OptimizationRunInfo.Guid};{item.BatchId}-{item.Id}",
+            Comments = $"Exported from Optimization Run {OptimizationRunInfo.Guid}",
+            ExchangeSymbolTimeFrame = OptimizationRunInfo.ExchangeSymbolTimeFrame,
+            BotTypeName = OptimizationRunInfo.BotTypeName,
 
-        //if (cts == null)
-        //{
-        //    ConsoleLog.LogWarning("Cancel requested, but no task is running.");
-        //    return;
-        //}
-        ConsoleLog.LogInformation("Cancel requested.  Aborting...");
-        IsAborting = true;
-        //cts?.Cancel();
-        //cts = null;
+            // TODO: Pick one 
+            //ParametersDictionary = item.PMultiSim?.ToParametersDictionary(),
+            Parameters = item.Parameters,
+        };
+
+        try
+        {
+            await bots.Write(bot.Name, bot);
+        }
+        catch { }
     }
 
     public void OnOptimize()
@@ -324,7 +328,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
         Progress = OptimizationProgress.NoProgress;
 
-        OptimizationTask = new OptimizationTask(ServiceProvider, Context);
+        OptimizationTask = new OptimizationTask(ServiceProvider, PMultiSim);
 
         var task = OptimizationTask.Run();
 
@@ -361,21 +365,71 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         });
     }
 
+    #endregion
+
+    #region Methods
+
+    public void DoGC()
+    {
+        GC.Collect();
+    }
+    public void Clear()
+    {
+        Progress = OptimizationProgress.NoProgress;
+        OptimizationTask = null;
+        //PMultiSim.Dispose();
+        //Context.Dispose();
+        GC.Collect();
+        //Context = new();
+        PMultiSim = new();
+        ResetParameters();
+
+    }
+
+    public void Cancel()
+    {
+        OptimizationTask?.Cancel();
+
+        //if (cts == null)
+        //{
+        //    ConsoleLog.LogWarning("Cancel requested, but no task is running.");
+        //    return;
+        //}
+        ConsoleLog.LogInformation("Cancel requested.  Aborting...");
+        IsAborting = true;
+        //cts?.Cancel();
+        //cts = null;
+    }
+
 
 
     #endregion
 
-    public void OnToggle(BacktestBatchJournalEntry entry)
+    #region (Private) Methods
+
+    private void ResetParameters()
     {
-        Debug.WriteLine("Toggle BacktestBatchJournalEntry: " + entry.Id);
-        if (Portfolio == null) return;
+        var p = POptimization;
 
-        OptimizationRunReference? orr = OptimizationTask?.Context?.OptimizationRunInfo;
+        var c = PMultiSim;
+        c.ExchangeSymbolTimeFrame = new("Binance", "futures", "BTCUSDT", TimeFrame.m1);
+        c.PBotType = BotTypes.FirstOrDefault();
 
-        Portfolio.Toggle(orr,entry);
+        var now = DateTimeOffset.UtcNow;
+        var startYear = now.Year;
+        var startMonth = now.Month - 6;
+        if (startMonth <= 0)
+        {
+            startYear--;
+            startMonth += 12;
+        }
+
+        c.Start = new(startYear, startMonth, 1, 0, 0, 0, TimeSpan.Zero);
+        c.EndExclusive = new(now.Year, now.Month, 1, 0, 0, 0, TimeSpan.Zero);
 
     }
 
-    public OptimizationRunInfo OptimizationRunInfo => OptimizationTask?.Context?.OptimizationRunInfo;
+
+    #endregion
 
 }

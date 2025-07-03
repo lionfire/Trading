@@ -12,7 +12,7 @@ namespace LionFire.Trading
 
     public class PositionDouble : IPositionDouble_CTraderCompat
     {
-        public IAccount Account { get; set; }
+        public IAccount_Old Account { get; set; }
 
         public PositionKind Kind
         {

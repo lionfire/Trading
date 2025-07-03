@@ -65,7 +65,7 @@ public class RetrieveHistoricalDataParameters : HistoricalDataJobInput
         IntervalFlag = barsRangeReference.TimeFrame.ToShortString();
         Symbol = barsRangeReference.Symbol;
         ExchangeFlag = barsRangeReference.Exchange;
-        ExchangeAreaFlag = barsRangeReference.ExchangeArea;
+        ExchangeAreaFlag = barsRangeReference.Area;
         FromFlag = barsRangeReference.Start.DateTime;
         ToFlag = barsRangeReference.EndExclusive.DateTime;
     }

@@ -69,7 +69,7 @@ namespace LionFire.Trading.Data
         //public string Broker { get; set; }
 
         [SetOnce]
-        public IFeed Account { get; set; }
+        public IFeed_Old Account { get; set; }
 
         //[SetOnce]
         //public string AccountType { get; set; }
@@ -337,7 +337,7 @@ namespace LionFire.Trading.Data
         //@"C:\ProgramData\LionFire\Trading\Data\IC Markets\AUDCAD\m1\2017\1"; 
         public string RootDir { get; set; } = Path.Combine(DependencyContext.Current.GetService<AppDirectories>().AppProgramDataDir, "Data");
 
-        public IFeed Account => Template.Account;
+        public IFeed_Old Account => Template.Account;
 
         public string TimeFrameDirectory
         {

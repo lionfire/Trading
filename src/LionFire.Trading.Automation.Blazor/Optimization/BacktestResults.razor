@@ -1,5 +1,8 @@
 @inherits ReactiveComponentBase<OneShotOptimizeVM>
+
+
 @using LionFire.Trading.Automation.Blazor.Optimization.Charts
+
 
 <MudIconButton OnClick="@(() => _open ^= true)" Icon="@Icons.Material.Outlined.Expand" />
 
@@ -11,14 +14,14 @@
     <MudDrawerHeader>
         <MudText Typo="Typo.h6">Results</MudText>
     </MudDrawerHeader>
-    @if (ViewModel!.OptimizationTask?.OptimizationMultiBatchJournal?.ObservableCache?.Items != null)
+    @if (ViewModel!.OptimizationTask?.BacktestsJournal?.ObservableCache?.Items != null)
     {
-        <MudDataGrid Items="ViewModel.OptimizationTask.OptimizationMultiBatchJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
+        <MudDataGrid Items="ViewModel.OptimizationTask.BacktestsJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
             <Columns>
                 <PropertyColumn Property="x => x.BatchId" Hidden=true Hideable="true" />
                 <PropertyColumn Property="x => x.Id" Hideable="true" Hidden="true" />
                 <PropertyColumn Property="x => x.Fitness" Hideable="true" />
-                <PropertyColumn Property="x => x.AD" Format="N1" CellClass="text-align-right"  />
+                <PropertyColumn Property="x => x.AD" Format="N1" CellClass="text-align-right" />
                 <PropertyColumn Property="x => x.TotalTrades / ((ViewModel.DateRange.End! - ViewModel.DateRange.Start!).Value.TotalDays)" Format="N2" Title="TPD" Hideable="true" />
                 <PropertyColumn Property="x => x.TotalTrades" Hideable="true" />
                 <PropertyColumn Property="x => x.WinRate" Format="P1" Hideable="true" />
@@ -36,15 +39,18 @@
                         }
                     </CellTemplate>
                 </TemplateColumn>
-                @*   @foreach(var parameter in ViewModel.Context.POptimization.OptimizableParameters)
+                @*   @foreach(var parameter in ViewModel.POptimization.OptimizableParameters)
                 {
                     <PropertyColumn Property="x => x.Parameters[parameter.Path]" />
                 } *@
                 <TemplateColumn>
                     <CellTemplate>
-                        <MudToggleIconButton Icon="@Icons.Material.Filled.BookmarkBorder" ToggledIcon="@Icons.Material.Filled.Bookmark" ToggledColor=@Color.Primary Size="Size.Small" Color="Color.Dark"
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowCircleRight"
+                                       Size="Size.Small" Color="Color.Dark" OnClick="@(() => ViewModel.OnExportToBot(context.Item,WorkspaceBots))" />
+
+                        @*                         <MudToggleIconButton Icon="@Icons.Material.Filled.BookmarkBorder" ToggledIcon="@Icons.Material.Filled.Bookmark" ToggledColor=@Color.Primary Size="Size.Small" Color="Color.Dark"
                                              Toggled=@(ViewModel!.Portfolio?.IsInPortfolio(ViewModel!.OptimizationRunInfo, context.Item) == true) 
-                                             ToggledChanged=@(() => ViewModel!.Portfolio?.Toggle(ViewModel.OptimizationRunInfo, context.Item)) />
+                                             ToggledChanged=@(() => ViewModel!.Portfolio?.Toggle(ViewModel.OptimizationRunInfo, context.Item)) /> *@
                     </CellTemplate>
                 </TemplateColumn>
             </Columns>

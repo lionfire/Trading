@@ -58,10 +58,10 @@ namespace LionFire.Trading
         #region Construction
 
         public MarketSeries() : base() { }
-        public MarketSeries(IFeed account, string key) : base(account, key)
+        public MarketSeries(IFeed_Old account, string key) : base(account, key)
         {
         }
-        public MarketSeries(IFeed market, string symbol, TimeFrame timeFrame) : base(market, symbol, timeFrame)
+        public MarketSeries(IFeed_Old market, string symbol, TimeFrame timeFrame) : base(market, symbol, timeFrame)
         {
         }
 

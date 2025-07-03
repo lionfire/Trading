@@ -33,8 +33,8 @@ namespace LionFire.Trading.Data
         public string Symbol => MarketSeriesBase?.SymbolCode;
         public TimeFrame TimeFrame => MarketSeriesBase?.TimeFrame;
 
-        public virtual IAccount Account => MarketSeriesBase?.Account;
-        public virtual IFeed Feed => MarketSeriesBase?.Feed;
+        public virtual IAccount_Old Account => MarketSeriesBase?.Account;
+        public virtual IFeed_Old Feed => MarketSeriesBase?.Feed;
 
         public MarketSeries MarketSeries { get { return MarketSeriesBase as MarketSeries; } }
         public MarketTickSeries MarketTickSeries { get { return MarketSeriesBase as MarketTickSeries; } }

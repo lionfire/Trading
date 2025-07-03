@@ -39,7 +39,7 @@ public partial class GridSearchState
 
     #region TEMP - convenience
 
-    //public IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> Parameters => GridSearchStrategy.OptimizationParameters.Parameters;
+    //public IReadOnlyList<(HierarchicalPropertyInfo info, IParameterOptimizationOptions options)> PMultiSim => GridSearchStrategy.OptimizationParameters.PMultiSim;
 
     public IObservableCollection<IParameterOptimizationOptions > OptimizableParameters => GridSearchStrategy.OptimizationParameters.OptimizableParameters;
 

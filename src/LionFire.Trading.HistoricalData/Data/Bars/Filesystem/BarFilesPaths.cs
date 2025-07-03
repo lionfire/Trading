@@ -30,7 +30,7 @@ public class BarFilesPaths
     public string GetDataDir(ExchangeSymbolTimeFrame r)
     {
         if (BaseDir == null) throw new ArgumentNullException(nameof(BaseDir));
-        return Path.Combine(BaseDir, r.Exchange, r.ExchangeArea, r.TimeFrame.Name, r.Symbol);
+        return Path.Combine(BaseDir, r.Exchange, r.Area, r.TimeFrame.Name, r.Symbol);
     }
 
     public void CreateIfMissing()

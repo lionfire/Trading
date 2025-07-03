@@ -14,9 +14,11 @@ public class BestJournalsTracker : IAsyncDisposable
 
     #region Lifecycle
 
-    public BestJournalsTracker(MultiBacktestContext context)
+    public BestJournalsTracker(MultiSimContext context)
     {
-        var options = context.POptimization.TradeJournalOptions;
+        ArgumentNullException.ThrowIfNull(context.Optimization.POptimization);
+
+        var options = context.Optimization?.POptimization?.TradeJournalOptions;
         NumberToKeep = options.KeepTradeJournalsForTopNResults;
         Threshold = options.DiscardDetailsWhenFitnessBelow - double.Epsilon;
     }

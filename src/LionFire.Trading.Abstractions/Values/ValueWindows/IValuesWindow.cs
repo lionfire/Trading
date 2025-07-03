@@ -3,7 +3,7 @@
 public interface IReadOnlyValuesWindow
 {
     uint Capacity { get; }
-    bool IsFull { get; }
+    //bool IsFull { get; }
     uint Size { get; }
 
 }

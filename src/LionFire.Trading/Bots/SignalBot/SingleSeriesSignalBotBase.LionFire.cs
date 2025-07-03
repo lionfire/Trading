@@ -15,7 +15,7 @@ namespace LionFire.Trading.Bots
 {
     public partial class SingleSeriesSignalBotBase<IndicatorType, TSingleSeriesSignalBotBase, TIndicator>
     {
-        public MarketSeries MarketSeries { get; set; }
+        public MarketSeries MarketSeries { get; set; } // REVIEW - overrides MarketSeries in BotBase!
 
         protected override async Task OnStarting()
         {
@@ -46,8 +46,8 @@ namespace LionFire.Trading.Bots
 
             //UpdateDesiredSubscriptions();
 
-            var sim = Account as ISimulatedAccount;
-            if (Account as ISimulatedAccount != null)
+            var sim = Account as ISimulatedAccount_Old;
+            if (Account as ISimulatedAccount_Old != null)
             {
                 Account.Ticked += Market_Ticked;
             }

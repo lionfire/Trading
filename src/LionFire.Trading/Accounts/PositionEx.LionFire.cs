@@ -15,7 +15,7 @@ namespace LionFire.Trading
         public TradeType TradeType { get; set; }
         public Symbol Symbol { get; set; }
 
-        public IAccount Account => Position.Account;
+        public IAccount_Old Account => Position.Account;
     }
 }
 

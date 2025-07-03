@@ -55,6 +55,7 @@ public interface IPosition<TPrecision> : IPosition
     TPrecision? StopLoss { get; }
     TPrecision? TakeProfit { get; }
 
+    void Close();
     ValueTask<IOrderResult> SetStopLoss(TPrecision price);
     ValueTask<IOrderResult> SetTakeProfit(TPrecision price);
 

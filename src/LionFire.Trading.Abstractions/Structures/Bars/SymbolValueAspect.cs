@@ -34,11 +34,11 @@ public record SymbolValueAspect<TValue>(string Exchange, string ExchangeArea, st
             _ => typeof(TValue),
         };
 
-    public override string Key => $"{Exchange}.{ExchangeArea}:{Symbol}/{TimeFrame}{(Aspect == DataPointAspect.Unspecified ? "" : "#")}{Aspect}{(typeof(TValue) == typeof(double) ? "" : $"<{typeof(TValue).Name}>")}";
+    public override string Key => $"{Exchange}.{Area}:{Symbol}/{TimeFrame}{(Aspect == DataPointAspect.Unspecified ? "" : "#")}{Aspect}{(typeof(TValue) == typeof(double) ? "" : $"<{typeof(TValue).Name}>")}";
 
     public Type PrecisionType => typeof(TValue);
 
-    public static SymbolValueAspect<TValue> Create(ExchangeSymbolTimeFrame e, DataPointAspect aspect) => new SymbolValueAspect<TValue>(e.Exchange, e.ExchangeArea, e.Symbol, e.TimeFrame, aspect);
+    public static SymbolValueAspect<TValue> Create(ExchangeSymbolTimeFrame e, DataPointAspect aspect) => new SymbolValueAspect<TValue>(e.Exchange, e.Area, e.Symbol, e.TimeFrame, aspect);
 }
 
 

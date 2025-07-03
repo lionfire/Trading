@@ -70,15 +70,20 @@ public static class TimeFrameTimeSpanX
 public class LionFireTimeFrame
 #else
 public class TimeFrame : ISerializableAsString
-    //, IParseableSlim<TimeFrame> // TODO - NEW
+    , IParsableSlim<TimeFrame> // TODO - NEW
 #endif
 {
+
+    #region Misc
+
     public override bool Equals(object o)
     {
         var other = o as TimeFrame;
         return other?.Name == Name;
     }
     public override int GetHashCode() => Name.GetHashCode();
+
+    #endregion
 
     #region Static
 
@@ -122,7 +127,7 @@ public class TimeFrame : ISerializableAsString
 
     public long? GetExpectedBarCount(DateTimeOffset? start, DateTimeOffset? endExclusive)
         => (TimeSpan <= TimeSpan.Zero || !start.HasValue || !endExclusive.HasValue)
-        ? null 
+        ? null
         : (long?)((endExclusive - start) / TimeSpan);
     public long? GetExpectedBarCountForNow(DateTimeOffset start, DateTimeOffset endExclusive)
     {
@@ -387,6 +392,26 @@ public class TimeFrame : ISerializableAsString
     //}
     //private TimeSpan? timeSpan;
 
+    public bool HasFixedTimeSpan
+    {
+        get
+        {
+            switch (TimeFrameUnit)
+            {
+                case TimeFrameUnit.Tick:
+                    return false;
+                case TimeFrameUnit.Minute:
+                case TimeFrameUnit.Hour:
+                case TimeFrameUnit.Day:
+                case TimeFrameUnit.Week:
+                case TimeFrameUnit.Month:
+                    return true;
+                default:
+                    throw new ArgumentNullException("TimeFrameUnit");
+            }
+        }
+    }
+
     public static TimeSpan TickApproximationTime = System.TimeSpan.FromMilliseconds(200);
     public TimeSpan TimeSpanApproximation
     {
@@ -601,12 +626,14 @@ public class TimeFrame : ISerializableAsString
         return barTime + (TimeSpan * count);
     }
 
+
     public string? Serialize() => this.ToString();
     public static object? Deserialize(string? serializedString) => serializedString == null ? null : new TimeFrame(serializedString);
+    static TimeFrame IParsableSlim<TimeFrame>.Parse(string s) => (TimeFrame)TimeFrame.Deserialize(s)!;
 
     ///// <summary>
     ///// </summary>
-    ///// <param name="openTime">Assumed to be a valid Open Time for this TimeFrame (otherwise bevahior is undefined)</param>
+    ///// <param name="openTime">Assumed to be a valid Open Time for this TimeFrame (otherwise behavior is undefined)</param>
     ///// <returns></returns>
     ///// <exception cref="NotImplementedException"></exception>
     //public DateTimeOffset GetNextOpenTime(DateTimeOffset openTime)

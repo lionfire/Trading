@@ -61,9 +61,9 @@ public partial class JournalEntry<TPrecision> : JournalEntry
     [MemoryPackConstructor]
     public JournalEntry() { }
 
-    public JournalEntry(IAccount2<TPrecision> account)
+    public JournalEntry(IAccount2<TPrecision>? account)
     {
-        Balance = account.Balance;
+        Balance = account?.Balance ?? TPrecision.Zero;
     }
 
     public JournalEntry(IPosition<TPrecision> position) : this(position.Account)

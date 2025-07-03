@@ -19,9 +19,9 @@ namespace LionFire.Trading
 
         public string SymbolCode => MarketSeries.SymbolCode;
         public MarketSeries MarketSeries { get; set; }
-        public IAccount Account { get; set; }
+        public IAccount_Old Account { get; set; }
         private MarketSeries m1 { get; set; }
-        public BarToOtherBarHandler(IAccount account, MarketSeries series)
+        public BarToOtherBarHandler(IAccount_Old account, MarketSeries series)
         {
             this.MarketSeries = series;
             this.Account = account;

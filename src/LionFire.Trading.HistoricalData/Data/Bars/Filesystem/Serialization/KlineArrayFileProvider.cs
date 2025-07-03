@@ -44,12 +44,12 @@ public class KlineArrayFileProvider
     {
         var ((start, endExclusive), isLong) = RangeProvider.RangeForDate(date, reference.TimeFrame);
 
-        var barsRangeReference = new SymbolBarsRange(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive);
+        var barsRangeReference = new SymbolBarsRange(reference.Exchange, reference.Area, reference.Symbol, reference.TimeFrame, start, endExclusive);
         KlineArrayInfo info = new()
         {
             //SymbolBarsRange = new SymbolBarsRange(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive),
             Exchange = reference.Exchange,
-            ExchangeArea = reference.ExchangeArea,
+            ExchangeArea = reference.Area,
             Symbol = reference.Symbol,
             TimeFrame = reference.TimeFrame.Name,
             Start = start.UtcDateTime,
@@ -86,13 +86,13 @@ public class KlineArrayFileProvider
     {
         var ((start, endExclusive), isLong) = RangeProvider.RangeForDate(date, reference.TimeFrame);
 
-        var barsRangeReference = new SymbolBarsRange(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive);
+        var barsRangeReference = new SymbolBarsRange(reference.Exchange, reference.Area, reference.Symbol, reference.TimeFrame, start, endExclusive);
 
         KlineArrayInfo info = new()
         {
             //SymbolBarsRange = new SymbolBarsRange(reference.Exchange, reference.ExchangeArea, reference.Symbol, reference.TimeFrame, start, endExclusive),
             Exchange = reference.Exchange,
-            ExchangeArea = reference.ExchangeArea,
+            ExchangeArea = reference.Area,
             Symbol = reference.Symbol,
             TimeFrame = reference.TimeFrame.Name,
             Start = start.UtcDateTime,

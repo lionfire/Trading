@@ -12,9 +12,9 @@ public interface IAccountProvider
 {
     /// <param name="accountId">Format: {ExchangeCode}:{AccountName}</param>
     /// <returns>The IAccount, or null if none registered by that Id</returns>
-    IAccount GetAccount(ExchangeId exchangeId, string accountId = "default");
+    IAccount_Old GetAccount(ExchangeId exchangeId, string accountId = "default");
 
     Dictionary<string, IExchangeAccountProvider> ExchangeAccountProviders { get; }
 
-    IEnumerable<IAccount> Accounts { get; }
+    IEnumerable<IAccount_Old> Accounts { get; }
 }

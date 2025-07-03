@@ -20,7 +20,7 @@ namespace LionFire.Notifications.Wpf.App
 
 
 
-        public void Attach(IFeed feed) { throw new NotImplementedException(); }
-        public void Detach(IFeed feed) { throw new NotImplementedException(); }
+        public void Attach(IFeed_Old feed) { throw new NotImplementedException(); }
+        public void Detach(IFeed_Old feed) { throw new NotImplementedException(); }
     }
 }

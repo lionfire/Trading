@@ -1,7 +1,9 @@
 using LionFire.FlexObjects;
 using LionFire.Mvvm;
+using LionFire.Reactive.Persistence;
 using LionFire.Trading.Automation.Portfolios;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using Plotly.Blazor;
 using Plotly.Blazor.Traces;
@@ -23,6 +25,8 @@ public partial class BacktestResults
     public Portfolio2? Portfolio { get; set; }
 
 
+    IObservableReaderWriter<string, BotEntity>? WorkspaceBots;
+
     protected override Task OnInitializedAsync()
     {
 
@@ -31,10 +35,11 @@ public partial class BacktestResults
     }
     protected override void OnParametersSet()
     {
-        if(ViewModel != null)
+        if (ViewModel != null)
         {
             ViewModel.Portfolio = Portfolio;
         }
+        WorkspaceBots = WorkspaceServices?.GetService<IObservableReaderWriter<string, BotEntity>>();
 
         base.OnParametersSet();
     }
@@ -61,4 +66,5 @@ public partial class BacktestResults
 
     #endregion
 
+    
 }

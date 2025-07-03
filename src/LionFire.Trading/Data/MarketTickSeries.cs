@@ -50,7 +50,7 @@ namespace LionFire.Trading
         #region Construction
 
         public MarketTickSeries() { }
-        public MarketTickSeries(IAccount account, string symbol) : base(account, symbol, TimeFrame.t1)
+        public MarketTickSeries(IAccount_Old account, string symbol) : base(account, symbol, TimeFrame.t1)
         {
         }
 

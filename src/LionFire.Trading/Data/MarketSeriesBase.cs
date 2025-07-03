@@ -37,9 +37,9 @@ namespace LionFire.Trading
     {
         //[Ignore]
         //[Required]
-        public IFeed Feed { get; set; }
+        public IFeed_Old Feed { get; set; }
 
-        public IAccount Account => Feed as IAccount;
+        public IAccount_Old Account => Feed as IAccount_Old;
 
         //[Required]
         public string Symbol { get; set; }
@@ -85,10 +85,10 @@ namespace LionFire.Trading
         #region Construction
 
         public MarketSeriesBase() : base() { }
-        public MarketSeriesBase(IFeed feed, string key) : base(feed, key)
+        public MarketSeriesBase(IFeed_Old feed, string key) : base(feed, key)
         {
         }
-        public MarketSeriesBase(IFeed feed, string symbol, TimeFrame timeFrame) : base(feed, symbol, timeFrame)
+        public MarketSeriesBase(IFeed_Old feed, string symbol, TimeFrame timeFrame) : base(feed, symbol, timeFrame)
         {
         }
 
@@ -416,7 +416,7 @@ namespace LionFire.Trading
         #region Construction
 
         public MarketSeriesBase() { }
-        public MarketSeriesBase(IFeed account, string key)
+        public MarketSeriesBase(IFeed_Old account, string key)
         {
             this.Feed = account;
             string symbol;
@@ -425,7 +425,7 @@ namespace LionFire.Trading
             this.SymbolCode = symbol;
             this.TimeFrame = timeFrame;
         }
-        public MarketSeriesBase(IFeed market, string symbol, TimeFrame timeFrame)
+        public MarketSeriesBase(IFeed_Old market, string symbol, TimeFrame timeFrame)
         {
             this.Feed = market;
             this.SymbolCode = symbol;
@@ -436,11 +436,11 @@ namespace LionFire.Trading
 
         #region Relationships
 
-        public IFeed Feed { get; protected set; }
+        public IFeed_Old Feed { get; protected set; }
         // Obsolete?
         public IDataSource Source { get; set; }
 
-        public IAccount Account { get { return Feed as IAccount; } protected set { this.Feed = value; } }
+        public IAccount_Old Account { get { return Feed as IAccount_Old; } protected set { this.Feed = value; } }
         public bool HasAccount => Account != null;
 
         #endregion

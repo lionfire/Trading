@@ -257,7 +257,7 @@ string text = new string(
 
         #region Relationships
 
-        public IFeed Feed { get; set; }
+        public IFeed_Old Feed { get; set; }
 
         #endregion
 

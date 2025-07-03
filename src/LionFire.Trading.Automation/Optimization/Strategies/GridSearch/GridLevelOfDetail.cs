@@ -75,7 +75,7 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
 
     #region State
 
-    //public ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> Parameters => parameters;
+    //public ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> PMultiSim => parameters;
     //private ReadOnlyObservableCollection<IParameterLevelOfDetailInfo> parameters;
     public IReadOnlyList<IParameterLevelOfDetailInfo> Parameters => parameters;
     private List<IParameterLevelOfDetailInfo> parameters;
@@ -112,7 +112,7 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
             current = new int[gridLevelOfDetailState.Parameters.Count];
             max = new int[gridLevelOfDetailState.Parameters.Count];
 
-            //for(int d = 0; d < gridLevelOfDetailState.Parameters.Count; d++) { 
+            //for(int d = 0; d < gridLevelOfDetailState.PMultiSim.Count; d++) { 
             //}
             int i = 0;
             foreach (var p in gridLevelOfDetailState.Parameters)

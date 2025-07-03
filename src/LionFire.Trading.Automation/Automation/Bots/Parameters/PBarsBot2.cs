@@ -5,11 +5,17 @@ using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation;
 
-public interface IPBarsBot2
+public interface IPBarsBot2 : IPRequiresInitBeforeUse
 {
     ExchangeSymbolTimeFrame ExchangeSymbolTimeFrame { get; set; }
 
-    void FinalizeInit();
+    //void InferMissingParameters();
+}
+
+public interface IPRequiresInitBeforeUse
+{
+    void Init();
+
 }
 
 [ContainsParameters]
@@ -33,10 +39,9 @@ public abstract class PBarsBot2<TConcrete, TValue>
 
     #region Inputs
 
-    [Signal(-1000)]
-    //public SymbolValueAspect<TValue>? Bars { get; set; }
     [JsonIgnore]
     public HLCReference<TValue>? Bars { get; set; }
+    //public SymbolValueAspect<TValue>? Bars { get; set; }
 
     #endregion
 
@@ -52,25 +57,36 @@ public abstract class PBarsBot2<TConcrete, TValue>
         ExchangeSymbolTimeFrame = e;
     }
 
-    public virtual void FinalizeInit()
+    public void Init() => InferMissingParameters();
+
+    /// <summary>
+    /// Uses common parameters to populate missing parameters:
+    /// - ExchangeSymbolTimeFrame -> Bars 
+    /// </summary>
+    /// <exception cref="NotImplementedException"></exception>
+    protected virtual void InferMissingParameters()
     {
         var pBotInfo = PBotInfos.Get(this.GetType());
 
-        if (pBotInfo.Bars != null)
+        /// Set Bars from ExchangeSymbolTimeFrame
+        if (Bars == null)
         {
-            if (pBotInfo.Bars.PropertyType == typeof(SymbolValueAspect<double>))
+            if (pBotInfo.Bars != null)
             {
-                pBotInfo.Bars.SetValue(this, SymbolValueAspect<double>.Create(ExchangeSymbolTimeFrame, DataPointAspect.HLC));
+                if (pBotInfo.Bars.PropertyType == typeof(SymbolValueAspect<TValue>))
+                {
+                    pBotInfo.Bars.SetValue(this, SymbolValueAspect<TValue>.Create(ExchangeSymbolTimeFrame, DataPointAspect.HLC));
+                }
+                else if (pBotInfo.Bars.PropertyType == typeof(HLCReference<TValue>))
+                {
+                    pBotInfo.Bars.SetValue(this, new HLCReference<TValue>(ExchangeSymbolTimeFrame));
+                }
+                else if (pBotInfo.Bars.PropertyType == typeof(OHLCReference<TValue>))
+                {
+                    pBotInfo.Bars.SetValue(this, new OHLCReference<TValue>(ExchangeSymbolTimeFrame));
+                }
+                else { throw new NotImplementedException(); }
             }
-            else if (pBotInfo.Bars.PropertyType == typeof(HLCReference<double>))
-            {
-                pBotInfo.Bars.SetValue(this, new HLCReference<double>(ExchangeSymbolTimeFrame));
-            }
-            else if (pBotInfo.Bars.PropertyType == typeof(OHLCReference<double>))
-            {
-                pBotInfo.Bars.SetValue(this, new OHLCReference<double>(ExchangeSymbolTimeFrame));
-            }
-            else { throw new NotImplementedException(); }
         }
     }
 
@@ -82,19 +98,4 @@ public interface IBarsBot<TValue>
     IReadOnlyValuesWindow<HLC<TValue>> Bars { get; set; }
 
     IPBarsBot2 Parameters { get; }
-}
-
-public class BarsBot2<TParameters, TValue> : SymbolBot2<TParameters, TValue>, IBarsBot<TValue>
-      where TParameters : PBarsBot2<TParameters, TValue>
-    where TValue : struct, INumber<TValue>
-{
-    IPBarsBot2 IBarsBot<TValue>.Parameters => Parameters;
-
-    #region Injected
-
-    [Signal(-1000)]
-    public IReadOnlyValuesWindow<HLC<TValue>> Bars { get; set; } = null!;
-
-
-    #endregion
 }

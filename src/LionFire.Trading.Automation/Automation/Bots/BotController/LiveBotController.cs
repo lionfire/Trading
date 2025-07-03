@@ -1,9 +1,9 @@
 ﻿
 namespace LionFire.Trading.Automation;
 
-//public class LiveBotController : BatchBotControllerBase
+//public class LiveBotContext : BatchBotControllerBase
 //{
-//    public LiveBotController(IServiceProvider serviceProvider, IPBacktestTask2 parameters) : base(serviceProvider, parameters)
+//    public LiveBotContext(IServiceProvider serviceProvider, IPBacktestTask2 parameters) : base(serviceProvider, parameters)
 //    {
 //    }
 

@@ -21,7 +21,7 @@ namespace LionFire.Trading.Triggers
         where TemplateType : TMarketTriggerBase<InstanceType>, ITemplate
     {
         [Dependency]
-        public IFeed Feed { get; set; }
+        public IFeed_Old Feed { get; set; }
         public TemplateType Template { get; set; }
         //ITemplate ITemplateInstance.Template { get => Template; set => Template = (TemplateType)value; }
 
@@ -50,7 +50,7 @@ namespace LionFire.Trading.Triggers
     {
 
         [Dependency]
-        public IAccount Account { get; set; }
+        public IAccount_Old Account { get; set; }
 
         public Task<ValidationContext> Initialize()
         {

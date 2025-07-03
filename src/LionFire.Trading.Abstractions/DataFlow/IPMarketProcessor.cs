@@ -1,10 +1,16 @@
 ﻿namespace LionFire.Trading.DataFlow;
 
-public interface IPMarketProcessor : IParameters
+public interface IPMarketProcessor  
 {
     //IPInput[]? Inputs { get; }
-    int[]? InputLookbacks => null; //{ get; set; } // REVIEW - is there a nicer way to do this?
 
+    /// <summary>
+    /// Array must match the order of Signals on the bot.
+    /// (TODO ENH - Find a way to make this more robust.)
+    /// 
+    /// If unspecified, assumed to be 0, meaning no lookback.
+    /// </summary>
+    int[]? InputLookbacks => null;
 
 }
 
@@ -13,6 +19,6 @@ public interface IPMarketProcessor : IParameters
 /// </summary>
 public interface IPTimeFrameMarketProcessor : IPMarketProcessor
 {
-    TimeFrame TimeFrame { get; }
+    TimeFrame? TimeFrame { get; }
 
 }

@@ -1,6 +1,6 @@
 @inherits ReactiveComponentBase<OneShotOptimizeVM>
 
-<MudItem sm="2" Class="@((info.ParameterAttribute.OptimizePriorityInt >= ViewModel.POptimization2.MinParameterPriority ? "Enabled border-solid mud-border-primary" : "Disabled border-dotted mud-border-secondary") + "  border-2 ")">
+<MudItem sm="2" Class="@((info.ParameterAttribute.OptimizePriorityInt >= ViewModel.POptimization.MinParameterPriority ? "Enabled border-solid mud-border-primary" : "Disabled border-dotted mud-border-secondary") + "  border-2 ")">
     <div class="d-flex flex-row justify-start align-start">
 
         <MudCheckBox @bind-Value=options.EnableOptimization />

@@ -54,10 +54,10 @@ public class BacktestsRepository
         {
             var sb = new System.Text.StringBuilder();
             sb.Append(exchangeSymbolTimeFrame?.Exchange ?? "UnknownExchange");
-            if (exchangeSymbolTimeFrame?.ExchangeArea != null)
+            if (exchangeSymbolTimeFrame?.Area != null)
             {
                 sb.Append(".");
-                sb.Append(exchangeSymbolTimeFrame.ExchangeArea);
+                sb.Append(exchangeSymbolTimeFrame.Area);
             }
             path = System.IO.Path.Combine(path, sb.ToString());
         }

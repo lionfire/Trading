@@ -15,7 +15,7 @@ namespace LionFire.Trading
     {
         #region Relationships
 
-        public IFeed Feed { get; protected set; }
+        public IFeed_Old Feed { get; protected set; }
 
         #endregion
 
@@ -30,7 +30,7 @@ namespace LionFire.Trading
 
         #region Construction
 
-        public DataSourceCollection(bool isHistorical, IFeed feed)
+        public DataSourceCollection(bool isHistorical, IFeed_Old feed)
         {
             this.Feed = feed;
             this.IsHistorical = isHistorical;

@@ -12,20 +12,20 @@ public record ExchangeSymbolTimeFrame(string? Exchange, string? ExchangeArea, st
 {
     //public string ToGrainId() => $"{Exchange}}";
 
-    public override string Key => $"{Exchange}.{ExchangeArea}:{Symbol}/{TimeFrame}";
+    public override string Key => $"{Exchange}.{Area}:{Symbol}/{TimeFrame}";
 
     [JsonIgnore]
     public virtual Type ValueType => typeof(IKline);
 
     string IPKlineInput.Exchange => Exchange ?? throw new ArgumentNullException(nameof(Exchange));
-    string IPKlineInput.ExchangeArea => ExchangeArea ?? throw new ArgumentNullException(nameof(ExchangeArea));
+    string IPKlineInput.Area => Area ?? throw new ArgumentNullException(nameof(Area));
     string IPKlineInput.Symbol => Symbol ?? throw new ArgumentNullException(nameof(Symbol));
     TimeFrame IPKlineInput.TimeFrame => TimeFrame ?? throw new ArgumentNullException(nameof(TimeFrame));
 
     #region Construction
 
     public static ExchangeSymbolTimeFrame Combine(ExchangeSymbol exchangeSymbol, TimeFrame timeFrame)
-        => new ExchangeSymbolTimeFrame(exchangeSymbol.Exchange, exchangeSymbol.ExchangeArea, exchangeSymbol.Symbol, timeFrame);
+        => new ExchangeSymbolTimeFrame(exchangeSymbol.Exchange, exchangeSymbol.Area, exchangeSymbol.Symbol, timeFrame);
 
     public static ExchangeSymbolTimeFrame Parse(string id, ISymbolIdParser symbolIdParser)
     {
@@ -60,10 +60,10 @@ public static class ExchangeSymbolTimeFrameX
     public static void AppendId(this StringBuilder sb, ExchangeSymbolTimeFrame exchangeSymbolTimeFrame)
     {
         sb.Append(exchangeSymbolTimeFrame.Exchange);
-        if (exchangeSymbolTimeFrame.ExchangeArea != null)
+        if (exchangeSymbolTimeFrame.Area != null)
         {
             sb.Append('.');
-            sb.Append(exchangeSymbolTimeFrame.ExchangeArea);
+            sb.Append(exchangeSymbolTimeFrame.Area);
         }
         sb.Append(':');
         sb.Append(exchangeSymbolTimeFrame.Symbol);

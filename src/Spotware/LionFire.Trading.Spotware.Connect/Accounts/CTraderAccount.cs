@@ -125,7 +125,7 @@ namespace LionFire.Trading.Spotware.Connect
 
         void IConfigures<IServiceCollection>.Configure(IServiceCollection sc)
         {
-            sc.AddSingleton(typeof(IAccount), this);
+            sc.AddSingleton(typeof(IAccount_Old), this);
         }
 
         #endregion
@@ -681,7 +681,7 @@ namespace LionFire.Trading.Spotware.Connect
         public override MarketSeries GetSeries(Symbol symbol, TimeFrame timeFrame)
         {
             var kvp = new KeyValuePair<string, string>(symbol.Code, timeFrame.ToString());
-            return marketSeries.GetOrAdd(kvp, _ => ((IAccount)this).CreateMarketSeries(symbol.Code, timeFrame));
+            return marketSeries.GetOrAdd(kvp, _ => ((IAccount_Old)this).CreateMarketSeries(symbol.Code, timeFrame));
         }
 
         public override MarketSeries CreateMarketSeries(string symbol, TimeFrame timeFrame)

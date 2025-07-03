@@ -1,9 +1,12 @@
-﻿using LionFire.ExtensionMethods;
+﻿using LionFire.Dependencies;
+using LionFire.ExtensionMethods;
 using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Backtesting;
+using LionFire.Trading.HistoricalData;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Nito.AsyncEx;
+using Polly;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -19,7 +22,7 @@ namespace LionFire.Trading.Automation;
 
 public class BacktestBatchItemTask
 {
-    public PBacktestTask2 Parameters { get; set; }
+    public PBotWrapper Parameters { get; set; }
     public BacktestResult Result { get; set; }
 }
 
@@ -50,7 +53,7 @@ public partial class BacktestQueue : IHostedService
         Logger = logger;
         tcs = new();
 
-        QueuedJobsChannel = Channel.CreateBounded<BacktestBatchesJob>(new BoundedChannelOptions(10_000)
+        QueuedJobsChannel = Channel.CreateBounded<BacktestJob>(new BoundedChannelOptions(10_000)
         {
             SingleReader = false,
             SingleWriter = false,
@@ -91,12 +94,12 @@ public partial class BacktestQueue : IHostedService
 
     #region State
 
-    private Channel<BacktestBatchesJob> QueuedJobsChannel;
-    ConcurrentQueue<BacktestBatchesJob> QueuedJobs { get; } = new();
-    ConcurrentDictionary<Guid, BacktestBatchesJob> RunningJobs { get; } = new();
-    ConcurrentDictionary<Guid, BacktestBatchesJob> FinishedJobs { get; } = new();
-    ConcurrentDictionary<Guid, BacktestBatchesJob> FaultedJobs { get; } = new();
-    ConcurrentDictionary<Guid, BacktestBatchesJob> Jobs { get; } = new();
+    private Channel<BacktestJob> QueuedJobsChannel;
+    ConcurrentQueue<BacktestJob> QueuedJobs { get; } = new();
+    ConcurrentDictionary<Guid, BacktestJob> RunningJobs { get; } = new();
+    ConcurrentDictionary<Guid, BacktestJob> FinishedJobs { get; } = new();
+    ConcurrentDictionary<Guid, BacktestJob> FaultedJobs { get; } = new();
+    ConcurrentDictionary<Guid, BacktestJob> Jobs { get; } = new();
 
     TaskCompletionSource tcs;
 
@@ -104,24 +107,23 @@ public partial class BacktestQueue : IHostedService
 
     #region (Public) Methods
 
-    //public ValueTask<IBacktestBatchJob> EnqueueJob(Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
+    //public ValueTask<BacktestJob> EnqueueJob(Action<BacktestJob> configure, CancellationToken cancellationToken = default)
     //{
-    //    var backtestContext = MultiBacktestContext.Create(ServiceProvider, new PMultiBacktestContext());
+    //    var backtestContext = MultiSimContext.Create(ServiceProvider, new PMultiBacktestContext());
 
     //    return EnqueueJob(backtestContext, configure, cancellationToken);
     //}
-    public async ValueTask<IBacktestBatchJob> EnqueueJob(MultiBacktestContext backtestContext, Action<IBacktestBatchJob> configure, CancellationToken cancellationToken = default)
+
+    public async ValueTask<BacktestJob> EnqueueJob(MultiSimContext context, List<PBotWrapper> pBots
+        //, Action<BacktestJob>? configure = null
+        , CancellationToken cancellationToken = default)
     {
         if (Parameters.SingleDateRange != true) throw new NotImplementedException();
 
         if (RunningJobs.Count >= Parameters.MaxConcurrentJobs && QueuedJobs.Count >= Parameters.MaxQueuedJobs) { throw new InvalidOperationException("Too many active jobs"); }
 
-        var job = Jobs.AddUnique(() => Guid.NewGuid(), guid =>
-        {
-            var job = new BacktestBatchesJob(guid, backtestContext);
-            configure(job);
-            return job;
-        }).value;
+        var job = Jobs.AddUnique(() => Guid.NewGuid(),
+            guid => new BacktestJob(guid, context, pBots)).value;
 
         if (job.Count == 0)
         {
@@ -133,7 +135,7 @@ public partial class BacktestQueue : IHostedService
 
             //QueuedJobs.Enqueue(job); // OLD
 
-            //if (Parameters.AutoStart /*&& RunningJobs.Count < Parameters.MaxConcurrentJobs*/)
+            //if (PMultiSim.AutoStart /*&& RunningJobs.Count < PMultiSim.MaxConcurrentJobs*/)
             //{
             //    TryStartNextJobs();
             //}
@@ -162,9 +164,9 @@ public partial class BacktestQueue : IHostedService
                     catch (Exception ex)
                     {
                         Logger.LogError(ex, "Job threw exception");
-                        job.OnFaulted(ex);
+                        job.MultiSimContext.OnFaulted(ex);
                     }
-                    if (job.CancellationToken.IsCancellationRequested)
+                    if (job.MultiSimContext.CancellationToken.IsCancellationRequested)
                     {
                         Logger.LogDebug("Enqueued Job was canceled: " + job.Guid);
                     }
@@ -180,7 +182,7 @@ public partial class BacktestQueue : IHostedService
     /// </summary>
     public void TryStartNextJobs()
     {
-        //while (QueuedJobs.Count > 0 && RunningJobs.Count < Parameters.MaxConcurrentJobs)
+        //while (QueuedJobs.Count > 0 && RunningJobs.Count < PMultiSim.MaxConcurrentJobs)
         //{
         //    if (QueuedJobs.TryDequeue(out var job))
         //    {
@@ -194,44 +196,49 @@ public partial class BacktestQueue : IHostedService
 
     #region (Private) Methods
 
-    private async ValueTask RunJob(BacktestBatchesJob job)
+    private async ValueTask RunJob(BacktestJob job)
     {
-        //Task.Run(async () =>
-        //{
         try
         {
             var sw = Stopwatch.StartNew();
             int count = 0;
             foreach (var batch in job.BacktestBatches)
             {
-                if (job.CancellationToken.IsCancellationRequested)
+                if (job.MultiSimContext.CancellationToken.IsCancellationRequested)
                 {
-                    Logger.LogInformation($"Job {job.Guid} canceled.");
+                    Logger.LogInformation("Job {guid} canceled.", job.Guid);
                     break;
                 }
 
-                var batchBacktest = await BacktestBatchTask2<double>.Create(ServiceProvider, batch, job.Context, backtestBatchJournal: job.Journal);
-                await batchBacktest.Run(job.CancellationToken);
+                var pBatch = new PBatch( batch)
+                {
+
+                };
+
+                var batchHarness = new BatchHarness<double>(job.MultiSimContext, pBatch);
+                await batchHarness.Init().ConfigureAwait(false);
+                await batchHarness.Run(job.MultiSimContext.CancellationToken);
+
                 count++;
             }
             sw.Stop();
-            job.OnFinished();
-            Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed} {(job.CancellationToken.IsCancellationRequested ? "(CANCELED)" : "")}");
+            job.MultiSimContext.OnFinished();
+            //Logger.LogInformation($"Job {job.Guid} completed {count} batches in {sw.Elapsed} {(job.MultiSimContext.CancellationToken.IsCancellationRequested ? "(CANCELED)" : "")}"); // OLD
+            Logger.LogInformation("Job {guid} completed {count} batches in {milliseconds} Canceled: {canceled}",
+                job.Guid, count, sw.Elapsed, job.MultiSimContext.CancellationToken.IsCancellationRequested);
         }
         catch (Exception ex)
         {
-            job.OnFaulted(ex);
+            job.MultiSimContext.OnFaulted(ex);
             RunningJobs.Remove(job.Guid, out var _);
             FaultedJobs.AddOrThrow(job.Guid, job);
         }
         //}).ContinueWith(t =>
         //{
-
         RunningJobs.Remove(job.Guid, out var _);
         //FinishedJobs.AddOrThrow(job.Guid, job); // TODO: Keep finished jobs for a short time?  For UI notifications?  They should probably be converted into a lightweight summary for this, and a reference to on-disk details. 
         Jobs.TryRemove(job.Guid, out var _);
         TryStartNextJobs();
-        //});
     }
 
     internal async Task WaitForEmpty()

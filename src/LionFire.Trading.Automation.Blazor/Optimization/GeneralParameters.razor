@@ -2,7 +2,7 @@
 
 <MudGrid>
     <MudItem sm="2">
-        <MudSelect Label="Bot" @bind-Value="ViewModel!.Common.PBotType" Dense="@true">
+        <MudSelect Label="Bot" @bind-Value="ViewModel!.PMultiSim.PBotType" Dense="@true">
             @foreach (var e in ViewModel!.BotTypes)
             {
                 <MudSelectItem Value="@e">@e.Name</MudSelectItem>
@@ -10,7 +10,7 @@
         </MudSelect>
     </MudItem>
     <MudItem sm="1">
-        <MudSelect Label="Exchange" @bind-Value="ViewModel!.Common.Exchange" Dense="@true">
+        <MudSelect Label="Exchange" @bind-Value="ViewModel!.PMultiSim.Exchange" Dense="@true">
             @foreach (var e in ViewModel!.Exchanges)
             {
                 <MudSelectItem Value="@e">@e</MudSelectItem>
@@ -19,13 +19,13 @@
     </MudItem>
 
     <MudItem sm="1">
-        <MudSelect Label="Area" @bind-Value="ViewModel!.Common.ExchangeArea">
+        <MudSelect Label="Area" @bind-Value="ViewModel!.PMultiSim.Area">
             <MudSelectItem Value="@("futures")">futures</MudSelectItem>
         </MudSelect>
     </MudItem>
 
     <MudItem sm="1">
-        <MudSelect Label="Symbol" @bind-Value="ViewModel!.Common.Symbol">
+        <MudSelect Label="Symbol" @bind-Value="ViewModel!.PMultiSim.DefaultSymbol">
             @foreach (var e in ViewModel!.Symbols)
             {
                 <MudSelectItem Value="@e">@e</MudSelectItem>
@@ -34,7 +34,7 @@
     </MudItem>
 
     <MudItem sm="1">
-        <MudSelect Label="TimeFrame" @bind-Value="ViewModel!.Common.TimeFrameString">
+        <MudSelect Label="TimeFrame" @bind-Value="ViewModel!.PMultiSim.TimeFrameString">
             @foreach (var e in ViewModel!.TimeFrames)
             {
                 <MudSelectItem Value="@e">@e</MudSelectItem>
@@ -43,10 +43,10 @@
     </MudItem>
 
     <MudItem sm="2">
-        <MudDatePicker @bind-Date="ViewModel!.Common.StartDateTime" Label="Start" Dense="@true" />
+        <MudDatePicker @bind-Date="ViewModel!.PMultiSim.StartDateTime" Label="Start" Dense="@true" />
     </MudItem>
     <MudItem sm="2">
-        <MudDatePicker @bind-Date="ViewModel!.Common.EndExclusiveDateTime" Label="End" Dense="@true" />
+        <MudDatePicker @bind-Date="ViewModel!.PMultiSim.EndExclusiveDateTime" Label="End" Dense="@true" />
         @* <MudDateRangePicker @bind-DateRange="ViewModel!.DateRange" Label="Range" Dense="@true" /> *@
     </MudItem>
 

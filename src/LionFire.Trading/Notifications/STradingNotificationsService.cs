@@ -23,9 +23,9 @@ namespace LionFire.Notifications.Wpf.App
     {
         public TradingNotificationsService Template { get; set; }
 
-        private List<IFeed> activeFeeds = new List<IFeed>();
+        private List<IFeed_Old> activeFeeds = new List<IFeed_Old>();
 
-        public void AddFeed(IFeed feed)
+        public void AddFeed(IFeed_Old feed)
         {
             foreach (var alertRequest in Template.AlertRequests)
             {
@@ -33,7 +33,7 @@ namespace LionFire.Notifications.Wpf.App
             }
         }
 
-        public void RemoveFeed(IFeed feed)
+        public void RemoveFeed(IFeed_Old feed)
         {
             foreach (var alertRequest in Template.AlertRequests)
             {
@@ -41,10 +41,10 @@ namespace LionFire.Notifications.Wpf.App
             }
         }
 
-        Dictionary<string, IFeed> feeds = new Dictionary<string, IFeed>();
-        Dictionary<string, IAccount> accounts = new Dictionary<string, IAccount>();
+        Dictionary<string, IFeed_Old> feeds = new Dictionary<string, IFeed_Old>();
+        Dictionary<string, IAccount_Old> accounts = new Dictionary<string, IAccount_Old>();
 
-        public IFeed DefaultFeed => feeds.Values.FirstOrDefault() ?? accounts.Values.FirstOrDefault();
+        public IFeed_Old DefaultFeed => feeds.Values.FirstOrDefault() ?? accounts.Values.FirstOrDefault();
 
         //FsObjectCollection<PriceNotifier> alerts; // TODO
 
@@ -52,7 +52,7 @@ namespace LionFire.Notifications.Wpf.App
         {
             foreach (var accountName in Template.AccountNames)
             {
-                foreach (var feed in DependencyContext.Current.GetServices<IFeed>().Concat(DependencyContext.Current.GetServices<IAccount>()))
+                foreach (var feed in DependencyContext.Current.GetServices<IFeed_Old>().Concat(DependencyContext.Current.GetServices<IAccount_Old>()))
                 {
 
                     // FUTURE: Match wildcard
@@ -62,7 +62,7 @@ namespace LionFire.Notifications.Wpf.App
                     {
                         feeds.Add(feed.Template.Key, feed);
                     }
-                    if (feed is IAccount acc && !accounts.ContainsKey(feed.Template.Key))
+                    if (feed is IAccount_Old acc && !accounts.ContainsKey(feed.Template.Key))
                     {
                         accounts.Add(feed.Template.Key, acc);
                     }

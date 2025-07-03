@@ -6,9 +6,9 @@
         <MudItem sm="4">
             <div class="lf-field row align-center">
                 <label style="order:-10;">Minimum Priority</label>
-                <MudTextField style="width: 4ch;" @bind-Value="ViewModel!.POptimization2.MinParameterPriority" data-Label="Min Parameter Priority" Dense="@true" />
-                <MudIconButton Class=@("mr-4 " + (ViewModel.POptimization2.InverseMinParameterPriority == -(ViewModel!.MaxParameterPriority) ? "invisible" : "")) Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> ViewModel.POptimization2.InverseMinParameterPriority = -(ViewModel!.MaxParameterPriority))" />
-                <MudSlider T="int" @bind-Value="ViewModel.POptimization2.InverseMinParameterPriority"
+                <MudTextField style="width: 4ch;" @bind-Value="ViewModel!.POptimization.MinParameterPriority" data-Label="Min Parameter Priority" Dense="@true" />
+                <MudIconButton Class=@("mr-4 " + (ViewModel.POptimization.InverseMinParameterPriority == -(ViewModel!.MaxParameterPriority) ? "invisible" : "")) Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> ViewModel.POptimization.InverseMinParameterPriority = -(ViewModel!.MaxParameterPriority))" />
+                <MudSlider T="int" @bind-Value="ViewModel.POptimization.InverseMinParameterPriority"
                            Min=@(-(ViewModel!.MaxParameterPriority + 1)) Max=@(-(ViewModel!.MinParameterPriority - 1))
                            Label="Min Parameter Priority" Dense="@true" />
             </div>
@@ -46,11 +46,11 @@
 
 @code {
 
-    IObservableCache<IParameterOptimizationOptions, string> AllParameters => ViewModel!.Context.POptimization.Parameters;
+    IObservableCache<IParameterOptimizationOptions, string> AllParameters => ViewModel!.POptimization.Parameters;
 
     public bool ShouldShow(IParameterOptimizationOptions options)
     {
-        return options.EnableOptimization.HasValue ? options.EnableOptimization.Value : options.Info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization2.MinParameterPriority || options?.EnableOptimization == true;
+        return options.EnableOptimization.HasValue ? options.EnableOptimization.Value : options.Info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization.MinParameterPriority || options?.EnableOptimization == true;
     }
 
     private Dictionary<string, object> GetParameters(IParameterOptimizationOptions options, bool fixedValue = false)

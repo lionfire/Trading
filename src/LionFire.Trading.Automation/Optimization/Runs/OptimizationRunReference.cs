@@ -50,11 +50,11 @@ public record OptimizationRunReference(
     //public Type? BotType { get; set; }
 
     //public string? Bot { get; set; }
-    //public string? Symbol { get; set; }
-    //public string? TimeFrame { get; set; }
+    //public string? DefaultSymbol { get; set; }
+    //public string? DefaultTimeFrame { get; set; }
     //public string? DateRange { get; set; }
     //public string? Exchange { get; set; }
-    //public string? ExchangeArea { get; set; }
+    //public string? DefaultExchangeArea { get; set; }
 
     //public string? RunId { get; set; }
 
@@ -70,10 +70,10 @@ public record OptimizationRunReference(
     //    //return new OptimizationRunReference
     //    //{
     //    //    Bot = parts[0],
-    //    //    Symbol = parts[1],
-    //    //    TimeFrame = parts[2],
+    //    //    DefaultSymbol = parts[1],
+    //    //    DefaultTimeFrame = parts[2],
     //    //    Exchange = parts[3],
-    //    //    ExchangeArea = parts[4],
+    //    //    DefaultExchangeArea = parts[4],
     //    //    DateRange = parts.Length > 5 ? parts[5] : null,
     //    //    RunId = parts.Length > 6 ? parts[6] : null
     //    //};

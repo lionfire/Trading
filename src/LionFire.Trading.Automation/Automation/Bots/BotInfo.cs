@@ -9,11 +9,60 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Bots;
 
-public readonly record struct InputInjectionInfo(PropertyInfo Parameter, PropertyInfo Values);
-
 public class BotInfo
 {
-    public List<InputInjectionInfo>? InputInjectionInfos { get; set; }
+    #region Lifecycle
+
+    public BotInfo() { }
+    public BotInfo(Type pBotType, Type botType)
+    {
+        #region Validation
+
+        if (!pBotType.IsAssignableTo(typeof(IPMarketProcessor))) throw new ArgumentException($"parameterType must be assignable to {typeof(IPMarketProcessor).FullName}.  parameterType: {pBotType.FullName}");
+        if (!botType.IsAssignableTo(typeof(IBot2))) throw new ArgumentException($"parameterType must be assignable to {typeof(IBot2).FullName}.  parameterType: {pBotType.FullName}");
+
+        #endregion
+
+        InputParameterToValueMapping = BotInfo.GetInputParameterToValueMapping(pBotType, botType);
+    }
+
+    #endregion
+
+    #region Properties
+
+    /// <summary>
+    /// Ordered list of mapping of Bot Input Parameter property to Bot Input Values property.
+    /// E.g.: Map "BTCUSDT HLC m5, lookback window of 5 bars" to a circular buffer with actual values.
+    /// </summary>
+    public List<InputParameterToValueMapping>? InputParameterToValueMapping { get; set; }
+
+    private static List<InputParameterToValueMapping> GetInputParameterToValueMapping(Type pBotType, Type botType)
+    {
+        List<InputParameterToValueMapping> result = [];
+
+        var botSignals = botType
+                        .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+                        .Where(pi => pi.PropertyType.IsAssignableTo(typeof(IReadOnlyValuesWindow)))
+                        .OrderBy(pi => pi.GetCustomAttribute<SignalAttribute>()?.Index ?? 0)
+                        .ThenBy(pi => pi.Name)
+                        ;
+
+        foreach (var propertyInfo in botSignals)
+        {
+            var parameterProperty = pBotType.GetProperty(propertyInfo.Name);
+
+            if (parameterProperty == null)
+            {
+                throw new ArgumentException($"Could not find matching Property {propertyInfo.Name} on {pBotType.FullName}");
+            }
+
+            result.Add(new InputParameterToValueMapping(parameterProperty, propertyInfo));
+        }
+
+        return result;
+    }
+
+    #endregion
 }
 
 public static class BotInfos
@@ -26,38 +75,8 @@ public static class BotInfos
 
     #region Methods
 
-    public static BotInfo Get(Type parameterType, Type botType)
-    {
-        return dict.GetOrAdd(parameterType, t =>
-        {
+    public static BotInfo Get(Type pBotType, Type botType) => dict.GetOrAdd(pBotType, t => new BotInfo(pBotType, botType));
 
-            if (!parameterType.IsAssignableTo(typeof(IPMarketProcessor))) throw new ArgumentException($"parameterType must be assignable to {typeof(IPMarketProcessor).FullName}.  parameterType: {parameterType.FullName}");
-
-            var result = new BotInfo();
-            result.InputInjectionInfos = new();
-
-            var botSignals = botType
-                .GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
-                .Where(pi => pi.PropertyType.IsAssignableTo(typeof(IReadOnlyValuesWindow)))
-                .OrderBy(pi => pi.GetCustomAttribute<SignalAttribute>()?.Index ?? 0)
-                .ThenBy(pi => pi.Name)
-                ;
-
-            foreach (var propertyInfo in botSignals)
-            {
-                var parameterProperty = parameterType.GetProperty(propertyInfo.Name);
-
-                if (parameterProperty == null)
-                {
-                    throw new ArgumentException($"Could not find matching Property {propertyInfo.Name} on {parameterType.FullName}");
-                }
-
-                result.InputInjectionInfos.Add(new InputInjectionInfo(parameterProperty, propertyInfo));
-            }
-            return result;
-        });
-    }
-    
     #endregion
 
 #if UNUSED // OLD From BotBatchBacktestControllerBase

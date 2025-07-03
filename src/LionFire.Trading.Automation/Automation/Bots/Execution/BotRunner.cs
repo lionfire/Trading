@@ -3,6 +3,9 @@ using LionFire.Threading;
 using LionFire.Trading.Automation;
 using Microsoft.Extensions.DependencyInjection;
 
+/// <summary>
+/// Create a BotHarness for a BotEntity and run it.
+/// </summary>
 public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
 {
     #region (static implementation)
@@ -15,17 +18,17 @@ public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
 
     public IServiceProvider ServiceProvider { get; }
     public ILogger<BotRunner> Logger { get; }
-    public LiveBotHarnessFactory LiveBotHarnessFactory { get; }
+    public BotHarnessFactory BotHarnessFactory { get; }
 
     #endregion
 
     #region Lifecycle
 
-    public BotRunner(IServiceProvider serviceProvider, ILogger<BotRunner> logger, LiveBotHarnessFactory liveBotHarnessFactory) //: base(enabledPredicate: b => b.Enabled)
+    public BotRunner(IServiceProvider serviceProvider, ILogger<BotRunner> logger, BotHarnessFactory botHarnessFactory) //: base(enabledPredicate: b => b.Enabled)
     {
         ServiceProvider = serviceProvider;
         Logger = logger;
-        LiveBotHarnessFactory = liveBotHarnessFactory;
+        BotHarnessFactory = botHarnessFactory;
     }
 
     #endregion
@@ -55,7 +58,7 @@ public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
 
         try
         {
-            harness = LiveBotHarnessFactory.Create(value);
+            harness = BotHarnessFactory.Create(value);
         }
         catch (Exception)
         {
@@ -84,6 +87,7 @@ public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
     }
 
     #endregion
+    
     async Task Run(BotEntity botEntity)
     {
         ArgumentNullException.ThrowIfNull(botEntity);

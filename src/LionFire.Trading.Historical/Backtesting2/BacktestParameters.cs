@@ -20,11 +20,11 @@ public class BotParameters
 
 }
 
-public class BacktestJob
-{
-    public BacktestParameters? Parameters { get; set; }
+//public class BacktestJob
+//{
+//    public BacktestParameters? Parameters { get; set; }
 
-    public object? Algo { get; set; }
-    public string? AlgoType => Algo?.GetType().FullName;
+//    public object? Algo { get; set; }
+//    public string? AlgoType => Algo?.GetType().FullName;
 
-}
+//}

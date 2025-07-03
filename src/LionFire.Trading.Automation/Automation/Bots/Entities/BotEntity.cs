@@ -16,7 +16,9 @@ namespace LionFire.Trading.Automation;
 [Alias("Bot")]
 public partial class BotEntity : ReactiveObject
 {
-    public PBotHarness? PBotHarness { get; set; }
+
+    //public Dictionary<string, object>? ParametersDictionary { get; set; }
+    public IPBot2? Parameters { get; set; }
 
     public OptimizationBacktestReference? BacktestReference { get; set; }
 
@@ -44,6 +46,10 @@ public partial class BotEntity : ReactiveObject
     private string? botTypeName;
 
     [Reactive]
+    private Type[]? botTypeParameters;
+    
+
+    [Reactive]
     private string? symbol;
 
     [Reactive]
@@ -55,6 +61,7 @@ public partial class BotEntity : ReactiveObject
 
     #region Derived
 
+    [JsonIgnore]
     public ExchangeSymbol? ExchangeSymbol
     {
         get
@@ -67,6 +74,7 @@ public partial class BotEntity : ReactiveObject
         }
     }
 
+    [JsonIgnore]
     public ExchangeSymbolTimeFrame? ExchangeSymbolTimeFrame
     {
         get
@@ -77,16 +85,24 @@ public partial class BotEntity : ReactiveObject
             }
             return new ExchangeSymbolTimeFrame(exchange, exchangeArea, symbol, timeFrame);
         }
+        set
+        {
+            Symbol = value?.Symbol;
+            Exchange = value?.Exchange;
+            ExchangeArea = value?.Area;
+            TimeFrame = value?.TimeFrame;
+        }
     }
 
     #endregion
 
     /// <summary>
-    /// Parameters that still exist on the current version of the bot must match exactly
+    /// PMultiSim that still exist on the current version of the bot must match exactly
     /// </summary>
     //public List<BacktestHandle>? Backtests { get; set; } // Maybe
-    public IObservableCache<OptimizationBacktestReference, string> Backtests => backtests;
-    private SourceCache<OptimizationBacktestReference, string> backtests = new SourceCache<OptimizationBacktestReference, string>(o=>o.ToString());
+    //public IObservableCache<OptimizationBacktestReference, string> Backtests => backtests;
+    public SourceCache<OptimizationBacktestReference, OptimizationBacktestReference> Backtests => backtests;
+    private SourceCache<OptimizationBacktestReference, OptimizationBacktestReference> backtests = new SourceCache<OptimizationBacktestReference, OptimizationBacktestReference>(o=>o);
 }
 
 #if FUTURE // Maybe

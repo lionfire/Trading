@@ -27,6 +27,15 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Optimization;
 
+/// <summary>
+/// Only 1
+/// - bot type
+/// - Start, EndExclusive
+/// - Exchange Area Symbol TimeFrame (default)
+/// 
+/// 1 or more
+/// - batches
+/// </summary>
 public partial class OptimizationTask : ReactiveObject, IRunnable
 {
     #region Dependencies
@@ -41,81 +50,13 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
 
     #region Parameters
 
-    public POptimization Parameters => Context.POptimization!;
+    #region (Derived)
 
-    public ExchangeSymbol? ExchangeSymbol => Parameters?.CommonBacktestParameters?.ExchangeSymbolTimeFrame;
+    public PMultiSim PMultiSim => MultiSimContext.Parameters;
+
+    public POptimization Parameters => PMultiSim.POptimization!;
 
     #endregion
-    PMultiBacktestContext pMultiBacktestContext;
-    #region Lifecycle
-
-    public OptimizationTask(IServiceProvider serviceProvider, PMultiBacktestContext parameters)
-    {
-        ServiceProvider = serviceProvider;
-        pMultiBacktestContext = parameters ?? throw new ArgumentNullException(nameof(parameters));
-
-
-    }
-    public async Task StartAsync(CancellationToken cancellationToken = default)
-    {
-        //IOptimizerEnumerable optimizerEnumerable = Parameters.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this); // OLD - find this and absorb
-
-        Context = await MultiBacktestContext.Create(ServiceProvider, pMultiBacktestContext);
-
-        if (CancellationTokenSource != null) { throw new AlreadyException(); }
-        CancellationTokenSource = new();
-
-        {
-            var actualCTS = CancellationTokenSource;
-            if (cancellationToken.CanBeCanceled)
-            {
-                actualCTS = CancellationTokenSource.CreateLinkedTokenSource(CancellationTokenSource.Token, cancellationToken);
-            }
-            Context.CancellationToken = actualCTS.Token;
-        }
-
-        if (Parameters == null) throw new ArgumentNullException(nameof(Parameters));
-        Parameters.ValidateOrThrow();
-
-        //OptimizationDirectory = GetOptimizationDirectory(Parameters.PBotType);
-
-        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
-
-        //if (Parameters.SearchSeed != 0) throw new NotImplementedException(); // NOTIMPLEMENTED
-
-        BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
-        ExecutionOptions = /*executionOptions ?? */ ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
-
-        //await Context.TrySetOptimizationRunInfo(() => getOptimizationRunInfo());
-
-
-        Context.ValidateOrThrow();
-
-        OptimizationMultiBatchJournal = ActivatorUtilities.CreateInstance<BacktestBatchJournal>(ServiceProvider, Context, Parameters.PBotType!, true);
-
-        var hjson = JsonValue.Parse(JsonSerializer.Serialize(Context.OptimizationRunInfo)).ToString(new HjsonOptions { EmitRootBraces = false });
-        string OptimizationRunInfoFileName = "OptimizationRunInfo.hjson";
-        await File.WriteAllTextAsync(Path.Combine(Context.OutputDirectory, OptimizationRunInfoFileName), hjson);
-
-        PGridSearchStrategy pGridSearchStrategy = new()
-        {
-            //Parameters = Parameters.ParameterRanges.ToDictionary(p => p.Name, p => new ParameterOptimizationOptions { MinValue = p.Min, MaxValue = p.Max, MinStep = p.Step, MaxStep = p.Step }),
-        };
-        Parameters.POptimizationStrategy = pGridSearchStrategy;
-
-        GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, Parameters, this);
-        OptimizationStrategy = gridSearchStrategy;
-
-        RunTask = Task.Run(async () =>
-        {
-            await gridSearchStrategy.Run().ConfigureAwait(false);
-            //await ServiceProvider.GetRequiredService<BacktestQueue>().StopAsync(default);
-            if (OptimizationMultiBatchJournal != null)
-            {
-                await OptimizationMultiBatchJournal.DisposeAsync();
-            }
-        });
-    }
 
     // TODO: Configure somehow
     public static string MachineName
@@ -127,27 +68,104 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
 
     #endregion
 
+    #region Lifecycle
+
+    public OptimizationTask(IServiceProvider serviceProvider, PMultiSim pMultiSim)
+    {
+        ServiceProvider = serviceProvider;
+        MultiSimContext = ActivatorUtilities.CreateInstance<MultiSimContext>(ServiceProvider, PMultiSim);
+
+        var MachineName = Environment.MachineName; // REVIEW - make configurable
+
+        MultiSimContext.Optimization.OptimizationRunInfo = new()
+        {
+            Guid = MultiSimContext.Guid.ToString(),
+            BotName = BotTyping.TryGetBotType(PMultiSim.PBotType!)?.Name ?? throw new ArgumentNullException("BotName"),
+            BotTypeName = MultiSimContext.ServiceProvider.GetRequiredService<BotTypeRegistry>().GetBotNameFromPBot(PMultiSim.PBotType!),
+
+            ExchangeSymbolTimeFrame = MultiSimContext.Parameters.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException(nameof(ExchangeSymbolTimeFrame)),
+
+            Start = MultiSimContext.Parameters.Start,
+            EndExclusive = MultiSimContext.Parameters.EndExclusive,
+
+            TicksEnabled = MultiSimContext.Parameters.Features.Ticks(),
+
+            BotAssemblyNameString = PMultiSim.PBotType!.Assembly.FullName ?? throw new ArgumentNullException(nameof(OptimizationRunInfo.BotAssemblyNameString)),
+            OptimizationExecutionDate = DateTime.UtcNow,
+
+            MachineName = MachineName,
+
+        };
+
+        MultiSimContext.OptimizationRunInfo.TryHydrateBuildDates(PMultiSim.PBotType!);
+
+        if (Parameters == null) throw new ArgumentNullException(nameof(Parameters));
+        Parameters.ValidateOrThrow();
+    }
+
+
+    public async Task StartAsync(CancellationToken cancellationToken = default)
+    {
+        await MultiSimContext.Init().ConfigureAwait(false);
+
+        //IOptimizerEnumerable optimizerEnumerable = PMultiSim.IsComprehensive ? new ComprehensiveEnumerable(this) : new NonComprehensiveEnumerable(this); // OLD - find this and absorb
+
+        BacktestBatcher = Parameters.BacktestBatcherName == null ? ServiceProvider.GetRequiredService<BacktestQueue>() : ServiceProvider.GetRequiredKeyedService<BacktestQueue>(Parameters.BacktestBatcherName);
+
+        //if (PMultiSim.SearchSeed != 0) throw new NotImplementedException(); // NOTIMPLEMENTED
+
+        BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
+        ExecutionOptions = /*executionOptions ?? */ ServiceProvider.GetRequiredService<IOptionsMonitor<BacktestExecutionOptions>>().CurrentValue;
+
+        //await MultiSimContext.TrySetOptimizationRunInfo(() => getOptimizationRunInfo());
+
+
+
+        var hjson = JsonValue.Parse(JsonSerializer.Serialize(MultiSimContext.OptimizationRunInfo)).ToString(new HjsonOptions { EmitRootBraces = false });
+        string OptimizationRunInfoFileName = "OptimizationRunInfo.hjson";
+        await File.WriteAllTextAsync(Path.Combine(this.MultiSimContext.OutputDirectory, OptimizationRunInfoFileName), hjson);
+
+        PGridSearchStrategy pGridSearchStrategy = new()
+        {
+            //PMultiSim = PMultiSim.ParameterRanges.ToDictionary(p => p.Name, p => new ParameterOptimizationOptions { MinValue = p.Min, MaxValue = p.Max, MinStep = p.Step, MaxStep = p.Step }),
+        };
+        Parameters.POptimizationStrategy = pGridSearchStrategy;
+
+        GridSearchStrategy gridSearchStrategy = ActivatorUtilities.CreateInstance<GridSearchStrategy>(ServiceProvider, Parameters, this);
+        OptimizationStrategy = gridSearchStrategy;
+
+        RunTask = Task.Run(async () =>
+        {
+            await gridSearchStrategy.Run().ConfigureAwait(false);
+            //await ServiceProvider.GetRequiredService<BacktestQueue>().StopAsync(default);
+            if (Journal != null)
+            {
+                await Journal.DisposeAsync();
+            }
+        });
+    }
+
+    #endregion
+
     #region State
+
+    public MultiSimContext MultiSimContext { get; private set; }
+
+    //[Obsolete("REVIEW - use MultiSimContext instead, and this is a Batch context that should be created by whoever creates batches (i.e. GridStrategy or other strategy)")]
+    //public BatchContext<double> BatchContext { get; private set; }
 
     public IOptimizationStrategy OptimizationStrategy { get; private set; }
 
-    public CancellationToken CancellationToken => CancellationTokenSource?.Token ?? CancellationToken.None;
-    public void Cancel() => CancellationTokenSource?.Cancel();
 
-    public MultiBacktestContext Context { get; private set; }
+    public string? OptimizationDirectory => MultiSimContext.OutputDirectory;
 
-    //string? OptimizationDirectory;
-    [Reactive(SetModifier = AccessModifier.Private)]
-    private BacktestBatchJournal? _optimizationMultiBatchJournal;
-
-    private IBacktestBatchJob? batchJob = null;
-
-    /// <remarks>
-    /// If not null, the task has already been started.
-    /// </remarks>
-    public CancellationTokenSource? CancellationTokenSource { get; private set; }
+    public BacktestsJournal Journal => MultiSimContext.Journal;
 
     public Task? RunTask { get; private set; }
+
+    #region Cancel State
+
+    #endregion
 
     #endregion
 }

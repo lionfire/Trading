@@ -153,15 +153,15 @@ namespace LionFire.Trading.Workspaces
 
         #region Account
 
-        public IAccount LiveAccount { get; set; }
-        public IAccount DemoAccount { get; set; }
-        public IAccount PaperAccount { get { return GetAccountForMode(PaperAccountMode); } } // REVIEW - how to do a Paper account alongside a real account?
-        public IAccount ScannerAccount { get { return GetAccountForMode(ScannerAccountMode); } }
+        public IAccount_Old LiveAccount { get; set; }
+        public IAccount_Old DemoAccount { get; set; }
+        public IAccount_Old PaperAccount { get { return GetAccountForMode(PaperAccountMode); } } // REVIEW - how to do a Paper account alongside a real account?
+        public IAccount_Old ScannerAccount { get { return GetAccountForMode(ScannerAccountMode); } }
 
         public AccountMode ScannerAccountMode { get { return Template.ScannerAccountMode; } set { Template.ScannerAccountMode = value; } }
         public AccountMode PaperAccountMode { get { return Template.PaperAccountMode; } set { Template.PaperAccountMode = value; } }
 
-        public IAccount Account
+        public IAccount_Old Account
         {
             get
             {
@@ -184,7 +184,7 @@ namespace LionFire.Trading.Workspaces
             }
         }
 
-        public IAccount GetAccountForMode(AccountMode mode)
+        public IAccount_Old GetAccountForMode(AccountMode mode)
         {
             switch (mode)
             {
@@ -467,7 +467,7 @@ namespace LionFire.Trading.Workspaces
 
         private IBot _AddBotForMode(BotMode mode, BacktestResult backtestResult = null, PBot pBot = null, TBot tBot = null, IBot bot = null)
         {
-            IAccount account;
+            IAccount_Old account;
             switch (mode)
             {
                 case BotMode.Live:
@@ -497,7 +497,7 @@ namespace LionFire.Trading.Workspaces
             return _AddBot(mode, backtestResult: backtestResult); // REFACTOR
         }
 
-        private IBot _AddBot(BotMode mode, BacktestResultHandle backtestResultHandle = null, IAccount account = null, BacktestResult backtestResult = null, PBot pBot = null, TBot tBot = null, IBot bot = null)
+        private IBot _AddBot(BotMode mode, BacktestResultHandle backtestResultHandle = null, IAccount_Old account = null, BacktestResult backtestResult = null, PBot pBot = null, TBot tBot = null, IBot bot = null)
         {
             if (account == null) throw new ArgumentNullException(nameof(account));
 

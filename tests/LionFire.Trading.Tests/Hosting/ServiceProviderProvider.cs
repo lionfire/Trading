@@ -33,11 +33,11 @@ public static class ServiceProviderProvider
 
             .AddBinance()
 
-            .AddAutomationRuntime()
             .Backtesting()
-            .ConfigureBacktestingOptions(Configuration)
             ;
 
+        throw new NotImplementedException(".ConfigureBacktestingOptions(Configuration)");
+            
         return services.BuildServiceProvider();
     }
     private static IServiceProvider? serviceProvider;

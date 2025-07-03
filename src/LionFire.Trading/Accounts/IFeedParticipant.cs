@@ -3,7 +3,7 @@ namespace LionFire.Trading
 {
     public interface IFeedParticipant
     {
-        IFeed Account { get; set; }
+        IFeed_Old Account { get; set; }
     }
 
 }

@@ -13,7 +13,7 @@ namespace LionFire.Trading
 #endif
     {
 #if !cAlgo
-        IAccount Account { get; set; }
+        IAccount_Old Account { get; set; }
 #endif
     }
 

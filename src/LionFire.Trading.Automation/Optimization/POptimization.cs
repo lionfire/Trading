@@ -19,20 +19,35 @@ using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Automation.Optimization;
 
+public class POptimizationVM : ReactiveObject
+{
+    public POptimization POptimization { get; }
+
+    public POptimizationVM(POptimization pOptimization)
+    {
+        POptimization = pOptimization;
+    }
+
+}
+
 // ENH: Validatable, make all properties mutable and not required in ctor.  (Or consider a new pattern: a pair of classes, one frozen and one mutable.)
 public partial class POptimization : ReactiveObject
     , IValidatable
 {
     public ValidationContext ValidateThis(ValidationContext c)
         => c
-            .PropertyNotNull(nameof(PBotType), PBotType)
             ;
 
     #region Identity Parameters
 
-    public Type? PBotType => Parent.PMultiBacktest.PBotType;
+    #region Bot Type
 
+    // FUTURE: allow it to be different than the MultiSim's PBotType
+
+    //public Type? PBotType { get; set; } 
     //public List<Type> BotTypes { get; set; } // ENH maybe someday though probably not, just a thought: OPTIMIZE - Test multiple bot types in parallel
+    
+    #endregion
 
     #endregion
 
@@ -40,14 +55,14 @@ public partial class POptimization : ReactiveObject
 
     CompositeDisposable disposables = new();
 
-    public POptimization(PMultiBacktestContext parent)
+    public POptimization(PMultiSim parent)
     {
-        Parent = parent ?? throw new ArgumentNullException(nameof(parent));
+        PMultiSim = parent ?? throw new ArgumentNullException(nameof(parent));
 
         var minParameterPriorityChanged = this.WhenAnyValue(x => x.MinParameterPriority);
 
         // OLD
-        //this.WhenAnyValue(x => x.Parent.PMultiBacktest.PBotType)
+        //this.WhenAnyValue(x => x.Parent.PMultiSim.PBotType)
         //.Subscribe(t => PBotType = t).DisposeWith(disposables);
 
         parameters.Connect()
@@ -106,38 +121,10 @@ public partial class POptimization : ReactiveObject
             InitLevelsOfDetail();
         };
 
-
-        this.WhenAnyValue(x => x.Parent.PMultiBacktest.PBotType)
-            .Select(BotParameterPropertiesInfo.SafeGet)
-            .Subscribe(properties =>
-            {
-                Debug.WriteLine($"POptimization Rx bind: PBotType => parameters");
-
-                parameters.Edit(u =>
-                {
-                    u.Clear();
-                    if (properties != null)
-                    {
-                        u.AddOrUpdate(properties.PathDictionary.Values
-                            .Where(info => info.IsOptimizable
-                                && info.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
-                            )
-                            .Select(info =>
-                            {
-                                var poo = CreatePoo(info);
-                                poo.PropertyChanged += (s, e) => RaiseParametersChanged();
-                                return poo;
-                            }));
-                    }
-                    this.RaisePropertyChanged(nameof(Parameters));
-                });
-            })
-            .DisposeWith(disposables);
-
     }
 
 
-    #endregion
+#endregion
 
     #region Execution options
 
@@ -181,8 +168,6 @@ public partial class POptimization : ReactiveObject
     //public int SearchSeed { get; set; }
 
     #endregion
-
-    public PMultiBacktest CommonBacktestParameters => Parent.PMultiBacktest;
 
 #if UNUSED // Reconsider both of these
     public int MinLevelOfDetail { get; set; } = 3; // TEMP, default can be higher   
@@ -233,84 +218,9 @@ public partial class POptimization : ReactiveObject
     #region Journal
 
     public TradeJournalOptions TradeJournalOptions { get => tradeJournalOptions ??= new(); set => tradeJournalOptions = value; }
-
     private TradeJournalOptions? tradeJournalOptions;
 
     #endregion
-
-    /// <summary>
-    /// Initialize ParameterOptimizationOptions if needed, from various sources, in the following order:
-    /// - ParameterAttribute
-    /// //- EnableOptimization from this.MinParameterPriority
-    /// //- POptimizationStrategy.Parameters
-    /// </summary>
-    /// <param name="info"></param>
-    /// <returns></returns>
-    public static IParameterOptimizationOptions CreatePoo(HierarchicalPropertyInfo info)
-    {
-        //ParameterOptimizationOptions ??= new();
-
-        //var fromPOptimization = ParameterOptimizationOptions.TryGetValue(info.Path)
-        //?? ParameterOptimizationOptions?.TryGetValue(info.Key)
-        ;
-        //if (fromPOptimization != null)
-        //{
-        //    return fromPOptimization;
-        //}
-
-        IParameterOptimizationOptions parameterOptimizationOptions = LionFire.Trading.ParameterOptimizationOptions.Create(info);
-
-
-        //ParameterOptimizationOptions.Create(info.ValueType, "<AttributePrototype>");
-
-        using var _ = parameterOptimizationOptions.SuppressChangeNotifications();
-
-        AssignFromExtensions.AssignNonDefaultPropertiesFrom(parameterOptimizationOptions!, info.ParameterAttribute);
-
-        #region Attribute
-
-        //IParameterOptimizationOptions fromAttribute = info.ParameterAttribute.GetParameterOptimizationOptions(info.LastPropertyInfo!.PropertyType);
-        //ArgumentNullException.ThrowIfNull(fromAttribute);
-
-        //var clone = fromAttribute.Clone();
-
-        #endregion
-
-        //if (!clone.EnableOptimization.HasValue)
-        //{
-        //    clone.EnableOptimization = info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
-        //}
-
-        #region POptimizationStrategy
-
-        //IParameterOptimizationOptions? fromOptimizationParameters = POptimizationStrategy.Parameters.TryGetValue(info.Path);
-
-        //// FUTURE: Clone per-strategy options somehow 
-        ////clone.FitnessOfInterest ??= gridSearchStrategy.Parameters.FitnessOfInterest;
-
-        //if (fromOptimizationParameters != null)
-        //{
-        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
-        //}
-
-        #endregion
-
-        #region ParameterOptimizationOptions
-
-        //clone.Path = info.Path;
-        //ParameterOptimizationOptions.TryAdd(info.Path, clone);
-
-        //var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
-        //if (fromPOptimization != null)
-        //{
-        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
-        //}
-
-        #endregion
-
-        return parameterOptimizationOptions;
-        //return ParameterOptimizationOptions[info.Path];
-    }
 
     public IEnumerable<int> LevelsOfDetailRange => Enumerable.Range(LevelsOfDetail.MinLevel, 0); // FUTURE: Levels above 0
     public IEnumerable<ILevelOfDetail> LevelsOfDetailEnumeration => Enumerable.Range(LevelsOfDetail.MinLevel, 1 - LevelsOfDetail.MinLevel).Select(level => LevelsOfDetail.GetLevel(level));
@@ -334,7 +244,7 @@ public partial class POptimization : ReactiveObject
             {
                 debounceLod = new Timer(_ =>
                 {
-                    Debug.WriteLine($"POptimization.OnLevelsOfDetailChanged: notifying. Parameters: {Parameters.Count}, Optimizable: {OptimizableParameters.Count}");
+                    Debug.WriteLine($"POptimization.OnLevelsOfDetailChanged: notifying. PMultiSim: {Parameters.Count}, Optimizable: {OptimizableParameters.Count}");
                     InitLevelsOfDetail();
                     ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailEnumeration));
                     ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailRange));
@@ -358,8 +268,7 @@ public partial class POptimization : ReactiveObject
 
     #endregion
 
-    public PMultiBacktestContext Parent { get; }
-
+    public PMultiSim PMultiSim { get; }
 
     public bool EffectiveEnableOptimization(IParameterOptimizationOptions options)
     {

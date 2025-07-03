@@ -13,6 +13,10 @@ namespace LionFire.Trading.Automation;
 public class WorkspaceChildTypeConfigurator<T> : IWorkspaceServiceConfigurator
     where T : notnull
 {
+
+    public bool Recursive { get; set; } = false;
+    public bool AutoSave { get; set; } = true;
+
     public ValueTask ConfigureWorkspaceServices(IServiceCollection services, UserWorkspacesService userWorkspacesService, string? workspaceId)
     {
         var workspaceReference = userWorkspacesService.UserWorkspaces.GetChildSubpath(workspaceId);
@@ -20,7 +24,7 @@ public class WorkspaceChildTypeConfigurator<T> : IWorkspaceServiceConfigurator
         if (workspaceReference != null)
         {
             services
-               .RegisterObservablesInSubDirForType<T>(userWorkspacesService.ServiceProvider, workspaceReference)
+               .RegisterObservablesInSubDirForType<T>(userWorkspacesService.ServiceProvider, workspaceReference, recursive: Recursive, autosave: AutoSave)
                //.AddSingleton<BotsProvider>()
                ;
         }

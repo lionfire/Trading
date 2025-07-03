@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Accounts
 {
-    public abstract class FeedBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, INotifyPropertyChanged, IFeed
+    public abstract class FeedBase<TTemplate> : ITemplateInstance<TTemplate>, IHierarchicalTemplateInstance, INotifyPropertyChanged, IFeed_Old
         , IAsyncSubscribable
         where TTemplate : TFeed
     {
@@ -131,7 +131,7 @@ namespace LionFire.Trading.Accounts
             {
                 if (marketData == null)
                 {
-                    marketData = new MarketData { Account = (IAccount)this };
+                    marketData = new MarketData { Account = (IAccount_Old)this };
                 }
                 return marketData;
             }

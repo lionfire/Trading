@@ -21,7 +21,7 @@ namespace LionFire.Trading.Spotware.Connect
 
     public class SpotwareDataProvider : IHistoricalDataProvider
     {
-        public IAccount Account { get { return account; } }
+        public IAccount_Old Account { get { return account; } }
         private CTraderAccount account;
         public SpotwareDataProvider(CTraderAccount account)
         {

@@ -5,8 +5,8 @@ namespace LionFire.Trading;
 public interface IExchangeAccountProvider
 {
     string Key { get; }
-    IAccount GetAccount(string accountId = "default");
+    IAccount_Old GetAccount(string accountId = "default");
 
-    IReadOnlyDictionary<string,IAccount> Accounts { get; }
+    IReadOnlyDictionary<string,IAccount_Old> Accounts { get; }
     IEnumerable<string> AccountIdsAvailable { get; }
 }

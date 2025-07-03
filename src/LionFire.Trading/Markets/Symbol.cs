@@ -56,7 +56,7 @@ namespace LionFire.Trading
 
         MarketTickSeries MarketTickSeries { get; }
 
-        IAccount Account { get; }
+        IAccount_Old Account { get; }
         Task EnsureHasLatestTick();
         double GetStopLossFromPips(TradeType tradeType, double stopLossInPips);
         double GetTakeProfitFromPips(TradeType tradeType, double takeProfitInPips);
@@ -76,7 +76,7 @@ namespace LionFire.Trading
     }
 
     public class SymbolImpl<FeedType> : SymbolImplBase<FeedType>, IBacktestSymbol
-        where FeedType : IFeed
+        where FeedType : IFeed_Old
     {
         public SymbolImpl(string symbolCode, FeedType market) : base(symbolCode, market) { }
 
@@ -91,7 +91,7 @@ namespace LionFire.Trading
     }
 
     public abstract class SymbolImplBase<AccountType> : Symbol, ISymbolInternal
-        where AccountType : IFeed
+        where AccountType : IFeed_Old
     {
 
 
@@ -135,7 +135,7 @@ namespace LionFire.Trading
 
         public AccountType Feed { get; protected set; }
 
-        public IAccount Account => this.Feed as IAccount;
+        public IAccount_Old Account => this.Feed as IAccount_Old;
 
         #endregion
 

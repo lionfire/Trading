@@ -5,7 +5,7 @@ public interface IPKlineInput : IPInput
 {
 
     string Exchange { get; }
-    string ExchangeArea { get; }
+    string Area { get; }
     string Symbol { get; }
     TimeFrame TimeFrame { get; }
 

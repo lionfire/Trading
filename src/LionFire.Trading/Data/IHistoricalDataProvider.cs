@@ -16,7 +16,7 @@ namespace LionFire.Trading;
 
 public interface IHistoricalDataProvider
 {
-    IAccount Account { get; }
+    IAccount_Old Account { get; }
     Task<DataLoadResult> RetrieveDataForChunk(MarketSeriesBase marketSeries, DateTimeOffset date, bool cacheOnly = false, bool writeCache = true, TimeSpan? maxOutOfDate = null, CancellationToken cancellationToken = default);
 }
 

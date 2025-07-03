@@ -8,8 +8,8 @@ namespace LionFire.Trading
     // For cAlgo compatibility - TODO: Only compile for cAlgo
     public class Server
     {
-        IAccount account;
-        public Server(IAccount account)
+        IAccount_Old account;
+        public Server(IAccount_Old account)
         {
             this.account = account;
         }

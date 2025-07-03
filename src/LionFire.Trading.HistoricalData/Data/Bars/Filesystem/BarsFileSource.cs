@@ -58,7 +58,7 @@ public class BarsFileSource : IChunkedBars, IListableBarsSource
 
             if (longRange.endExclusive <= DateTime.UtcNow)
             {
-                chunk = await GetLongChunk(new SymbolBarsRange(range.Exchange, range.ExchangeArea, range.Symbol, range.TimeFrame, longRange.start, longRange.endExclusive), options);
+                chunk = await GetLongChunk(new SymbolBarsRange(range.Exchange, range.Area, range.Symbol, range.TimeFrame, longRange.start, longRange.endExclusive), options);
 
                 if (chunk != null) { chunk = chunk.Trim(range.Start, range.EndExclusive); }
             }

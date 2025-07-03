@@ -21,14 +21,14 @@ namespace LionFire.Trading
 
     public class ExposureItem
     {
-        public ExposureItem(string code, IAccount account)
+        public ExposureItem(string code, IAccount_Old account)
         {
             this.SymbolCode = code;
             this.Account = account;
         }
 
         public string SymbolCode { get; set; }
-        public IAccount Account { get; set; }
+        public IAccount_Old Account { get; set; }
         public IPositionsDouble Positions { get { return Account.Positions; } }
         public IPendingOrders Orders { get { return Account.PendingOrders; } }
 
@@ -107,8 +107,8 @@ namespace LionFire.Trading
     }
     public class PositionStats
     {
-        public IAccount Account { get; set; }
-        public PositionStats(IAccount account) { this.Account = account; }
+        public IAccount_Old Account { get; set; }
+        public PositionStats(IAccount_Old account) { this.Account = account; }
 
         public Dictionary<string, ExposureItem> Exposure { get; set; }
 

@@ -148,8 +148,8 @@ public class OptimizationRunAnalysisService : IHostedService
     //                        var id = new OptimizationRunId()
     //                        {
     //                            Bot = bot,
-    //                            Symbol = symbol,
-    //                            TimeFrame = tf,
+    //                            DefaultSymbol = symbol,
+    //                            DefaultTimeFrame = tf,
     //                            Start = split[0],
     //                            End = split[1],
     //                        };

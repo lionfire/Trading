@@ -7,6 +7,7 @@ using LionFire.Extensions.Logging;
 using LionFire.Serialization.Csv;
 using LionFire.Threading;
 using LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
+using LionFire.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using NLog.LayoutRenderers.Wrappers;
 using Spectre.Console;
@@ -25,12 +26,14 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
     public OptimizationTask OptimizationTask { get; }
 
+    public MultiSimContext MultiSimContext => OptimizationTask.MultiSimContext;
+
     internal ILogger Logger { get; }
 
     #region Derived
 
     public IServiceProvider ServiceProvider => OptimizationTask.ServiceProvider;
-    private BacktestBatchJournal OptimizationMultiBatchJournal => OptimizationTask.OptimizationMultiBatchJournal!;
+    private BacktestsJournal BacktestsJournal => OptimizationTask.Journal!;
 
     #endregion
 
@@ -44,7 +47,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
     #region Lifecycle
 
-    public GridSearchStrategy(ILogger<GridSearchStrategy> logger, POptimization optimizationParameters, OptimizationTask optimizationTask) : base(optimizationTask.Context, optimizationParameters)
+    public GridSearchStrategy(ILogger<GridSearchStrategy> logger, POptimization optimizationParameters, OptimizationTask optimizationTask) : base(optimizationTask, optimizationParameters)
     {
         Parameters = optimizationParameters.POptimizationStrategy as PGridSearchStrategy ?? throw new ArgumentException("optimizationParameters.POptimizationStrategy must be PGridSearchStrategy");
 
@@ -52,13 +55,13 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         Logger = logger; // optimizationTask.ServiceProvider.GetRequiredService<ILogger<GridSearchStrategy>>();
         State = new GridSearchState(this);
 
-        if (optimizationTask.Context.OutputDirectory != null)
+        if (optimizationTask.MultiSimContext.OutputDirectory != null)
         {
             foreach (var level in State.LevelsOfDetail)
             {
                 var json = JsonSerializer.Serialize(
                     level,
-                    //level.Parameters.OfType<object>(),
+                    //level.PMultiSim.OfType<object>(),
                     new JsonSerializerOptions
                     {
                         WriteIndented = false,
@@ -68,7 +71,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                 var hjsonValue = Hjson.JsonValue.Parse(json);
                 var hjson = hjsonValue.ToString(new HjsonOptions { EmitRootBraces = false });
 
-                var path = Path.Combine(optimizationTask.Context.OutputDirectory, $"GridLevel {level.Level}.hjson");
+                var path = Path.Combine(optimizationTask.MultiSimContext.OutputDirectory, $"GridLevel {level.Level}.hjson");
                 File.WriteAllText(path, hjson);
             }
         }
@@ -80,7 +83,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
     public GridSearchState State { get; private set; }
 
-    public long BacktestsComplete => BacktestContext.Events.Completed;
+    public long BacktestsComplete => MultiSimContext.BatchEvents.Completed;
     public long BacktestsQueued { get; set; }
 
     public long MinBacktestsRemaining { get; set; }
@@ -118,7 +121,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
             if (State.LevelsOfDetail != null)
             {
                 progress.Completed = BacktestsComplete;
-                progress.FractionallyCompleted = BacktestContext.Events.FractionallyCompleted;
+                progress.FractionallyCompleted = MultiSimContext.BatchEvents.FractionallyCompleted;
                 progress.Queued = BacktestsQueued;
                 //progress.Total = (long)State.LevelsOfDetail.Select(l => l.TestPermutationCount).Sum();
                 //progress.PlannedSearchTotal = ; // FUTURE: Everything at level 1+
@@ -149,7 +152,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
     //    }
     //}
 
-    public CancellationToken CancellationToken => OptimizationTask.Context.CancellationToken;
+    public CancellationToken CancellationToken => MultiSimContext.CancellationToken;
 
     public async Task Run()
     {
@@ -165,8 +168,12 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
         int maxBatchSize = OptimizationParameters.MaxBatchSize;
 
-        var ParametersToTest = Channel.CreateBounded<List<int>>(new BoundedChannelOptions(maxBatchSize * 2) { FullMode = BoundedChannelFullMode.Wait,
-            SingleReader = true, SingleWriter = true, AllowSynchronousContinuations = true
+        var ParametersToTest = Channel.CreateBounded<List<int>>(new BoundedChannelOptions(maxBatchSize * 2)
+        {
+            FullMode = BoundedChannelFullMode.Wait,
+            SingleReader = true,
+            SingleWriter = true,
+            AllowSynchronousContinuations = true
             //SingleReader = false, SingleWriter = false, AllowSynchronousContinuations = false
         });
 
@@ -207,6 +214,10 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     }
                 }
 
+                var pBotType = MultiSimContext.Parameters.PBotType ?? throw new ArgumentNullException("MultiSimContext.Parameters.PBotType");
+                
+                OptimizationParameters.ValidateOrThrow();
+
                 if (batchStaging.Count > 0)
                 {
                     int batchStagingIndex = 0;
@@ -214,12 +225,11 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     while (batchStagingIndex < batchStaging.Count && !CancellationToken.IsCancellationRequested)
                     {
                         var enqueueJobSW = Stopwatch.StartNew();
-                        var job = await batchQueue.EnqueueJob(BacktestContext, batch =>
-                        {
-                            batch.Journal = OptimizationMultiBatchJournal;
-                            Logger.LogInformation("Enqueuing batch {0} with {1} items", batch.Guid, batchStaging.Count);
 
-                            List<PBacktestTask2> backtestTasksBatch = new(maxBatchSize);
+                        List<PBotWrapper> backtestTasksBatch = new(maxBatchSize);
+                        {
+                            //Logger.LogInformation("Enqueuing batch {0} with {1} items", batchStagingIndex, batchStaging.Count);
+
                             //backtestTasksBatch.Clear();
 
                             for (
@@ -227,7 +237,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                                         && backtestTasksBatch.Count < maxBatchSize
                                     ; batchStagingIndex++)
                             {
-                                var pBot = Activator.CreateInstance(OptimizationParameters.PBotType);
+                                var pBot = Activator.CreateInstance(pBotType);
 
                                 foreach (var poo in unoptimizableParameters)
                                 {
@@ -245,12 +255,12 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                                 //foreach (var (src, dest) in propertiesToCopy) { dest.SetValue(pBot, src.GetValue(pBacktest)); }
                                 //foreach (var range in segments) { range.Info.SetValue(pBot, range.CurrentValue); }
 
-                                var pBacktestTask = new PBacktestTask2(OptimizationParameters.CommonBacktestParameters)
+                                var pItem = new PBotWrapper //(OptimizationParameters.CommonBacktestParameters)
                                 {
                                     PBot = (IPTimeFrameBot2)pBot!,
                                     OnFinished = OnBacktestFinished
                                 };
-                                backtestTasksBatch.Add(pBacktestTask);
+                                backtestTasksBatch.Add(pItem);
                                 Interlocked.Increment(ref backtestsEnqueued);
 
                                 //foreach (var range in ((IEnumerable<IParameterValuesSegment>)segments).Reverse())
@@ -262,10 +272,16 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                                 //    }
                                 //}
                             }
-                            batch.Backtests = backtestTasksBatch;
-                        }, CancellationToken);
+                        }
 
-                        Logger.Log(enqueueJobSW.ElapsedMilliseconds > 50 ? LogLevel.Information : LogLevel.Trace, "Enqueued batch in {0}ms", enqueueJobSW.ElapsedMilliseconds);
+                        var job = await batchQueue.EnqueueJob(MultiSimContext, backtestTasksBatch
+                        //    , job =>
+                        //{
+                        //    job.Backtests = backtestTasksBatch;
+                        //}
+                        , CancellationToken);
+
+                        Logger.Log(enqueueJobSW.ElapsedMilliseconds > 50 ? LogLevel.Information : LogLevel.Trace, "Enqueued batch #{0} {1} with {2} items in {3}ms", batchStagingIndex, job.Guid, batchStaging.Count, enqueueJobSW.ElapsedMilliseconds);
                         BacktestsQueued += batchStaging.Count;
                     }
                 }

@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Accounts
 {
-    public abstract class LiveAccountBase<TTemplate> : AccountBase<TTemplate>, IAccount
+    public abstract class LiveAccountBase<TTemplate> : AccountBase_Old<TTemplate>, IAccount_Old
         where TTemplate : TAccount
     {
 

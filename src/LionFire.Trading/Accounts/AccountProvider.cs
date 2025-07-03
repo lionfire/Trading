@@ -16,7 +16,7 @@ public class AccountProvider : IAccountProvider
         Logger = logger;
     }
 
-    public IAccount? GetAccount(ExchangeId exchangeId, string accountName)
+    public IAccount_Old? GetAccount(ExchangeId exchangeId, string accountName)
     {
         if (!exchangeId.HasValue || accountName == null) { return null; }
 
@@ -29,10 +29,10 @@ public class AccountProvider : IAccountProvider
         return null;
     }
 
-    private IAccount GetAccount(IExchangeAccountProvider exchangeAccountProvider, string accountName)
+    private IAccount_Old GetAccount(IExchangeAccountProvider exchangeAccountProvider, string accountName)
         => exchangeAccountProvider.GetAccount(accountName);
 
-    public IEnumerable<IAccount> Accounts => ExchangeAccountProviders.Values.SelectMany(eap => eap.Accounts.Values);
+    public IEnumerable<IAccount_Old> Accounts => ExchangeAccountProviders.Values.SelectMany(eap => eap.Accounts.Values);
 
     public ILogger<AccountProvider> Logger { get; }
 

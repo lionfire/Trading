@@ -37,6 +37,13 @@ public interface IReadOnlyValuesWindow<TValue, TPrecision> : IReadOnlyValuesWind
 //    IDisposable SubscribeToPrice(TPrecision triggerValue, Action<(TPrecision oldValue, TPrecision newValue)> onReached);
 //}
 
+//public interface ILookbackSubscription : IDisposable
+//{
+//    ValueTask Lookback(int size);
+//    ValueTask<int> Lookback();
+
+//}
+
 public interface IReadOnlyTimeFrameValuesWindow<T> : IReadOnlyValuesWindow<T>
 {
     (DateTimeOffset lastOpenTime, IList<ArraySegment<T>> arraySegments) ReversedValuesBufferWithTime { get; }

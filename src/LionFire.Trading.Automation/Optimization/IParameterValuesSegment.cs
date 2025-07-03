@@ -67,11 +67,11 @@ public class OptimizationLevelOfDetail
 
         #region ranges
 
-        //foreach (var parameterRange in Parameters.ParameterRanges)
+        //foreach (var parameterRange in PMultiSim.ParameterRanges)
         //{
         //    var info = botParameters.PathDictionary.TryGetValue(parameterRange.Name)
         //        ?? botParameters.NameDictionary.TryGetValue(parameterRange.Name)
-        //        ?? throw new ArgumentException($"Parameter {parameterRange.Name} not found in {Parameters.BotParametersType}");
+        //        ?? throw new ArgumentException($"Parameter {parameterRange.Name} not found in {PMultiSim.BotParametersType}");
 
         //    var range = parameterRange.Create(info);
         //    segments.Add(range);

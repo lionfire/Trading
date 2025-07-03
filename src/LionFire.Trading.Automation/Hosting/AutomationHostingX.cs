@@ -61,7 +61,7 @@ public static class AutomationHostingX
         where T : notnull
     {
         return services
-                .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, WorkspaceChildTypeConfigurator<T>>()
+                .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, WorkspaceChildTypeConfigurator<T>>( new WorkspaceChildTypeConfigurator<T>() { /*Recursive = false*/ })
             ;
     }
     public static IServiceCollection AutomationModel(this IServiceCollection services, IConfiguration configuration)
@@ -75,12 +75,8 @@ public static class AutomationHostingX
             .AddWorkspaceChildType<Portfolio2>()
             .AddWorkspaceChildType<BotEntity>()
 
-            // OLD
-            //.TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, BotsWorkspaceServiceConfigurator>()
-            //.TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, PortfoliosWorkspaceServiceConfigurator>()
-
             .AddWorkspaceDocumentService<string, BotEntity>()
-            .AddWorkspaceDocumentService<string, Portfolio2>()
+            //.AddWorkspaceDocumentService<string, Portfolio2>()
             ;
     }
 
@@ -89,7 +85,7 @@ public static class AutomationHostingX
         services
             .Backtesting()
             .Optimization(configuration)
-            .AddSingleton<LiveBotHarnessFactory>()
+            .AddSingleton<BotHarnessFactory>()
             ;
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceDocumentRunner<string, BotEntity>, WorkspaceDocumentRunner<string, BotEntity, BotRunner>>());

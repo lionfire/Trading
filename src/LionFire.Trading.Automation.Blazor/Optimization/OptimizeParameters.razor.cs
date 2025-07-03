@@ -19,8 +19,8 @@ public partial class OptimizeParameters(ILogger<OptimizeParameters> Logger)
     //{
     //    //this.WhenAnyValue(x => x.ViewModel.DateRange).Subscribe(range =>
     //    //{
-    //    //    ViewModel!.POptimization2.PMultiBacktest.Start = !range.Start.HasValue ? DateTimeOffset.MinValue : new DateTimeOffset(range.Start.Value, TimeSpan.Zero);
-    //    //    ViewModel!.POptimization2.PMultiBacktest.EndExclusive = !range.End.HasValue ? DateTimeOffset.MaxValue : new DateTimeOffset(range.End.Value, TimeSpan.Zero);
+    //    //    ViewModel!.POptimization2.PMultiSim.Start = !range.Start.HasValue ? DateTimeOffset.MinValue : new DateTimeOffset(range.Start.Value, TimeSpan.Zero);
+    //    //    ViewModel!.POptimization2.PMultiSim.EndExclusive = !range.End.HasValue ? DateTimeOffset.MaxValue : new DateTimeOffset(range.End.Value, TimeSpan.Zero);
     //    //});
     //    return base.OnParametersSetAsync();
     //}

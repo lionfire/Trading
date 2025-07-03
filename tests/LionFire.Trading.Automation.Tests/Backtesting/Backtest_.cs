@@ -35,11 +35,12 @@ public static class BacktestX
     //        Start = start,
     //        EndExclusive = endExclusive,
     //        ExchangeSymbol = exchangeSymbolTimeFrame,
-    //        //TimeFrame = exchangeSymbolTimeFrame.TimeFrame,
+    //        //DefaultTimeFrame = exchangeSymbolTimeFrame.DefaultTimeFrame,
     //    });
     //}
 }
 
+#if TODO //fix after refactor - need MultiBacktest now?
 public class BacktestTheoryData : TheoryData<PBacktestTask2>
 {
     public IEnumerable<TimeFrame> TimeFrames
@@ -98,11 +99,12 @@ public class BacktestTheoryData : TheoryData<PBacktestTask2>
                 TimeFrame = timeFrame,
                 Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
                 EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
-                Features = BotHarnessFeatures.Bars,
+                Features = SimFeatures.Bars,
             });
         }
     }
 }
+#endif
 
 //public class BatchBacktestParameters
 //{
@@ -120,6 +122,7 @@ public class BacktestTheoryData : TheoryData<PBacktestTask2>
 //    }
 //}
 
+#if TODO // Restore after refactor - maybe switch to be centered around MultiBacktest since we more rarely do just one
 
 public class Backtest_Batch_ : BinanceDataTest
 {
@@ -144,7 +147,7 @@ public class Backtest_Batch_ : BinanceDataTest
         {
             var exchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame("Binance", "futures", symbol, TimeFrame.m1);
 
-            var job = await batchQueue.EnqueueJob(await MultiBacktestContext.Create(ServiceProvider,
+            var job = await batchQueue.EnqueueJob(await MultiBacktestContext<double>.Create(ServiceProvider,
                 new PMultiBacktest(typeof(PAtrBot<double>), exchangeSymbolTimeFrame,
                Start,
                EndExclusive
@@ -174,7 +177,7 @@ public class Backtest_Batch_ : BinanceDataTest
                         //EndExclusive = new DateTimeOffset(2024, 7, 1, 0, 0, 0, TimeSpan.Zero),
                         //Start = new DateTimeOffset(2024, 7, 22, 0, 0, 0, TimeSpan.Zero),
                         //EndExclusive = new DateTimeOffset(2024, 7, 23, 0, 0, 0, TimeSpan.Zero),
-                        Features = BotHarnessFeatures.Bars,
+                        Features = SimFeatures.Bars,
 
                     };
                 }
@@ -250,7 +253,7 @@ public class Backtest_Batch_ : BinanceDataTest
                         },
                      Start = Start,
                      EndExclusive = EndExclusive,
-                     Features = BotHarnessFeatures.Bars,
+                     Features = SimFeatures.Bars,
                  },
                 new PBacktestTask2<PAtrBot<double>>
                  {
@@ -264,7 +267,7 @@ public class Backtest_Batch_ : BinanceDataTest
                      Start = new DateTimeOffset(2024, 1, 1, 0, 0, 0, TimeSpan.Zero),
                      // Invalid: different range
                      EndExclusive = new DateTimeOffset(2024, 2, 2, 0, 0, 0, TimeSpan.Zero),
-                     Features = BotHarnessFeatures.Bars,
+                     Features = SimFeatures.Bars,
                  },
                     ]];
             });
@@ -273,6 +276,7 @@ public class Backtest_Batch_ : BinanceDataTest
     }
 }
 
+#endif
 public class Backtest_Optimize_ : BinanceDataTest
 {
 #if TODO
@@ -293,6 +297,7 @@ public class Backtest_Optimize_ : BinanceDataTest
 #endif
 }
 
+#if TODO //fix after refactor - need MultiBacktest now?
 public class Backtest_ : BinanceDataTest
 {
     // TODO - FIXME
@@ -300,7 +305,11 @@ public class Backtest_ : BinanceDataTest
     [ClassData(typeof(BacktestTheoryData))]
     public async Task Execute_(PBacktestTask2 parameters)
     {
-        await (await BacktestBatchTask2<double>.Create(ServiceProvider, [parameters], dateChunker: HistoricalDataChunkRangeProvider)).Run();
+        await (await MultiBacktestHarness<double>.Create(ServiceProvider, new PSimContext<double>()
+        {
+            DefaultExchangeArea = parameters.ExchangeSymbol,
+            DefaultMarketSymbol = parameters.ExchangeSymbol?.Symbol,
+        }, [parameters], dateChunker: HistoricalDataChunkRangeProvider)).Run();
     }
 
 #if RunViaExtensionMethod
@@ -359,6 +368,7 @@ public class Backtest_ : BinanceDataTest
 #endif
 }
 
+#endif
 
 
 

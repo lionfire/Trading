@@ -12,7 +12,7 @@ public interface IInputEnumerator
 }
 
 /// <summary>
-/// An enumerator of a series of input OutputBuffer, typically historical data for a Symbol, or Indicator output.
+/// An enumerator of a series of input OutputBuffer, typically historical data for a DefaultSymbol, or Indicator output.
 /// 
 /// Features:
 /// - chunked loading
@@ -22,7 +22,7 @@ public abstract class InputEnumeratorBase : IInputEnumerator
 {
     #region Identity
 
-    public Type ValueType { get; }
+    //public abstract Type ValueType { get; }
 
     #endregion
 
@@ -142,7 +142,8 @@ public abstract class InputEnumeratorBase<TValue, TPrecision> : InputEnumeratorB
     #region IReadOnlyValuesWindow<T>
 
     public abstract uint Capacity { get; }
-    public abstract bool IsFull { get; }
+
+    //public abstract bool IsFull { get; } // UNUSED, not sure how it would be useful or how exactly it works
     public abstract uint Size { get; }
 
     public abstract TValue this[int index] { get; }

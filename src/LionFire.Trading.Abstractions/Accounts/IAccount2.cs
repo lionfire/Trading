@@ -1,59 +1,16 @@
 ﻿using DynamicData;
-using System.Numerics;
+using LionFire.Trading.Automation;
 
 namespace LionFire.Trading;
 
-public interface IMarketParticipant2
+/// <summary>
+/// An account for a user (or sub-user) within a single exchange (e.g. Binance) and area (e.g. spot or futures)
+/// </summary>
+public interface IAccount2 : IBarListener
 {
-
-    void OnBar();
-
-}
-
-public interface IPAccount2
-{
-    string? BalanceCurrency { get; }
-
-}
-
-public interface IPSimulatedAccount2<TPrecision> : IPAccount2
-    where TPrecision : struct, INumber<TPrecision>
-{
-    TPrecision StartingBalance { get; set; }
-    //DateTimeOffset StartTime { get; set; }
-
-
-    TPrecision AbortOnBalanceDrawdownPerunum { get; set; }
-}
-
-public interface ISimulatedAccount2<TPrecision> : IAccount2<TPrecision>
-    where TPrecision : struct, INumber<TPrecision>
-{
-    ValueTask<IOrderResult> SimulatedExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize, PositionOperationFlags increasePositionFlags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null, TPrecision? currentPrice = null, JournalEntryFlags journalFlags = JournalEntryFlags.Unspecified);
-    TPrecision InitialBalance { get; }
-    TPrecision BalanceReturnOnInvestment { get; }
-    double AnnualizedBalanceReturnOnInvestment { get; }
-    double AnnualizedBalanceReturnOnInvestmentVsDrawdownPercent { get; }
-    double AnnualizedReturnOnInvestmentVsDrawdownPercent { get; }
-
-    TPrecision MaxEquityDrawdownPerunum { get; }
-    TPrecision CurrentEquityDrawdown { get; }
-    TPrecision MaxEquityDrawdown { get; }
-
-    TPrecision MaxBalanceDrawdownPerunum { get; }
-    TPrecision CurrentBalanceDrawdown { get; }
-    TPrecision MaxBalanceDrawdown { get; }
-    bool IsAborted { get; }
-}
-
-public interface IAccount2 : IMarketParticipant2
-{
-    IPAccount2 Parameters { get; }
-
     #region Identity
 
-    string Exchange { get; }
-    string ExchangeArea { get; }
+    public ExchangeArea ExchangeArea { get; }
 
     bool IsSimulation { get; }
     bool IsLive => !IsSimulation;
@@ -70,23 +27,36 @@ public interface IAccount2 : IMarketParticipant2
 
     #endregion
 
+    #region Parameters
+
+    IPHolding? PPrimaryHolding { get; }
+
+    #endregion
 
     MarketFeatures GetMarketFeatures(string symbol);
-
 }
 
+/// <summary>
+/// An account for a user (or sub-user) within a single exchange (e.g. Binance) and area (e.g. spot or futures)
+/// </summary>
 public interface IAccount2<TPrecision> : IAccount2
     where TPrecision : struct, INumber<TPrecision>
 {
-    new IPSimulatedAccount2<TPrecision> Parameters { get; }
+    #region State
 
-    #region Balance
+    IObservableCache<IHolding<TPrecision>, string /* Symbol  */> Holdings { get; }
+
+    #region (Convenience) Balance
+
+    ISimHolding<TPrecision>? PrimaryHolding { get; }
 
     TPrecision Balance { get; }
 
-    // FUTURE: Multiple balances
+    #endregion
 
     #endregion
+
+    #region Methods
 
     ValueTask<IOrderResult> ExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize, PositionOperationFlags increasePositionFlags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null, JournalEntryFlags journalFlags = JournalEntryFlags.Unspecified);
 
@@ -99,20 +69,7 @@ public interface IAccount2<TPrecision> : IAccount2
     void OnRealizedProfit(TPrecision realizedGrossProfitDelta);
     ValueTask<IOrderResult> SetStopLosses(string symbol, LongAndShort direction, TPrecision sl, StopLossFlags flags);
     ValueTask<IOrderResult> SetTakeProfits(string symbol, LongAndShort direction, TPrecision sl, StopLossFlags flags);
-}
 
+    #endregion
 
-public enum StopLossFlags
-{
-    Unspecified = 0,
-    TightenOnly = 1 << 0,
-}
-
-[Flags]
-public enum JournalEntryFlags
-{
-    Unspecified = 0,
-    StopLoss = 1 << 0,
-    TakeProfit = 1 << 1,
-    Reverse = 1 << 10,
 }

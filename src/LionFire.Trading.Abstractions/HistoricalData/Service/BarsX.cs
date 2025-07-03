@@ -12,7 +12,7 @@ public static class BarsX
 
         foreach (var c in @this.HistoricalDataChunkRangeProvider.GetBarChunks(r))
         {
-            var range = new SymbolBarsRange(r.Exchange, r.ExchangeArea, r.Symbol, r.TimeFrame, c.Item1.start, c.Item1.endExclusive);
+            var range = new SymbolBarsRange(r.Exchange, r.Area, r.Symbol, r.TimeFrame, c.Item1.start, c.Item1.endExclusive);
             var chunkResult = await (c.isLong ? @this.GetLongChunk(range, options) : @this.GetShortChunk(range, false, options));
             if (chunkResult != null) { resultList.Add(chunkResult); }
         }

@@ -40,6 +40,8 @@
     <PackageVersion Include="DeferredEvents" Version="1.0.5" />
     <PackageVersion Include="DotNetify.SignalR" Version="5.4.0" />
     <PackageVersion Include="DotNetProjects.Extended.Wpf.Toolkit" Version="4.6.97" />
+    <PackageVersion Include="Durian.Core" Version="2.0.1" />
+    <PackageVersion Include="Durian.FriendClass" Version="2.0.0" />
     <PackageVersion Include="DynamicData" Version="9.1.2" />
     <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="9.0.0" />
     <PackageVersion Include="FluentEmail.Mailgun" Version="3.0.2" />
@@ -161,7 +163,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.11.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="0.5.0-beta.3" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.11.1" />
-		<PackageVersion Include="OrchardCore.Application.Cms.Targets" Version="2.1.7" />
+    <PackageVersion Include="OrchardCore.Application.Cms.Targets" Version="2.1.7" />
     <PackageVersion Include="Orleans.Clustering.Redis" Version="7.0.0" />
     <PackageVersion Include="Microsoft.Orleans.Persistence.Redis" Version="9.1.2" />
     <PackageVersion Include="OrleansDashboard" Version="8.2.0" />

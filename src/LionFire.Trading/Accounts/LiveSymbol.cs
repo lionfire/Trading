@@ -11,7 +11,7 @@ using LionFire.ExtensionMethods;
 namespace LionFire.Trading.Spotware.Connect
 {
     public class SimulatedSymbol<AccountType> : SymbolImplBase<AccountType>, INotifyPropertyChanged
-        where AccountType : IFeed
+        where AccountType : IFeed_Old
     {
         #region Construction
 
@@ -34,7 +34,7 @@ namespace LionFire.Trading.Spotware.Connect
     }
 
     public abstract class LiveSymbol<AccountType> : SymbolImplBase<AccountType>, INotifyPropertyChanged
-        where AccountType : IFeed
+        where AccountType : IFeed_Old
     {
 
         #region Construction

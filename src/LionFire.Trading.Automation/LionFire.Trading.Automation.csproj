@@ -19,9 +19,15 @@
 
   <ItemGroup>
     <Folder Include="Accounts\" />
+    <Folder Include="Automation\Markets\" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Durian.Core" />
+    <PackageReference Include="Durian.FriendClass">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Hjson" />
     <PackageReference Include="ReactiveUI.SourceGenerators">
       <PrivateAssets>all</PrivateAssets>

@@ -2,8 +2,11 @@
 
 public abstract class OptimizationStrategyBase
 {
-    public MultiBacktestContext BacktestContext => backtestContext;
-    private MultiBacktestContext backtestContext;
+
+    public IBatchContext MultiBacktestContext => multiBacktestContext;
+    private IBatchContext multiBacktestContext;
+
+    public OptimizationTask OptimizationTask { get; }
 
     #region Parameters
 
@@ -11,11 +14,10 @@ public abstract class OptimizationStrategyBase
 
     #endregion
 
-    protected OptimizationStrategyBase(MultiBacktestContext backtestContext, POptimization optimizationParameters)
+    protected OptimizationStrategyBase(OptimizationTask optimizationTask, POptimization optimizationParameters)
     {
-        this.backtestContext = backtestContext;
+        OptimizationTask = optimizationTask;
         OptimizationParameters = optimizationParameters ?? throw new ArgumentNullException();
     }
-
 
 }

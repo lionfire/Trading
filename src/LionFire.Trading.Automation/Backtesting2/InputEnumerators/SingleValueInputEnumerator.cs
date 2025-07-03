@@ -22,7 +22,7 @@ public sealed class SingleValueInputEnumerator<TValue, TPrecision> : InputEnumer
 
     public override uint Capacity => 1;
 
-    public override bool IsFull => true;
+    //public override bool IsFull => true; // UNUSED
 
     public override uint Size => 1;
 

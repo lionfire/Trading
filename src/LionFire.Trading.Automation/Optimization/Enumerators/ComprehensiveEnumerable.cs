@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace LionFire.Trading.Automation.Optimization.Enumerators;
 
-public class ComprehensiveEnumerable : OptimizerEnumerableBase, IEnumerable<IEnumerable<PBacktestTask2>>, IEnumerable<PBacktestTask2>, IOptimizerEnumerable
+public class ComprehensiveEnumerable : OptimizerEnumerableBase, IEnumerable<IEnumerable<PBotWrapper>>, IEnumerable<PBotWrapper>, IOptimizerEnumerable
 {
     #region Lifecycle
 
@@ -18,7 +18,7 @@ public class ComprehensiveEnumerable : OptimizerEnumerableBase, IEnumerable<IEnu
 
 
 
-    public IEnumerator<PBacktestTask2> GetEnumerator()
+    public IEnumerator<PBotWrapper> GetEnumerator()
     {
         // TODO SOON
         throw new NotImplementedException();
@@ -26,7 +26,7 @@ public class ComprehensiveEnumerable : OptimizerEnumerableBase, IEnumerable<IEnu
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    IEnumerator<IEnumerable<PBacktestTask2>> IEnumerable<IEnumerable<PBacktestTask2>>.GetEnumerator()
+    IEnumerator<IEnumerable<PBotWrapper>> IEnumerable<IEnumerable<PBotWrapper>>.GetEnumerator()
     {
         yield return this;
     }

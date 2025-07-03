@@ -23,26 +23,33 @@ public class Optimize_ : BinanceDataTest
 
         var ExchangeSymbol = new ExchangeSymbol("Binance", "futures", "BTCUSDT");
 
-        var c = new PMultiBacktestContext(new(typeof(PAtrBot<double>),
+        var PMultiSim = new PMultiSim<double>(typeof(PAtrBot<double>),
                  ExchangeSymbolTimeFrame.Combine(ExchangeSymbol, TimeFrame.h1),
                 new DateTimeOffset(2021, 1, 1, 0, 0, 0, TimeSpan.Zero),
 new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
-                BotHarnessFeatures.Bars
-            ))
+                SimFeatures.Bars
+            );
+
+        POptimization pOptimization = PMultiSim.POptimization = new POptimization(PMultiSim);
+
+        new OptimizationTask()
+
+
+        var pBatch = new PBatch(PMultiSim)
         {
-            //PMultiBacktest = new PBacktestBatchTask2
+            //PMultiSim = new PBacktestBatchTask2
             //{
             //    PBotType = typeof(PAtrBot<double>),
             //    Start = 
             //    EndExclusive = 
             //    Features = BotHarnessFeatures.Bars,
-            //    TimeFrame = TimeFrame.h1,
+            //    DefaultTimeFrame = DefaultTimeFrame.h1,
             //    ExchangeSymbol = ExchangeSymbol,
             //    //StartingBalance = 10000,
             //},
         };
 
-        var p = c.POptimization;
+        var p = pBatch.POptimization;
 
         //MaxBatchSize = 100_000,
         //MaxBatchSize = 20_048,
@@ -144,7 +151,7 @@ new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
         var bq = ServiceProvider.GetRequiredService<BacktestQueue>();
         await bq.StartAsync(default);
 
-        await new OptimizationTask(ServiceProvider, c).Run();
+        await new OptimizationTask(ServiceProvider, pBatch).Run();
         //await bq.StopAsync(default);
     }
 }
