@@ -1,0 +1,45 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LionFire.Trading.Feeds", "LionFire.Trading.Feeds\LionFire.Trading.Feeds.csproj", "{1F2D4C5A-6B9E-4A7A-9C3E-8B5F2A4D7E10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LionFire.Trading.Feeds.Binance", "LionFire.Trading.Feeds.Binance\LionFire.Trading.Feeds.Binance.csproj", "{2E3B5D6C-7C8F-4B8C-AD4F-9C6E3B5E8F20}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LionFire.Trading.Feeds.Bybit", "LionFire.Trading.Feeds.Bybit\LionFire.Trading.Feeds.Bybit.csproj", "{3D4A6E7D-8D9F-4C9D-BE5F-AD7F4C6F9E30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LionFire.Trading.Feeds.MEXC", "LionFire.Trading.Feeds.MEXC\LionFire.Trading.Feeds.MEXC.csproj", "{4E5B7F8E-9EA0-4DAE-CF6F-BE8F5D7FAF40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LionFire.Trading.Exchanges", "LionFire.Trading.Exchanges\LionFire.Trading.Exchanges.csproj", "{5F6C8F9F-AFB1-4EBF-DF7F-CF9F6E8FBE50}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1F2D4C5A-6B9E-4A7A-9C3E-8B5F2A4D7E10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F2D4C5A-6B9E-4A7A-9C3E-8B5F2A4D7E10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F2D4C5A-6B9E-4A7A-9C3E-8B5F2A4D7E10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F2D4C5A-6B9E-4A7A-9C3E-8B5F2A4D7E10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E3B5D6C-7C8F-4B8C-AD4F-9C6E3B5E8F20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E3B5D6C-7C8F-4B8C-AD4F-9C6E3B5E8F20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E3B5D6C-7C8F-4B8C-AD4F-9C6E3B5E8F20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E3B5D6C-7C8F-4B8C-AD4F-9C6E3B5E8F20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3D4A6E7D-8D9F-4C9D-BE5F-4C9D-BE5F-AD7F4C6F9E30}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3D4A6E7D-8D9F-4C9D-BE5F-4C9D-BE5F-AD7F4C6F9E30}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3D4A6E7D-8D9F-4C9D-BE5F-4C9D-BE5F-AD7F4C6F9E30}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3D4A6E7D-8D9F-4C9D-BE5F-4C9D-BE5F-AD7F4C6F9E30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4E5B7F8E-9EA0-4DAE-CF6F-BE8F5D7FAF40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4E5B7F8E-9EA0-4DAE-CF6F-BE8F5D7FAF40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4E5B7F8E-9EA0-4DAE-CF6F-BE8F5D7FAF40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4E5B7F8E-9EA0-4DAE-CF6F-BE8F5D7FAF40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5F6C8F9F-AFB1-4EBF-DF7F-CF9F6E8FBE50}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5F6C8F9F-AFB1-4EBF-DF7F-CF9F6E8FBE50}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5F6C8F9F-AFB1-4EBF-DF7F-CF9F6E8FBE50}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5F6C8F9F-AFB1-4EBF-DF7F-CF9F6E8FBE50}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
