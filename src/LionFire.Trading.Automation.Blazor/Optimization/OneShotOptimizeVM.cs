@@ -60,15 +60,15 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             LinesVM.Append(logEntry.Message ?? "", logEntry.LogLevel, logEntry.Category ?? "");
         });
 
-        this.WhenAnyValue(x => x.OptimizationTask!.BacktestsJournal!.ObservableCache).Subscribe(oc =>
+        this.WhenAnyValue(x => x.MultiSimContext!.Journal!.ObservableCache).Subscribe(oc =>
         {
             Backtests = oc;
         });
-        this.WhenAnyValue(x => x.OptimizationTask!.BacktestsJournal!).Subscribe(oc =>
+        this.WhenAnyValue(x => x.MultiSimContext!.Journal!).Subscribe(oc =>
         {
             Debug.WriteLine("WhenAnyValue OMBJ");
         });
-        this.WhenAnyValue(x => x.OptimizationTask!).Subscribe(oc =>
+        this.WhenAnyValue(x => x.MultiSimContext!).Subscribe(oc =>
         {
             Debug.WriteLine("WhenAnyValue OptimizationTask");
         });
@@ -102,6 +102,8 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     #region (Derived)
 
     public OptimizationRunInfo OptimizationRunInfo => OptimizationTask?.MultiSimContext?.OptimizationRunInfo;
+
+    public MultiSimContext? MultiSimContext => _optimizationTask?.MultiSimContext;
 
     #endregion
 
@@ -388,7 +390,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     public void Cancel()
     {
-        OptimizationTask?.Cancel();
+        MultiSimContext?.Cancel();
 
         //if (cts == null)
         //{

@@ -20,6 +20,7 @@
     <PackageVersion Include="Baseline" Version="4.1.0" />
     <PackageVersion Include="BernhardHaus.Collections.WeakDictionary" Version="1.0.3" />
     <PackageVersion Include="Binance.Net" Version="10.18.0" />
+    <PackageVersion Include="Bybit.Net" Version="3.14.2" />
     <PackageVersion Include="BinanceDotNet" Version="4.12.0" />
     <PackageVersion Include="BlazorGridStack" Version="1.0.12" />
     <PackageVersion Include="Blazorise.Bootstrap" Version="1.7.5" />
@@ -109,6 +110,7 @@
     <PackageVersion Include="Microsoft.Extensions.Options" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.3" />
     <PackageVersion Include="Microsoft.Extensions.PlatformAbstractions" Version="1.1.0" />
+    <PackageVersion Include="Microsoft.FASTER.Core" Version="2.6.5" />
     <PackageVersion Include="Microsoft.IdentityModel.Protocols.OpenIdConnect" Version="8.6.1" />
     <PackageVersion Include="Microsoft.IdentityModel.Protocols" Version="8.6.1" />
     <PackageVersion Include="Microsoft.IdentityModel.Tokens" Version="8.6.1" />

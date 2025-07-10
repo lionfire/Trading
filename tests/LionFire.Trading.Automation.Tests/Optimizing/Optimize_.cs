@@ -32,29 +32,29 @@ new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
 
         POptimization pOptimization = PMultiSim.POptimization = new POptimization(PMultiSim);
 
-        new OptimizationTask()
+        //new OptimizationTask()
 
 
-        var pBatch = new PBatch(PMultiSim)
-        {
-            //PMultiSim = new PBacktestBatchTask2
-            //{
-            //    PBotType = typeof(PAtrBot<double>),
-            //    Start = 
-            //    EndExclusive = 
-            //    Features = BotHarnessFeatures.Bars,
-            //    DefaultTimeFrame = DefaultTimeFrame.h1,
-            //    ExchangeSymbol = ExchangeSymbol,
-            //    //StartingBalance = 10000,
-            //},
-        };
+        //var pBatch = new PBatch(PMultiSim)
+        //{
+        //    //PMultiSim = new PBacktestBatchTask2
+        //    //{
+        //    //    PBotType = typeof(PAtrBot<double>),
+        //    //    Start = 
+        //    //    EndExclusive = 
+        //    //    Features = BotHarnessFeatures.Bars,
+        //    //    DefaultTimeFrame = DefaultTimeFrame.h1,
+        //    //    ExchangeSymbol = ExchangeSymbol,
+        //    //    //StartingBalance = 10000,
+        //    //},
+        //};
 
-        var p = pBatch.POptimization;
+        var pOptimization = new POptimization(PMultiSim);
 
         //MaxBatchSize = 100_000,
         //MaxBatchSize = 20_048,
         //MaxBatchSize = 4_096,
-        p.MaxBatchSize = 2_048;
+        pOptimization.MaxBatchSize = 2_048;
         //MaxBatchSize = 1_024,
         //MaxBatchSize = 10,
 
@@ -62,21 +62,21 @@ new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
         //MaxBacktests = 8_192,
         //MaxBacktests = 10_000,
         //MaxBacktests = 100_000,
-        p.MaxBacktests = 1_000_000;
+        pOptimization.MaxBacktests = 1_000_000;
         //MaxBacktests = 15_000,
 
-        p.MinParameterPriority = -10;
+        pOptimization.MinParameterPriority = -10;
 
-        p.TradeJournalOptions = new()
+        pOptimization.TradeJournalOptions = new()
         {
             Enabled = false,
         };
 
-        p.GranularityStepMultiplier = 4;
+        pOptimization.GranularityStepMultiplier = 4;
 
         var parameters = BotParameterPropertiesInfo.Get(typeof(PAtrBot<double>))!.PathDictionary;
 
-        p.ParameterOptimizationOptions = new Dictionary<string, IParameterOptimizationOptions>();
+        pOptimization.ParameterOptimizationOptions = new Dictionary<string, IParameterOptimizationOptions>();
 
         var period = ParameterOptimizationOptions.Create<int>(parameters["ATR.Period"]);
         period.MaxCount = 20;
@@ -151,7 +151,7 @@ new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
         var bq = ServiceProvider.GetRequiredService<BacktestQueue>();
         await bq.StartAsync(default);
 
-        await new OptimizationTask(ServiceProvider, pBatch).Run();
+        await new OptimizationTask(ServiceProvider, PMultiSim).Run();
         //await bq.StopAsync(default);
     }
 }

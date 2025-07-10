@@ -14,9 +14,9 @@
     <MudDrawerHeader>
         <MudText Typo="Typo.h6">Results</MudText>
     </MudDrawerHeader>
-    @if (ViewModel!.OptimizationTask?.BacktestsJournal?.ObservableCache?.Items != null)
+    @if (ViewModel!.MultiSimContext?.Journal?.ObservableCache?.Items != null)
     {
-        <MudDataGrid Items="ViewModel.OptimizationTask.BacktestsJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
+        <MudDataGrid Items="ViewModel.MultiSimContext.Journal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
             <Columns>
                 <PropertyColumn Property="x => x.BatchId" Hidden=true Hideable="true" />
                 <PropertyColumn Property="x => x.Id" Hideable="true" Hidden="true" />

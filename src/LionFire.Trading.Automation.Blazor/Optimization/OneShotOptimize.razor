@@ -198,11 +198,11 @@
                 <MudTabPanel Text="Results">
                     <MudGrid>
                         <MudItem>
-                            @if (ViewModel!.OptimizationTask?.BacktestsJournal?.BatchDirectory != null)
+                            @if (ViewModel!.MultiSimContext?.Journal?.BatchDirectory != null)
                             {
                                 <div>
                                     Dir:
-                                    <a href="@($"file:///{ViewModel!.OptimizationTask?.BacktestsJournal?.BatchDirectory}")">@ViewModel!.OptimizationTask?.BacktestsJournal?.BatchDirectory</a>
+                                    <a href="@($"file:///{ViewModel!.MultiSimContext?.Journal?.BatchDirectory}")">@ViewModel!.MultiSimContext?.Journal?.BatchDirectory</a>
                                 </div>
                             }
                         </MudItem>

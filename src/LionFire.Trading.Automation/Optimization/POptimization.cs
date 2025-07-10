@@ -19,18 +19,10 @@ using System.Reactive.Subjects;
 
 namespace LionFire.Trading.Automation.Optimization;
 
-public class POptimizationVM : ReactiveObject
-{
-    public POptimization POptimization { get; }
-
-    public POptimizationVM(POptimization pOptimization)
-    {
-        POptimization = pOptimization;
-    }
-
-}
-
-// ENH: Validatable, make all properties mutable and not required in ctor.  (Or consider a new pattern: a pair of classes, one frozen and one mutable.)
+/// <summary>
+/// Attaches to parent PMultiSim.  (It must not already have a POptimization)
+/// </summary>
+/// ENH: Make validatable, make all properties mutable and not required in ctor.  (Or consider a new pattern: a pair of classes, one frozen and one mutable.)
 public partial class POptimization : ReactiveObject
     , IValidatable
 {
@@ -57,6 +49,7 @@ public partial class POptimization : ReactiveObject
 
     public POptimization(PMultiSim parent)
     {
+        PMultiSim.POptimization = this;
         PMultiSim = parent ?? throw new ArgumentNullException(nameof(parent));
 
         var minParameterPriorityChanged = this.WhenAnyValue(x => x.MinParameterPriority);
@@ -121,8 +114,34 @@ public partial class POptimization : ReactiveObject
             InitLevelsOfDetail();
         };
 
-    }
+        this.WhenAnyValue(x => x.PMultiSim.PBotType)
+            .Select(BotParameterPropertiesInfo.SafeGet)
+            .Subscribe(properties =>
+            {
+                Debug.WriteLine($"POptimization Rx bind: PBotType => parameters");
 
+                parameters.Edit(u =>
+                {
+                    u.Clear();
+                    if (properties != null)
+                    {
+                        u.AddOrUpdate(properties.PathDictionary.Values
+                            .Where(info => info.IsOptimizable
+                                && info.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
+                            )
+                            .Select(info =>
+                            {
+                                var poo = CreatePoo(info);
+                                poo.PropertyChanged += (s, e) => RaiseParametersChanged();
+                                return poo;
+                            }));
+                    }
+                    this.RaisePropertyChanged(nameof(Parameters));
+                });
+            })
+            .DisposeWith(disposables);
+
+    }
 
 #endregion
 
@@ -278,12 +297,92 @@ public partial class POptimization : ReactiveObject
         return options.EnableOptimization == true || options.Info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
     }
 
+    #region Bot Parameters
+
+    /// <summary>
+    /// Initialize ParameterOptimizationOptions if needed, from various sources, in the following order:
+    /// - ParameterAttribute
+    /// //- EnableOptimization from this.MinParameterPriority
+    /// //- POptimizationStrategy.PMultiSim
+    /// </summary>
+    /// <param name="info"></param>
+    /// <returns></returns>
+    public static IParameterOptimizationOptions CreatePoo(HierarchicalPropertyInfo info)
+    {
+        //ParameterOptimizationOptions ??= new();
+
+        //var fromPOptimization = ParameterOptimizationOptions.TryGetValue(info.Path)
+        //?? ParameterOptimizationOptions?.TryGetValue(info.Key)
+        ;
+        //if (fromPOptimization != null)
+        //{
+        //    return fromPOptimization;
+        //}
+
+        IParameterOptimizationOptions parameterOptimizationOptions = LionFire.Trading.ParameterOptimizationOptions.Create(info);
+
+
+        //ParameterOptimizationOptions.Create(info.ValueType, "<AttributePrototype>");
+
+        using var _ = parameterOptimizationOptions.SuppressChangeNotifications();
+
+        AssignFromExtensions.AssignNonDefaultPropertiesFrom(parameterOptimizationOptions!, info.ParameterAttribute);
+
+        #region Attribute
+
+        //IParameterOptimizationOptions fromAttribute = info.ParameterAttribute.GetParameterOptimizationOptions(info.LastPropertyInfo!.PropertyType);
+        //ArgumentNullException.ThrowIfNull(fromAttribute);
+
+        //var clone = fromAttribute.Clone();
+
+        #endregion
+
+        //if (!clone.EnableOptimization.HasValue)
+        //{
+        //    clone.EnableOptimization = info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
+        //}
+
+        #region POptimizationStrategy
+
+        //IParameterOptimizationOptions? fromOptimizationParameters = POptimizationStrategy.PMultiSim.TryGetValue(info.Path);
+
+        //// FUTURE: Clone per-strategy options somehow 
+        ////clone.FitnessOfInterest ??= gridSearchStrategy.PMultiSim.FitnessOfInterest;
+
+        //if (fromOptimizationParameters != null)
+        //{
+        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
+        //}
+
+        #endregion
+
+        #region ParameterOptimizationOptions
+
+        //clone.Path = info.Path;
+        //ParameterOptimizationOptions.TryAdd(info.Path, clone);
+
+        //var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
+        //if (fromPOptimization != null)
+        //{
+        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
+        //}
+
+        #endregion
+
+        return parameterOptimizationOptions;
+        //return ParameterOptimizationOptions[info.Path];
+    }
+
+    #endregion
+    
     #region Misc
 
     public override string ToString() => this.ToXamlProperties();
 
 
     #endregion
+
+
 }
 
 //public enum ParameterType

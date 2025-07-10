@@ -67,32 +67,7 @@ public sealed class OptimizationContext : IValidatable
         BacktestsRepository = ServiceProvider.GetRequiredService<BacktestsRepository>();
 
 
-        this.WhenAnyValue(x => x.MultiSimContext.Parameters.PBotType)
-            .Select(BotParameterPropertiesInfo.SafeGet)
-            .Subscribe(properties =>
-            {
-                Debug.WriteLine($"POptimization Rx bind: PBotType => parameters");
 
-                parameters.Edit(u =>
-                {
-                    u.Clear();
-                    if (properties != null)
-                    {
-                        u.AddOrUpdate(properties.PathDictionary.Values
-                            .Where(info => info.IsOptimizable
-                                && info.LastPropertyInfo!.PropertyType != typeof(bool) // NOTIMPLEMENTED yet
-                            )
-                            .Select(info =>
-                            {
-                                var poo = CreatePoo(info);
-                                poo.PropertyChanged += (s, e) => RaiseParametersChanged();
-                                return poo;
-                            }));
-                    }
-                    this.RaisePropertyChanged(nameof(Parameters));
-                });
-            })
-            .DisposeWith(disposables);
     }
 
     public async Task Init()
@@ -151,81 +126,5 @@ public sealed class OptimizationContext : IValidatable
 
     HjsonOptions hjsonOptions = new HjsonOptions() { EmitRootBraces = false };
 
-    #region Bot Parameters
 
-    /// <summary>
-    /// Initialize ParameterOptimizationOptions if needed, from various sources, in the following order:
-    /// - ParameterAttribute
-    /// //- EnableOptimization from this.MinParameterPriority
-    /// //- POptimizationStrategy.PMultiSim
-    /// </summary>
-    /// <param name="info"></param>
-    /// <returns></returns>
-    public static IParameterOptimizationOptions CreatePoo(HierarchicalPropertyInfo info)
-    {
-        //ParameterOptimizationOptions ??= new();
-
-        //var fromPOptimization = ParameterOptimizationOptions.TryGetValue(info.Path)
-        //?? ParameterOptimizationOptions?.TryGetValue(info.Key)
-        ;
-        //if (fromPOptimization != null)
-        //{
-        //    return fromPOptimization;
-        //}
-
-        IParameterOptimizationOptions parameterOptimizationOptions = LionFire.Trading.ParameterOptimizationOptions.Create(info);
-
-
-        //ParameterOptimizationOptions.Create(info.ValueType, "<AttributePrototype>");
-
-        using var _ = parameterOptimizationOptions.SuppressChangeNotifications();
-
-        AssignFromExtensions.AssignNonDefaultPropertiesFrom(parameterOptimizationOptions!, info.ParameterAttribute);
-
-        #region Attribute
-
-        //IParameterOptimizationOptions fromAttribute = info.ParameterAttribute.GetParameterOptimizationOptions(info.LastPropertyInfo!.PropertyType);
-        //ArgumentNullException.ThrowIfNull(fromAttribute);
-
-        //var clone = fromAttribute.Clone();
-
-        #endregion
-
-        //if (!clone.EnableOptimization.HasValue)
-        //{
-        //    clone.EnableOptimization = info.ParameterAttribute.OptimizePriorityInt >= MinParameterPriority;
-        //}
-
-        #region POptimizationStrategy
-
-        //IParameterOptimizationOptions? fromOptimizationParameters = POptimizationStrategy.PMultiSim.TryGetValue(info.Path);
-
-        //// FUTURE: Clone per-strategy options somehow 
-        ////clone.FitnessOfInterest ??= gridSearchStrategy.PMultiSim.FitnessOfInterest;
-
-        //if (fromOptimizationParameters != null)
-        //{
-        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromOptimizationParameters);
-        //}
-
-        #endregion
-
-        #region ParameterOptimizationOptions
-
-        //clone.Path = info.Path;
-        //ParameterOptimizationOptions.TryAdd(info.Path, clone);
-
-        //var fromPOptimization = ParameterOptimizationOptions?.TryGetValue(info.Path) ?? ParameterOptimizationOptions?.TryGetValue(info.Key);
-        //if (fromPOptimization != null)
-        //{
-        //    AssignFromExtensions.AssignNonDefaultPropertiesFrom(clone, fromPOptimization);
-        //}
-
-        #endregion
-
-        return parameterOptimizationOptions;
-        //return ParameterOptimizationOptions[info.Path];
-    }
-
-    #endregion
 }

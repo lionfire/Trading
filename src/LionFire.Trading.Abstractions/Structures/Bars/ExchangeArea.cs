@@ -5,6 +5,7 @@ using Orleans;
 namespace LionFire.Trading;
 
 [Alias("exchange-area")]
+[GenerateSerializer]
 public record ExchangeArea(string Exchange, string Area) 
     : IKeyed<string>
     , IValidatable

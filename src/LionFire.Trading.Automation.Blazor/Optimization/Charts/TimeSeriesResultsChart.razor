@@ -124,9 +124,9 @@
         Included = 0;
 
         List<ITrace> data = new List<ITrace>();
-        if (ViewModel?.OptimizationTask?.BacktestsJournal?.ObservableCache == null) return data;
+        if (ViewModel?.MultiSimContext?.Journal?.ObservableCache == null) return data;
 
-        foreach (var result in ViewModel.OptimizationTask.BacktestsJournal.ObservableCache.Items)
+        foreach (var result in ViewModel.MultiSimContext.Journal.ObservableCache.Items)
         {
             if (NullableMinFitness.HasValue)
             {

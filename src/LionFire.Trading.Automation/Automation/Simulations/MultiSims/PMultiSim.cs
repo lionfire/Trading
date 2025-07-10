@@ -36,7 +36,19 @@ public partial class PMultiSim : ReactiveObject, IValidatable
 
     #region Components
 
-    public POptimization? POptimization { get; set; }
+    public POptimization? POptimization 
+    { 
+        get => pOptimization;
+        set
+        {
+            if (pOptimization != null && value != null)
+            {
+                throw new InvalidOperationException($"{nameof(POptimization)} is already set and cannot be changed once set.");
+            }
+            pOptimization = value;
+        }
+    }
+    private POptimization? pOptimization;
 
     #endregion
 
@@ -76,17 +88,23 @@ public partial class PMultiSim : ReactiveObject, IValidatable
     private Type? botType;
 
 
+    // Backing fields to avoid circular references
+    private string? exchange;
+    private string? area;
+    private string? defaultSymbol;
+    private TimeFrame? defaultTimeFrame;
+
     [JsonIgnore]
     public string? Exchange
     {
-        get => ExchangeSymbolTimeFrame?.Exchange;
-        set => ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(value, Area, DefaultSymbol, DefaultTimeFrame);
+        get => exchange;
+        set => exchange = value;
     }
     [JsonIgnore]
     public string? Area
     {
-        get => ExchangeSymbolTimeFrame?.Area;
-        set => ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(Exchange, value, DefaultSymbol, DefaultTimeFrame);
+        get => area;
+        set => area = value;
     }
     public ExchangeArea? DefaultExchangeArea => (Exchange != null && Area != null) ? new ExchangeArea(Exchange, Area) : null;
 
@@ -95,15 +113,15 @@ public partial class PMultiSim : ReactiveObject, IValidatable
     [JsonIgnore]
     public string? DefaultSymbol
     {
-        get => ExchangeSymbolTimeFrame?.Symbol;
-        set => ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(Exchange, Area, value, DefaultTimeFrame);
+        get => defaultSymbol;
+        set => defaultSymbol = value;
     }
 
     [JsonIgnore]
     public TimeFrame? DefaultTimeFrame
     {
-        get => ExchangeSymbolTimeFrame?.TimeFrame;
-        set => ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(Exchange, Area, DefaultSymbol, value);
+        get => defaultTimeFrame;
+        set => defaultTimeFrame = value;
     }
     [JsonIgnore]
     public string? TimeFrameString { get => DefaultTimeFrame; set => DefaultTimeFrame = value; }
@@ -113,10 +131,10 @@ public partial class PMultiSim : ReactiveObject, IValidatable
         get => (Exchange != null && Area != null && DefaultSymbol != null && DefaultTimeFrame != null) ? new ExchangeSymbolTimeFrame(Exchange, Area, DefaultSymbol, DefaultTimeFrame) : null;
         set
         {
-            Exchange = value?.Exchange;
-            Area = value?.Area;
-            DefaultSymbol = value?.Symbol;
-            DefaultTimeFrame = value?.TimeFrame;
+            exchange = value?.Exchange;
+            area = value?.Area;
+            defaultSymbol = value?.Symbol;
+            defaultTimeFrame = value?.TimeFrame;
         }
     }
 
