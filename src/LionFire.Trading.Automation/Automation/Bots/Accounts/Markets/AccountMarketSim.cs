@@ -16,7 +16,7 @@ namespace LionFire.Trading.Automation;
 /// Limitations: Only supports HLC Bars, no ticks.  ENH: Support more options somehow, perhaps via other classes/generic class
 /// </remarks>
 public class AccountMarketSim<TPrecision>
-    //: IBarListener
+    : IMarketListener, IHasInputMappings
         where TPrecision : struct, INumber<TPrecision>
 {
     #region Identity
@@ -26,16 +26,17 @@ public class AccountMarketSim<TPrecision>
 
     #endregion
 
-    #region DEPRECATED
+    #region IMarketListener
 
-    static BotInfo BotInfo => BotInfos.Get(typeof(PSimAccount<TPrecision>), typeof(SimAccount<TPrecision>));
+    public float ListenOrder => ListenerOrders.AccountMarket;
 
-    //List<InputMapping> IHasInputMappings.InputMappings
-    //=>        [];
-    //=> [new(PMultiSim.Bars!, BotInfo.InputParameterToValueMapping![0])];
+    public IPMarketProcessor Parameters { get; }
 
-    //IBarListener IHasInputMappings.Instance => this;
+    #endregion
 
+    #region IHasInputMappings
+
+    public List<PInputToMappingToValuesWindowProperty>? InputMappings { get; set; }
 
     #endregion
 
@@ -45,11 +46,26 @@ public class AccountMarketSim<TPrecision>
     {
         Account = account;
         ExchangeSymbol = exchangeSymbol;
+
+        Parameters = new PAccountMarketSim<TPrecision>
+        {
+            ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.Area, ExchangeSymbol.Symbol, ((SimAccount<TPrecision>)Account).Context.TimeFrame)
+        };
+
+        InputMappings = new List<PInputToMappingToValuesWindowProperty>
+        {
+            new PInputToMappingToValuesWindowProperty(
+                Parameters.Bars, 
+                new InputParameterToValueMapping(
+                    typeof(PAccountMarketSim<TPrecision>).GetProperty(nameof(PAccountMarketSim<TPrecision>.Bars))!,
+                    typeof(AccountMarketSim<TPrecision>).GetProperty(nameof(Bars))!
+                ))
+        };
     }
 
     public void Init(IServiceProvider serviceProvider)
     {
-        throw new NotImplementedException("TODO: Init Bars");
+        // Initialization will be handled by the input mapping system
     }
 
     #endregion
@@ -60,6 +76,7 @@ public class AccountMarketSim<TPrecision>
 
 
     // ENH: OHLC
+    [Signal(0)]
     public IReadOnlyValuesWindow<HLC<TPrecision>> Bars { get; set; } = null!;
 
     #endregion 

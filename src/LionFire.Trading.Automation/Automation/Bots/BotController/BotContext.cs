@@ -6,7 +6,14 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace LionFire.Trading.Automation;
 
-public sealed class BotContext<TPrecision> : IBotContext<TPrecision>
+public class MarketParticipantContext<TPrecision>
+{
+    // REVIEW - offload to initializer class, and let it be GC'ed after init?
+    public List<PInputToMappingToValuesWindowProperty>? InputMappings { get; set; } = [];
+
+}
+
+public sealed class BotContext<TPrecision> : MarketParticipantContext<TPrecision>, IBotContext // IBotContext<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
     #region Identity
@@ -41,6 +48,7 @@ public sealed class BotContext<TPrecision> : IBotContext<TPrecision>
 
     public PBotContext<TPrecision> Parameters { get; }
 
+    
     public TimeFrame TimeFrame { get; set; }
 
     #endregion

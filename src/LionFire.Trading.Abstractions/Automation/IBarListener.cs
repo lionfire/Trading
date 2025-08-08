@@ -20,9 +20,4 @@ public interface ITickListener : IMarketListenerOrder
     void OnTick();
 }
 
-public interface IMarketParticipant2<TPrecision> : IBarListener
-    where TPrecision : struct, INumber<TPrecision>
-{
-    // FUTURE
-    //IDisposable SubscribeToPriceAlert(ExchangeSymbol exchangeSymbol, ...);
-}
+

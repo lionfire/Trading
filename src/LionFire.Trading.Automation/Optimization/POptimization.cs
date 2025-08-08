@@ -49,8 +49,8 @@ public partial class POptimization : ReactiveObject
 
     public POptimization(PMultiSim parent)
     {
-        PMultiSim.POptimization = this;
         PMultiSim = parent ?? throw new ArgumentNullException(nameof(parent));
+        PMultiSim.POptimization = this;
 
         var minParameterPriorityChanged = this.WhenAnyValue(x => x.MinParameterPriority);
 

@@ -36,7 +36,7 @@ namespace LionFire.Trading.Automation.Optimization;
 /// 1 or more
 /// - batches
 /// </summary>
-public partial class OptimizationTask : ReactiveObject, IRunnable
+public partial class OptimizationTask : ReactiveObject, ICancelableRunnable
 {
     #region Dependencies
 
@@ -73,7 +73,7 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
     public OptimizationTask(IServiceProvider serviceProvider, PMultiSim pMultiSim)
     {
         ServiceProvider = serviceProvider;
-        MultiSimContext = ActivatorUtilities.CreateInstance<MultiSimContext>(ServiceProvider, PMultiSim);
+        MultiSimContext = ActivatorUtilities.CreateInstance<MultiSimContext>(ServiceProvider, pMultiSim);
 
         var MachineName = Environment.MachineName; // REVIEW - make configurable
 
@@ -119,8 +119,6 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
 
         //await MultiSimContext.TrySetOptimizationRunInfo(() => getOptimizationRunInfo());
 
-
-
         var hjson = JsonValue.Parse(JsonSerializer.Serialize(MultiSimContext.OptimizationRunInfo)).ToString(new HjsonOptions { EmitRootBraces = false });
         string OptimizationRunInfoFileName = "OptimizationRunInfo.hjson";
         await File.WriteAllTextAsync(Path.Combine(this.MultiSimContext.OutputDirectory, OptimizationRunInfoFileName), hjson);
@@ -148,6 +146,11 @@ public partial class OptimizationTask : ReactiveObject, IRunnable
     #endregion
 
     #region State
+
+    public void AddCancellationToken(CancellationToken cancellationToken)
+    {
+        MultiSimContext.AddCancellationToken(cancellationToken);
+    }
 
     public MultiSimContext MultiSimContext { get; private set; }
 

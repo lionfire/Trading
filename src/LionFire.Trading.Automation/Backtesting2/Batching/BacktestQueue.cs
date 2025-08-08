@@ -196,7 +196,10 @@ public partial class BacktestQueue : IHostedService
 
     #region (Private) Methods
 
-    private async ValueTask RunJob(BacktestJob job)
+    private ValueTask RunJob(BacktestJob job) => RunJob<double>(job); // HARDCODE TPrecision for now
+
+    private async ValueTask RunJob<TPrecision>(BacktestJob job)
+        where TPrecision : struct, INumber<TPrecision>
     {
         try
         {
@@ -210,12 +213,15 @@ public partial class BacktestQueue : IHostedService
                     break;
                 }
 
-                var pBatch = new PBatch( batch)
+                var pBatch = new PBatch(job.MultiSimContext, batch)
                 {
-
                 };
 
-                var batchHarness = new BatchHarness<double>(job.MultiSimContext, pBatch);
+                var batchContext = ActivatorUtilities.CreateInstance<BatchContext<TPrecision>>(
+                   job.MultiSimContext.ServiceProvider,
+                   job.MultiSimContext, pBatch);
+
+                var batchHarness = new BatchHarness<TPrecision>(batchContext);
                 await batchHarness.Init().ConfigureAwait(false);
                 await batchHarness.Run(job.MultiSimContext.CancellationToken);
 

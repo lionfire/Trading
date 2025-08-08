@@ -10,12 +10,12 @@ using System.Diagnostics;
 namespace LionFire.Trading
 {
 
-    public interface IMarketDataProvider
+    public interface IMarketDataProvider_Legacy
     {
         MarketSeries GetMarketSeries(string symbol, TimeFrame timeFrame, bool historical = false);
     }
 
-    public class MarketDataProvider : IMarketDataProvider
+    public class MarketDataProvider : IMarketDataProvider_Legacy
     {
         #region Relationships
 

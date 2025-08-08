@@ -8,12 +8,13 @@ public interface IPHydratedInput : IPInput
 }
 
 // TODO REVIEW - this class can be replaced by the static method ResolveSlotValues
+// REVIEW - Are indexed slots working for slot count > 1?
 public class PBoundSlots
 // Must not implement IPMayHaveUnboundInputSlots
 {
     public IPMayHaveUnboundInputSlots Parent { get; }
 
-    public PBoundSlots(IPMayHaveUnboundInputSlots unboundInput, IPTimeFrameMarketProcessor root)
+    public PBoundSlots(IPMayHaveUnboundInputSlots unboundInput, IPMarketProcessor root)
     {
         Parent = unboundInput;
         Signals = ResolveSlotValues(unboundInput, root);
@@ -138,16 +139,19 @@ public class PBoundInput : PBoundSlots, IPInput
     /// - If PUnboundInput.TimeFrame is more granular: it should be rolled up somehow, if possible
     /// - If PUnboundInput.TimeFrame is more coarse: the same value should be repeated for all granular bars within the coarse bar
     /// </summary>
-    public TimeFrame TimeFrame { get; set; }
+    public TimeFrame? TimeFrame { get; set; }
 
     #endregion
 
     #region Lifecycle
 
-    // REVIEW - can there be multiple upstream Inputs that are adapted to match the parent's exected Input type?
-    public PBoundInput(IPInputThatSupportsUnboundInputs unboundInput, IPTimeFrameMarketProcessor root) : base(unboundInput, root)
+    // REVIEW - can there be multiple upstream Inputs that are adapted to match the parent's expected Input type?
+    public PBoundInput(IPInputThatSupportsUnboundInputs unboundInput, IPMarketProcessor root) : base(unboundInput, root)
     {
-        TimeFrame = root.TimeFrame;
+        if (root is IPTimeFrameMarketProcessor rootTimeFrame)
+        {
+            TimeFrame = rootTimeFrame.TimeFrame;
+        }
     }
 
     #endregion

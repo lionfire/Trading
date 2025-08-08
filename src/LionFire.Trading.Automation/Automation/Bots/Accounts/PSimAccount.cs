@@ -5,11 +5,9 @@ namespace LionFire.Trading.Automation;
 public sealed class PSimAccount<TPrecision>
 #if BacktestAccountSlottedParameters
     : SlottedParameters<BacktestAccount2<T>>
-    , IPTimeFrameMarketProcessor
 #else
     : IPMayHaveUnboundInputSlots
 #endif
-    , IPTimeFrameMarketProcessor
     , IParametersFor<SimAccount<TPrecision>>
     , ICloneable
     where TPrecision : struct, INumber<TPrecision>
@@ -93,8 +91,6 @@ public sealed class PSimAccount<TPrecision>
     #endregion
 
     #region Inputs
-
-    public int[]? InputLookbacks => [1];
 
     public IReadOnlyList<InputSlot> InputSlots => InputSlotsReflection.GetInputSlots(typeof(PSimAccount<TPrecision>));
 

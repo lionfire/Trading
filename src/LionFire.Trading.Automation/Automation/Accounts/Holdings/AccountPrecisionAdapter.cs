@@ -2,7 +2,7 @@
 
 namespace LionFire.Trading.Automation;
 
-public class PSimulatedHoldingPrecisionAdapter<TPrecision, TFromPrecision> : IPSimulatedHolding<TPrecision>
+public class PSimulatedHoldingPrecisionAdapter<TPrecision, TFromPrecision> : PMarketProcessor<TPrecision>, IPSimulatedHolding<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
     where TFromPrecision : struct, INumber<TFromPrecision>
 {
@@ -45,6 +45,8 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
 
     public IAccount2<TFromPrecision> From { get; }
 
+    IPMarketProcessor IMarketListener.Parameters => Parameters;
+
     public IPSimulatedHolding<TPrecision> Parameters => PAccountPrecisionAdapter;
     private PSimulatedHoldingPrecisionAdapter<TPrecision, TFromPrecision> PAccountPrecisionAdapter;
     IPHolding IAccount2.PPrimaryHolding => From.PPrimaryHolding;
@@ -74,6 +76,7 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
     public ISimHolding<TPrecision> PrimaryHolding => throw new NotImplementedException();
 
     public float ListenOrder { get => From.ListenOrder;  }
+
 
     public ValueTask<IOrderResult> ClosePosition(IPosition<TPrecision> position, JournalEntryFlags flags = JournalEntryFlags.Unspecified) => From.ClosePosition(From.Positions.Lookup(position.Id).Value);
 

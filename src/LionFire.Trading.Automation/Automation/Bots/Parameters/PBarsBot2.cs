@@ -39,9 +39,19 @@ public abstract class PBarsBot2<TConcrete, TValue>
 
     #region Inputs
 
+    
     [JsonIgnore]
-    public HLCReference<TValue>? Bars { get; set; }
+    public HLCReference<TValue>? HLCBars 
+    { 
+        get => hlcBars;
+        set => hlcBars = value;
+    }
+    private HLCReference<TValue>? hlcBars;
     //public SymbolValueAspect<TValue>? Bars { get; set; }
+    
+    // Override abstract property from PMarketProcessor base class
+    [JsonIgnore]
+    public override IPInput Bars => hlcBars!;
 
     #endregion
 

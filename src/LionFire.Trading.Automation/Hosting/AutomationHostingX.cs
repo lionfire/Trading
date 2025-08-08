@@ -86,6 +86,10 @@ public static class AutomationHostingX
             .Backtesting()
             .Optimization(configuration)
             .AddSingleton<BotHarnessFactory>()
+            .AddTransient(typeof(SimContext<>))
+            .AddTransient<MultiSimContext>()
+            .AddTransient<PMultiSim>()
+            //.AddTransient(typeof(PSimAccount<>))
             ;
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceDocumentRunner<string, BotEntity>, WorkspaceDocumentRunner<string, BotEntity, BotRunner>>());

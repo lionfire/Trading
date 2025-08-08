@@ -57,6 +57,7 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     public float ListenOrder => ListenerOrders.Account;
 
     public PSimAccount<TPrecision> Parameters { get; }
+    IPMarketProcessor IMarketListener.Parameters => Parameters;
 
     #region Convenience
 
@@ -156,6 +157,15 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     {
         return new AccountMarketSim<TPrecision>(this, new ExchangeSymbol(ExchangeArea, symbol));
     }
+    
+    public IEnumerable<AccountMarketSim<TPrecision>> GetAllMarketSims()
+    {
+        if (DefaultMarketSim != null) yield return DefaultMarketSim;
+        foreach (var marketSim in marketSims.Values)
+        {
+            yield return marketSim;
+        }
+    }
 
     #endregion
 
@@ -192,6 +202,8 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     public const bool CanPositionChangeDirections = false;
 
     public IObservableCache<IPosition<TPrecision>, int> Positions => positions;
+
+
     protected SourceCache<IPosition<TPrecision>, int> positions = new(p => p.Id);
 
     #endregion

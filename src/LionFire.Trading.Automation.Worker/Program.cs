@@ -4,7 +4,7 @@ using LionFire.Trading.Indicators;
 using LionFire.Trading.Automation.Blazor.Optimization;
 using LionFire.Logging;
 
-var customLoggerProvider = new CustomLoggerProvider();
+//var customLoggerProvider = new CustomLoggerProvider();
 
 Host.CreateApplicationBuilder(args)
     .LionFire(9850, lf => lf
@@ -34,12 +34,12 @@ Host.CreateApplicationBuilder(args)
         #endregion
 
         #region Logging
-            .AddSingleton(customLoggerProvider)
-            .AddLogging(b =>
-            {
-                b.ClearProviders(); // TEMP - clear console logger in LF DLLs?
-                b.AddProvider(customLoggerProvider);
-            })
+            //.AddSingleton(customLoggerProvider)
+            //.AddLogging(b =>
+            //{
+            //    b.ClearProviders(); // TEMP - clear console logger in LF DLLs?
+            //    b.AddProvider(customLoggerProvider);
+            //})
         #endregion
 
             #region UI

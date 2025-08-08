@@ -12,6 +12,7 @@ public interface IPMarketProcessor
     /// </summary>
     int[]? InputLookbacks => null;
 
+    IPInput Bars { get; }
 }
 
 /// <summary>

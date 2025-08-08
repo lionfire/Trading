@@ -15,9 +15,17 @@ using System.Runtime.InteropServices;
 namespace LionFire.Trading.Automation;
 
 public abstract class BotHarnessBase
+    //: IHasInputMappings
 {
-    protected IBot2 InstantiateBot<TPrecision>(IPBot2? pBot)
-        where TPrecision : struct, INumber<TPrecision>
+    
+    #region Parent
+
+    public abstract ISimContext ISimContext { get; }
+
+    #endregion
+
+    protected IBot2 InstantiateBot<TPrecision>(MultiSimContext multiSimContext, IPBot2? pBot)
+    where TPrecision : struct, INumber<TPrecision>
     {
         ArgumentNullException.ThrowIfNull(pBot);
 
@@ -30,15 +38,18 @@ public abstract class BotHarnessBase
 
         if (bot is IBarsBot<TPrecision> barsBot)
         {
-            ArgumentNullException.ThrowIfNull(barsBot.Parameters.ExchangeSymbolTimeFrame.Symbol);
+            barsBot.Parameters.ExchangeSymbolTimeFrame ??= multiSimContext.Parameters.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException(nameof(barsBot.Parameters.ExchangeSymbolTimeFrame));
 
-            barsBot.Parameters.ExchangeSymbolTimeFrame ??= barsBot.Parameters.ExchangeSymbolTimeFrame ?? throw new ArgumentNullException(nameof(barsBot.Parameters.ExchangeSymbolTimeFrame));
+            ArgumentNullException.ThrowIfNull(barsBot.Parameters.ExchangeSymbolTimeFrame?.Symbol);
 
             if (pBot is IPRequiresInitBeforeUse requiresInit) { requiresInit.Init(); }
         }
 
         return bot;
     }
+
+
+
 }
 
 
@@ -54,7 +65,7 @@ public abstract class BatchHarnessBase : BotHarnessBase, IMultiBacktestHarness
 
     #region Dependencies
 
-    public IServiceProvider ServiceProvider { get; }
+    public IServiceProvider ServiceProvider => MultiSimContext.ServiceProvider;
 
     #endregion
 
@@ -68,14 +79,11 @@ public abstract class BatchHarnessBase : BotHarnessBase, IMultiBacktestHarness
 
     #region Parameters
 
-    public IEnumerable<PBotWrapper> PBacktests { get; }
-    public BacktestExecutionOptions ExecutionOptions { get; } // MOVE to IBatchContext
-
     #region Derived
 
     // Must match across all parameters
 
-    public TimeFrame TimeFrame => MultiSimContext.Parameters.DefaultTimeFrame ??  throw new ArgumentNullException(nameof(TimeFrame));
+    public TimeFrame TimeFrame => MultiSimContext.Parameters.DefaultTimeFrame ?? throw new ArgumentNullException(nameof(TimeFrame));
     public DateTimeOffset InputStart { get; }
     public DateTimeOffset Start => MultiSimContext.Parameters.Start;
     public DateTimeOffset EndExclusive => MultiSimContext.Parameters.EndExclusive;
@@ -86,30 +94,27 @@ public abstract class BatchHarnessBase : BotHarnessBase, IMultiBacktestHarness
 
     #region Lifecycle
 
-    public BatchHarnessBase(IServiceProvider serviceProvider, PBatch pBatch)
-    {
-        ServiceProvider = serviceProvider;
-        PBacktests = pBatch.PBacktests;
+//    public BatchHarnessBase()
+//    {
+//        //var first = PBacktests.FirstOrDefault();
+//        //if (first == null) throw new ArgumentException("batch empty");
 
-        var first = PBacktests.FirstOrDefault();
-        if (first == null) throw new ArgumentException("batch empty");
+//        //DefaultTimeFrame = first.DefaultTimeFrame ?? (first.PBot as IPTimeFrameBot2)?.DefaultTimeFrame ?? throw new ArgumentNullException($"Neither first {nameof(parameters)} nor first {nameof(first.PBot)} has a {nameof(first.DefaultTimeFrame)}");
+//        //Start = first.Start;
+//        //EndExclusive = first.EndExclusive;
 
-        //DefaultTimeFrame = first.DefaultTimeFrame ?? (first.PBot as IPTimeFrameBot2)?.DefaultTimeFrame ?? throw new ArgumentNullException($"Neither first {nameof(parameters)} nor first {nameof(first.PBot)} has a {nameof(first.DefaultTimeFrame)}");
-        //Start = first.Start;
-        //EndExclusive = first.EndExclusive;
+//#if DEBUG
+//        // Extra validation to make sure stray backtests ended up in a sim with the wrong parameters
 
-#if DEBUG
-        // Extra validation to make sure stray backtests ended up in a sim with the wrong parameters
+//        //foreach (var p in PBacktests)
+//        //{
+//        //    if (p.DefaultTimeFrame != DefaultTimeFrame) throw new ArgumentException("DefaultTimeFrame mismatch");
+//        //    if (p.Start != Start) throw new ArgumentException("Start mismatch");
+//        //    if (p.EndExclusive != EndExclusive) throw new ArgumentException("EndExclusive mismatch");
+//        //}
+//#endif
+//    }
 
-        //foreach (var p in PBacktests)
-        //{
-        //    if (p.DefaultTimeFrame != DefaultTimeFrame) throw new ArgumentException("DefaultTimeFrame mismatch");
-        //    if (p.Start != Start) throw new ArgumentException("Start mismatch");
-        //    if (p.EndExclusive != EndExclusive) throw new ArgumentException("EndExclusive mismatch");
-        //}
-#endif
-    }
-    
     /// <summary>
     /// (No need to call this base method)
     /// </summary>
@@ -128,21 +133,20 @@ public abstract class BatchHarnessBase : BotHarnessBase, IMultiBacktestHarness
     #endregion
 
     #region State
-    
-    public abstract ISimContext ISimContext { get; }
 
-    #region Enumerators
 
-    public Dictionary<string, InputEnumeratorBase> InputEnumerators { get; } = new();
+    //#region Enumerators
 
-    #endregion
+    //public Dictionary<string, InputEnumeratorBase> InputEnumerators { get; } = new();
 
-    #endregion
-
-    #region Init
-
-    public IHistoricalTimeSeries Resolve(Type outputType, object source) => ServiceProvider.GetRequiredService<IMarketDataResolver>().Resolve(outputType, source);
+    //#endregion
 
     #endregion
+
+    //#region Init
+
+    //public IHistoricalTimeSeries Resolve(Type outputType, object source) => ServiceProvider.GetRequiredService<IMarketDataResolver>().Resolve(outputType, source);
+
+    //#endregion 
 }
 

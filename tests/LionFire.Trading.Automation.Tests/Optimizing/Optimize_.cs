@@ -34,7 +34,6 @@ new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
 
         //new OptimizationTask()
 
-
         //var pBatch = new PBatch(PMultiSim)
         //{
         //    //PMultiSim = new PBacktestBatchTask2
@@ -49,7 +48,6 @@ new DateTimeOffset(2021, 3, 1, 0, 0, 0, TimeSpan.Zero),
         //    //},
         //};
 
-        var pOptimization = new POptimization(PMultiSim);
 
         //MaxBatchSize = 100_000,
         //MaxBatchSize = 20_048,

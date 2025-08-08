@@ -1,5 +1,8 @@
-﻿using LionFire.Types;
+﻿using LionFire.ExtensionMethods.Validation;
+using LionFire.Types;
+using LionFire.Validation;
 using Microsoft.Extensions.DependencyInjection;
+//using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 
 namespace LionFire.Trading.Automation;
@@ -33,6 +36,8 @@ public class BotHarnessFactory
     /// <returns></returns>
     public ILiveBotHarness Create(BotEntity botEntity)
     {
+        botEntity.ValidateOrThrow();
+
         if (botEntity.Parameters != null)
         {
             var bot = CreateBotFromParameters(botEntity);

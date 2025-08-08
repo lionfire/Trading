@@ -1,4 +1,5 @@
 ﻿using LionFire.Trading.ValueWindows;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation;
@@ -16,7 +17,7 @@ public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>, IPSymbolBot2
 }
 
 
-public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
+public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, TValue>
       where TParameters : PSymbolBot2<TParameters>
     where TValue : struct, INumber<TValue>
 {
@@ -26,12 +27,7 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
     public ExchangeSymbol ExchangeSymbol { get; set; } = default!;
     public string Symbol => ExchangeSymbol.Symbol!;
 
-    public IAccount2<TValue> Account { get; set; } = default!;
-    public IAccount2<double> DoubleAccount => Account as IAccount2<double> ?? (doubleAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<double, decimal>(DecimalAccount));
-    private IAccount2<double>? doubleAccountAdapter;
-    public IAccount2<decimal> DecimalAccount => Account as IAccount2<decimal> ?? (decimalAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<decimal, double>(DoubleAccount));
-    private IAccount2<decimal>? decimalAccountAdapter;
-
+   
     #endregion
 
     #region Lifecycle
@@ -51,7 +47,8 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
         ExchangeSymbol = Parameters.ExchangeSymbol;
         //}
 
-        Account = Context.Sim.DefaultAccount as IAccount2<TValue> ?? throw new NotImplementedException();
+
+        //Account = Context.Sim.DefaultAccount as IAccount2<TValue> ?? throw new NotImplementedException();
 
         if (ExchangeSymbol == null) throw new InvalidOperationException($"Failed to resolve {nameof(ExchangeSymbol)}");
         if (Account == null) throw new InvalidOperationException($"Failed to resolve {nameof(Account)}");
@@ -64,4 +61,14 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, double>
 
     #endregion
 
+    #region State
+
+    //public IAccount2<TValue> Account { get; set; } = default!;
+    public IAccount2<TValue> Account => Context.DefaultSimAccount!;
+    public IAccount2<double> DoubleAccount => Account as IAccount2<double> ?? (doubleAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<double, decimal>(DecimalAccount));
+    private IAccount2<double>? doubleAccountAdapter;
+    public IAccount2<decimal> DecimalAccount => Account as IAccount2<decimal> ?? (decimalAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<decimal, double>(DoubleAccount));
+    private IAccount2<decimal>? decimalAccountAdapter;
+
+    #endregion
 }

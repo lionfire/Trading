@@ -29,20 +29,28 @@ namespace LionFire.Trading.Automation;
 /// 1 or more:
 /// - SimContext
 /// </summary>
-public sealed partial class MultiSimContext : ReactiveObject, IValidatable
+public sealed partial class MultiSimContext : ReactiveObject, IValidatable, IDisposable
 {
     public ValidationContext ValidateThis(ValidationContext validationContext)
     {
-
-        return validationContext
+        validationContext
             .PropertyNotNull(nameof(Parameters), Parameters)
             .PropertyNotNull(nameof(ServiceProvider), ServiceProvider)
             .PropertyNotNull(nameof(DateChunker), DateChunker)
             .PropertyNotNull(nameof(BotTypeName), BotTypeName)
             .PropertyNotNull(nameof(FilesystemRetryPipeline), FilesystemRetryPipeline)
-            .PropertyNotNull(nameof(Journal), Journal)
             .ValidateOptional(Optimization)
             ;
+
+        if(IsInitialized)
+        {
+            validationContext
+                .PropertyNotNull(nameof(Journal), Journal)
+                ;
+
+        }
+
+        return validationContext;
     }
 
     #region Identity
@@ -97,8 +105,7 @@ public sealed partial class MultiSimContext : ReactiveObject, IValidatable
 
     public MultiSimContext(IServiceProvider serviceProvider, PMultiSim parameters, DateChunker dateChunker)
     {
-        ArgumentNullException.ThrowIfNull(parameters.BotType);
-        ArgumentNullException.ThrowIfNull(parameters.PBotType);
+        parameters.ValidateOrThrow();
 
         ServiceProvider = serviceProvider;
         Parameters = parameters;
@@ -106,7 +113,13 @@ public sealed partial class MultiSimContext : ReactiveObject, IValidatable
 
         BotTypeName = ServiceProvider.GetRequiredService<BotTypeRegistry>().GetBotName(Parameters.BotType);
 
-        Journal = ActivatorUtilities.CreateInstance<BacktestsJournal>(ServiceProvider, this, Parameters.PBotType!, /* retainInMemory */ true);
+        cancellationTokenSource.Token.Register(() =>
+        {
+            if (!tcs.Task.IsCompleted)
+            {
+                tcs.TrySetCanceled(cancellationTokenSource.Token);
+            }
+        });
 
         if (ServiceProvider.GetService<ResiliencePipelineProvider<string>>()?.TryGetPipeline(FilesystemRetryPolicy.Default, out var p) == true)
         {
@@ -115,6 +128,8 @@ public sealed partial class MultiSimContext : ReactiveObject, IValidatable
 
         Optimization = new(this); // FUTURE: make optional
     }
+
+    public bool IsInitialized { get; private set; }
 
     public async Task Init()
     {
@@ -127,22 +142,51 @@ public sealed partial class MultiSimContext : ReactiveObject, IValidatable
                     //,Guid.ToString()
                     ).ConfigureAwait(false);
 
+        Journal = ActivatorUtilities.CreateInstance<BacktestsJournal>(ServiceProvider, this, Parameters.PBotType!, /* retainInMemory */ true);
+
         if (Optimization != null)
         {
             await Optimization.Init();
         }
+        
+        IsInitialized=true;
+        this.ValidateOrThrow();
+    }
 
+    public void Dispose()
+    {
+        cancellationTokenSource?.Dispose();
     }
 
     #region Cancellation
 
     public CancellationToken CancellationToken => cancellationTokenSource.Token;
-    private readonly CancellationTokenSource cancellationTokenSource = new();
+    private CancellationTokenSource cancellationTokenSource = new();
+    public bool IsCancellationRequested => cancellationTokenSource.IsCancellationRequested;
 
-    public void Cancel()
+
+    public void Cancel()=> cancellationTokenSource.Cancel();
+
+    public void AddCancellationToken(CancellationToken externalToken)
     {
-        cancellationTokenSource.Cancel();
-        tcs.SetCanceled();
+        if (externalToken == default || !externalToken.CanBeCanceled) { return; }
+
+        // Create a linked token source that responds to both internal and external cancellation
+        var oldSource = cancellationTokenSource;
+        cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(
+            oldSource.Token,
+            externalToken);
+
+        oldSource.Dispose();
+
+        // Register callback for external cancellation
+        externalToken.Register(() =>
+        {
+            if (!tcs.Task.IsCompleted)
+            {
+                tcs.TrySetCanceled(externalToken);
+            }
+        });
     }
 
     #endregion
@@ -152,8 +196,8 @@ public sealed partial class MultiSimContext : ReactiveObject, IValidatable
     public Task Task => tcs.Task;
     private readonly TaskCompletionSource tcs = new();
 
-    internal void OnFinished() => tcs.SetResult();
-    internal void OnFaulted(Exception exception) => tcs.SetException(exception);
+    internal void OnFinished() => tcs.TrySetResult();
+    internal void OnFaulted(Exception exception) => tcs.TrySetException(exception);
 
     #endregion
 
@@ -161,7 +205,7 @@ public sealed partial class MultiSimContext : ReactiveObject, IValidatable
 
     #region Services
 
-    public required BacktestsJournal Journal { get; init; }
+    public BacktestsJournal? Journal { get; private set; } // Set in Init()
 
     #endregion
 

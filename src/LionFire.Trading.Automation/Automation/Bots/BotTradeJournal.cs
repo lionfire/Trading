@@ -25,13 +25,13 @@ public sealed partial class BotTradeJournal<TPrecision> : IBotTradeJournal<TPrec
     #region Dependencies
 
     private readonly ILogger<BotTradeJournal<TPrecision>> logger;
-    BotContext<TPrecision> BotContext;
+    readonly BatchContext<TPrecision> BatchContext;
 
     #region (Derived)
 
     private BestJournalsTracker bestJournalsTracker;
 
-    public MultiSimContext MultiSimContext => BotContext.Sim.MultiSimContext;
+    public MultiSimContext MultiSimContext => BatchContext.MultiSimContext;
 
     #endregion
 
@@ -96,11 +96,11 @@ public sealed partial class BotTradeJournal<TPrecision> : IBotTradeJournal<TPrec
 
     #region Lifecycle
 
-    public BotTradeJournal(IServiceProvider serviceProvider, ILogger<BotTradeJournal<TPrecision>> logger, TradeJournalOptions options, BotContext<TPrecision> botContext, ExchangeSymbol? exchangeSymbol = null)
+    public BotTradeJournal(IServiceProvider serviceProvider, ILogger<BotTradeJournal<TPrecision>> logger, TradeJournalOptions options, BatchContext<TPrecision> batchContext, ExchangeSymbol? exchangeSymbol = null)
     {
-        BotContext = botContext;
+        BatchContext = batchContext;
 
-        bestJournalsTracker = botContext.Sim.MultiSimContext.Optimization.BestJournalsTracker;
+        bestJournalsTracker = batchContext.MultiSimContext.Optimization.BestJournalsTracker;
 
         this.logger = logger;
         this.options = options;

@@ -12,7 +12,8 @@ public interface IBotContext
 
 
 public abstract class BotBase2<TParameters, TPrecision>
-    : IBot2<TParameters, TPrecision>
+    : MarketParticipantBase<TPrecision>
+    , IBot2<TParameters, TPrecision>
     where TParameters : PBot2<TParameters>, IPMarketProcessor
     where TPrecision : struct, INumber<TPrecision>
 {
@@ -30,7 +31,7 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     #region BotContext
 
-    public IBotContext<TPrecision>? Context
+    public BotContext<TPrecision>? Context
     {
         get => context;
         set
@@ -39,8 +40,8 @@ public abstract class BotBase2<TParameters, TPrecision>
             context = value;
         }
     }
-    private IBotContext<TPrecision>? context = null!; // OnBar, OnTick are guaranteed to have PBacktests set
-    IBotContext IBot2.Context { get => Context ?? throw new InvalidOperationException(); set => throw new NotImplementedException(); }
+    private BotContext<TPrecision>? context = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    IBotContext IBot2.Context { get => Context ?? throw new InvalidOperationException(); set => Context = (BotContext<TPrecision>?)value; }
 
     #endregion
 
@@ -59,6 +60,7 @@ public abstract class BotBase2<TParameters, TPrecision>
     }
     private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have PBacktests set
     IPBot2 IBot2.Parameters { get => parameters; set => parameters = (TParameters)value; }
+    IPMarketProcessor IMarketListener.Parameters => Parameters;
 
     protected virtual void OnParametersSet()
     {
@@ -100,7 +102,7 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     public async ValueTask CloseAllPositions()
     {
-        foreach(var p in positions.KeyValues.Values)
+        foreach (var p in positions.KeyValues.Values)
         {
             p.Close();
         }

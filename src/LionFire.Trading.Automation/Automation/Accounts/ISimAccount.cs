@@ -17,6 +17,8 @@ public interface ISimAccount<TPrecision> : IAccount2<TPrecision>
 
     ValueTask<IOrderResult> SimulatedExecuteMarketOrder(string symbol, LongAndShort longAndShort, TPrecision positionSize, PositionOperationFlags increasePositionFlags = PositionOperationFlags.Default, int? existingPositionId = null, long? transactionId = null, TPrecision? currentPrice = null, JournalEntryFlags journalFlags = JournalEntryFlags.Unspecified);
     
+    IEnumerable<AccountMarketSim<TPrecision>> GetAllMarketSims();
+    
     #endregion
 
 

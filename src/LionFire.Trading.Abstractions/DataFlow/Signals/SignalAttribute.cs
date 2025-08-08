@@ -1,7 +1,7 @@
 ﻿namespace LionFire.Trading;
 
 /// <summary>
-/// Belongs on the Bot properties (IBot2). Has no effect on Bot Parameter (IPBot2) properties
+/// Belongs on the IMarketParticipant properties (IBot2). Has no effect on Bot Parameter (IPBot2) properties
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
 public class SignalAttribute : Attribute

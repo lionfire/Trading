@@ -31,6 +31,7 @@ using System.Threading;
 using LionFire.Trading.Automation.Journaling.Trades;
 using System.Threading.Tasks;
 using Serilog.Core;
+using Orleans.Serialization.Buffers;
 
 namespace LionFire.Trading.Automation;
 
@@ -49,7 +50,7 @@ namespace LionFire.Trading.Automation;
 /// Reused:
 /// - inputs (such as indicators, even if they have different lookback requirements)
 /// </summary>
-public sealed class BatchHarness<TPrecision>
+public sealed partial class BatchHarness<TPrecision>
     : BatchHarnessBase
     , IBacktestBatch
     where TPrecision : struct, INumber<TPrecision>
@@ -78,6 +79,8 @@ public sealed class BatchHarness<TPrecision>
     #endregion
 
     #region Parameters
+
+    public BacktestExecutionOptions ExecutionOptions { get; } // MOVE to IBatchContext
 
     public PSimAccount<TPrecision> PBacktestAccountPrototype { get; set; }
         = PSimAccount<TPrecision>.DefaultForBacktesting;
@@ -112,17 +115,21 @@ public sealed class BatchHarness<TPrecision>
 
     #endregion
 
+    #region Convenience
+
+    public IEnumerable<PBotWrapper> PBacktests => Context.Parameters.PBacktests;
+
+    #endregion
+
     #endregion
 
     #region Lifecycle
 
-    public BatchHarness(MultiSimContext multiSimContext, PBatch pBatch) : base(multiSimContext.ServiceProvider, pBatch)
+    public BatchHarness(BatchContext<TPrecision> batchContext)
     {
         try
         {
-            Context = ActivatorUtilities.CreateInstance<BatchContext<TPrecision>>(
-                multiSimContext.ServiceProvider,
-                multiSimContext);
+            Context = batchContext;
 
             BacktestOptions = ServiceProvider.GetRequiredService<IOptionsSnapshot<BacktestOptions>>().Value;
 
@@ -157,7 +164,7 @@ public sealed class BatchHarness<TPrecision>
                 var sw = Stopwatch.StartNew();
                 ValidateParameter(p);
                 validationTime += sw.ElapsedMilliseconds;
-                await CreateBot(p);
+                await CreateBot(MultiSimContext, p);
             }
             Log.Get<BatchHarness<TPrecision>>().LogInformation("Validation time: {validationTime}ms", validationTime);
 
@@ -170,9 +177,9 @@ public sealed class BatchHarness<TPrecision>
         }
     }
 
-    private async ValueTask CreateBot(PBotWrapper p)
+    private async ValueTask CreateBot(MultiSimContext multiSimContext, PBotWrapper p)
     {
-        IBot2 bot = InstantiateBot<TPrecision>(p.PBot);
+        IBot2 bot = InstantiateBot<TPrecision>(multiSimContext, p.PBot);
 
         var pAccount = PBacktestAccountPrototype;
 
@@ -191,7 +198,6 @@ public sealed class BatchHarness<TPrecision>
         }
 
         ExchangeSymbol exchangeSymbol = (bot.Parameters as IPSymbolBot2)?.ExchangeSymbol!;
-
 
         //var context = await BotBatchBacktestContext<TPrecision>.Create(this, bot, pAccount, tradeJournal);
         var context = new BotContext<TPrecision>(SimContext, new PBotContext<TPrecision>
@@ -310,32 +316,33 @@ public sealed class BatchHarness<TPrecision>
 
     #region Inputs
 
-    //List<InputEnumeratorBase> inputs;
     //List<AsyncInputEnumerator>? asyncInputs;
     //List<InputEnumeratorBase> indicatorInputs;
 
-    IEnumerable<InputEnumeratorBase> AllInputEnumerators
-    {
-        get
-        {
-            if (AllInputEnumerators2 != null)
-            {
-                foreach (var input in AllInputEnumerators2)
-                {
-                    yield return input;
-                }
-            }
-            //if (indicatorInputs != null)
-            //{
-            //    foreach (var input in indicatorInputs)
-            //    {
-            //        yield return input;
-            //    }
-            //}
-        }
-    }
+    //IEnumerable<InputEnumeratorBase> InputEnumerators => inputEnumerators.Values;
+    //{
+    //    get
+    //    {
+    //        if (AllInputEnumerators2 != null)
+    //        {
+    //            foreach (var input in AllInputEnumerators2)
+    //            {
+    //                yield return input;
+    //            }
+    //        }
+    //        //if (indicatorInputs != null)
+    //        //{
+    //        //    foreach (var input in indicatorInputs)
+    //        //    {
+    //        //        yield return input;
+    //        //    }
+    //        //}
+    //    }
+    //}
 
-    List<InputEnumeratorBase> AllInputEnumerators2 { get; set; } = default!; // Set by ctor
+    //public IReadOnlyDictionary<string, InputEnumeratorBase> InputEnumerators => inputEnumerators;
+    private Dictionary<string, InputEnumeratorBase> inputEnumerators = [];
+    private List<InputEnumeratorBase> InputEnumeratorsList { get;  set; } = [];
 
     public interface IInputSlotFulfiller
     {
@@ -347,57 +354,40 @@ public sealed class BatchHarness<TPrecision>
     //    static InputInjectionInfo BacktestAccountSymbolInjectionInfo = new InputInjectionInfo(typeof(PBacktestAccount<TPrecision>).GetProperty(nameof(PBacktestAccount<TPrecision>.Bars))!, typeof(BacktestAccount2<TPrecision>).GetProperty(nameof(BacktestAccount2<TPrecision>.Bars))!);
     //#endif
 
-    private void InitInputsForPBot(IPTimeFrameBot2? pBot, IBot2 bot, BotInfo botInfo, Dictionary<string, IndexedInput> inputEnumerators)
-    {
-        int inputEnumeratorIndex = -1;
-        foreach (var inputInjectionInfo in (botInfo.InputParameterToValueMapping ?? Enumerable.Empty<InputParameterToValueMapping>()))
-        {
-            ArgumentNullException.ThrowIfNull(pBot);
-            inputEnumeratorIndex++;
-
-            int lookback = pBot.InputLookbacks == null
-                ? 0
-                : pBot.InputLookbacks[inputEnumeratorIndex];
-
-            if (pBot is IHasInputMappings him)
-            {
-                InputMappingTools.InitInputsForBacktest(inputEnumerators, him, inputEnumeratorIndex, inputInjectionInfo, lookback, pBot);
-            }
-            else
-            {
-                // TEMP
-                throw new UnreachableCodeException(); // REVIEW
-            }
-        }
-    }
-
+    public BotInfo BotInfo => botInfo ??= BotInfos.Get(PBotType, BotType);
+    private BotInfo botInfo;
 
     /// <summary>
     /// Gather all inputs including derived ones for the inputs
     /// </summary>
     private void InitInputs()
     {
-        var ir = ServiceProvider.GetRequiredService<IMarketDataResolver>();
+        var marketDataResolver = ServiceProvider.GetRequiredService<IMarketDataResolver>();
 
-        Dictionary<string, IndexedInput> inputEnumerators = [];
+        Dictionary<string, PInputToEnumerator> aggregatedPInputs = []; // Keys are IPInput.Key
 
         #region InputItem creation, and determine max lookback for each input
 
-        foreach (var backtest in backtests)
+        foreach (BacktestState backtest in backtests)
         {
-            var pBacktest = backtest.PBacktest;
-
-            InitInputsForPBot(pBacktest.PBot, backtest.Bot, backtest.BotInfo, inputEnumerators);
-
-            // BacktestAccount
-#if BacktestAccountSlottedParameters
-            if (backtest.Controller.Account is BacktestAccount2<TPrecision> bta)
+            AggregatePInputsForPMarketParticipant(backtest.PBacktest.PBot, backtest.BotContext, aggregatedPInputs);
+            
+            // Aggregate inputs for account market sims
+            if (backtest.BotContext.DefaultSimAccount != null)
             {
-                    NewMethod(inputEnumerators, backtest, inputEnumeratorIndex, BacktestAccountSymbolInjectionInfo, 1, bta.Parameters);
+                foreach (var marketSim in backtest.BotContext.DefaultSimAccount.GetAllMarketSims())
+                {
+                    AggregatePInputsForPMarketParticipant(marketSim.Parameters, backtest.BotContext, aggregatedPInputs);
+                }
             }
-#endif
-
         }
+
+        //if(Context.DefaultAccount != null)
+        //{
+        //    AggregatePInputsForPBot(backtest.PBacktest.PBot, backtest.BotContext, aggregatedPInputs);
+
+        //}
+
         #endregion
 
         //foreach (var backtest in backtests)
@@ -420,27 +410,11 @@ public sealed class BatchHarness<TPrecision>
         //    //}
         //}
 
-        #region Create enumerator for each input
+        #region Now that we know lookback size, we can create the sliding windows for for each input
 
-        foreach (var (key, value) in inputEnumerators)
+        foreach (var (key, value) in aggregatedPInputs)
         {
-            IHistoricalTimeSeries series = ir.Resolve(value.PInput);
-
-            if (value.Lookback == 0)
-            {
-                inputEnumerators[key].Enumerator = (InputEnumeratorBase)typeof(SingleValueInputEnumerator<,>)
-                   .MakeGenericType(series.ValueType, series.PrecisionType)
-                   .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType)])!
-                   .Invoke([series]);
-            }
-            else if (value.Lookback < 0) throw new ArgumentOutOfRangeException(nameof(value.Lookback));
-            else
-            {
-                inputEnumerators[key].Enumerator = (InputEnumeratorBase)typeof(ChunkingInputEnumerator<,>)
-                    .MakeGenericType(series.ValueType, series.PrecisionType)
-                    .GetConstructor([typeof(IHistoricalTimeSeries<>).MakeGenericType(series.ValueType), typeof(int)])!
-                    .Invoke([series, value.Lookback]);
-            }
+            inputEnumerators.Add(key, marketDataResolver.CreateInputEnumerator(value.PInput, value.Lookback));
         }
 
         #endregion
@@ -470,22 +444,36 @@ public sealed class BatchHarness<TPrecision>
             }
 #endif
 
-            InputMappingTools.HydrateInputMappings(inputEnumerators, backtest);
+            InputMappingTools.HydrateValueWindowsOnMarketListener(backtest.Bot, inputEnumerators, backtest.BotContext.InputMappings!);
 
-            foreach (var a in backtest.BotContext.SimulatedAccounts.Values.OfType<IHasInputMappings>()) { InputMappingTools.HydrateInputMappings(inputEnumerators, a); }
+            // Hydrate market sims for accounts
+            if (backtest.BotContext.DefaultSimAccount != null)
+            {
+                foreach (var marketSim in backtest.BotContext.DefaultSimAccount.GetAllMarketSims())
+                {
+                    InputMappingTools.HydrateValueWindowsOnMarketListener(marketSim, inputEnumerators, backtest.BotContext.InputMappings!);
+                }
+            }
+
+            backtest.BotContext.InputMappings = null;
 
             backtest.InitFinished();
         }
 
         #endregion
 
-        AllInputEnumerators2 = inputEnumerators.Values.Select(e => e.Enumerator!).ToList();
-
+        OnInputEnumeratorsChanged();
     }
+
+    private void OnInputEnumeratorsChanged()
+    {
+        InputEnumeratorsList = inputEnumerators.Values.ToList();
+    }
+
     IEnumerable<IBot2> bots => backtests.Select(s => s.Bot);
     List<BacktestState> backtests = [];
 
-    private record struct BacktestState(PBotWrapper PBacktest, IBot2 Bot, IBotContext<TPrecision> BotContext) : IHasInputMappings
+    private record struct BacktestState(PBotWrapper PBacktest, IBot2 Bot, BotContext<TPrecision> BotContext) : IHasInputMappings
     {
 
         #region Derived
@@ -503,10 +491,9 @@ public sealed class BatchHarness<TPrecision>
 
         #region IHasInputMappings
 
-        internal readonly List<InputMapping> InputMappings => inputMappings;
-        internal List<InputMapping> inputMappings = [];
-        List<InputMapping> IHasInputMappings.InputMappings => InputMappings;
-        IBarListener IHasInputMappings.Instance => Bot;
+        internal readonly List<PInputToMappingToValuesWindowProperty> InputMappings => inputMappings;
+        internal List<PInputToMappingToValuesWindowProperty> inputMappings = [];
+        List<PInputToMappingToValuesWindowProperty> IHasInputMappings.InputMappings => InputMappings;
 
         #endregion
     }
@@ -583,7 +570,7 @@ public sealed class BatchHarness<TPrecision>
             int counter = 0;
             var sw = Stopwatch.StartNew();
 
-            if (EndExclusive != Start) // MOVE: This should be checked in validation
+            if (EndExclusive == Start) // MOVE: This should be checked in validation
             {
                 throw new ArgumentException("Zero duration");
             }
@@ -790,7 +777,7 @@ public sealed class BatchHarness<TPrecision>
     }
 
     private Task PreloadInputChunk() => Task.WhenAll(
-            AllInputEnumerators
+            InputEnumeratorsList
                 .Select(input => input.PreloadRange(chunkStart, chunkEndExclusive))
                 .Where(t => !t.IsCompletedSuccessfully)
                 .Select(t => t.AsTask())
@@ -799,7 +786,7 @@ public sealed class BatchHarness<TPrecision>
     private async ValueTask LoadInputLookback()
     {
         List<Task>? tasks = null;
-        foreach (InputEnumeratorBase input in AllInputEnumerators)
+        foreach (InputEnumeratorBase input in InputEnumeratorsList)
         {
             if (input.LookbackRequired > 0)
             {
@@ -829,7 +816,7 @@ public sealed class BatchHarness<TPrecision>
 
         //var asyncTasks = asyncInputs?.Select(i => i.MoveNextAsync());
 
-        foreach (InputEnumeratorBase input in AllInputEnumerators)
+        foreach (InputEnumeratorBase input in InputEnumeratorsList)
         {
             input.MoveNext();
         }
@@ -874,7 +861,7 @@ public sealed class BatchHarness<TPrecision>
             //}
             //else
             {
-                Debug.WriteLine($"NextBar: {SimContext.SimulatedCurrentDate} Input[0]: {AllInputEnumerators2[0].GetType()}");
+                Debug.WriteLine($"NextBar: {SimContext.SimulatedCurrentDate} Input[0]: {InputEnumeratorsList[0].GetType()}");
             }
         }
 #endif

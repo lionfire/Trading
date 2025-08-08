@@ -8,7 +8,7 @@ public interface IBot2 : IBarListener
     static Type ParametersType { get; } = null!;
 
     string BotId { get; set; }
-    IPBot2 Parameters { get; set; }
+    new IPBot2 Parameters { get; set; }
 
     void Init() { }
 
@@ -23,7 +23,7 @@ public interface IBot2<TPrecision> : IBot2
     where TPrecision : struct, INumber<TPrecision>
 {
     IObservableCache<IPosition<TPrecision>, int> Positions { get; }
-    IBotContext<TPrecision>? Context { get; set; }
+    new BotContext<TPrecision>? Context { get; set; }
 }
 public interface IBot2<TParameters, TPrecision> : IBot2<TPrecision>
     where TPrecision : struct, INumber<TPrecision>

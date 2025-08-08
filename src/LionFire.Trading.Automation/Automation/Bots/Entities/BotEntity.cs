@@ -2,6 +2,7 @@
 using LionFire.IO.Reactive.Hjson;
 using LionFire.Ontology;
 using LionFire.Trading.Automation;
+using LionFire.Validation;
 using Newtonsoft.Json;
 using Nito.Disposables;
 using ReactiveUI;
@@ -14,8 +15,11 @@ namespace LionFire.Trading.Automation;
 
 
 [Alias("Bot")]
-public partial class BotEntity : ReactiveObject
+public partial class BotEntity : ReactiveObject, IValidatable
 {
+    public ValidationContext ValidateThis(ValidationContext validationContext) => validationContext
+        .PropertyNotNull(nameof(Parameters), Parameters)
+        ;
 
     //public Dictionary<string, object>? ParametersDictionary { get; set; }
     public IPBot2? Parameters { get; set; }
@@ -103,6 +107,8 @@ public partial class BotEntity : ReactiveObject
     //public IObservableCache<OptimizationBacktestReference, string> Backtests => backtests;
     public SourceCache<OptimizationBacktestReference, OptimizationBacktestReference> Backtests => backtests;
     private SourceCache<OptimizationBacktestReference, OptimizationBacktestReference> backtests = new SourceCache<OptimizationBacktestReference, OptimizationBacktestReference>(o=>o);
+
+    
 }
 
 #if FUTURE // Maybe

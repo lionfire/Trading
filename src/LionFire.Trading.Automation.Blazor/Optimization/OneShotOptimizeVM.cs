@@ -23,6 +23,7 @@ using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
@@ -34,7 +35,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     #region Dependencies
 
     public IServiceProvider ServiceProvider { get; }
-    public CustomLoggerProvider CustomLoggerProvider { get; }
+    //public CustomLoggerProvider CustomLoggerProvider { get; }
     public BotTypeRegistry BotTypeRegistry { get; }
 
     #endregion
@@ -45,20 +46,23 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     #endregion
 
-    
+
     #region Lifecycle
 
-    public OneShotOptimizeVM(IServiceProvider serviceProvider, LionFire.Logging.CustomLoggerProvider customLoggerProvider, BotTypeRegistry botTypeRegistry)
+    public OneShotOptimizeVM(IServiceProvider serviceProvider
+        //, LionFire.Logging.CustomLoggerProvider customLoggerProvider
+        , BotTypeRegistry botTypeRegistry)
     {
         ServiceProvider = serviceProvider;
-        CustomLoggerProvider = customLoggerProvider;
+        //CustomLoggerProvider = customLoggerProvider;
         BotTypeRegistry = botTypeRegistry;
-        ResetParameters();
 
-        customLoggerProvider.Observable.Subscribe(logEntry =>
-        {
-            LinesVM.Append(logEntry.Message ?? "", logEntry.LogLevel, logEntry.Category ?? "");
-        });
+        #region Event Handlers
+
+        //customLoggerProvider.Observable.Subscribe(logEntry =>
+        //{
+        //    LinesVM.Append(logEntry.Message ?? "", logEntry.LogLevel, logEntry.Category ?? "");
+        //});
 
         this.WhenAnyValue(x => x.MultiSimContext!.Journal!.ObservableCache).Subscribe(oc =>
         {
@@ -78,6 +82,10 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         //Sim.POptimization.ParametersChanged.Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
 
         this.WhenAnyValue(x => x.POptimization.Parameters).Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
+
+        #endregion
+
+        Reset();
     }
     CompositeDisposable disposables = new();
 
@@ -93,7 +101,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     #endregion
 
-   
+
     #region State
 
     [Reactive]
@@ -241,9 +249,9 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         get => pMultiSim;
         set => RaiseAndSetNestedViewModelIfChanged(ref pMultiSim, value);
     }
-    private PMultiSim pMultiSim = new();
+    private PMultiSim pMultiSim;
 
-    public POptimization POptimization => PMultiSim.POptimization!;
+    public POptimization? POptimization => PMultiSim?.POptimization!;
 
     public TimeFrame TimeFrame => TimeFrame.Parse(TimeFrameString);
 
@@ -324,7 +332,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         catch { }
     }
 
-    public void OnOptimize()
+    public async Task OnOptimize()
     {
         ConsoleLog.LogInformation("OnOptimize");
 
@@ -332,16 +340,29 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
         OptimizationTask = new OptimizationTask(ServiceProvider, PMultiSim);
 
-        var task = OptimizationTask.Run();
+        //Task task;
+
+        try
+        {
+            await OptimizationTask.Run().ConfigureAwait(false);
+            //if (task.IsFaulted) { throw task.Exception; }
+        }
+        catch (Exception ex)
+        {
+            ConsoleLog.LogError(ex, "Exception starting OptimizationTask");
+            IsAborted = true;
+            throw;
+        }
 
         IsRunning = true;
         IsAborted = false;
         changes.OnNext(Unit.Default); // TODO - avoid this
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
             ConsoleLog.LogInformation("Waiting for optimization to complete...");
-            await task;
+            //await task;
+            await OptimizationTask.RunTask;
             ConsoleLog.LogInformation("Waiting for optimization to complete...done.");
             IsRunning = false;
             IsCompleted = true;
@@ -359,9 +380,9 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             //_ = InvokeAsync(StateHasChanged);
         });
 
-        Task.Run(async () =>
+        _ = Task.Run(async () =>
         {
-            await task;
+            //await task;
             await OptimizationTask.RunTask;
             LinesVM.Append("Optimization completed", category: GetType().FullName);
         });
@@ -375,7 +396,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     {
         GC.Collect();
     }
-    public void Clear()
+    public void Reset()
     {
         Progress = OptimizationProgress.NoProgress;
         OptimizationTask = null;
@@ -384,6 +405,8 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         GC.Collect();
         //Context = new();
         PMultiSim = new();
+        PMultiSim.POptimization = null;
+        PMultiSim.POptimization = new(PMultiSim);
         ResetParameters();
 
     }

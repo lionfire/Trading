@@ -18,12 +18,18 @@ public partial class PMultiSim : ReactiveObject, IValidatable
 {
     #region Validation
 
-    public ValidationContext ValidateThis(ValidationContext v) =>
-        v.PropertyNotNull(nameof(PBotType), PBotType)
-        .PropertyNotNull(nameof(ExchangeSymbolTimeFrame), ExchangeSymbolTimeFrame)
-        .PropertyNotNull(nameof(Start), Start)
-        .PropertyNotNull(nameof(EndExclusive), EndExclusive)
-        ;
+    public ValidationContext ValidateThis(ValidationContext v)
+    {
+        BotType ??= PBotType == null ? null : BotTyping.TryGetBotType(PBotType);
+
+        return v
+            .PropertyNotNull(nameof(PBotType), PBotType)
+            .PropertyNotNull(nameof(BotType), BotType)
+            .PropertyNotNull(nameof(ExchangeSymbolTimeFrame), ExchangeSymbolTimeFrame)
+            .PropertyNotNull(nameof(Start), Start)
+            .PropertyNotNull(nameof(EndExclusive), EndExclusive)
+            ;
+    }
 
     public bool IsValid =>
         this.Validate().Valid;
@@ -41,10 +47,10 @@ public partial class PMultiSim : ReactiveObject, IValidatable
         get => pOptimization;
         set
         {
-            if (pOptimization != null && value != null)
-            {
-                throw new InvalidOperationException($"{nameof(POptimization)} is already set and cannot be changed once set.");
-            }
+            //if (pOptimization != null && value != null)
+            //{
+            //    throw new InvalidOperationException($"{nameof(POptimization)} is already set and cannot be changed once set unless first set back to null.");
+            //}
             pOptimization = value;
         }
     }

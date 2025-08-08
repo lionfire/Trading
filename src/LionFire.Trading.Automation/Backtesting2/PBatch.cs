@@ -34,6 +34,12 @@ public class PBatch : DisposableBaseViewModel
     //    };
     //}
 
+    #region Parent
+
+    private readonly MultiSimContext multiSimContext;
+
+    #endregion
+
     #region Lifecycle
 
     //public static implicit operator PSimContext(PMultiSim p) => new(p);
@@ -55,39 +61,42 @@ public class PBatch : DisposableBaseViewModel
     //    POptimization = new POptimization(this);
     //}
 
-    public PBatch(IEnumerable<PBotWrapper>? pBacktestTask2 = null)
+    public PBatch(MultiSimContext multiSimContext, IEnumerable<PBotWrapper> pBacktestTasks)
     {
-        ArgumentNullException.ThrowIfNull(pMultiSim);
+        ArgumentNullException.ThrowIfNull(multiSimContext);
+        ArgumentNullException.ThrowIfNull(pBacktestTasks);
+        this.multiSimContext = multiSimContext;
 
-        pBacktestTasks = pBacktestTask2;
-        var first = pBacktestTask2.First();
-        var pBotType = first.PBot!.GetType();
-
+        this.pBacktestTasks = pBacktestTasks;
+        //var first = pBacktestTask2.First();
+        //var pBotType = first.PBot!.GetType();
     }
 
     #endregion
 
+
     #region State
 
 
-    public PMultiSim PMultiSim
-    {
-        get => pMultiSim;
-        set => RaiseAndSetNestedViewModelIfChanged(ref pMultiSim, value);
-    }
-    private PMultiSim pMultiSim;
+    public PMultiSim PMultiSim => multiSimContext.Parameters;
+    //{
+    //    get => pMultiSim;
+    //    set => RaiseAndSetNestedViewModelIfChanged(ref pMultiSim, value);
+    //}
+    //private PMultiSim pMultiSim;
 
     #endregion
 
     #region Backtests
 
     public IEnumerable<PBotWrapper> PBacktests => pBacktestTasks ?? [];
+
     IEnumerable<PBotWrapper>? pBacktestTasks;
 
     #endregion
 
     public POptimization? POptimization => PMultiSim.POptimization;
-    
+
     #region Derived
 
     #region Convenience

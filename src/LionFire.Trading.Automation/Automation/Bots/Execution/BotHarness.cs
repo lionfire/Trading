@@ -9,19 +9,15 @@ public interface ILiveBotHarness : IBotHarness, IHostedService
 {
 }
 
-    
+
 /// <summary>
 /// Single bot
 /// </summary>
 /// <typeparam name="TPrecision"></typeparam>
 public sealed class BotHarness<TPrecision> : BotHarnessBase
     , ILiveBotHarness
-    , IHasInputMappings
     where TPrecision : struct, INumber<TPrecision>
 {
-    #region Identity
-    
-    #endregion
 
     #region Relationships
 
@@ -34,23 +30,15 @@ public sealed class BotHarness<TPrecision> : BotHarnessBase
             bot = value;
         }
     }
-    IBarListener IHasInputMappings.Instance => Bot;
     private IBot2 bot;
-    private readonly IGrainFactory grainFactory;
 
     #endregion
+
+    private readonly IGrainFactory grainFactory;
 
     #region Lifecycle
 
-    #region Initialization info
-    
-    // REVIEW - offload to initializer class, and let it be GC'ed after init?
-    public List<InputMapping> InputMappings => instanceInputInfos;
-    internal List<InputMapping> instanceInputInfos = new();
-
-    #endregion
-
-    public BotHarness(IBot2 bot, IGrainFactory grainFactory, SimContext<TPrecision> simContext)
+    public BotHarness(IBot2 bot, IGrainFactory grainFactory, SimContext<TPrecision> simContext) 
     {
         this.bot = bot;
         this.grainFactory = grainFactory;
@@ -83,6 +71,7 @@ public sealed class BotHarness<TPrecision> : BotHarnessBase
 
     public SimContext<TPrecision> SimContext { get; }
     ISimContext IBotHarness.ISimContext => SimContext;
+    public override ISimContext ISimContext => SimContext;
 
     #endregion
 

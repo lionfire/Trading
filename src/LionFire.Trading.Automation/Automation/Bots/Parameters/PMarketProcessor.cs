@@ -59,5 +59,5 @@ public abstract class PMarketProcessor : IPMarketProcessor
     public abstract Type MaterializedType { get; }
     //public abstract Type MaterializedType { get; }
 
-
+    public abstract IPInput Bars { get; }
 }
