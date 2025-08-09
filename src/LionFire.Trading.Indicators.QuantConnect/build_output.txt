@@ -1,0 +1,74 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  LionFire.Console -> d:\build\bin\Debug\AnyCPU\LionFire.Console\Debug\net9.0\LionFire.Console.dll
+  LionFire.MultiTyping.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.MultiTyping.Abstractions\Debug\net9.0\LionFire.MultiTyping.Abstractions.dll
+  LionFire.Validation -> d:\build\bin\Debug\AnyCPU\LionFire.Validation\Debug\net9.0\LionFire.Validation.dll
+  LionFire.DynamicData.Orleans -> d:\build\bin\Debug\AnyCPU\LionFire.DynamicData.Orleans\Debug\net9.0\LionFire.DynamicData.Orleans.dll
+  LionFire.UI.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.UI.Abstractions\Debug\net9.0\LionFire.UI.Abstractions.dll
+  LionFire.Trading.Api.Abstractions -> C:\src\Trading.Proprietary\build\bin\LionFire.Trading.Api.Abstractions\Debug\net9.0\LionFire.Trading.Api.Abstractions.dll
+  LionFire.Metadata -> d:\build\bin\Debug\AnyCPU\LionFire.Metadata\Debug\net9.0\LionFire.Metadata.dll
+  LionFire.IO.VirtualFilesystem.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.IO.VirtualFilesystem.Abstractions\Debug\net9.0\LionFire.IO.VirtualFilesystem.Abstractions.dll
+  LionFire.StateMachines.Abstractions -> C:\src\StateMachines\bin\LionFire.StateMachines.Abstractions\Debug\netstandard2.0\LionFire.StateMachines.Abstractions.dll
+  LionFire.StateMachines -> C:\src\StateMachines\bin\LionFire.StateMachines\Debug\netstandard2.0\LionFire.StateMachines.dll
+  LionFire.IO.VirtualFilesystem -> d:\build\bin\Debug\AnyCPU\LionFire.IO.VirtualFilesystem\Debug\net9.0\LionFire.IO.VirtualFilesystem.dll
+  LionFire.Base -> d:\build\bin\Debug\AnyCPU\LionFire.Base\Debug\net9.0\LionFire.Base.dll
+  LionFire.Flex -> d:\build\bin\Debug\AnyCPU\LionFire.Flex\Debug\net9.0\LionFire.Flex.dll
+  LionFire.Structures -> d:\build\bin\Debug\AnyCPU\LionFire.Structures\Debug\net9.0\LionFire.Structures.dll
+  LionFire.Hosting.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Hosting.Abstractions\Debug\net9.0\LionFire.Hosting.Abstractions.dll
+  LionFire.Data.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Abstractions\Debug\net9.0\LionFire.Data.Abstractions.dll
+  LionFire.Data.Async.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Async.Abstractions\Debug\net9.0\LionFire.Data.Async.Abstractions.dll
+  LionFire.Core.Extras.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Core.Extras.Abstractions\Debug\net9.0\LionFire.Core.Extras.Abstractions.dll
+  LionFire.Environment -> d:\build\bin\Debug\AnyCPU\LionFire.Environment\Debug\net9.0\LionFire.Environment.dll
+  LionFire.Reactive -> d:\build\bin\Debug\AnyCPU\LionFire.Reactive\Debug\net9.0\LionFire.Reactive.dll
+  LionFire.Orleans.Structures.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Orleans.Structures.Abstractions\Debug\net9.0\LionFire.Orleans.Structures.Abstractions.dll
+  LionFire.Mvvm.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Mvvm.Abstractions\Debug\net9.0\LionFire.Mvvm.Abstractions.dll
+  LionFire.Extensions.Hosting -> d:\build\bin\Debug\AnyCPU\LionFire.Extensions.Hosting\Debug\net9.0\LionFire.Extensions.Hosting.dll
+  LionFire.Referencing.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Referencing.Abstractions\Debug\net9.0\LionFire.Referencing.Abstractions.dll
+  LionFire.Execution.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Execution.Abstractions\Debug\net9.0\LionFire.Execution.Abstractions.dll
+  LionFire.Hosting.CommandLine -> d:\build\bin\Debug\AnyCPU\LionFire.Hosting.CommandLine\Debug\net9.0\LionFire.Hosting.CommandLine.dll
+  LionFire.Data.Async.ReactiveUI.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Async.ReactiveUI.Abstractions\Debug\net9.0\LionFire.Data.Async.ReactiveUI.Abstractions.dll
+  LionFire.Data.Persisters.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Persisters.Abstractions\Debug\net9.0\LionFire.Data.Persisters.Abstractions.dll
+  LionFire.Core -> d:\build\bin\Debug\AnyCPU\LionFire.Core\Debug\net9.0\LionFire.Core.dll
+  LionFire.Persistence.Handles.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Persistence.Handles.Abstractions\Debug\net9.0\LionFire.Persistence.Handles.Abstractions.dll
+  LionFire.Data.Async -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Async\Debug\net9.0\LionFire.Data.Async.dll
+  LionFire.Data.Async.Extras -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Async.Extras\Debug\net9.0\LionFire.Data.Async.Extras.dll
+  LionFire.Instantiating.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Instantiating.Abstractions\Debug\net9.0\LionFire.Instantiating.Abstractions.dll
+  LionFire.Data.Async.ReactiveUI -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Async.ReactiveUI\Debug\net9.0\LionFire.Data.Async.ReactiveUI.dll
+  LionFire.DependencyMachines.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.DependencyMachines.Abstractions\Debug\net9.0\LionFire.DependencyMachines.Abstractions.dll
+  LionFire.DependencyMachines -> d:\build\bin\Debug\AnyCPU\LionFire.DependencyMachines\Debug\net9.0\LionFire.DependencyMachines.dll
+  LionFire.Applications.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Applications.Abstractions\Debug\net9.0\LionFire.Applications.Abstractions.dll
+  LionFire.Referencing -> d:\build\bin\Debug\AnyCPU\LionFire.Referencing\Debug\net9.0\LionFire.Referencing.dll
+  LionFire.Execution -> d:\build\bin\Debug\AnyCPU\LionFire.Execution\Debug\net9.0\LionFire.Execution.dll
+  LionFire.Extensions.Logging -> d:\build\bin\Debug\AnyCPU\LionFire.Extensions.Logging\Debug\net9.0\LionFire.Extensions.Logging.dll
+  LionFire.Hosting -> d:\build\bin\Debug\AnyCPU\LionFire.Hosting\Debug\net9.0\LionFire.Hosting.dll
+  LionFire.Assets.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Assets.Abstractions\Debug\net9.0\LionFire.Assets.Abstractions.dll
+  LionFire.Notifications.Abstractions -> d:\build\bin\Debug\AnyCPU\LionFire.Notifications.Abstractions\Debug\net9.0\LionFire.Notifications.Abstractions.dll
+  LionFire.Trading.Abstractions -> C:\src\Trading\src\LionFire.Trading.Abstractions\bin\Debug\net9.0\LionFire.Trading.Abstractions.dll
+  LionFire.Persistence.Handles -> d:\build\bin\Debug\AnyCPU\LionFire.Persistence.Handles\Debug\net9.0\LionFire.Persistence.Handles.dll
+  LionFire.Inspection -> d:\build\bin\Debug\AnyCPU\LionFire.Inspection\Debug\net9.0\LionFire.Inspection.dll
+  LionFire.Trading.Link.Abstractions -> C:\src\Trading.Proprietary\build\bin\LionFire.Trading.Link.Abstractions\Debug\net9.0\LionFire.Trading.Link.Abstractions.dll
+  LionFire.Trading.Notifications.Abstractions -> C:\src\Trading.Proprietary\build\bin\LionFire.Trading.Notifications.Abstractions\Debug\net9.0\LionFire.Trading.Notifications.Abstractions.dll
+  LionFire.Trading.Grains.Abstractions -> C:\src\Trading\src\LionFire.Trading.Grains.Abstractions\bin\Debug\net9.0\LionFire.Trading.Grains.Abstractions.dll
+  LionFire.Applications -> d:\build\bin\Debug\AnyCPU\LionFire.Applications\Debug\net9.0\LionFire.Applications.dll
+  LionFire.Mvvm -> d:\build\bin\Debug\AnyCPU\LionFire.Mvvm\Debug\net9.0\LionFire.Mvvm.dll
+  LionFire.Assets -> d:\build\bin\Debug\AnyCPU\LionFire.Assets\Debug\net9.0\LionFire.Assets.dll
+  LionFire.Data.Async.Mvvm -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Async.Mvvm\Debug\net9.0\LionFire.Data.Async.Mvvm.dll
+  LionFire.Data.Persisters -> d:\build\bin\Debug\AnyCPU\LionFire.Data.Persisters\Debug\net9.0\LionFire.Data.Persisters.dll
+  LionFire.Serialization.Json.Newtonsoft -> d:\build\bin\Debug\AnyCPU\LionFire.Serialization.Json.Newtonsoft\Debug\net9.0\LionFire.Serialization.Json.Newtonsoft.dll
+  LionFire.Instantiating -> d:\build\bin\Debug\AnyCPU\LionFire.Instantiating\Debug\net9.0\LionFire.Instantiating.dll
+  LionFire.Notifications -> d:\build\bin\Debug\AnyCPU\LionFire.Notifications\Debug\net9.0\LionFire.Notifications.dll
+  LionFire.UI -> d:\build\bin\Debug\AnyCPU\LionFire.UI\Debug\net9.0\LionFire.UI.dll
+  LionFire.Persistence.Filesystem -> d:\build\bin\Debug\AnyCPU\LionFire.Persistence.Filesystem\Debug\net9.0\LionFire.Persistence.Filesystem.dll
+  LionFire.UI.Entities -> d:\build\bin\Debug\AnyCPU\LionFire.UI.Entities\Debug\net9.0\LionFire.UI.Entities.dll
+  LionFire.Trading -> C:\src\Trading\src\LionFire.Trading\bin\Debug\net9.0\LionFire.Trading.dll
+  LionFire.Trading.Historical -> C:\src\Trading\src\LionFire.Trading.Historical\bin\Debug\net9.0\LionFire.Trading.Historical.dll
+  LionFire.Trading.Binance -> C:\src\Trading.Proprietary\build\bin\LionFire.Trading.Binance\Debug\net9.0\LionFire.Trading.Binance.dll
+  LionFire.Trading.Historical.Framework -> C:\src\Trading\src\LionFire.Trading.HistoricalData\bin\Debug\net9.0\LionFire.Trading.Historical.Framework.dll
+  LionFire.Trading.Indicators -> C:\src\Trading\src\LionFire.Trading.Indicators\bin\Debug\net9.0\LionFire.Trading.Indicators.dll
+  LionFire.Trading.Indicators.QuantConnect -> C:\src\Trading\src\LionFire.Trading.Indicators.QuantConnect\bin\Debug\net9.0\LionFire.Trading.Indicators.QuantConnect.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:16.83
