@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.Data;
+﻿using LionFire.Trading;
+using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.Trading.Indicators.Inputs;
 using LionFire.Trading.ValueWindows;

@@ -7,8 +7,8 @@ namespace LionFire.Trading.Indicators;
 /// </summary>
 /// <remarks>
 /// Available implementations:
-/// - SMAQC: QuantConnect implementation (default, stable)
-/// - SMAFP: First-party implementation (custom features, optimized with circular buffer)
+/// - SMA_QC: QuantConnect implementation (default, stable)
+/// - SMA_FP: First-party implementation (custom features, optimized with circular buffer)
 /// 
 /// Selection: Automatic based on performance profile, or set
 /// ImplementationHint in parameters.

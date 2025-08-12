@@ -7,8 +7,8 @@ namespace LionFire.Trading.Indicators;
 /// </summary>
 /// <remarks>
 /// Available implementations:
-/// - RSIQC: QuantConnect implementation (default, stable)
-/// - RSIFP: First-party implementation (custom features)
+/// - RSI_QC: QuantConnect implementation (default, stable)
+/// - RSI_FP: First-party implementation (custom features)
 /// - RSIOpt: Optimized implementation (when available)
 /// 
 /// Selection: Automatic based on performance profile, or set

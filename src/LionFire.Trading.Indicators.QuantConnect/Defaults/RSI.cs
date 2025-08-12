@@ -5,10 +5,10 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 /// </summary>
 /// <remarks>
 /// This alias allows easy switching between implementations without changing client code.
-/// Use RSIQC directly if you need the QuantConnect-specific implementation,
-/// or RSIFP from LionFire.Trading.Indicators.Native for the first-party implementation.
+/// Use RSI_QC directly if you need the QuantConnect-specific implementation,
+/// or RSI_FP from LionFire.Trading.Indicators.Native for the first-party implementation.
 /// </remarks>
-public class RSI<TPrice, TOutput> : RSIQC<TPrice, TOutput>
+public class RSI<TPrice, TOutput> : RSI_QC<TPrice, TOutput>
 {
     public RSI(PRSI<TPrice, TOutput> parameters) : base(parameters) { }
     

@@ -12,8 +12,8 @@ namespace LionFire.Trading.Indicators;
 /// - %D: The slow stochastic indicator (signal line), which is a moving average of %K
 /// 
 /// Available implementations:
-/// - StochasticQC: QuantConnect implementation (default, stable)
-/// - StochasticFP: First-party implementation (custom features)
+/// - Stochastic_QC: QuantConnect implementation (default, stable)
+/// - Stochastic_FP: First-party implementation (custom features)
 /// 
 /// Selection: Automatic based on performance profile, or set
 /// PreferredImplementation in parameters.

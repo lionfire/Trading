@@ -1,0 +1,210 @@
+{
+  "benchmarkConfiguration": {
+    "name": "LorentzianClassificationBenchmarks",
+    "version": "1.0.0",
+    "description": "Comprehensive benchmark configuration for Lorentzian Classification indicator",
+    "author": "Trading Indicators Team",
+    "lastModified": "2025-08-10"
+  },
+  
+  "parameterSets": {
+    "realTimeTrading": {
+      "description": "Optimized for real-time trading with low latency requirements",
+      "kValues": [4, 8],
+      "lookbackPeriods": [50, 100],
+      "normalizationWindows": [10, 20],
+      "dataSizes": [1000, 10000],
+      "marketConditions": ["Trending", "Volatile"],
+      "numericTypes": ["Double", "Float"],
+      "categories": ["Initialization", "SingleUpdate", "KNN"]
+    },
+    
+    "backtesting": {
+      "description": "Optimized for backtesting with higher accuracy requirements",
+      "kValues": [8, 16, 32],
+      "lookbackPeriods": [100, 500],
+      "normalizationWindows": [20, 50],
+      "dataSizes": [10000, 100000],
+      "marketConditions": ["Trending", "Sideways", "Volatile"],
+      "numericTypes": ["Double", "Decimal"],
+      "categories": ["BatchProcessing", "Memory", "MarketCondition"]
+    },
+    
+    "research": {
+      "description": "Complete parameter sweep for research and optimization",
+      "kValues": [4, 8, 16, 32],
+      "lookbackPeriods": [50, 100, 500],
+      "normalizationWindows": [10, 20, 50],
+      "dataSizes": [1000, 10000, 100000],
+      "marketConditions": ["Trending", "Sideways", "Volatile"],
+      "numericTypes": ["Double", "Float", "Decimal"],
+      "categories": ["*"]
+    },
+    
+    "memoryAnalysis": {
+      "description": "Focus on memory usage patterns and optimization",
+      "kValues": [8, 16],
+      "lookbackPeriods": [100, 500, 1000],
+      "normalizationWindows": [20, 50],
+      "dataSizes": [10000, 100000],
+      "marketConditions": ["Realistic"],
+      "numericTypes": ["Double"],
+      "categories": ["Memory", "Initialization"],
+      "specialOptions": {
+        "enableMemoryProfiler": true,
+        "trackAllocations": true,
+        "measureGCPressure": true
+      }
+    },
+    
+    "performanceRegression": {
+      "description": "Minimal set for CI/CD performance regression detection",
+      "kValues": [8],
+      "lookbackPeriods": [100],
+      "normalizationWindows": [20],
+      "dataSizes": [10000],
+      "marketConditions": ["Trending"],
+      "numericTypes": ["Double"],
+      "categories": ["SingleUpdate", "BatchProcessing"],
+      "benchmarkOptions": {
+        "warmupCount": 2,
+        "iterationCount": 5,
+        "launchCount": 1,
+        "timeout": "00:05:00"
+      }
+    }
+  },
+  
+  "benchmarkTargets": {
+    "singleUpdateLatency": {
+      "description": "Real-time processing latency targets",
+      "target": "500μs",
+      "warning": "800μs", 
+      "critical": "1.5ms",
+      "unit": "microseconds",
+      "priority": "high"
+    },
+    
+    "batchProcessingThroughput": {
+      "description": "Backtesting throughput targets",
+      "target": "200000 bars/second",
+      "warning": "100000 bars/second",
+      "critical": "50000 bars/second", 
+      "unit": "bars per second",
+      "priority": "medium"
+    },
+    
+    "initializationTime": {
+      "description": "Indicator setup time",
+      "target": "5ms",
+      "warning": "20ms",
+      "critical": "100ms",
+      "unit": "milliseconds",
+      "priority": "low"
+    },
+    
+    "memoryUsagePerPattern": {
+      "description": "Memory efficiency per historical pattern",
+      "target": "500B",
+      "warning": "1KB",
+      "critical": "2KB",
+      "unit": "bytes",
+      "priority": "medium"
+    },
+    
+    "featureExtractionOverhead": {
+      "description": "Technical indicator calculation cost",
+      "target": "50μs",
+      "warning": "100μs",
+      "critical": "500μs",
+      "unit": "microseconds",
+      "priority": "medium"
+    }
+  },
+  
+  "testDataProfiles": {
+    "minimal": {
+      "description": "Quick validation dataset",
+      "size": 1000,
+      "marketCondition": "Trending",
+      "volatility": "Low",
+      "seed": 42
+    },
+    
+    "standard": {
+      "description": "Standard benchmark dataset",
+      "size": 10000,
+      "marketCondition": "Mixed",
+      "volatility": "Medium",
+      "seed": 12345
+    },
+    
+    "stress": {
+      "description": "Large dataset for stress testing",
+      "size": 100000,
+      "marketCondition": "Volatile",
+      "volatility": "High",
+      "seed": 67890
+    },
+    
+    "realistic": {
+      "description": "Realistic market data simulation",
+      "size": 50000,
+      "marketCondition": "Realistic",
+      "volatility": "Variable",
+      "includeGaps": true,
+      "includeMicrostructure": true,
+      "seed": 11111
+    }
+  },
+  
+  "reportingConfig": {
+    "defaultFormats": ["html", "csv", "md"],
+    "includeCharts": true,
+    "includeSummaryTables": true,
+    "includeRegression": true,
+    "customColumns": [
+      "Throughput",
+      "Latency_P95",
+      "Latency_P99", 
+      "MemoryPerOperation",
+      "GCGen0",
+      "GCGen1",
+      "GCGen2"
+    ],
+    "thresholdAlerts": {
+      "performanceRegression": "10%",
+      "memoryIncrease": "20%",
+      "latencyIncrease": "15%"
+    }
+  },
+  
+  "environmentRequirements": {
+    "minMemoryGB": 8,
+    "recommendedMemoryGB": 16,
+    "minCpuCores": 4,
+    "recommendedCpuCores": 8,
+    "requiredFramework": ".NET 8.0",
+    "operatingSystems": ["Windows", "Linux", "macOS"],
+    "requiredPackages": [
+      "BenchmarkDotNet",
+      "System.Numerics",
+      "FluentAssertions",
+      "xUnit"
+    ]
+  },
+  
+  "cicdIntegration": {
+    "enableAutomatedRuns": true,
+    "triggerOnCommit": true,
+    "triggerOnPullRequest": true,
+    "scheduleDaily": "02:00",
+    "scheduleWeekly": "Sunday 03:00",
+    "artifactRetentionDays": 30,
+    "performanceBaseline": {
+      "updateFrequency": "Weekly",
+      "significanceThreshold": 0.05,
+      "minimumSampleSize": 10
+    }
+  }
+}

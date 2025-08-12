@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Resolve version conflict -->
+    <PackageReference Include="Microsoft.CodeAnalysis.Common" />
+    
+    <!-- BenchmarkDotNet for performance testing -->
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Condition="'$(OS)' == 'Windows_NT'" />
+    
+    <!-- For data generation and manipulation -->
+    <PackageReference Include="Bogus" />
+    
+    <!-- For CSV export -->
+    <PackageReference Include="CsvHelper" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Reference indicator projects -->
+    <!-- Temporarily disabled due to build errors -->
+    <!-- <ProjectReference Include="..\..\src\LionFire.Trading.Indicators.QuantConnect\LionFire.Trading.Indicators.QuantConnect.csproj" /> -->
+    <ProjectReference Include="..\..\src\LionFire.Trading.Indicators\LionFire.Trading.Indicators.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -7,10 +7,10 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 /// </summary>
 /// <remarks>
 /// This alias allows easy switching between implementations without changing client code.
-/// Use StochasticQC directly if you need the QuantConnect-specific implementation,
-/// or StochasticFP from LionFire.Trading.Indicators.Native for the first-party implementation.
+/// Use Stochastic_QC directly if you need the QuantConnect-specific implementation,
+/// or Stochastic_FP from LionFire.Trading.Indicators.Native for the first-party implementation.
 /// </remarks>
-public class Stochastic<TPrice, TOutput> : StochasticQC<TPrice, TOutput>
+public class Stochastic<TPrice, TOutput> : Stochastic_QC<TPrice, TOutput>
     where TPrice : struct
     where TOutput : struct, System.Numerics.INumber<TOutput>
 {

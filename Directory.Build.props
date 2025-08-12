@@ -27,5 +27,11 @@
     <Authors>Jared Thirsk</Authors>
     <Company>Jared Thirsk</Company>
   </PropertyGroup>
+
+  <!-- Special handling for benchmark projects to avoid assembly attribute duplication -->
+  <PropertyGroup Condition="$(MSBuildProjectName.Contains('Benchmark'))">
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+  </PropertyGroup>
  
 </Project>

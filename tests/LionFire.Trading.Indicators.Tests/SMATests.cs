@@ -13,7 +13,7 @@ public class SMATests
     {
         // Arrange
         var parameters = new PSMA<double, double> { Period = 3 };
-        var sma = new SMAFP<double, double>(parameters);
+        var sma = new SMA_FP<double, double>(parameters);
         var inputs = new double[] { 1, 2, 3, 4, 5 };
         var outputs = new double[inputs.Length];
 
@@ -35,7 +35,7 @@ public class SMATests
     {
         // Arrange
         var parameters = new PSMA<double, double> { Period = 3 };
-        var sma = new SMAQC<double, double>(parameters);
+        var sma = new SMA_QC<double, double>(parameters);
         var inputs = new double[] { 1, 2, 3, 4, 5 };
         var outputs = new double[inputs.Length];
 
@@ -80,7 +80,7 @@ public class SMATests
     {
         // Arrange
         var parameters = new PSMA<double, double> { Period = 10 };
-        var sma = new SMAFP<double, double>(parameters);
+        var sma = new SMA_FP<double, double>(parameters);
         
         // Create test data: 1 to 20
         var inputs = Enumerable.Range(1, 20).Select(x => (double)x).ToArray();
@@ -112,7 +112,7 @@ public class SMATests
     {
         // Arrange
         var parameters = new PSMA<double, double> { Period = 3 };
-        var sma = new SMAFP<double, double>(parameters);
+        var sma = new SMA_FP<double, double>(parameters);
         
         // Process some data
         sma.OnBarBatch([1, 2, 3], null);
@@ -142,7 +142,7 @@ public class SMATests
     {
         // Arrange
         var parameters = new PSMA<double, double> { Period = period };
-        var sma = new SMAFP<double, double>(parameters);
+        var sma = new SMA_FP<double, double>(parameters);
         
         // Create constant input data
         var inputs = Enumerable.Repeat(10.0, period * 2).ToArray();

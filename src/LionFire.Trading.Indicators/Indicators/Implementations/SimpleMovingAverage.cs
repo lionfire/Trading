@@ -3,7 +3,7 @@ using CircularBuffer;
 using LionFire.Structures;
 using LionFire.Trading.Data;
 using LionFire.Trading.HistoricalData.Retrieval;
-using LionFire.Trading.IO;
+using LionFire.Trading;
 using Microsoft.CodeAnalysis.Editing;
 using Microsoft.Extensions.Options;
 using System.Diagnostics.Contracts;

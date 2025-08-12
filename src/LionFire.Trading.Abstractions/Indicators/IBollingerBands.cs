@@ -10,8 +10,8 @@ namespace LionFire.Trading.Indicators;
 /// calculated as standard deviations from the middle band.
 /// 
 /// Available implementations:
-/// - BollingerBandsQC: QuantConnect implementation (default, stable)
-/// - BollingerBandsFP: First-party implementation (custom features)
+/// - BollingerBands_QC: QuantConnect implementation (default, stable)
+/// - BollingerBands_FP: First-party implementation (custom features)
 /// 
 /// Selection: Automatic based on performance profile, or set
 /// ImplementationHint in parameters.

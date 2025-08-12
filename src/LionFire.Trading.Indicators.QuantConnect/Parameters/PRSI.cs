@@ -11,7 +11,7 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 /// Input: Price values (typically Close)
 /// Output: RSI value between 0 and 100
 /// </summary>
-public class PRSI<TPrice, TOutput> : IndicatorParameters<RSIQC<TPrice, TOutput>, TPrice, TOutput>
+public class PRSI<TPrice, TOutput> : IndicatorParameters<RSI_QC<TPrice, TOutput>, TPrice, TOutput>
 {
     #region Identity
 

@@ -34,11 +34,11 @@ class Program
 
         // Test QuantConnect implementation
         Console.WriteLine("Testing QuantConnect Implementation:");
-        TestIndicator(new StochasticQC<double, double>(parameters), uptrendData, "QuantConnect");
+        TestIndicator(new Stochastic_QC<double, double>(parameters), uptrendData, "QuantConnect");
 
         // Test First-Party implementation
         Console.WriteLine("\nTesting First-Party Implementation:");
-        TestIndicator(new StochasticFP<double, double>(parameters), uptrendData, "First-Party");
+        TestIndicator(new Stochastic_FP<double, double>(parameters), uptrendData, "First-Party");
 
         // Test default alias
         Console.WriteLine("\nTesting Default Alias (should use QuantConnect):");
@@ -59,10 +59,10 @@ class Program
 
         Console.WriteLine("\n=== Testing with Downtrend Data ===");
         Console.WriteLine("\nQuantConnect with downtrend:");
-        TestIndicator(new StochasticQC<double, double>(parameters), downtrendData, "QuantConnect-Down");
+        TestIndicator(new Stochastic_QC<double, double>(parameters), downtrendData, "QuantConnect-Down");
 
         Console.WriteLine("\nFirst-Party with downtrend:");
-        TestIndicator(new StochasticFP<double, double>(parameters), downtrendData, "FirstParty-Down");
+        TestIndicator(new Stochastic_FP<double, double>(parameters), downtrendData, "FirstParty-Down");
 
         Console.WriteLine("\n=== All Tests Completed Successfully ===");
     }

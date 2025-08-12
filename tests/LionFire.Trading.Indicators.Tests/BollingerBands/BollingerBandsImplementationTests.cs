@@ -18,7 +18,7 @@ public class BollingerBandsImplementationTests
             StandardDeviations = 2.0
         };
         
-        var indicator = new BollingerBandsFP<double, double>(parameters);
+        var indicator = new BollingerBands_FP<double, double>(parameters);
         var prices = new List<double> { 10, 11, 12, 11, 10, 9, 10, 11, 12, 13 };
         var output = new double[prices.Count * 3]; // 3 values per price: Upper, Middle, Lower
         
@@ -54,7 +54,7 @@ public class BollingerBandsImplementationTests
             StandardDeviations = 2.0
         };
         
-        var indicator = new BollingerBandsQC<double, double>(parameters);
+        var indicator = new BollingerBands_QC<double, double>(parameters);
         var prices = new List<double>();
         
         // Generate test data
@@ -85,8 +85,8 @@ public class BollingerBandsImplementationTests
             StandardDeviations = 2.0
         };
         
-        var fpIndicator = new BollingerBandsFP<double, double>(parameters);
-        var qcIndicator = new BollingerBandsQC<double, double>(parameters);
+        var fpIndicator = new BollingerBands_FP<double, double>(parameters);
+        var qcIndicator = new BollingerBands_QC<double, double>(parameters);
         
         var prices = new List<double>();
         for (int i = 0; i < 20; i++)

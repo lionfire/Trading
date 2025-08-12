@@ -9,7 +9,7 @@ namespace LionFire.Trading.Tests.Indicators;
 public class StochasticTests
 {
     [Fact]
-    public void StochasticQC_CalculatesCorrectly()
+    public void Stochastic_QC_CalculatesCorrectly()
     {
         // Arrange
         var parameters = new PStochastic<double, double>
@@ -21,7 +21,7 @@ public class StochasticTests
             OversoldLevel = 20
         };
 
-        var indicator = new StochasticQC<double, double>(parameters);
+        var indicator = new Stochastic_QC<double, double>(parameters);
         
         // Create sample HLC data
         var testData = new List<HLC<double>>();
@@ -52,7 +52,7 @@ public class StochasticTests
     }
 
     [Fact]
-    public void StochasticFP_CalculatesCorrectly()
+    public void Stochastic_FP_CalculatesCorrectly()
     {
         // Arrange
         var parameters = new PStochastic<double, double>
@@ -64,7 +64,7 @@ public class StochasticTests
             OversoldLevel = 20
         };
 
-        var indicator = new StochasticFP<double, double>(parameters);
+        var indicator = new Stochastic_FP<double, double>(parameters);
         
         // Create sample HLC data
         var testData = new List<HLC<double>>();
@@ -105,7 +105,7 @@ public class StochasticTests
             SlowDPeriod = 3
         };
 
-        // Default Stochastic should point to StochasticQC
+        // Default Stochastic should point to Stochastic_QC
         var indicator = new Stochastic<double, double>(parameters);
         
         // Create sample HLC data
@@ -144,7 +144,7 @@ public class StochasticTests
             OversoldLevel = 20
         };
 
-        var indicator = new StochasticQC<double, double>(parameters);
+        var indicator = new Stochastic_QC<double, double>(parameters);
         
         // Create data that will result in overbought condition
         var overboughtData = new List<HLC<double>>();

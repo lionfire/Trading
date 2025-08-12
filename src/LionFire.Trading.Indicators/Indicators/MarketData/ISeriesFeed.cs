@@ -1,4 +1,5 @@
-﻿
+﻿using LionFire.Trading;
+
 namespace LionFire.Trading.Data;
 
 //public interface IValueStreamReference

@@ -1,4 +1,4 @@
-﻿namespace LionFire.Trading.IO;
+﻿﻿namespace LionFire.Trading;
 
 public class OutputSlot : Slot
 {

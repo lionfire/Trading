@@ -25,7 +25,7 @@ public static class EMA
         return parameters.ImplementationHint switch
         {
             ImplementationHint.QuantConnect => CreateQuantConnectImplementation(parameters),
-            ImplementationHint.FirstParty => new EMAFP<TPrice, TOutput>(parameters),
+            ImplementationHint.FirstParty => new EMA_FP<TPrice, TOutput>(parameters),
             ImplementationHint.Optimized => SelectOptimizedImplementation(parameters),
             ImplementationHint.Auto => SelectBestImplementation(parameters),
             _ => SelectBestImplementation(parameters)
@@ -63,7 +63,7 @@ public static class EMA
         {
             // Try to load the QuantConnect implementation assembly
             var qcAssembly = Assembly.Load("LionFire.Trading.Indicators.QuantConnect");
-            var emaqcType = qcAssembly.GetType($"LionFire.Trading.Indicators.QuantConnect_.EMAQC`2");
+            var emaqcType = qcAssembly.GetType($"LionFire.Trading.Indicators.QuantConnect_.EMA_QC`2");
             
             if (emaqcType != null)
             {
@@ -85,7 +85,7 @@ public static class EMA
         }
         
         // Fallback to first-party implementation
-        return new EMAFP<TPrice, TOutput>(parameters);
+        return new EMA_FP<TPrice, TOutput>(parameters);
     }
     
     /// <summary>
@@ -109,7 +109,7 @@ public static class EMA
         }
         else
         {
-            return new EMAFP<TPrice, TOutput>(parameters);
+            return new EMA_FP<TPrice, TOutput>(parameters);
         }
     }
     
@@ -138,7 +138,7 @@ public static class EMA
         else
         {
             // Use first-party implementation for efficiency and SMA seeding
-            return new EMAFP<TPrice, TOutput>(parameters);
+            return new EMA_FP<TPrice, TOutput>(parameters);
         }
     }
 

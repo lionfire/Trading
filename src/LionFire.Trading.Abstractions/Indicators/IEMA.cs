@@ -11,8 +11,8 @@ namespace LionFire.Trading.Indicators;
 /// Where Multiplier = 2 / (Period + 1)
 /// 
 /// Available implementations:
-/// - EMAQC: QuantConnect implementation (default, stable)
-/// - EMAFP: First-party implementation (custom features, uses SMA for initial seed)
+/// - EMA_QC: QuantConnect implementation (default, stable)
+/// - EMA_FP: First-party implementation (custom features, uses SMA for initial seed)
 /// 
 /// Selection: Automatic based on performance profile, or set
 /// ImplementationHint in parameters.

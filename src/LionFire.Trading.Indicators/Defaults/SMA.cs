@@ -25,8 +25,8 @@ public static class SMA
         return parameters.ImplementationHint switch
         {
             ImplementationHint.QuantConnect => CreateQuantConnectImplementation(parameters),
-            ImplementationHint.FirstParty => new SMAFP<TPrice, TOutput>(parameters),
-            ImplementationHint.Optimized => new SMAFP<TPrice, TOutput>(parameters), // FP is already optimized with circular buffer
+            ImplementationHint.FirstParty => new SMA_FP<TPrice, TOutput>(parameters),
+            ImplementationHint.Optimized => new SMA_FP<TPrice, TOutput>(parameters), // FP is already optimized with circular buffer
             ImplementationHint.Auto => SelectBestImplementation(parameters),
             _ => SelectBestImplementation(parameters)
         };
@@ -58,7 +58,7 @@ public static class SMA
         {
             // Try to load the QuantConnect implementation assembly
             var qcAssembly = Assembly.Load("LionFire.Trading.Indicators.QuantConnect");
-            var smaqcType = qcAssembly.GetType($"LionFire.Trading.Indicators.QuantConnect_.SMAQC`2");
+            var smaqcType = qcAssembly.GetType($"LionFire.Trading.Indicators.QuantConnect_.SMA_QC`2");
             
             if (smaqcType != null)
             {
@@ -80,7 +80,7 @@ public static class SMA
         }
         
         // Fallback to first-party implementation
-        return new SMAFP<TPrice, TOutput>(parameters);
+        return new SMA_FP<TPrice, TOutput>(parameters);
     }
     
     /// <summary>
@@ -107,7 +107,7 @@ public static class SMA
         else
         {
             // Use first-party implementation for efficiency
-            return new SMAFP<TPrice, TOutput>(parameters);
+            return new SMA_FP<TPrice, TOutput>(parameters);
         }
     }
 

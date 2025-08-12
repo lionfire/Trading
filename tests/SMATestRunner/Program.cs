@@ -7,11 +7,11 @@ Console.WriteLine("Testing SMA Implementations");
 Console.WriteLine("===========================");
 
 // Test First-Party Implementation
-Console.WriteLine("\n1. Testing First-Party Implementation (SMAFP):");
+Console.WriteLine("\n1. Testing First-Party Implementation (SMA_FP):");
 TestFirstPartyImplementation();
 
 // Test QuantConnect Implementation
-Console.WriteLine("\n2. Testing QuantConnect Implementation (SMAQC):");
+Console.WriteLine("\n2. Testing QuantConnect Implementation (SMA_QC):");
 TestQuantConnectImplementation();
 
 // Test Default Factory
@@ -23,7 +23,7 @@ Console.WriteLine("\nAll tests completed successfully!");
 void TestFirstPartyImplementation()
 {
     var parameters = new PSMA<double, double> { Period = 3 };
-    var sma = new SMAFP<double, double>(parameters);
+    var sma = new SMA_FP<double, double>(parameters);
     var inputs = new double[] { 1, 2, 3, 4, 5 };
     var outputs = new double[inputs.Length];
 
@@ -48,7 +48,7 @@ void TestFirstPartyImplementation()
 void TestQuantConnectImplementation()
 {
     var parameters = new PSMA<double, double> { Period = 3 };
-    var sma = new SMAQC<double, double>(parameters);
+    var sma = new SMA_QC<double, double>(parameters);
     var inputs = new double[] { 1, 2, 3, 4, 5 };
     var outputs = new double[inputs.Length];
 
@@ -78,8 +78,8 @@ void TestDefaultFactory()
     var inputs = new double[] { 1, 2, 3, 4, 5 };
     var outputs = new double[inputs.Length];
     
-    // Cast to SMAFP to access OnBarBatch method
-    if (sma is SMAFP<double, double> smafp)
+    // Cast to SMA_FP to access OnBarBatch method
+    if (sma is SMA_FP<double, double> smafp)
     {
         smafp.OnBarBatch(inputs, outputs);
         
@@ -100,6 +100,6 @@ void TestDefaultFactory()
     }
     else
     {
-        Console.WriteLine("   Unable to test - implementation is not SMAFP");
+        Console.WriteLine("   Unable to test - implementation is not SMA_FP");
     }
 }

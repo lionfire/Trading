@@ -1,4 +1,5 @@
-﻿using LionFire.Trading.Data;
+﻿using LionFire.Trading;
+using LionFire.Trading.Data;
 
 namespace LionFire.Trading.Indicators;
 
