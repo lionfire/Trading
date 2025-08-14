@@ -1,5 +1,6 @@
 using LionFire.Structures;
 using LionFire.Trading;
+using LionFire.Trading.DataFlow.Indicators;
 using LionFire.Trading.Data;
 using System.Numerics;
 using System.Text.Json.Serialization;

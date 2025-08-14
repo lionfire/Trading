@@ -24,5 +24,7 @@ namespace LionFire.Trading
         Weighted,
         // TOVERIFY
         WilderSmoothing,
+        // Alias for WilderSmoothing - used in QuantConnect and other libraries
+        Wilders,
     }
 }

@@ -1,6 +1,7 @@
 using LionFire.Trading.Indicators.Parameters;
 using LionFire.Trading.Indicators.Native;
-using LionFire.Trading.Indicators.QuantConnect_;
+using LionFire.Trading.Indicators.Registry;
+using LionFire.Trading.DataFlow.Indicators;
 using System.Numerics;
 
 namespace LionFire.Trading.Indicators.Defaults;
@@ -18,13 +19,24 @@ public static class FisherTransform
         where TInput : struct
         where TOutput : struct, INumber<TOutput>
     {
-        return parameters.PreferredImplementation switch
+        // Try to get factory from registry
+        var factory = IndicatorFactoryRegistry.Instance.GetFactory<IFisherTransform<TInput, TOutput>, PFisherTransform<TInput, TOutput>>(parameters.PreferredImplementation);
+        
+        if (factory != null)
         {
-            ImplementationHint.FirstParty => FisherTransform_FP<TInput, TOutput>.Create(parameters),
-            ImplementationHint.QuantConnect => FisherTransform_QC<TInput, TOutput>.Create(parameters),
-            ImplementationHint.Optimized => FisherTransform_FP<TInput, TOutput>.Create(parameters), // Use FP as optimized for now
-            _ => FisherTransform_FP<TInput, TOutput>.Create(parameters) // Default to FP implementation
-        };
+            return factory.Create(parameters);
+        }
+
+        // If no factory found, try to get best available factory
+        var bestFactory = IndicatorFactoryRegistry.Instance.GetBestFactory<IFisherTransform<TInput, TOutput>, PFisherTransform<TInput, TOutput>>(parameters.PreferredImplementation);
+        
+        if (bestFactory != null)
+        {
+            return bestFactory.Create(parameters);
+        }
+
+        // Final fallback to FP implementation
+        return FisherTransform_FP<TInput, TOutput>.Create(parameters);
     }
 
     /// <summary>

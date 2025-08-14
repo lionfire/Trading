@@ -21,13 +21,16 @@ public static class ZigZagExample
         var zigzag = ZigZagCommon.Create();
         
         // Subscribe to ZigZag results
-        zigzag.Subscribe(results =>
+        if (zigzag is IObservable<IReadOnlyList<decimal>> observable)
         {
-            if (zigzag.IsReady)
+            observable.Subscribe(results =>
             {
-                Console.WriteLine($"ZigZag Value: {results[0]:F2}, Direction: {GetDirectionText(zigzag.Direction)}");
-            }
-        });
+                if (zigzag.IsReady)
+                {
+                    Console.WriteLine($"ZigZag Value: {results[0]:F2}, Direction: {GetDirectionText(zigzag.Direction)}");
+                }
+            });
+        }
 
         // Example market data with clear swings
         var marketData = new[]
@@ -45,7 +48,10 @@ public static class ZigZagExample
         };
 
         // Process market data
-        zigzag.OnNext(marketData);
+        if (zigzag is IObserver<IReadOnlyList<HLC<decimal>>> observer)
+        {
+            observer.OnNext(marketData);
+        }
 
         // Check current values
         Console.WriteLine($"Current ZigZag Value: {zigzag.CurrentValue:F2}");
@@ -87,14 +93,17 @@ public static class ZigZagExample
         // Subscribe to all indicators
         foreach (var (name, indicator) in indicators)
         {
-            indicator.Subscribe(results =>
+            if (indicator is IObservable<IReadOnlyList<decimal>> observable)
             {
-                if (indicator.IsReady && indicator.RecentPivots?.Count > 0)
+                observable.Subscribe(results =>
                 {
-                    var lastPivot = indicator.RecentPivots.Last();
-                    Console.WriteLine($"{name}: New Pivot - {lastPivot}");
-                }
-            });
+                    if (indicator.IsReady && indicator.RecentPivots?.Count > 0)
+                    {
+                        var lastPivot = indicator.RecentPivots.Last();
+                        Console.WriteLine($"{name}: New Pivot - {lastPivot}");
+                    }
+                });
+            }
         }
 
         // Generate test data with various swing sizes
@@ -105,7 +114,10 @@ public static class ZigZagExample
         {
             foreach (var (_, indicator) in indicators)
             {
-                indicator.OnNext(data);
+                if (indicator is IObserver<HLC<decimal>> observer)
+                {
+                    observer.OnNext(data);
+                }
             }
         }
 
@@ -129,19 +141,25 @@ public static class ZigZagExample
 
         var zigzag = ZigZagCommon.Create(deviation: 5.0m, depth: 10);
         
-        zigzag.Subscribe(results =>
+        if (zigzag is IObservable<IReadOnlyList<decimal>> observable)
         {
-            if (zigzag.IsReady && zigzag.RecentPivots != null)
+            observable.Subscribe(results =>
             {
-                AnalyzeTrend(zigzag.RecentPivots);
-            }
-        });
+                if (zigzag.IsReady && zigzag.RecentPivots != null)
+                {
+                    AnalyzeTrend(zigzag.RecentPivots);
+                }
+            });
+        }
 
         // Generate trending data
         var trendingData = GenerateTrendingData();
         
         // Process the data
-        zigzag.OnNext(trendingData);
+        if (zigzag is IObserver<IReadOnlyList<HLC<decimal>>> observer)
+        {
+            observer.OnNext(trendingData);
+        }
 
         Console.WriteLine($"Final Analysis - Current ZigZag: {zigzag.CurrentValue:F2}");
         Console.WriteLine($"Trend Direction: {GetDirectionText(zigzag.Direction)}");
@@ -158,27 +176,33 @@ public static class ZigZagExample
         var supportLevels = new List<decimal>();
         var resistanceLevels = new List<decimal>();
 
-        zigzag.Subscribe(results =>
+        if (zigzag is IObservable<IReadOnlyList<decimal>> observable)
         {
-            if (zigzag.IsReady && zigzag.RecentPivots != null)
+            observable.Subscribe(results =>
             {
-                foreach (var pivot in zigzag.RecentPivots.Where(p => p.IsConfirmed))
+                if (zigzag.IsReady && zigzag.RecentPivots != null)
                 {
-                    if (pivot.IsHigh)
+                    foreach (var pivot in zigzag.RecentPivots.Where(p => p.IsConfirmed))
                     {
-                        resistanceLevels.Add(pivot.Price);
-                    }
-                    else
-                    {
-                        supportLevels.Add(pivot.Price);
+                        if (pivot.IsHigh)
+                        {
+                            resistanceLevels.Add(pivot.Price);
+                        }
+                        else
+                        {
+                            supportLevels.Add(pivot.Price);
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // Generate data with clear support/resistance levels
         var srData = GenerateSupportResistanceData();
-        zigzag.OnNext(srData);
+        if (zigzag is IObserver<IReadOnlyList<HLC<decimal>>> observer)
+        {
+            observer.OnNext(srData);
+        }
 
         // Identify key levels (simplified approach)
         var keySupport = supportLevels.GroupBy(s => Math.Round(s, 1))
@@ -230,7 +254,10 @@ public static class ZigZagExample
                 };
 
                 var zigzag = ZigZag.Create(parameters);
-                zigzag.OnNext(testData);
+                if (zigzag is IObserver<IReadOnlyList<HLC<decimal>>> observer)
+                {
+                    observer.OnNext(testData);
+                }
 
                 // Simple scoring based on number of pivots and trend capture
                 var score = CalculateZigZagScore(zigzag);

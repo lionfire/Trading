@@ -11,7 +11,7 @@ public class BarsBot2<TParameters, TValue> : SymbolBot2<TParameters, TValue>, IB
       where TParameters : PBarsBot2<TParameters, TValue>
     where TValue : struct, INumber<TValue>
 {
-    IPBarsBot2 IBarsBot<TValue>.Parameters => Parameters;
+    IPBarsBot2 IBarsBot<TValue>.Parameters => (IPBarsBot2)Parameters;
 
     #region Injected
 

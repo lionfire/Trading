@@ -49,7 +49,11 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     #region TParameters
 
-    public TParameters Parameters
+    // Override the abstract property from base class
+    public override IPMarketProcessor Parameters => parameters;
+    
+    // Strongly-typed property for derived classes
+    public TParameters TypedParameters
     {
         get => parameters;
         set
@@ -59,6 +63,17 @@ public abstract class BotBase2<TParameters, TPrecision>
         }
     }
     private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    
+    // Interface implementations
+    TParameters IBot2<TParameters, TPrecision>.Parameters 
+    { 
+        get => parameters; 
+        set 
+        {
+            parameters = value;
+            OnParametersSet();
+        }
+    }
     IPBot2 IBot2.Parameters { get => parameters; set => parameters = (TParameters)value; }
     IPMarketProcessor IMarketListener.Parameters => Parameters;
 
@@ -116,10 +131,11 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     #region Event Handlers
 
-    public virtual void OnBar() { }
+    public override void OnBar() { }
     public virtual async ValueTask Stop() // OPTIMIZE: Sync version
     {
-        if (Parameters.ClosePositionsOnStop)
+        var typedParams = (PBot2<TParameters>)Parameters;
+        if (typedParams.ClosePositionsOnStop)
         {
             await CloseAllPositions();
         }

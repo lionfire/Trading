@@ -1,11 +1,10 @@
 using LionFire.Trading.Indicators.Base;
 using LionFire.Trading.Indicators.Parameters;
+using LionFire.Trading.Indicators.Utils;
 using LionFire.Structures;
 using LionFire.Trading;
+using LionFire.Trading.Indicators;
 using System.Numerics;
-using CircularBuffer;
-
-namespace LionFire.Trading.Indicators.Native;
 
 /// <summary>
 /// First-party implementation of Awesome Oscillator (AO) indicator.

@@ -1,5 +1,6 @@
 using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
+using LionFire.Trading.DataFlow.Indicators;
 using System.Numerics;
 
 namespace LionFire.Trading.Indicators.Defaults;

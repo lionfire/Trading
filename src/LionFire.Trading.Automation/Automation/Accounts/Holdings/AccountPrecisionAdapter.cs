@@ -45,7 +45,7 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
 
     public IAccount2<TFromPrecision> From { get; }
 
-    IPMarketProcessor IMarketListener.Parameters => Parameters;
+    IPMarketProcessor IMarketListener.Parameters => (IPMarketProcessor)Parameters;
 
     public IPSimulatedHolding<TPrecision> Parameters => PAccountPrecisionAdapter;
     private PSimulatedHoldingPrecisionAdapter<TPrecision, TFromPrecision> PAccountPrecisionAdapter;
@@ -54,7 +54,11 @@ public class AccountPrecisionAdapter<TPrecision, TFromPrecision> : IAccount2<TPr
     public AccountPrecisionAdapter(IAccount2<TFromPrecision> from)
     {
         From = from ?? throw new ArgumentNullException(nameof(from));
-        PAccountPrecisionAdapter = new PSimulatedHoldingPrecisionAdapter<TPrecision, TFromPrecision>((IPSimulatedHolding<TFromPrecision>)from.PPrimaryHolding);
+        var fromHolding = (IPSimulatedHolding<TFromPrecision>)from.PPrimaryHolding;
+        PAccountPrecisionAdapter = new PSimulatedHoldingPrecisionAdapter<TPrecision, TFromPrecision>(fromHolding)
+        {
+            ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame("DEFAULT_EXCHANGE", "DEFAULT_AREA", fromHolding.Symbol, TimeFrame.m1) // Default exchange/area/timeframe
+        };
     }
 
     public IObservableCache<IPosition<TPrecision>, int> Positions => throw new NotImplementedException();

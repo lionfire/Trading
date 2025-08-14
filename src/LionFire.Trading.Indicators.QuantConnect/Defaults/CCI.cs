@@ -1,3 +1,5 @@
+using LionFire.Trading.Indicators.Parameters;
+
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
 /// <summary>

@@ -206,7 +206,7 @@ public class HeikinAshi_FP<TInput, TOutput> : HeikinAshiBase<HeikinAshi_FP<TInpu
         
         // If the input is itself a numeric type, treat it as close price
         // and use the same value for all OHLC components
-        if (typeof(TInput).IsAssignableTo(typeof(INumber<TInput>)))
+        if (input is IConvertible convertible)
         {
             var value = TOutput.CreateChecked(Convert.ToDecimal(input));
             return (value, value, value, value);

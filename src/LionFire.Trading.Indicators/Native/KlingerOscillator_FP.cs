@@ -177,8 +177,8 @@ public class KlingerOscillator_FP<TInput, TOutput> : KlingerOscillatorBase<TInpu
             hasPreviousHLCV = true;
             
             // Initialize cumulative movement with daily movement
-            var dailyMovement = CalculateDailyMovement(high, low);
-            cumulativeMovement = dailyMovement;
+            var initialDailyMovement = CalculateDailyMovement(high, low);
+            cumulativeMovement = initialDailyMovement;
             previousTrend = TOutput.One; // Assume positive trend initially
             
             return;

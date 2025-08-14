@@ -34,12 +34,13 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
 
     public override void Init()
     {
+        var typedParams = (PStandardBot2<TParameters, TValue>)Parameters;
         // Infer Direction from PMultiSim.PositionSize if not set
-        Direction = Parameters.Direction switch
+        Direction = typedParams.Direction switch
         {
             LongAndShort.Long => LongAndShort.Long,
             LongAndShort.Short => LongAndShort.Short,
-            _ => Parameters.PositionSize >= 0 ? LongAndShort.Long : LongAndShort.Short
+            _ => typedParams.PositionSize >= 0 ? LongAndShort.Long : LongAndShort.Short
         };
         base.Init();
     }
@@ -59,7 +60,8 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
     }
     public virtual ValueTask<IOrderResult> OpenPositionPortion(double? amount = null)
     {
-        return DoubleAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value, PositionOperationFlags.Default | PositionOperationFlags.AllowCloseAndOpenAtOnce | PositionOperationFlags.Open);
+        var typedParams = (PStandardBot2<TParameters, TValue>)Parameters;
+        return DoubleAccount.ExecuteMarketOrder(Symbol, typedParams.Direction, amount == null ? typedParams.PositionSize : typedParams.PositionSize * amount.Value, PositionOperationFlags.Default | PositionOperationFlags.AllowCloseAndOpenAtOnce | PositionOperationFlags.Open);
     }
 
     /// <summary>
@@ -69,10 +71,11 @@ public abstract class StandardBot2<TParameters, TValue> : BarsBot2<TParameters, 
     /// <returns></returns>
     public virtual ValueTask<IOrderResult> ClosePositionPortion(double? amount = null)
     {
-        amount = amount == null ? Parameters.PositionSize : Parameters.PositionSize * amount.Value;
-        if (Parameters.Direction != LongAndShort.Short) { amount = -amount.Value; }
+        var typedParams = (PStandardBot2<TParameters, TValue>)Parameters;
+        amount = amount == null ? typedParams.PositionSize : typedParams.PositionSize * amount.Value;
+        if (typedParams.Direction != LongAndShort.Short) { amount = -amount.Value; }
 
-        return DoubleAccount.ExecuteMarketOrder(Symbol, Parameters.Direction, amount.Value, PositionOperationFlags.Default | PositionOperationFlags.Close | PositionOperationFlags.CloseOnly);
+        return DoubleAccount.ExecuteMarketOrder(Symbol, typedParams.Direction, amount.Value, PositionOperationFlags.Default | PositionOperationFlags.Close | PositionOperationFlags.CloseOnly);
 
         //if (DoubleAccount.Positions.Count == 0) { return ValueTask.FromResult(OrderResult.NoopSuccess); }
         //double amountToClose = amount == null ? PMultiSim.PositionSize : PMultiSim.PositionSize * amount.Value;

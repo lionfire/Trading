@@ -1,5 +1,6 @@
 using LionFire.Trading.Indicators.Parameters;
 using LionFire.Trading.Indicators.Native;
+using LionFire.Trading.DataFlow.Indicators;
 using LionFire.Trading.Indicators;
 using LionFire.Trading;
 using Microsoft.Extensions.Logging;
@@ -65,7 +66,7 @@ public static class ZigZag
         where TPrice : struct
         where TOutput : struct, INumber<TOutput>
     {
-        return parameters.PreferredImplementation switch
+        return parameters.ImplementationHint switch
         {
             ImplementationHint.QuantConnect => CreateQuantConnectImplementation(parameters),
             ImplementationHint.FirstParty => ZigZag_FP<TPrice, TOutput>.Create(parameters),

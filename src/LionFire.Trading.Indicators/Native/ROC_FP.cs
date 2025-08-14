@@ -1,7 +1,7 @@
 using LionFire.Trading.Indicators.Base;
 using LionFire.Trading.Indicators.Parameters;
 using System.Numerics;
-using CircularBuffer;
+using LionFire.Trading.Indicators.Utils;
 
 namespace LionFire.Trading.Indicators.Native;
 
@@ -54,14 +54,14 @@ public class ROC_FP<TPrice, TOutput>
             var price = TOutput.CreateChecked(Convert.ToDecimal(input));
             
             // Add current price to circular buffer
-            priceHistory.PushBack(price);
+            priceHistory.Add(price);
             dataPointsReceived++;
             
             // Calculate ROC if we have enough data
             if (IsReady)
             {
-                var currentPrice = priceHistory.Back();
-                var pastPrice = priceHistory.Front();
+                var currentPrice = priceHistory.Back;
+                var pastPrice = priceHistory.Front;
                 
                 // ROC = ((Current Price - Price N periods ago) / Price N periods ago) * 100
                 if (pastPrice != TOutput.Zero)

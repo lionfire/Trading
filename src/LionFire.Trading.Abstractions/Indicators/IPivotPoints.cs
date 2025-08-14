@@ -70,6 +70,16 @@ public interface IPivotPoints<TInput, TOutput> : IIndicator2
 public enum PivotPointsPeriod
 {
     /// <summary>
+    /// Minute pivot points - calculated from previous minute's OHLC
+    /// </summary>
+    Minute,
+    
+    /// <summary>
+    /// Hourly pivot points - calculated from previous hour's OHLC
+    /// </summary>
+    Hourly,
+    
+    /// <summary>
     /// Daily pivot points (default) - calculated from previous day's OHLC
     /// </summary>
     Daily,
@@ -82,5 +92,10 @@ public enum PivotPointsPeriod
     /// <summary>
     /// Monthly pivot points - calculated from previous month's OHLC
     /// </summary>
-    Monthly
+    Monthly,
+    
+    /// <summary>
+    /// Quarterly pivot points - calculated from previous quarter's OHLC
+    /// </summary>
+    Quarterly
 }

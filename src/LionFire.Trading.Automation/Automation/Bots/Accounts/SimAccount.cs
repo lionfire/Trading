@@ -57,7 +57,8 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     public float ListenOrder => ListenerOrders.Account;
 
     public PSimAccount<TPrecision> Parameters { get; }
-    IPMarketProcessor IMarketListener.Parameters => Parameters;
+    private PAccountMarketSim<TPrecision> AccountMarketParameters { get; }
+    IPMarketProcessor IMarketListener.Parameters => AccountMarketParameters;
 
     #region Convenience
 
@@ -74,6 +75,10 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     {
         Context = context;
         Parameters = parameters;
+        AccountMarketParameters = new PAccountMarketSim<TPrecision>
+        {
+            ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(parameters.ExchangeArea.Exchange, parameters.ExchangeArea.Area, "DEFAULT", TimeFrame.m1) // Default symbol and timeframe
+        };
 
         if (PPrimaryHolding != null)
         {

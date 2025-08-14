@@ -1,6 +1,7 @@
 using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
-using LionFire.Trading.Indicators.QuantConnect_;
+using LionFire.Trading.Indicators.Registry;
+using LionFire.Trading.DataFlow.Indicators;
 using System.Numerics;
 using System.Reflection;
 
@@ -23,13 +24,28 @@ public static class Supertrend
         where TPrice : struct
         where TOutput : struct, INumber<TOutput>
     {
+        // Try to get factory from registry
+        var factory = IndicatorFactoryRegistry.Instance.GetFactory<ISupertrend<TPrice, TOutput>, PSupertrend<TPrice, TOutput>>(parameters.PreferredImplementation);
+        
+        if (factory != null)
+        {
+            return factory.Create(parameters);
+        }
+
+        // If no factory found, try to get best available factory
+        var bestFactory = IndicatorFactoryRegistry.Instance.GetBestFactory<ISupertrend<TPrice, TOutput>, PSupertrend<TPrice, TOutput>>(parameters.PreferredImplementation);
+        
+        if (bestFactory != null)
+        {
+            return bestFactory.Create(parameters);
+        }
+
+        // Final fallback based on implementation hint
         return parameters.PreferredImplementation switch
         {
-            ImplementationHint.QuantConnect => new Supertrend_QC<TPrice, TOutput>(parameters),
-            ImplementationHint.FirstParty => new Supertrend_FP<TPrice, TOutput>(parameters),
             ImplementationHint.Optimized => SelectOptimizedImplementation(parameters),
             ImplementationHint.Auto => SelectBestImplementation(parameters),
-            _ => SelectBestImplementation(parameters)
+            _ => new Supertrend_FP<TPrice, TOutput>(parameters) // Default to FP implementation
         };
     }
 
@@ -70,8 +86,9 @@ public static class Supertrend
 
         if (quantConnectLoaded)
         {
-            // Use QuantConnect if it's already loaded for ecosystem consistency
-            return new Supertrend_QC<TPrice, TOutput>(parameters);
+            // QuantConnect is loaded but we can't use it without project reference
+            // Fall back to first-party implementation
+            return new Supertrend_FP<TPrice, TOutput>(parameters);
         }
         else
         {
@@ -99,8 +116,9 @@ public static class Supertrend
 
         if (quantConnectLoaded)
         {
-            // Use QuantConnect if it's already loaded for consistency
-            return new Supertrend_QC<TPrice, TOutput>(parameters);
+            // QuantConnect is loaded but we can't use it without project reference
+            // Fall back to first-party implementation
+            return new Supertrend_FP<TPrice, TOutput>(parameters);
         }
         else
         {

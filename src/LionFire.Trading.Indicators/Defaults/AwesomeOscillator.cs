@@ -1,5 +1,6 @@
 using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
+using LionFire.Trading.DataFlow.Indicators;
 using LionFire.Structures;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;

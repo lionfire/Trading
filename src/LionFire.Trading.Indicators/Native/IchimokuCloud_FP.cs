@@ -3,7 +3,7 @@ using LionFire.Trading;
 using LionFire.Trading.Indicators.Base;
 using LionFire.Trading.Indicators.Parameters;
 using System.Numerics;
-using CircularBuffer;
+using LionFire.Trading.Indicators.Utils;
 
 namespace LionFire.Trading.Indicators.Native;
 
@@ -120,9 +120,9 @@ public class IchimokuCloud_FP<TPrice, TOutput> : IchimokuCloudBase<IchimokuCloud
             TOutput close = ConvertToOutput(input.Close);
 
             // Store in circular buffers
-            highBuffer.PushBack(high);
-            lowBuffer.PushBack(low);
-            closeBuffer.PushBack(close);
+            highBuffer.Add(high);
+            lowBuffer.Add(low);
+            closeBuffer.Add(close);
             
             samplesProcessed++;
 
@@ -143,7 +143,7 @@ public class IchimokuCloud_FP<TPrice, TOutput> : IchimokuCloudBase<IchimokuCloud
             if (samplesProcessed >= Math.Max(ConversionLinePeriod, BaseLinePeriod))
             {
                 currentSenkouSpanA = (tenkanSen + kijunSen) / TOutput.CreateChecked(2);
-                senkouSpanABuffer.PushBack(currentSenkouSpanA);
+                senkouSpanABuffer.Add(currentSenkouSpanA);
             }
 
             // Calculate current Senkou Span B (before displacement)
@@ -151,16 +151,16 @@ public class IchimokuCloud_FP<TPrice, TOutput> : IchimokuCloudBase<IchimokuCloud
             if (samplesProcessed >= LeadingSpanBPeriod)
             {
                 currentSenkouSpanB = CalculateHighLowAverage(LeadingSpanBPeriod);
-                senkouSpanBBuffer.PushBack(currentSenkouSpanB);
+                senkouSpanBBuffer.Add(currentSenkouSpanB);
             }
 
             // Apply displacement for Senkou Spans (leading)
-            if (senkouSpanABuffer.Size >= Displacement)
+            if (senkouSpanABuffer.Count >= Displacement)
             {
                 senkouSpanA = senkouSpanABuffer[0]; // Oldest value (26 periods ago)
             }
 
-            if (senkouSpanBBuffer.Size >= Displacement)
+            if (senkouSpanBBuffer.Count >= Displacement)
             {
                 senkouSpanB = senkouSpanBBuffer[0]; // Oldest value (26 periods ago)
             }
@@ -220,16 +220,16 @@ public class IchimokuCloud_FP<TPrice, TOutput> : IchimokuCloudBase<IchimokuCloud
     /// </summary>
     private TOutput CalculateHighLowAverage(int period)
     {
-        if (highBuffer.Size < period || lowBuffer.Size < period)
+        if (highBuffer.Count < period || lowBuffer.Count < period)
         {
             return TOutput.Zero;
         }
 
         // Find highest high and lowest low over the period
-        TOutput highestHigh = highBuffer[highBuffer.Size - period];
-        TOutput lowestLow = lowBuffer[lowBuffer.Size - period];
+        TOutput highestHigh = highBuffer[highBuffer.Count - period];
+        TOutput lowestLow = lowBuffer[lowBuffer.Count - period];
         
-        for (int i = highBuffer.Size - period + 1; i < highBuffer.Size; i++)
+        for (int i = highBuffer.Count - period + 1; i < highBuffer.Count; i++)
         {
             if (highBuffer[i] > highestHigh)
                 highestHigh = highBuffer[i];

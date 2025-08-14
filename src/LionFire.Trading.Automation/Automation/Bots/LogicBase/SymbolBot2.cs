@@ -44,7 +44,7 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, TValue>
         //}
         //if (ExchangeSymbol == null && PMultiSim is IPSymbolBarsBot2 s)
         //{
-        ExchangeSymbol = Parameters.ExchangeSymbol;
+        ExchangeSymbol = ((PSymbolBot2<TParameters>)Parameters).ExchangeSymbol;
         //}
 
 

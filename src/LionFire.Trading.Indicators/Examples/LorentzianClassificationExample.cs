@@ -20,10 +20,13 @@ public static class LorentzianClassificationExample
         var indicator = LorentzianClassification.CreateDouble();
         
         // Subscribe to results
-        indicator.Subscribe(results =>
+        if (indicator is IObservable<IReadOnlyList<double>> observable)
         {
-            Console.WriteLine($"Classification Results: Signal={results[0]}, Confidence={results[1]}");
-        });
+            observable.Subscribe(results =>
+            {
+                Console.WriteLine($"Classification Results: Signal={results[0]}, Confidence={results[1]}");
+            });
+        }
 
         // Example market data
         var marketData = new[]
@@ -35,7 +38,10 @@ public static class LorentzianClassificationExample
         };
 
         // Process market data
-        indicator.OnNext(marketData);
+        if (indicator is IObserver<IReadOnlyList<OHLC<double>>> observer)
+        {
+            observer.OnNext(marketData);
+        }
 
         // Check current signal and confidence
         Console.WriteLine($"Current Signal: {indicator.Signal}");
@@ -67,28 +73,31 @@ public static class LorentzianClassificationExample
         var indicator = LorentzianClassification.Create(parameters);
 
         // Subscribe to detailed results
-        indicator.Subscribe(results =>
+        if (indicator is IObservable<IReadOnlyList<double>> observable)
         {
-            var signal = results[0];
-            var confidence = results[1];
-            
-            string signalText = signal switch
+            observable.Subscribe(results =>
             {
-                > 0.5 => "STRONG BUY",
-                > 0 => "BUY", 
-                < -0.5 => "STRONG SELL",
-                < 0 => "SELL",
-                _ => "NEUTRAL"
-            };
+                var signal = results[0];
+                var confidence = results[1];
+                
+                string signalText = signal switch
+                {
+                    > 0.5 => "STRONG BUY",
+                    > 0 => "BUY", 
+                    < -0.5 => "STRONG SELL",
+                    < 0 => "SELL",
+                    _ => "NEUTRAL"
+                };
 
-            Console.WriteLine($"Signal: {signalText} (Value: {signal:F3}, Confidence: {confidence:F3})");
-            
-            // Print current features for analysis
-            var features = indicator.CurrentFeatures;
-            Console.WriteLine($"Features: [RSI: {features[0]:F2}, CCI_Change: {features[1]:F2}, " +
-                             $"ADX: {features[2]:F2}, Returns: {features[3]:F4}, " +
-                             $"Volatility: {features[4]:F4}, Momentum: {features[5]:F4}]");
-        });
+                Console.WriteLine($"Signal: {signalText} (Value: {signal:F3}, Confidence: {confidence:F3})");
+                
+                // Print current features for analysis
+                var features = indicator.CurrentFeatures;
+                Console.WriteLine($"Features: [RSI: {features[0]:F2}, CCI_Change: {features[1]:F2}, " +
+                                 $"ADX: {features[2]:F2}, Returns: {features[3]:F4}, " +
+                                 $"Volatility: {features[4]:F4}, Momentum: {features[5]:F4}]");
+            });
+        }
 
         // Simulate processing real market data
         ProcessMarketDataStream(indicator);
@@ -107,21 +116,24 @@ public static class LorentzianClassificationExample
         );
 
         // Subscribe to trading signals
-        indicator.Subscribe(results =>
+        if (indicator is IObservable<IReadOnlyList<double>> observable)
         {
-            var signal = results[0];
-            var confidence = results[1];
-
-            // Only act on high-confidence signals
-            if (Math.Abs(signal) > 0 && confidence > 0.6)
+            observable.Subscribe(results =>
             {
-                string action = signal > 0 ? "BUY" : "SELL";
-                Console.WriteLine($"TRADING SIGNAL: {action} (Confidence: {confidence:P1})");
-                
-                // Here you would place actual trades
-                // PlaceTrade(action, confidence);
-            }
-        });
+                var signal = results[0];
+                var confidence = results[1];
+
+                // Only act on high-confidence signals
+                if (Math.Abs(signal) > 0 && confidence > 0.6)
+                {
+                    string action = signal > 0 ? "BUY" : "SELL";
+                    Console.WriteLine($"TRADING SIGNAL: {action} (Confidence: {confidence:P1})");
+                    
+                    // Here you would place actual trades
+                    // PlaceTrade(action, confidence);
+                }
+            });
+        }
 
         // In a real application, you'd connect to a live data feed
         Console.WriteLine("Live trading indicator ready. Connect to data feed...");
@@ -143,18 +155,21 @@ public static class LorentzianClassificationExample
         var trades = new List<(DateTime time, string action, double confidence)>();
 
         // Subscribe to backtest signals
-        indicator.Subscribe(results =>
+        if (indicator is IObservable<IReadOnlyList<double>> observable)
         {
-            var signal = results[0];
-            var confidence = results[1];
-
-            if (Math.Abs(signal) > 0 && confidence >= 0.7)
+            observable.Subscribe(results =>
             {
-                string action = signal > 0 ? "BUY" : "SELL";
-                trades.Add((DateTime.Now, action, confidence));
-                Console.WriteLine($"Backtest Signal: {action} (Confidence: {confidence:P1})");
-            }
-        });
+                var signal = results[0];
+                var confidence = results[1];
+
+                if (Math.Abs(signal) > 0 && confidence >= 0.7)
+                {
+                    string action = signal > 0 ? "BUY" : "SELL";
+                    trades.Add((DateTime.Now, action, confidence));
+                    Console.WriteLine($"Backtest Signal: {action} (Confidence: {confidence:P1})");
+                }
+            });
+        }
 
         Console.WriteLine($"Backtesting completed. Generated {trades.Count} signals.");
         
@@ -200,7 +215,10 @@ public static class LorentzianClassificationExample
             };
 
             // Process single bar
-            indicator.OnNext(ohlc);
+            if (indicator is IObserver<OHLC<double>> observer)
+            {
+                observer.OnNext(ohlc);
+            }
             
             // Print status every 50 bars
             if (i % 50 == 0 && indicator.IsReady)
@@ -226,35 +244,38 @@ public static class LorentzianClassificationExample
         }
         int featureIndex = 0;
 
-        indicator.Subscribe(results =>
+        if (indicator is IObservable<IReadOnlyList<double>> observable)
         {
-            if (indicator.IsReady)
+            observable.Subscribe(results =>
             {
-                var features = indicator.CurrentFeatures;
-                
-                // Store features for analysis
-                for (int i = 0; i < features.Length; i++)
+                if (indicator.IsReady)
                 {
-                    featureStats[i][featureIndex % 100] = Convert.ToDouble(features[i]);
-                }
-                featureIndex++;
-
-                // Print feature analysis every 100 bars
-                if (featureIndex % 100 == 0)
-                {
-                    Console.WriteLine("\nFeature Analysis:");
-                    string[] featureNames = { "RSI", "CCI_Change", "ADX", "Returns", "Volatility", "Momentum" };
+                    var features = indicator.CurrentFeatures;
                     
-                    for (int i = 0; i < featureNames.Length; i++)
+                    // Store features for analysis
+                    for (int i = 0; i < features.Length; i++)
                     {
-                        var values = featureStats[i];
-                        var mean = values.Average();
-                        var std = Math.Sqrt(values.Select(x => Math.Pow(x - mean, 2)).Average());
-                        Console.WriteLine($"{featureNames[i]}: Mean={mean:F4}, StdDev={std:F4}");
+                        featureStats[i][featureIndex % 100] = Convert.ToDouble(features[i]);
+                    }
+                    featureIndex++;
+
+                    // Print feature analysis every 100 bars
+                    if (featureIndex % 100 == 0)
+                    {
+                        Console.WriteLine("\nFeature Analysis:");
+                        string[] featureNames = { "RSI", "CCI_Change", "ADX", "Returns", "Volatility", "Momentum" };
+                        
+                        for (int i = 0; i < featureNames.Length; i++)
+                        {
+                            var values = featureStats[i];
+                            var mean = values.Average();
+                            var std = Math.Sqrt(values.Select(x => Math.Pow(x - mean, 2)).Average());
+                            Console.WriteLine($"{featureNames[i]}: Mean={mean:F4}, StdDev={std:F4}");
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         // Process test data for feature analysis
         ProcessMarketDataStream(indicator);

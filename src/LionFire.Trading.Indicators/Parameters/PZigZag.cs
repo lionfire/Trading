@@ -1,5 +1,6 @@
 using LionFire.Structures;
 using LionFire.Trading;
+using LionFire.Trading.DataFlow.Indicators;
 using System.Numerics;
 using System.Text.Json.Serialization;
 
@@ -78,7 +79,7 @@ public class PZigZag<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// Implementation selection hint for runtime selection
     /// </summary>
     [Parameter(OptimizePriority = -10)]
-    public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
+    public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion
 

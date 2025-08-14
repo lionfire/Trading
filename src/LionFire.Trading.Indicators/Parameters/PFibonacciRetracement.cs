@@ -1,5 +1,6 @@
 using LionFire.Structures;
 using LionFire.Trading;
+using LionFire.Trading.DataFlow.Indicators;
 using System.Numerics;
 using System.Text.Json.Serialization;
 
@@ -50,10 +51,23 @@ public class PFibonacciRetracement<TInput, TOutput> : IndicatorParameters<TInput
     public bool IncludeExtensionLevels { get; set; } = true;
 
     /// <summary>
+    /// Minimum price swing percentage to consider a valid swing high/low (default: 1.0%)
+    /// </summary>
+    [Parameter(
+        HardValueMin = 0.1,
+        DefaultMin = 0.5,
+        DefaultMax = 5.0,
+        ValueMax = 10.0,
+        HardValueMax = 50.0,
+        DefaultValue = 1.0,
+        OptimizePriority = -3)]
+    public double MinSwingPercent { get; set; } = 1.0;
+
+    /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
     [Parameter(OptimizePriority = -10)]
-    public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
+    public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion
 
