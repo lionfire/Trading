@@ -145,7 +145,6 @@ public class BotHarnessFactory
     {
         if (parameters == null) return typeof(decimal);
 
-        //REVIEW
         var parametersType = parameters.GetType();
         if (parametersType.IsGenericType)
         {
@@ -164,7 +163,6 @@ public class BotHarnessFactory
 
     private Type DetermineTargetNumericType(BotEntity botEntity, Type sourceNumericType)
     {
-        //REVIEW
         // Priority: Bot-specific override > Global override > Source type
 
         // 1. Check bot-specific override
