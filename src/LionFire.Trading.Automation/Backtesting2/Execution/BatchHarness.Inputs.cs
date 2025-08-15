@@ -23,10 +23,10 @@ public partial class BatchHarness<TPrecision>
     /// Iterates through the input parameters of the PBot (with corresponding loopback values) and calls TryAddPInputEnumerator
     /// </summary>
     /// <param name="pMarketProcessor"></param>
-    /// <param name="botContext"></param>
+    /// <param name="marketParticipantContext"></param>
     /// <param name="aggregatedPInputs"></param>
     private void AggregatePInputsForPMarketParticipant(IPMarketProcessor? pMarketProcessor,
-    MarketParticipantContext<TPrecision> botContext,
+    MarketParticipantContext<TPrecision> marketParticipantContext,
     Dictionary<string, PInputToEnumerator> aggregatedPInputs)
     {
         ArgumentNullException.ThrowIfNull(pMarketProcessor);
@@ -45,7 +45,7 @@ public partial class BatchHarness<TPrecision>
         {
             // For other market participants (like AccountMarketSim), extract from already configured InputMappings
             // These were set up in the market participant's constructor
-            inputMappings = botContext.InputMappings?.Select(m => m.Mapping) ?? Enumerable.Empty<InputParameterToValueMapping>();
+            inputMappings = marketParticipantContext.InputMappings?.Select(m => m.Mapping) ?? Enumerable.Empty<InputParameterToValueMapping>();
         }
         
         int inputEnumeratorIndex = -1;
@@ -57,7 +57,7 @@ public partial class BatchHarness<TPrecision>
                 ? 0
                 : pMarketProcessor.InputLookbacks[inputEnumeratorIndex];
 
-            AggregatePInput(aggregatedPInputs, botContext.InputMappings!
+            AggregatePInput(aggregatedPInputs, marketParticipantContext.InputMappings!
                 //, inputEnumeratorIndex
                 , inputInjectionMapping, lookback, pMarketProcessor);
         }
