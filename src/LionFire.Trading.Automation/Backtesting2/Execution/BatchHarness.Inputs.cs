@@ -36,19 +36,22 @@ public partial class BatchHarness<TPrecision>
         // Determine input mappings based on context type and participant type
         IEnumerable<InputParameterToValueMapping> inputMappings;
         List<PInputToMappingToValuesWindowProperty>? participantMappings = null;
+        bool mappingsArePrePopulated = false;
         
         // First priority: Use context's InputMappings if it's an AccountMarketSimContext
         if (marketParticipantContext is AccountMarketSimContext<TPrecision> accountContext)
         {
-            // AccountMarketSimContext manages its own InputMappings
+            // AccountMarketSimContext manages its own InputMappings - they're already complete
             participantMappings = accountContext.InputMappings;
             inputMappings = participantMappings?.Select(m => m.Mapping) ?? Enumerable.Empty<InputParameterToValueMapping>();
+            mappingsArePrePopulated = true; // These mappings are already complete, don't add to them
         }
         // Second priority: Use market participant's own InputMappings if provided
         else if (marketParticipant?.InputMappings != null)
         {
             participantMappings = marketParticipant.InputMappings;
             inputMappings = participantMappings.Select(m => m.Mapping);
+            mappingsArePrePopulated = true; // These mappings are already complete, don't add to them
         }
         // Third priority: For bots, use BotInfo
         else if (pMarketProcessor is IPBot2 pBot)
@@ -57,6 +60,8 @@ public partial class BatchHarness<TPrecision>
             var botType = pBot.MaterializedType;
             var botInfo = BotInfos.Get(pMarketProcessor.GetType(), botType);
             inputMappings = botInfo.InputParameterToValueMapping ?? Enumerable.Empty<InputParameterToValueMapping>();
+            // For bots, we need to build the mappings list
+            mappingsArePrePopulated = false;
         }
         else
         {
@@ -70,22 +75,55 @@ public partial class BatchHarness<TPrecision>
                 $"or be an IPBot2 with BotInfo mappings.");
         }
         
-        int inputEnumeratorIndex = -1;
-        foreach (var inputInjectionMapping in inputMappings)
+        // If mappings are pre-populated (AccountMarketSim case), we just need to process them for aggregation
+        // without modifying the original list
+        if (mappingsArePrePopulated && participantMappings != null)
         {
-            inputEnumeratorIndex++;
-
-            int lookback = pMarketProcessor.InputLookbacks == null
-                ? 0
-                : pMarketProcessor.InputLookbacks[inputEnumeratorIndex];
-
-            // Use the participant's own mappings if available, otherwise use context mappings
-            var targetMappings = participantMappings ?? marketParticipantContext.InputMappings;
-            if (targetMappings != null)
+            int index = 0;
+            foreach (var mapping in participantMappings)
             {
-                AggregatePInput(aggregatedPInputs, targetMappings
-                    //, inputEnumeratorIndex
-                    , inputInjectionMapping, lookback, pMarketProcessor);
+                int lookback = pMarketProcessor.InputLookbacks == null || index >= pMarketProcessor.InputLookbacks.Length
+                    ? 0
+                    : pMarketProcessor.InputLookbacks[index];
+                
+                // Process the existing mapping for aggregation
+                var key = mapping.PInput.Key;
+                if (aggregatedPInputs.TryGetValue(key, out PInputToEnumerator? value))
+                {
+                    // Input already exists, so make sure the lookback is sufficient
+                    value.Lookback = Math.Max(value.Lookback, lookback);
+                }
+                else
+                {
+                    // Input does not exist, so add it to the aggregated inputs
+                    aggregatedPInputs.Add(key, new PInputToEnumerator
+                    {
+                        PInput = mapping.PInput,
+                        Lookback = lookback,
+                    });
+                }
+                index++;
+            }
+        }
+        else
+        {
+            // Bots:  build the mappings list
+            var targetMappings = marketParticipantContext.InputMappings ?? new List<PInputToMappingToValuesWindowProperty>();
+            if (marketParticipantContext.InputMappings == null)
+            {
+                marketParticipantContext.InputMappings = targetMappings;
+            }
+            
+            int inputEnumeratorIndex = -1;
+            foreach (var inputInjectionMapping in inputMappings)
+            {
+                inputEnumeratorIndex++;
+
+                int lookback = pMarketProcessor.InputLookbacks == null
+                    ? 0
+                    : pMarketProcessor.InputLookbacks[inputEnumeratorIndex];
+
+                AggregatePInput(aggregatedPInputs, targetMappings, inputInjectionMapping, lookback, pMarketProcessor);
             }
         }
 
