@@ -52,6 +52,13 @@ public partial class BotEntity : ReactiveObject, IValidatable
     [Reactive]
     private Type[]? botTypeParameters;
     
+    /// <summary>
+    /// Override the numeric type for live trading.
+    /// If set, bots will use this type for live trading regardless of the saved parameter type.
+    /// Common values: typeof(decimal) for maximum accuracy, typeof(double) for performance.
+    /// </summary>
+    [Reactive]
+    private Type? liveNumericTypeOverride;
 
     [Reactive]
     private string? symbol;
