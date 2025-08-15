@@ -377,7 +377,18 @@ public sealed partial class BatchHarness<TPrecision>
             {
                 foreach (var marketSim in backtest.BotContext.DefaultSimAccount.GetAllMarketSims())
                 {
-                    AggregatePInputsForPMarketParticipant(marketSim.Parameters, backtest.BotContext, aggregatedPInputs);
+                    // Create a context for this market sim if it doesn't have one
+                    if (marketSim.Context == null)
+                    {
+                        marketSim.Context = new AccountMarketSimContext<TPrecision>(
+                            SimContext,
+                            marketSim,
+                            marketSim.ExchangeSymbol,
+                            backtest.BotContext.TimeFrame);
+                    }
+                    
+                    // Use the market sim's context which has the appropriate InputMappings
+                    AggregatePInputsForPMarketParticipant(marketSim.Parameters, marketSim.Context, aggregatedPInputs, marketSim);
                 }
             }
         }
@@ -451,7 +462,11 @@ public sealed partial class BatchHarness<TPrecision>
             {
                 foreach (var marketSim in backtest.BotContext.DefaultSimAccount.GetAllMarketSims())
                 {
-                    InputMappingTools.HydrateValueWindowsOnMarketListener(marketSim, inputEnumerators, backtest.BotContext.InputMappings!);
+                    var marketSimContext = marketSim.Context;
+                    if (marketSimContext?.InputMappings != null)
+                    {
+                        InputMappingTools.HydrateValueWindowsOnMarketListener(marketSim, inputEnumerators, marketSimContext.InputMappings);
+                    }
                 }
             }
 

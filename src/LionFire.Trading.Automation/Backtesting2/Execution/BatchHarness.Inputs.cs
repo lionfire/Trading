@@ -25,16 +25,33 @@ public partial class BatchHarness<TPrecision>
     /// <param name="pMarketProcessor"></param>
     /// <param name="marketParticipantContext"></param>
     /// <param name="aggregatedPInputs"></param>
+    /// <param name="marketParticipant">Optional market participant that implements IHasInputMappings (e.g., AccountMarketSim)</param>
     private void AggregatePInputsForPMarketParticipant(IPMarketProcessor? pMarketProcessor,
     MarketParticipantContext<TPrecision> marketParticipantContext,
-    Dictionary<string, PInputToEnumerator> aggregatedPInputs)
+    Dictionary<string, PInputToEnumerator> aggregatedPInputs,
+    IHasInputMappings? marketParticipant = null)
     {
         ArgumentNullException.ThrowIfNull(pMarketProcessor);
         
-        // Determine input mappings based on type
+        // Determine input mappings based on context type and participant type
         IEnumerable<InputParameterToValueMapping> inputMappings;
+        List<PInputToMappingToValuesWindowProperty>? participantMappings = null;
         
-        if (pMarketProcessor is IPBot2 pBot)
+        // First priority: Use context's InputMappings if it's an AccountMarketSimContext
+        if (marketParticipantContext is AccountMarketSimContext<TPrecision> accountContext)
+        {
+            // AccountMarketSimContext manages its own InputMappings
+            participantMappings = accountContext.InputMappings;
+            inputMappings = participantMappings?.Select(m => m.Mapping) ?? Enumerable.Empty<InputParameterToValueMapping>();
+        }
+        // Second priority: Use market participant's own InputMappings if provided
+        else if (marketParticipant?.InputMappings != null)
+        {
+            participantMappings = marketParticipant.InputMappings;
+            inputMappings = participantMappings.Select(m => m.Mapping);
+        }
+        // Third priority: For bots, use BotInfo
+        else if (pMarketProcessor is IPBot2 pBot)
         {
             // For bots, use BotInfo to get mappings
             var botType = pBot.MaterializedType;
@@ -43,9 +60,14 @@ public partial class BatchHarness<TPrecision>
         }
         else
         {
-            // For other market participants (like AccountMarketSim), extract from already configured InputMappings
-            // These were set up in the market participant's constructor
-            inputMappings = marketParticipantContext.InputMappings?.Select(m => m.Mapping) ?? Enumerable.Empty<InputParameterToValueMapping>();
+            // This case represents a PMarketProcessor that is neither a bot nor has proper context/mappings.
+            // This is an unsupported scenario that would fail later with a TargetException when trying
+            // to access properties, so we fail fast with a clear error message.
+            throw new InvalidOperationException(
+                $"Unable to determine InputMappings for {pMarketProcessor.GetType().Name}. " +
+                $"The market processor must either have an AccountMarketSimContext, " +
+                $"implement IHasInputMappings with valid InputMappings, " +
+                $"or be an IPBot2 with BotInfo mappings.");
         }
         
         int inputEnumeratorIndex = -1;
@@ -57,9 +79,14 @@ public partial class BatchHarness<TPrecision>
                 ? 0
                 : pMarketProcessor.InputLookbacks[inputEnumeratorIndex];
 
-            AggregatePInput(aggregatedPInputs, marketParticipantContext.InputMappings!
-                //, inputEnumeratorIndex
-                , inputInjectionMapping, lookback, pMarketProcessor);
+            // Use the participant's own mappings if available, otherwise use context mappings
+            var targetMappings = participantMappings ?? marketParticipantContext.InputMappings;
+            if (targetMappings != null)
+            {
+                AggregatePInput(aggregatedPInputs, targetMappings
+                    //, inputEnumeratorIndex
+                    , inputInjectionMapping, lookback, pMarketProcessor);
+            }
         }
 
         //if(botContext.DefaultSimAccount != null)

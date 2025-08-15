@@ -23,6 +23,11 @@ public class AccountMarketSim<TPrecision>
 
     public IAccount2<TPrecision> Account { get; }
     public ExchangeSymbol ExchangeSymbol { get; set; }
+    
+    /// <summary>
+    /// Optional context for this market sim. When set, provides lifecycle management and coordination.
+    /// </summary>
+    public AccountMarketSimContext<TPrecision>? Context { get; set; }
 
     #endregion
 
@@ -52,6 +57,7 @@ public class AccountMarketSim<TPrecision>
             ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.Area, ExchangeSymbol.Symbol, ((SimAccount<TPrecision>)Account).Context.TimeFrame)
         };
 
+        // TODO: Optimize: Make this a static readonly?
         InputMappings = new List<PInputToMappingToValuesWindowProperty>
         {
             new PInputToMappingToValuesWindowProperty(

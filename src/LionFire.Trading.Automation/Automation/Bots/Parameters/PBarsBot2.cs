@@ -39,16 +39,16 @@ public abstract class PBarsBot2<TConcrete, TValue>
 
     #region Inputs
 
-    
+
     [JsonIgnore]
-    public HLCReference<TValue>? HLCBars 
-    { 
+    public HLCReference<TValue>? HLCBars
+    {
         get => hlcBars;
         set => hlcBars = value;
     }
     private HLCReference<TValue>? hlcBars;
     //public SymbolValueAspect<TValue>? Bars { get; set; }
-    
+
     // Override abstract property from PMarketProcessor base class
     [JsonIgnore]
     public override IPInput Bars => hlcBars!;
@@ -108,9 +108,9 @@ public abstract class PBarsBot2<TConcrete, TValue>
                         hlcBars = new HLCReference<TValue>(ExchangeSymbolTimeFrame);
                     }
                 }
-                else 
-                { 
-                    throw new NotImplementedException($"Unsupported Bars property type: {pBotInfo.Bars.PropertyType.FullName}. Supported types are: SymbolValueAspect<TValue>, HLCReference<TValue>, OHLCReference<TValue>, IPInput"); 
+                else
+                {
+                    throw new NotImplementedException($"Unsupported Bars property type: {pBotInfo.Bars.PropertyType.FullName}. Supported types are: SymbolValueAspect<TValue>, HLCReference<TValue>, OHLCReference<TValue>, IPInput");
                 }
             }
         }
