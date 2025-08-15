@@ -81,7 +81,12 @@ public abstract class PBarsBot2<TConcrete, TValue>
         /// Set Bars from ExchangeSymbolTimeFrame
         if (Bars == null)
         {
-            if (pBotInfo.Bars != null)
+            // For PBarsBot2 derived classes, we should set HLCBars directly
+            if (hlcBars == null && ExchangeSymbolTimeFrame != null)
+            {
+                hlcBars = new HLCReference<TValue>(ExchangeSymbolTimeFrame);
+            }
+            else if (pBotInfo.Bars != null)
             {
                 if (pBotInfo.Bars.PropertyType == typeof(SymbolValueAspect<TValue>))
                 {
@@ -95,7 +100,18 @@ public abstract class PBarsBot2<TConcrete, TValue>
                 {
                     pBotInfo.Bars.SetValue(this, new OHLCReference<TValue>(ExchangeSymbolTimeFrame));
                 }
-                else { throw new NotImplementedException(); }
+                else if (pBotInfo.Bars.PropertyType == typeof(IPInput))
+                {
+                    // For abstract Bars property that returns IPInput, set HLCBars instead
+                    if (hlcBars == null && ExchangeSymbolTimeFrame != null)
+                    {
+                        hlcBars = new HLCReference<TValue>(ExchangeSymbolTimeFrame);
+                    }
+                }
+                else 
+                { 
+                    throw new NotImplementedException($"Unsupported Bars property type: {pBotInfo.Bars.PropertyType.FullName}. Supported types are: SymbolValueAspect<TValue>, HLCReference<TValue>, OHLCReference<TValue>, IPInput"); 
+                }
             }
         }
     }
