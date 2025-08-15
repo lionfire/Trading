@@ -40,9 +40,11 @@ public class BotHarnessFactory
 
         if (botEntity.Parameters != null)
         {
-            var bot = CreateBotFromParameters(botEntity);
+            var (bot, numericType) = CreateBotFromParameters(botEntity);
 
-            return ActivatorUtilities.CreateInstance<BotHarness<decimal>>(ServiceProvider, bot);
+            // Create BotHarness with the correct numeric type
+            var harnessType = typeof(BotHarness<>).MakeGenericType(numericType);
+            return (ILiveBotHarness)ActivatorUtilities.CreateInstance(ServiceProvider, harnessType, bot);
         }
         //else if (botEntity.PBotHarness != null)
         //{
@@ -60,12 +62,32 @@ public class BotHarnessFactory
         }
     }
 
-    private IBot2 CreateBotFromParameters(BotEntity botEntity)
+    private (IBot2 bot, Type numericType) CreateBotFromParameters(BotEntity botEntity)
     {
         var botType = BotTypeRegistry.BotRegistry.GetTypeFromNameOrThrow(botEntity.BotTypeName
             ?? throw new ArgumentNullException(nameof(botEntity.BotTypeName)));
 
-        // If Bot type has 1 generic parameter (check for name TPrecision), default to decimal precision for live bots
+        // Infer numeric type from parameters if available
+        Type numericType = typeof(decimal); // Default fallback
+        if (botEntity.Parameters != null)
+        {
+            var parametersType = botEntity.Parameters.GetType();
+            if (parametersType.IsGenericType)
+            {
+                var genericArgs = parametersType.GetGenericArguments();
+                // Look for numeric types in the generic arguments
+                foreach (var arg in genericArgs)
+                {
+                    if (IsNumericType(arg))
+                    {
+                        numericType = arg;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If Bot type has 1 generic parameter (check for name TPrecision), use the inferred numeric type
         var botTypeParameters = botEntity.BotTypeParameters;
         if (botType.IsGenericTypeDefinition)
         {
@@ -76,9 +98,18 @@ public class BotHarnessFactory
                     //&& genericArgs[0].Name == "TPrecision"
                     )
                 {
-                    // Use decimal for live bots by default
-                    botTypeParameters = [typeof(decimal)];
+                    // Use the inferred numeric type instead of hardcoding decimal
+                    botTypeParameters = [numericType];
                     botType = botType.MakeGenericType(botTypeParameters);
+                }
+            }
+            else
+            {
+                botType = botType.MakeGenericType(botTypeParameters);
+                // Update numericType based on the provided type parameters
+                if (botTypeParameters.Length > 0 && IsNumericType(botTypeParameters[0]))
+                {
+                    numericType = botTypeParameters[0];
                 }
             }
         }
@@ -101,7 +132,15 @@ public class BotHarnessFactory
             }
         }
 
-        return bot;
+        return (bot, numericType);
+    }
+
+    private static bool IsNumericType(Type type)
+    {
+        return type == typeof(decimal) || type == typeof(double) || type == typeof(float) ||
+               type == typeof(int) || type == typeof(long) || type == typeof(short) ||
+               type == typeof(uint) || type == typeof(ulong) || type == typeof(ushort) ||
+               type == typeof(byte) || type == typeof(sbyte);
     }
 
     private static void CopyPropertiesRecursive(object source, object target)

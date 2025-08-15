@@ -1,3 +1,6 @@
+using LionFire.Trading.Indicators.Parameters;
+using System.Numerics;
+
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
 /// <summary>
@@ -9,6 +12,8 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 /// or MFI_FP from LionFire.Trading.Indicators.Native for the first-party implementation.
 /// </remarks>
 public class MFI<TInput, TOutput> : MFI_QC<TInput, TOutput>
+    where TInput : struct
+    where TOutput : struct, INumber<TOutput>
 {
     public MFI(PMFI<TInput, TOutput> parameters) : base(parameters) { }
     

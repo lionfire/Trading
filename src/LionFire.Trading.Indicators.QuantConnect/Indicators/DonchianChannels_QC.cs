@@ -135,7 +135,7 @@ public class DonchianChannels_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper
             if (width == TOutput.Zero) return TOutput.CreateChecked(0.5);
             
             // Use close price for percent position calculation
-            var currentPrice = ConvertToOutput(currentInput.Close);
+            var currentPrice = ConvertToOutput(Convert.ToDecimal(currentInput.Close));
             var lowerChannel = LowerChannel;
             
             return (currentPrice - lowerChannel) / width;

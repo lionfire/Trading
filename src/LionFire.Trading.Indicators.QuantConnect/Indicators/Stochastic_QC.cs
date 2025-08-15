@@ -147,7 +147,7 @@ public class Stochastic_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper<Stoch
             // Create a TradeBar with the HLC values for Stochastic calculation
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: Convert.ToDecimal(input.High), // Open not used, but required
                 high: Convert.ToDecimal(input.High),
                 low: Convert.ToDecimal(input.Low),

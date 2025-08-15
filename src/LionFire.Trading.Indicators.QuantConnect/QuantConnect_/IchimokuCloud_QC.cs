@@ -109,7 +109,7 @@ public class IchimokuCloud_QC<TPrice, TOutput> : IchimokuCloudBase<IchimokuCloud
         foreach (var input in inputs)
         {
             // Convert to QuantConnect's TradeBar format
-            var tradeBar = new QuantConnect.Data.Market.TradeBar()
+            var tradeBar = new global::QuantConnect.Data.Market.TradeBar()
             {
                 High = Convert.ToDecimal(input.High),
                 Low = Convert.ToDecimal(input.Low),

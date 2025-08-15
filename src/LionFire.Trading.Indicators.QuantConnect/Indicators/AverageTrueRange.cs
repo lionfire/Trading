@@ -232,7 +232,7 @@ public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<Av
 
     DateTime endTime = DefaultEndTime;
     TradeBar tradeBar = new TradeBar(time: DefaultEndTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: default /* UNUSED for ATR */,
                 high: default,
                 low: default,
@@ -256,7 +256,7 @@ public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<Av
 
             WrappedIndicator.Update(new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: default /* UNUSED for ATR */,
                 high: Convert.ToDecimal(input.High),
                 low: Convert.ToDecimal(input.Low),

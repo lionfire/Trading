@@ -185,8 +185,9 @@ public class DualAtrBot<TValue> : StandardBot2<PDualAtrBot<TValue>, TValue>
 
         //Thread.SpinWait(150);
         //Thread.SpinWait(50);
-        if (OpenScore >= Parameters.Points!.OpenThreshold) { TryOpen(); }
-        if (CloseScore >= Parameters.Points.CloseThreshold) { TryClose(); }
+        var typedParams = (PDualAtrBot<TValue>)Parameters;
+        if (OpenScore >= typedParams.Points!.OpenThreshold) { TryOpen(); }
+        if (CloseScore >= typedParams.Points.CloseThreshold) { TryClose(); }
 
         var sl = Direction switch
         {

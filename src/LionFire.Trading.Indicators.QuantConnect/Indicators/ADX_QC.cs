@@ -145,7 +145,7 @@ public class ADX_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<ADX_QC<TInpu
             // Create a TradeBar with HLC data
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: Convert.ToDecimal(input.Close), // Use close as open since we don't have open
                 high: Convert.ToDecimal(input.High),
                 low: Convert.ToDecimal(input.Low),

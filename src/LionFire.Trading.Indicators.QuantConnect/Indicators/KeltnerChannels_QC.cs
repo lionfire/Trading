@@ -89,10 +89,7 @@ public class KeltnerChannels_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<
     public KeltnerChannels_QC(PKeltnerChannels<TInput, TOutput> parameters) : base(
         new global::QuantConnect.Indicators.KeltnerChannels(
             parameters.Period, 
-            Convert.ToDecimal(parameters.AtrMultiplier),
-            QuantConnect.Indicators.MovingAverageType.Exponential,
-            QuantConnect.Indicators.MovingAverageType.Simple,
-            parameters.AtrPeriod))
+            Convert.ToDecimal(parameters.AtrMultiplier)))
     {
         Parameters = parameters;
     }
@@ -160,7 +157,7 @@ public class KeltnerChannels_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<
             // For single-value input, we assume Close = High = Low
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: close,
                 high: close,
                 low: close,

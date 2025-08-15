@@ -54,7 +54,7 @@ public class ParabolicSAR_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper<Par
     /// <summary>
     /// Maximum lookback period required for the indicator
     /// </summary>
-    public override int MaxLookback => Parameters.LookbackForInputSlot(Parameters.GetInputSlots().First());
+    public override int MaxLookback => Parameters.LookbackForInputSlot(PParabolicSAR<TPrice, TOutput>.GetInputSlots().First());
 
     #endregion
 
@@ -115,7 +115,7 @@ public class ParabolicSAR_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper<Par
             if (!WrappedIndicator.IsReady || lastHLC == null)
                 return true; // Default assumption
                 
-            var currentPrice = TOutput.CreateChecked(Convert.ToDecimal(lastHLC.Value.High + lastHLC.Value.Low) / 2.0m);
+            var currentPrice = TOutput.CreateChecked((Convert.ToDecimal(lastHLC.Value.High) + Convert.ToDecimal(lastHLC.Value.Low)) / 2.0m);
             return currentPrice > CurrentValue;
         }
     }
@@ -160,7 +160,7 @@ public class ParabolicSAR_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper<Par
             // Create a TradeBar with the HLC values
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: Convert.ToDecimal(input.High), // Use high as open for simplicity
                 high: Convert.ToDecimal(input.High),
                 low: Convert.ToDecimal(input.Low),

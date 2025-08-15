@@ -237,59 +237,62 @@ public class VWAP_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<VWAP_QC<TIn
     {
         DateTime timestamp = DateTime.UtcNow; // Default timestamp
 
-        // Handle different input types
-        switch (input)
+        // Handle different input types using runtime type checking
+        var boxed = (object)input;
+        
+        // Check for Bar type (runtime check since TInput is struct-constrained)
+        if (boxed is Bar bar)
         {
-            case Bar bar:
-                return (Convert.ToDecimal(bar.High), Convert.ToDecimal(bar.Low), 
-                       Convert.ToDecimal(bar.Close), Convert.ToDecimal(bar.Volume),
-                       bar.TimeStart?.DateTime ?? timestamp);
-            
-            case TimedBar timedBar:
-                return (Convert.ToDecimal(timedBar.High), Convert.ToDecimal(timedBar.Low), 
-                       Convert.ToDecimal(timedBar.Close), Convert.ToDecimal(timedBar.Volume),
-                       timedBar.TimeStart?.DateTime ?? timestamp);
-            
-            default:
-                // Try reflection for dynamic property access
-                var inputType = typeof(TInput);
-                var boxed = (object)input;
-                
-                // Look for OHLCV and Time properties
-                var highProperty = inputType.GetProperty("High");
-                var lowProperty = inputType.GetProperty("Low");
-                var closeProperty = inputType.GetProperty("Close");
-                var volumeProperty = inputType.GetProperty("Volume");
-                var timeProperty = inputType.GetProperty("Time") ?? 
-                                 inputType.GetProperty("Timestamp") ?? 
-                                 inputType.GetProperty("DateTime");
-                
-                if (closeProperty != null && volumeProperty != null)
-                {
-                    var highValue = highProperty?.GetValue(boxed) ?? closeProperty.GetValue(boxed);
-                    var lowValue = lowProperty?.GetValue(boxed) ?? closeProperty.GetValue(boxed);
-                    var closeValue = closeProperty.GetValue(boxed);
-                    var volumeValue = volumeProperty.GetValue(boxed);
-                    var timeValue = timeProperty?.GetValue(boxed);
-                    
-                    if (timeValue is DateTime dt)
-                        timestamp = dt;
-                    else if (timeValue is DateTimeOffset dto)
-                        timestamp = dto.DateTime;
-                    
-                    return (
-                        Convert.ToDecimal(highValue!),
-                        Convert.ToDecimal(lowValue!),
-                        Convert.ToDecimal(closeValue!),
-                        Convert.ToDecimal(volumeValue!),
-                        timestamp
-                    );
-                }
-                
-                throw new InvalidOperationException(
-                    $"Unable to extract OHLCV data from input type {inputType.Name}. " +
-                    "Input must have High, Low, Close and Volume properties.");
+            return (Convert.ToDecimal(bar.High), Convert.ToDecimal(bar.Low), 
+                   Convert.ToDecimal(bar.Close), Convert.ToDecimal(bar.Volume),
+                   timestamp);
         }
+        
+        // Check for TimedBar type
+        if (boxed is TimedBar timedBar)
+        {
+            return (Convert.ToDecimal(timedBar.High), Convert.ToDecimal(timedBar.Low), 
+                   Convert.ToDecimal(timedBar.Close), Convert.ToDecimal(timedBar.Volume),
+                   timedBar.OpenTime.DateTime);
+        }
+        
+        // Try reflection for dynamic property access
+        var inputType = typeof(TInput);
+        
+        // Look for OHLCV and Time properties
+        var highProperty = inputType.GetProperty("High");
+        var lowProperty = inputType.GetProperty("Low");
+        var closeProperty = inputType.GetProperty("Close");
+        var volumeProperty = inputType.GetProperty("Volume");
+        var timeProperty = inputType.GetProperty("Time") ?? 
+                         inputType.GetProperty("Timestamp") ?? 
+                         inputType.GetProperty("DateTime");
+        
+        if (closeProperty != null && volumeProperty != null)
+        {
+            var highValue = highProperty?.GetValue(boxed) ?? closeProperty.GetValue(boxed);
+            var lowValue = lowProperty?.GetValue(boxed) ?? closeProperty.GetValue(boxed);
+            var closeValue = closeProperty.GetValue(boxed);
+            var volumeValue = volumeProperty.GetValue(boxed);
+            var timeValue = timeProperty?.GetValue(boxed);
+            
+            if (timeValue is DateTime dt)
+                timestamp = dt;
+            else if (timeValue is DateTimeOffset dto)
+                timestamp = dto.DateTime;
+            
+            return (
+                Convert.ToDecimal(highValue!),
+                Convert.ToDecimal(lowValue!),
+                Convert.ToDecimal(closeValue!),
+                Convert.ToDecimal(volumeValue!),
+                timestamp
+            );
+        }
+        
+        throw new InvalidOperationException(
+            $"Unable to extract OHLCV data from input type {inputType.Name}. " +
+            "Input must have High, Low, Close and Volume properties.");
     }
 
     /// <summary>

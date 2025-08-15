@@ -152,7 +152,7 @@ public class OBV_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<OBV_QC<TInpu
             // Create a TradeBar with the price and volume values
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: price,
                 high: price,
                 low: price,
@@ -208,61 +208,63 @@ public class OBV_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<OBV_QC<TInpu
     /// </summary>
     private (decimal price, decimal volume) ExtractPriceAndVolume(TInput input)
     {
-        // Handle different input types
-        switch (input)
+        // Handle different input types using runtime type checking
+        var boxed = (object)input;
+        
+        // Check for Bar type (runtime check since TInput is struct-constrained)
+        if (boxed is Bar bar)
         {
-            case Bar bar:
-                return (Convert.ToDecimal(bar.Close), Convert.ToDecimal(bar.Volume));
+            return (Convert.ToDecimal(bar.Close), Convert.ToDecimal(bar.Volume));
+        }
+        
+        // Check for TimedBar type
+        if (boxed is TimedBar timedBar)
+        {
+            return (Convert.ToDecimal(timedBar.Close), Convert.ToDecimal(timedBar.Volume));
+        }
+        
+        // Try reflection for dynamic property access
+        var inputType = typeof(TInput);
+        
+        // Look for Close and Volume properties
+        var closeProperty = inputType.GetProperty("Close");
+        var volumeProperty = inputType.GetProperty("Volume");
+        
+        if (closeProperty != null && volumeProperty != null)
+        {
+            var closeValue = closeProperty.GetValue(boxed);
+            var volumeValue = volumeProperty.GetValue(boxed);
             
-            case TimedBar timedBar:
-                return (Convert.ToDecimal(timedBar.Close), Convert.ToDecimal(timedBar.Volume));
-            
-            default:
-                // Try reflection for dynamic property access
-                var inputType = typeof(TInput);
-                
-                // Look for Close and Volume properties
-                var closeProperty = inputType.GetProperty("Close");
-                var volumeProperty = inputType.GetProperty("Volume");
-                
-                if (closeProperty != null && volumeProperty != null)
+            return (
+                Convert.ToDecimal(closeValue!),
+                Convert.ToDecimal(volumeValue!)
+            );
+        }
+        
+        // If no Close/Volume properties, assume input is a tuple or has similar structure
+        if (inputType.IsGenericType)
+        {
+            var genericArgs = inputType.GetGenericArguments();
+            if (genericArgs.Length >= 2)
+            {
+                // Try to treat as (price, volume) tuple
+                var fields = inputType.GetFields();
+                if (fields.Length >= 2)
                 {
-                    var boxed = (object)input;
-                    var closeValue = closeProperty.GetValue(boxed);
-                    var volumeValue = volumeProperty.GetValue(boxed);
+                    var item1 = fields[0].GetValue(boxed);
+                    var item2 = fields[1].GetValue(boxed);
                     
                     return (
-                        Convert.ToDecimal(closeValue!),
-                        Convert.ToDecimal(volumeValue!)
+                        Convert.ToDecimal(item1!),
+                        Convert.ToDecimal(item2!)
                     );
                 }
-                
-                // If no Close/Volume properties, assume input is a tuple or has similar structure
-                if (inputType.IsGenericType)
-                {
-                    var genericArgs = inputType.GetGenericArguments();
-                    if (genericArgs.Length >= 2)
-                    {
-                        // Try to treat as (price, volume) tuple
-                        var fields = inputType.GetFields();
-                        if (fields.Length >= 2)
-                        {
-                            var boxed = (object)input;
-                            var item1 = fields[0].GetValue(boxed);
-                            var item2 = fields[1].GetValue(boxed);
-                            
-                            return (
-                                Convert.ToDecimal(item1!),
-                                Convert.ToDecimal(item2!)
-                            );
-                        }
-                    }
-                }
-                
-                throw new InvalidOperationException(
-                    $"Unable to extract price and volume from input type {inputType.Name}. " +
-                    "Input must have Close and Volume properties or be a (price, volume) tuple.");
+            }
         }
+        
+        throw new InvalidOperationException(
+            $"Unable to extract price and volume from input type {inputType.Name}. " +
+            "Input must have Close and Volume properties or be a (price, volume) tuple.");
     }
 
     #endregion

@@ -276,7 +276,6 @@ public class PivotPoints_QC<TInput, TOutput>
 
     public override void Clear()
     {
-        base.Clear();
         qcIndicator?.Reset();
         fallbackIndicator?.Clear();
         

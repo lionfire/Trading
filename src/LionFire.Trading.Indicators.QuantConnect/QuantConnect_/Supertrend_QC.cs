@@ -83,8 +83,9 @@ public class Supertrend_QC<TPrice, TOutput>
     {
         // Initialize QuantConnect's ATR with Wilder's smoothing (default for Supertrend)
         atrIndicator = new global::QuantConnect.Indicators.AverageTrueRange(
+            $"ATR({parameters.AtrPeriod})", 
             parameters.AtrPeriod, 
-            QuantConnect.Indicators.MovingAverageType.Wilders);
+            global::QuantConnect.Indicators.MovingAverageType.Wilders);
             
         currentSupertrend = TOutput.Zero;
         finalUpperBand = TOutput.Zero;
@@ -135,7 +136,7 @@ public class Supertrend_QC<TPrice, TOutput>
         // Create TradeBar for QuantConnect's ATR
         var tradeBar = new TradeBar(
             time: endTime,
-            symbol: QuantConnect.Symbol.None,
+            symbol: global::QuantConnect.Symbol.None,
             open: Convert.ToDecimal(hlc.Close), // ATR doesn't need open
             high: Convert.ToDecimal(hlc.High),
             low: Convert.ToDecimal(hlc.Low),

@@ -110,7 +110,7 @@ public class ROC_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper<ROC_QC<TPric
             // For ROC, we only need the Close price, other OHLC values are not used
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: Convert.ToDecimal(input),
                 high: Convert.ToDecimal(input),
                 low: Convert.ToDecimal(input),

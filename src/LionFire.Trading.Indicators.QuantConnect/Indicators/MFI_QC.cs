@@ -161,7 +161,7 @@ public class MFI_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<MFI_QC<TInpu
             // Create a TradeBar with OHLCV values for QuantConnect's MoneyFlowIndex
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: open,
                 high: high,
                 low: low,

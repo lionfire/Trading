@@ -3,6 +3,7 @@ using LionFire.Trading;
 using LionFire.Trading.Indicators.Parameters;
 using LionFire.Trading.ValueWindows;
 using QuantConnect.Data.Market;
+using System.Numerics;
 using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
@@ -16,6 +17,8 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 /// </summary>
 public class WilliamsR_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper<WilliamsR_QC<TPrice, TOutput>, global::QuantConnect.Indicators.WilliamsPercentR, PWilliamsR<TPrice, TOutput>, HLC<TPrice>, TOutput>, 
     IIndicator2<WilliamsR_QC<TPrice, TOutput>, PWilliamsR<TPrice, TOutput>, HLC<TPrice>, TOutput>
+    where TPrice : struct
+    where TOutput : struct, INumber<TOutput>
 {
     #region Static
 
@@ -126,7 +129,7 @@ public class WilliamsR_QC<TPrice, TOutput> : QuantConnectIndicatorWrapper<Willia
             // Williams %R requires High, Low, and Close prices
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: Convert.ToDecimal(input.Close), // Open not used by Williams %R, use Close
                 high: Convert.ToDecimal(input.High),
                 low: Convert.ToDecimal(input.Low),

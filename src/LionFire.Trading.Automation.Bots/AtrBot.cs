@@ -192,8 +192,9 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
         //Thread.SpinWait(150);
         //Thread.SpinWait(50);
-        if (CloseScore >= Parameters.Points!.CloseThreshold) { TryClose(); }
-        else if (OpenScore >= Parameters.Points.OpenThreshold) { TryOpen(); }
+        var typedParams = (PAtrBot<TValue>)Parameters;
+        if (CloseScore >= typedParams.Points!.CloseThreshold) { TryClose(); }
+        else if (OpenScore >= typedParams.Points.OpenThreshold) { TryOpen(); }
 
         var sl = Direction switch
         {

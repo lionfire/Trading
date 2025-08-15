@@ -1,4 +1,5 @@
 using LionFire.Trading.Indicators.Parameters;
+using System.Numerics;
 
 namespace LionFire.Trading.Indicators.QuantConnect_;
 
@@ -11,6 +12,8 @@ namespace LionFire.Trading.Indicators.QuantConnect_;
 /// or CCI_FP from LionFire.Trading.Indicators.Native for the first-party implementation.
 /// </remarks>
 public class CCI<TPrice, TOutput> : CCI_QC<TPrice, TOutput>
+    where TPrice : struct
+    where TOutput : struct, INumber<TOutput>
 {
     public CCI(PCCI<TPrice, TOutput> parameters) : base(parameters) { }
     

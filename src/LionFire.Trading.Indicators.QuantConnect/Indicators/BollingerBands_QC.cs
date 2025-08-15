@@ -152,7 +152,7 @@ public class BollingerBands_QC<TInput, TOutput> : QuantConnectIndicatorWrapper<B
             // Create a TradeBar with the price value
             var tradeBar = new TradeBar(
                 time: endTime,
-                symbol: QuantConnect.Symbol.None,
+                symbol: global::QuantConnect.Symbol.None,
                 open: Convert.ToDecimal(input),
                 high: Convert.ToDecimal(input),
                 low: Convert.ToDecimal(input),
