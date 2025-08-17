@@ -13,7 +13,7 @@ public record ExchangeSymbol(string Exchange, string Area, string Symbol)
 
     #region Static
 
-    public static ExchangeSymbol GenericUSD = new("_", "_", "USD");
+    public static ExchangeSymbol GenericUSD = new("UnknownExchange", "UnknownExchange", "USD");
     public static ExchangeSymbol Unknown = new("UnknownExchange", "UnknownArea", "UnknownSymbol");
 
     #endregion

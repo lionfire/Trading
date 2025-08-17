@@ -71,13 +71,26 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
 
     #region Lifecycle
 
-    internal SimAccount(BotContext<TPrecision> context, PSimAccount<TPrecision> parameters)
+    internal SimAccount(BotContext<TPrecision> context, PSimAccount<TPrecision> parameters, ExchangeArea? exchangeAreaFallback = null)
     {
         Context = context;
-        Parameters = parameters;
+
+        // If parameters have UnknownExchange and we have a fallback, create new parameters with correct exchange
+        if (parameters.ExchangeArea.Exchange == "UnknownExchange" && exchangeAreaFallback != null && exchangeAreaFallback.Exchange != "UnknownExchange")
+        {
+            Parameters = new PSimAccount<TPrecision>(exchangeAreaFallback)
+            {
+                DefaultHolding = parameters.DefaultHolding
+            };
+        }
+        else
+        {
+            Parameters = parameters;
+        }
+
         AccountMarketParameters = new PAccountMarketSim<TPrecision>
         {
-            ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(parameters.ExchangeArea.Exchange, parameters.ExchangeArea.Area, "DEFAULT", TimeFrame.m1) // Default symbol and timeframe
+            ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(Parameters.ExchangeArea.Exchange, Parameters.ExchangeArea.Area, "{default}", TimeFrame.m1) // Default symbol and timeframe
         };
 
         if (PPrimaryHolding != null)
@@ -87,7 +100,8 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
 
         if (SimContext.PMultiSim.DefaultSymbol != null)
         {
-            DefaultMarketSim = CreateMarketSim(SimContext.PMultiSim.DefaultSymbol);
+            // Pass the exchange fallback when creating the default market sim
+            DefaultMarketSim = CreateMarketSim(SimContext.PMultiSim.DefaultSymbol, exchangeAreaFallback);
         }
     }
 
@@ -158,11 +172,17 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     private readonly Dictionary<string, AccountMarketSim<TPrecision>> marketSims = [];
     private readonly object marketSimsLock = new();
 
-    private AccountMarketSim<TPrecision> CreateMarketSim(string symbol)
+    // REVIEW: There may not be a good reason to allow override, in which case we should remove it.
+    private AccountMarketSim<TPrecision> CreateMarketSim(string symbol, ExchangeArea? exchangeAreaOverride = null)
     {
-        return new AccountMarketSim<TPrecision>(this, new ExchangeSymbol(ExchangeArea, symbol));
+        // Use override if provided and not UnknownExchange, otherwise use account's ExchangeArea
+        var exchangeArea = exchangeAreaOverride != null && exchangeAreaOverride.Exchange != "UnknownExchange"
+            ? exchangeAreaOverride
+            : ExchangeArea;
+
+        return new AccountMarketSim<TPrecision>(this, new ExchangeSymbol(exchangeArea, symbol));
     }
-    
+
     public IEnumerable<AccountMarketSim<TPrecision>> GetAllMarketSims()
     {
         if (DefaultMarketSim != null) yield return DefaultMarketSim;

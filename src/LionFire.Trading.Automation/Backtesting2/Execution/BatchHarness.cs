@@ -342,7 +342,7 @@ public sealed partial class BatchHarness<TPrecision>
 
     //public IReadOnlyDictionary<string, InputEnumeratorBase> InputEnumerators => inputEnumerators;
     private Dictionary<string, InputEnumeratorBase> inputEnumerators = [];
-    private List<InputEnumeratorBase> InputEnumeratorsList { get;  set; } = [];
+    private IReadOnlyList<InputEnumeratorBase> InputEnumeratorsList { get;  set; } = [];
 
     public interface IInputSlotFulfiller
     {
@@ -380,10 +380,26 @@ public sealed partial class BatchHarness<TPrecision>
                     // Create a context for this market sim if it doesn't have one
                     if (marketSim.Context == null)
                     {
+                        var exchangeSymbol = marketSim.ExchangeSymbol;
+                        
+                        // Warn if account exchange differs from bot exchange (and neither is Unknown)
+                        if (exchangeSymbol.Exchange != "UnknownExchange" && 
+                            backtest.PBacktest.PBot is IPBarsBot2 barsBot && 
+                            barsBot is PMarketProcessor<TPrecision> marketProcessor &&
+                            marketProcessor.ExchangeSymbolTimeFrame != null &&
+                            (exchangeSymbol.Exchange != marketProcessor.ExchangeSymbolTimeFrame.Exchange ||
+                             exchangeSymbol.Area != marketProcessor.ExchangeSymbolTimeFrame.Area))
+                        {
+                            Log.Get<BatchHarness<TPrecision>>().LogWarning("Account market sim exchange {AccountExchange}.{AccountArea} differs from bot exchange {BotExchange}.{BotArea} for symbol {Symbol}",
+                                exchangeSymbol.Exchange, exchangeSymbol.Area,
+                                marketProcessor.ExchangeSymbolTimeFrame.Exchange, marketProcessor.ExchangeSymbolTimeFrame.Area,
+                                exchangeSymbol.Symbol);
+                        }
+                        
                         marketSim.Context = new AccountMarketSimContext<TPrecision>(
                             SimContext,
                             marketSim,
-                            marketSim.ExchangeSymbol,
+                            exchangeSymbol,
                             backtest.BotContext.TimeFrame);
                     }
                     

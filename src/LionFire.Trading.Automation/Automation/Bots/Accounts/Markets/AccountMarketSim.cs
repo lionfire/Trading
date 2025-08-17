@@ -51,10 +51,10 @@ public class AccountMarketSim<TPrecision>
     {
         Account = account;
         ExchangeSymbol = exchangeSymbol;
-
+        
         Parameters = new PAccountMarketSim<TPrecision>
         {
-            ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(ExchangeSymbol.Exchange, ExchangeSymbol.Area, ExchangeSymbol.Symbol, ((SimAccount<TPrecision>)Account).Context.TimeFrame)
+            ExchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(exchangeSymbol.Exchange, exchangeSymbol.Area, exchangeSymbol.Symbol, ((SimAccount<TPrecision>)Account).Context.TimeFrame)
         };
 
         // TODO: Optimize: Make this a static readonly?

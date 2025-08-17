@@ -76,7 +76,9 @@ public sealed class BotContext<TPrecision> : MarketParticipantContext<TPrecision
         if (e != null)
         {
             //GetSimulatedAccount(e);
-            defaultSimAccount = new SimAccount<TPrecision>(this, parameters.PSimulatedAccount);
+            // Pass the bot's exchange area to SimAccount as a fallback if the account has UnknownExchange
+            var exchangeAreaFallback = new ExchangeArea(e.Exchange, e.Area);
+            defaultSimAccount = new SimAccount<TPrecision>(this, parameters.PSimulatedAccount, exchangeAreaFallback);
         }
         else
         {
