@@ -39,21 +39,21 @@ public class BacktestsRepository
         var path = BacktestOptions.Dir;
 
         if (RepositoryOptions.BotSubDir) { path = System.IO.Path.Combine(path, botTypeName); }
-        if (RepositoryOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, exchangeSymbolTimeFrame?.Symbol ?? "UnknownSymbol"); }
+        if (RepositoryOptions.SymbolSubDir) { path = System.IO.Path.Combine(path, exchangeSymbolTimeFrame?.Symbol ?? TradingConstants.UnknownSymbol); }
 
         if (RepositoryOptions.TimeFrameDir)
         {
-            path = System.IO.Path.Combine(path, exchangeSymbolTimeFrame!.TimeFrame?.ToString() ?? "UnknownTimeFrame");
+            path = System.IO.Path.Combine(path, exchangeSymbolTimeFrame!.TimeFrame?.ToString() ?? TradingConstants.UnknownTimeFrame);
         }
         if (RepositoryOptions.DateRangeDir)
         {
             path = System.IO.Path.Combine(path, DateTimeFormatting.ToConciseFileName(start, endExclusive));
         }
-        //if (RepositoryOptions.ExchangeSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange"); }
+        //if (RepositoryOptions.ExchangeSubDir) { path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? TradingConstants.UnknownExchange); }
         if (RepositoryOptions.ExchangeAndAreaSubDir)
         {
             var sb = new System.Text.StringBuilder();
-            sb.Append(exchangeSymbolTimeFrame?.Exchange ?? "UnknownExchange");
+            sb.Append(exchangeSymbolTimeFrame?.Exchange ?? TradingConstants.UnknownExchange);
             if (exchangeSymbolTimeFrame?.Area != null)
             {
                 sb.Append(".");

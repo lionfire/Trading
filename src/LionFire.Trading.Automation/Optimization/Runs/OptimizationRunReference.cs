@@ -26,11 +26,11 @@ public record OptimizationRunReference(
     public static OptimizationRunReference? FromOptimizationRunInfo(OptimizationRunInfo? optimizationRunInfo)
     {
         return optimizationRunInfo == null ? null : new OptimizationRunReference(
-            optimizationRunInfo.BotName ?? "UnknownBot",
-            optimizationRunInfo.Exchange ?? "UnknownExchange",
-            optimizationRunInfo.ExchangeArea ?? "UnknownExchangeArea",
-            optimizationRunInfo.Symbol ?? "UnknownSymbol",
-            optimizationRunInfo.TimeFrame?.ToString() ?? "UnknownTimeFrame",
+            optimizationRunInfo.BotName ?? TradingConstants.UnknownBot,
+            optimizationRunInfo.Exchange ?? TradingConstants.UnknownExchange,
+            optimizationRunInfo.ExchangeArea ?? TradingConstants.UnknownExchangeArea,
+            optimizationRunInfo.Symbol ?? TradingConstants.UnknownSymbol,
+            optimizationRunInfo.TimeFrame?.ToString() ?? TradingConstants.UnknownTimeFrame,
             //DateTimeFormatting.ToConciseFileName(optimizationRunInfo.Start, optimizationRunInfo.EndExclusive),
             optimizationRunInfo.Start,
             optimizationRunInfo.EndExclusive,
@@ -84,16 +84,16 @@ public record OptimizationRunReference(
     public override string ToString()
     {
         var sb = new System.Text.StringBuilder();
-        sb.Append(Bot ?? "UnknownBot");
+        sb.Append(Bot ?? TradingConstants.UnknownBot);
         sb.Append(Separator);
-        sb.Append(Symbol ?? "UnknownSymbol");
+        sb.Append(Symbol ?? TradingConstants.UnknownSymbol);
         sb.Append(Separator);
-        sb.Append(TimeFrame ?? "UnknownTimeFrame");
+        sb.Append(TimeFrame ?? TradingConstants.UnknownTimeFrame);
         sb.Append(Separator);
 
-        sb.Append(Exchange ?? "UnknownExchange");
+        sb.Append(Exchange ?? TradingConstants.UnknownExchange);
         sb.Append(Separator);
-        sb.Append(ExchangeArea ?? "UnknownExchangeArea");
+        sb.Append(ExchangeArea ?? TradingConstants.UnknownExchangeArea);
         sb.Append(Separator);
 
         sb.Append(DateTimeFormatting.ToConciseFileName(Start, EndExclusive));

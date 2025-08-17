@@ -383,7 +383,7 @@ public sealed partial class BatchHarness<TPrecision>
                         var exchangeSymbol = marketSim.ExchangeSymbol;
                         
                         // Warn if account exchange differs from bot exchange (and neither is Unknown)
-                        if (exchangeSymbol.Exchange != "UnknownExchange" && 
+                        if (exchangeSymbol.Exchange != TradingConstants.UnknownExchange && 
                             backtest.PBacktest.PBot is IPBarsBot2 barsBot && 
                             barsBot is PMarketProcessor<TPrecision> marketProcessor &&
                             marketProcessor.ExchangeSymbolTimeFrame != null &&

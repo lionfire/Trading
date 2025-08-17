@@ -76,7 +76,7 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
         Context = context;
 
         // If parameters have UnknownExchange and we have a fallback, create new parameters with correct exchange
-        if (parameters.ExchangeArea.Exchange == "UnknownExchange" && exchangeAreaFallback != null && exchangeAreaFallback.Exchange != "UnknownExchange")
+        if (parameters.ExchangeArea.Exchange == TradingConstants.UnknownExchange && exchangeAreaFallback != null && exchangeAreaFallback.Exchange != TradingConstants.UnknownExchange)
         {
             Parameters = new PSimAccount<TPrecision>(exchangeAreaFallback)
             {
@@ -176,7 +176,7 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     private AccountMarketSim<TPrecision> CreateMarketSim(string symbol, ExchangeArea? exchangeAreaOverride = null)
     {
         // Use override if provided and not UnknownExchange, otherwise use account's ExchangeArea
-        var exchangeArea = exchangeAreaOverride != null && exchangeAreaOverride.Exchange != "UnknownExchange"
+        var exchangeArea = exchangeAreaOverride != null && exchangeAreaOverride.Exchange != TradingConstants.UnknownExchange
             ? exchangeAreaOverride
             : ExchangeArea;
 

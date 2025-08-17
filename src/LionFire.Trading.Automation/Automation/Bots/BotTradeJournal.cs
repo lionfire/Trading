@@ -76,7 +76,7 @@ public sealed partial class BotTradeJournal<TPrecision> : IBotTradeJournal<TPrec
     //        var path = JournalDirectory;
     //        if (Options.ExchangeSubDir)
     //        {
-    //            path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? "UnknownExchange");
+    //            path = System.IO.Path.Combine(path, ExchangeSymbol?.Exchange ?? TradingConstants.UnknownExchange);
     //        }
     //        if (Options.ExchangeAndAreaSubDir && ExchangeSymbol?.DefaultExchangeArea != null)
     //        {
@@ -84,7 +84,7 @@ public sealed partial class BotTradeJournal<TPrecision> : IBotTradeJournal<TPrec
     //        }
     //        if (Options.SymbolSubDir)
     //        {
-    //            path = System.IO.Path.Combine(path, ExchangeSymbol?.DefaultSymbol ?? "UnknownSymbol");
+    //            path = System.IO.Path.Combine(path, ExchangeSymbol?.DefaultSymbol ?? TradingConstants.UnknownSymbol);
     //        }
     //        return path;
     //    }
