@@ -4,6 +4,14 @@
     <TargetFramework>net9.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    
+    <!-- NuGet Package Properties -->
+    <IsPackable>true</IsPackable>
+    <PackageId>LionFire.Trading.Automation.Bots</PackageId>
+    <Version>1.0.0</Version>
+    <Description>Trading bot implementations for LionFire Trading platform</Description>
+    <PackageTags>trading;bots;automation;strategies</PackageTags>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
