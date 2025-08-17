@@ -289,13 +289,14 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             {
                 var timer = new PeriodicTimer(TimeSpan.FromSeconds(0.25));
                 while (isKnownToBeRunning && !IsAborted && OptimizationTask != null)
-
+                {
                     if (OptimizationTask.OptimizationStrategy?.Progress != null)
                     {
                         Progress = OptimizationTask.OptimizationStrategy?.Progress;
                     }
-                changes.OnNext(Unit.Default);
-                await timer.WaitForNextTickAsync();
+                    changes.OnNext(Unit.Default);
+                    await timer.WaitForNextTickAsync();
+                }
             });
         }
     }
@@ -340,11 +341,11 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
         OptimizationTask = new OptimizationTask(ServiceProvider, PMultiSim);
 
-        //Task task;
+        Task startTask;
 
         try
         {
-            await OptimizationTask.Run().ConfigureAwait(false);
+            startTask = OptimizationTask.StartAsync();
             //if (task.IsFaulted) { throw task.Exception; }
         }
         catch (Exception ex)
@@ -361,8 +362,8 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         _ = Task.Run(async () =>
         {
             ConsoleLog.LogInformation("Waiting for optimization to complete...");
-            //await task;
-            await OptimizationTask.RunTask;
+            await startTask;
+            await OptimizationTask.RunTask!;
             ConsoleLog.LogInformation("Waiting for optimization to complete...done.");
             IsRunning = false;
             IsCompleted = true;
@@ -382,8 +383,8 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
         _ = Task.Run(async () =>
         {
-            //await task;
-            await OptimizationTask.RunTask;
+            await startTask;
+            await OptimizationTask.RunTask!;
             LinesVM.Append("Optimization completed", category: GetType().FullName);
         });
     }
