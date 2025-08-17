@@ -26,6 +26,20 @@
 	<PropertyGroup>
     <Authors>Jared Thirsk</Authors>
     <Company>Jared Thirsk</Company>
+    
+    <!-- Package versioning -->
+    <VersionPrefix>7.0.0</VersionPrefix>
+    <VersionSuffix>alpha</VersionSuffix>
+    <Copyright>2010-2025 Jared Thirsk</Copyright>
+    <RepositoryUrl>https://github.com/lionfire/Trading</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    
+    <!-- Debug symbols for packages -->
+    <DebugSymbols>true</DebugSymbols>
+    <EmbedAllSources>true</EmbedAllSources>
+    <DebugType>portable</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
 
   <!-- Special handling for benchmark projects to avoid assembly attribute duplication -->
@@ -33,5 +47,25 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
+
+  <!-- Package generation configuration -->
+  <PropertyGroup Condition=" '$(Configuration)'=='Debug'">
+    <BumpLabel>dev</BumpLabel>
+    <BumpLabelDigits>4</BumpLabelDigits>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)'=='Release'">
+    <BumpRevision>True</BumpRevision>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <!-- Auto-push packages to local feed -->
+  <Target Name="AfterPack" AfterTargets="Pack">
+    <ItemGroup>
+      <PackageFiles Include="$(MSBuildProjectDirectory)\bin\$(Configuration)\*.nupkg" />
+      <SymbolFiles Include="$(MSBuildProjectDirectory)\bin\$(Configuration)\*.snupkg" />
+    </ItemGroup>
+    <Exec Command="dotnet nuget push &quot;%(PackageFiles.Identity)&quot; --source LionFireLocal" Condition="@(PackageFiles-&gt;Count()) &gt; 0" />
+    <Exec Command="dotnet nuget push &quot;%(SymbolFiles.Identity)&quot; --source LionFireLocal" Condition="@(SymbolFiles-&gt;Count()) &gt; 0" />
+  </Target>
  
 </Project>
