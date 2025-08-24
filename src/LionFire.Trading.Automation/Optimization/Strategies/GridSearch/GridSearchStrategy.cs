@@ -7,6 +7,7 @@ using LionFire.Extensions.Logging;
 using LionFire.Serialization.Csv;
 using LionFire.Threading;
 using LionFire.Trading.Automation.Optimization.Strategies.GridSpaces;
+using LionFire.Trading.Optimization;
 using LionFire.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using NLog.LayoutRenderers.Wrappers;

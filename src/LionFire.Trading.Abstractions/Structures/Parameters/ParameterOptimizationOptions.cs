@@ -38,6 +38,7 @@ public partial class ParameterOptimizationOptions<TValue>
 {
 
     #region Identity
+    [JsonIgnore]
     public Type ValueType => typeof(TValue);
 
     [JsonIgnore]
@@ -73,7 +74,9 @@ public partial class ParameterOptimizationOptions<TValue>
 
     #region Events
 
+    [JsonIgnore]
     public IObservable<Unit> SomethingChanged => somethingChanged;
+    [JsonIgnore]
     private Subject<Unit> somethingChanged = new();
 
     #endregion

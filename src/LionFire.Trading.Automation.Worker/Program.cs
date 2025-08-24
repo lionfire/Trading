@@ -2,6 +2,7 @@ using LionFire.Hosting;
 using LionFire.Trading.Binance_;
 using LionFire.Trading.Indicators;
 using LionFire.Trading.Automation.Blazor.Optimization;
+//using LionFire.Trading.Automation.Orleans.Hosting;
 using LionFire.Logging;
 
 //var customLoggerProvider = new CustomLoggerProvider();
@@ -15,7 +16,10 @@ Host.CreateApplicationBuilder(args)
              //   .UseOrleansClient_LF())
         )
         //.FireLynxApp()
-        .If(Convert.ToBoolean(lf.Configuration["Orleans:Enable"]), lf => lf.Silo())
+        .If(Convert.ToBoolean(lf.Configuration["Orleans:Enable"]), lf => lf.Silo((context, silo) =>
+        {
+            silo.AddOptimizationQueueGrains();
+        }))
         .WebHost<TradingWorkerStartup>(w => w.Http().BlazorInteractiveServer())
         .ConfigureServices(services => services
 
@@ -51,11 +55,13 @@ Host.CreateApplicationBuilder(args)
             .AddTradingUI()
             //.AddTransient<OneShotOptimizeVM>()
             .AddSingleton<OneShotOptimizeVM>()
+            .AddTransient<LionFire.Trading.Automation.Blazor.Optimization.Queue.OptimizationQueueVM>()
         
             #endregion
 
             .AutomationModel(lf.Configuration)
             .Automation(lf.Configuration)
+            .AddOptimizationQueue() // Add Orleans queue services
         )
     )
     .Build()

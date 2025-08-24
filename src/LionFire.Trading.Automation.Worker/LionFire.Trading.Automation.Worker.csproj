@@ -32,6 +32,7 @@
 		<ProjectReference Include="..\LionFire.Trading.Automation.Blazor\LionFire.Trading.Automation.Blazor.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
+		<ProjectReference Include="..\LionFire.Trading.Automation.Orleans\LionFire.Trading.Automation.Orleans.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Data\LionFire.Trading.Data.csproj" />
 		<!--<ProjectReference Include="..\FireLynx.Blazor.Public\FireLynx.Blazor.Public.csproj" />-->
 		<!--<ProjectReference Include="..\..\..\Trading.Proprietary\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />-->

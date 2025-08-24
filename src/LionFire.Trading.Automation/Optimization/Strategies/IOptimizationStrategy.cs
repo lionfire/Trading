@@ -1,4 +1,6 @@
-﻿namespace LionFire.Trading.Automation.Optimization.Strategies;
+﻿using LionFire.Trading.Optimization;
+
+namespace LionFire.Trading.Automation.Optimization.Strategies;
 
 public interface IOptimizationStrategy
 {

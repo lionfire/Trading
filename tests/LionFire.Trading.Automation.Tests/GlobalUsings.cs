@@ -2,3 +2,8 @@
 global using System;
 global using Xunit;
 global using System.Collections.Generic;
+global using FluentAssertions;
+global using Moq;
+global using Orleans;
+global using LionFire.Trading.Optimization.Queue;
+global using LionFire.Trading.Grains.Optimization;

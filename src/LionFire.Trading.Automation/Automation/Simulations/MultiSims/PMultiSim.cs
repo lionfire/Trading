@@ -86,12 +86,23 @@ public partial class PMultiSim : ReactiveObject, IValidatable
 
     #region Properties
 
-    [Reactive]
     private Type? pBotType;
 
-    //public Type? BotType => botType ??= PBotType == null ? null : BotTyping.TryGetBotType(PBotType);
-    [Reactive]
+    [JsonIgnore]
+    public Type? PBotType 
+    { 
+        get => pBotType;
+        set => this.RaiseAndSetIfChanged(ref pBotType, value);
+    }
+
     private Type? botType;
+
+    [JsonIgnore]
+    public Type? BotType 
+    { 
+        get => botType;
+        set => this.RaiseAndSetIfChanged(ref botType, value);
+    }
 
 
     // Backing fields to avoid circular references

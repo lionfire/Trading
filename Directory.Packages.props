@@ -48,6 +48,7 @@
     <PackageVersion Include="Durian.FriendClass" Version="2.0.0" />
     <PackageVersion Include="DynamicData" Version="9.1.2" />
     <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="9.0.0" />
+    <PackageVersion Include="FluentAssertions" Version="6.13.2" />
     <PackageVersion Include="FluentEmail.Mailgun" Version="3.0.2" />
     <PackageVersion Include="Flurl.Http" Version="4.0.2" />
     <PackageVersion Include="GitVersion.MsBuild" Version="6.1.0" />
@@ -131,10 +132,12 @@
     <PackageVersion Include="Microsoft.Orleans.Sdk" Version="9.1.2" />
     <PackageVersion Include="Microsoft.Orleans.Server" Version="9.1.2" />
     <PackageVersion Include="Microsoft.Orleans.Streaming" Version="9.1.2" />
+    <PackageVersion Include="Microsoft.Orleans.TestingHost" Version="9.1.2" />
     <PackageVersion Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.0" />
     <PackageVersion Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
     <PackageVersion Include="Microsoft.Web.WebView2" Version="1.0.3124.44" />
     <PackageVersion Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.135" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="MorseCode.ITask" Version="2.0.3" />
     <PackageVersion Include="MSTest.TestAdapter" Version="3.8.3" />
     <PackageVersion Include="MSTest.TestFramework" Version="3.8.3" />
@@ -207,6 +210,7 @@
     <PackageVersion Include="SerilogTraceListener" Version="3.2.0" />
     <PackageVersion Include="SharpZipLib" Version="1.4.2" />
     <PackageVersion Include="SkiaSharp.NativeAssets.Linux" Version="3.116.1" />
+    <PackageVersion Include="Spectre.Console" Version="0.49.1" />
     <PackageVersion Include="StackExchange.Redis" Version="2.8.31" />
     <PackageVersion Include="StardustDL.RazorComponents.MaterialDesignIcons" Version="5.9.55.17" />
     <PackageVersion Include="Stride.Engine" Version="4.2.0.2042" />

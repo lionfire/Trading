@@ -35,6 +35,11 @@ return await Host.CreateDefaultBuilder()
             .AddSingleton<IndicatorProvider>()
             .AddHistoricalBars(context.Configuration)
             .AddIndicators()
+            .AddOrleansClient(builder =>
+            {
+                // TODO: Configure Orleans client from configuration
+                builder.UseLocalhostClustering();
+            })
         ;
     })
     .MultiCommandProgram()
@@ -49,6 +54,12 @@ return await Host.CreateDefaultBuilder()
         .Command("indicator",
             typeof(ListIndicatorsCommand),
             typeof(CalculateIndicatorCommand)
+        )
+        .Command("optimize",
+            typeof(OptimizeQueueAddCommand),
+            typeof(OptimizeQueueListCommand),
+            typeof(OptimizeQueueCancelCommand),
+            typeof(OptimizeQueueStatusCommand)
         )
 .Run(args)
 //.RunOaktonCommands(args);

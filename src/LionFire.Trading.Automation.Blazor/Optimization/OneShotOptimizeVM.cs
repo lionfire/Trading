@@ -8,8 +8,13 @@ using LionFire.Reactive.Persistence;
 using LionFire.ReactiveUI_;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Automation.Optimization;
+using LionFire.Trading.Optimization;
 using LionFire.Trading.Automation.Portfolios;
 using LionFire.Trading.Journal;
+using LionFire.Trading.Grains.Optimization;
+using LionFire.Trading.Optimization.Queue;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using MudBlazor;
 using QuantConnect.Api;
@@ -37,6 +42,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     public IServiceProvider ServiceProvider { get; }
     //public CustomLoggerProvider CustomLoggerProvider { get; }
     public BotTypeRegistry BotTypeRegistry { get; }
+    public IGrainFactory GrainFactory { get; }
 
     #endregion
 
@@ -51,11 +57,13 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     public OneShotOptimizeVM(IServiceProvider serviceProvider
         //, LionFire.Logging.CustomLoggerProvider customLoggerProvider
-        , BotTypeRegistry botTypeRegistry)
+        , BotTypeRegistry botTypeRegistry
+        , IGrainFactory grainFactory)
     {
         ServiceProvider = serviceProvider;
         //CustomLoggerProvider = customLoggerProvider;
         BotTypeRegistry = botTypeRegistry;
+        GrainFactory = grainFactory;
 
         #region Event Handlers
 
@@ -137,6 +145,32 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     //[Reactive]
     //public int TestsQueued { get; set; }
+    
+    #region Queue-related Properties
+    
+    [Reactive]
+    private OptimizationQueueItem? _queuedJob;
+    
+    [Reactive]
+    private OptimizationQueueStatus? _queueStatus;
+    
+    /// <summary>
+    /// True if this user has a job queued or running in the global queue
+    /// </summary>
+    public bool HasQueuedJob => QueuedJob != null && 
+        (QueuedJob.Status == OptimizationJobStatus.Queued || QueuedJob.Status == OptimizationJobStatus.Running);
+    
+    /// <summary>
+    /// Queue position if job is queued (1-based)
+    /// </summary>
+    public int? QueuePosition => QueueStatus?.QueuedCount;
+    
+    /// <summary>
+    /// Estimated time until this job starts
+    /// </summary>
+    public TimeSpan? EstimatedStartTime => QueueStatus?.EstimatedNextJobDelay;
+    
+    #endregion
 
     Task? task;
     //CancellationTokenSource? cts;
@@ -387,6 +421,143 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             await OptimizationTask.RunTask!;
             LinesVM.Append("Optimization completed", category: GetType().FullName);
         });
+    }
+    
+    /// <summary>
+    /// Queue an optimization job instead of running it immediately
+    /// </summary>
+    public async Task OnQueue(int priority = 5)
+    {
+        try
+        {
+            ConsoleLog.LogInformation("Queuing optimization job with priority {Priority}", priority);
+            
+            // Serialize the current parameters with custom options for Orleans grain compatibility
+            var serializerOptions = new JsonSerializerOptions
+            {
+                WriteIndented = false,
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                ReferenceHandler = ReferenceHandler.Preserve,
+                Converters = { new JsonStringEnumConverter() }
+            };
+            var parametersJson = JsonSerializer.Serialize(PMultiSim, serializerOptions);
+            
+            // Get the queue grain and enqueue the job
+            var queueGrain = GrainFactory.GetGrain<IOptimizationQueueGrain>("global");
+            var queuedJob = await queueGrain.EnqueueJobAsync(parametersJson, priority, "UI-User");
+            
+            QueuedJob = queuedJob;
+            
+            ConsoleLog.LogInformation("Job {JobId} queued successfully at position {Position}", 
+                queuedJob.JobId, await GetQueuePositionAsync(queuedJob.JobId));
+                
+            // Start monitoring queue status
+            _ = Task.Run(MonitorQueueStatus);
+        }
+        catch (Exception ex)
+        {
+            ConsoleLog.LogError(ex, "Failed to queue optimization job");
+            throw;
+        }
+    }
+    
+    /// <summary>
+    /// Cancel the currently queued job
+    /// </summary>
+    public async Task OnCancelQueued()
+    {
+        if (QueuedJob == null) return;
+        
+        try
+        {
+            var queueGrain = GrainFactory.GetGrain<IOptimizationQueueGrain>("global");
+            var cancelled = await queueGrain.CancelJobAsync(QueuedJob.JobId);
+            
+            if (cancelled)
+            {
+                ConsoleLog.LogInformation("Job {JobId} cancelled successfully", QueuedJob.JobId);
+                QueuedJob = null;
+            }
+            else
+            {
+                ConsoleLog.LogWarning("Failed to cancel job {JobId}", QueuedJob.JobId);
+            }
+        }
+        catch (Exception ex)
+        {
+            ConsoleLog.LogError(ex, "Error cancelling job {JobId}", QueuedJob?.JobId);
+        }
+    }
+    
+    /// <summary>
+    /// Refresh queue status information
+    /// </summary>
+    public async Task RefreshQueueStatus()
+    {
+        try
+        {
+            var queueGrain = GrainFactory.GetGrain<IOptimizationQueueGrain>("global");
+            QueueStatus = await queueGrain.GetQueueStatusAsync();
+            
+            // Update current job status if we have one
+            if (QueuedJob != null)
+            {
+                var updatedJob = await queueGrain.GetJobAsync(QueuedJob.JobId);
+                if (updatedJob != null)
+                {
+                    QueuedJob = updatedJob;
+                    
+                    // If job completed, clear it after a delay
+                    if (updatedJob.Status == OptimizationJobStatus.Completed ||
+                        updatedJob.Status == OptimizationJobStatus.Failed ||
+                        updatedJob.Status == OptimizationJobStatus.Cancelled)
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            await Task.Delay(TimeSpan.FromSeconds(5));
+                            QueuedJob = null;
+                        });
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            ConsoleLog.LogWarning(ex, "Failed to refresh queue status");
+        }
+    }
+    
+    /// <summary>
+    /// Get the position of a specific job in the queue
+    /// </summary>
+    private async Task<int> GetQueuePositionAsync(Guid jobId)
+    {
+        try
+        {
+            var queueGrain = GrainFactory.GetGrain<IOptimizationQueueGrain>("global");
+            var jobs = await queueGrain.GetJobsAsync(OptimizationJobStatus.Queued, 1000);
+            
+            var position = jobs.Select((job, index) => new { job, index })
+                              .FirstOrDefault(x => x.job.JobId == jobId)?.index + 1;
+            
+            return position ?? 0;
+        }
+        catch
+        {
+            return 0;
+        }
+    }
+    
+    /// <summary>
+    /// Monitor queue status in background
+    /// </summary>
+    private async Task MonitorQueueStatus()
+    {
+        while (HasQueuedJob)
+        {
+            await RefreshQueueStatus();
+            await Task.Delay(TimeSpan.FromSeconds(5));
+        }
     }
 
     #endregion

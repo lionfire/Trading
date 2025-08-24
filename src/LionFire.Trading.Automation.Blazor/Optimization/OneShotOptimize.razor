@@ -8,6 +8,7 @@
 @using LionFire.Blazor.Components.Terminal
 @using MudBlazor.Components
 @using Humanizer
+@using LionFire.Trading.Optimization.Queue
 
 @* This page is a quick UI for optimizing right from a Worker process' UI.  The long-term approach favors a FireLynx workbench that supports Optimize documents which can be saved/loaded.  *@
 
@@ -15,6 +16,60 @@
 
 
 <div class="d-flex flex-column flex-grow-1 gap-2">
+
+    @* Queue Status Panel *@
+    @if (ViewModel!.QueueStatus != null && (ViewModel.QueueStatus.QueuedCount > 0 || ViewModel.QueueStatus.RunningCount > 0 || ViewModel.HasQueuedJob))
+    {
+        <MudPaper Class="pa-4">
+            <div class="d-flex flex-row align-center gap-4">
+                <MudIcon Icon="@Icons.Material.Filled.Queue" />
+                <div class="d-flex flex-row gap-6">
+                    <div class="lf-field">
+                        <div class="label">Queued</div>
+                        <div class="value">@ViewModel.QueueStatus.QueuedCount</div>
+                    </div>
+                    <div class="lf-field">
+                        <div class="label">Running</div>
+                        <div class="value">@ViewModel.QueueStatus.RunningCount</div>
+                    </div>
+                    <div class="lf-field">
+                        <div class="label">Completed</div>
+                        <div class="value">@ViewModel.QueueStatus.CompletedCount</div>
+                    </div>
+                    @if (ViewModel.HasQueuedJob && ViewModel.QueuedJob!.Status == OptimizationJobStatus.Queued)
+                    {
+                        <div class="lf-field">
+                            <div class="label">Your Position</div>
+                            <div class="value">#@(ViewModel.QueuePosition ?? 0)</div>
+                        </div>
+                        @if (ViewModel.EstimatedStartTime.HasValue)
+                        {
+                            <div class="lf-field">
+                                <div class="label">Est. Start</div>
+                                <div class="value">@ViewModel.EstimatedStartTime.Value.Humanize()</div>
+                            </div>
+                        }
+                    }
+                    @if (ViewModel.HasQueuedJob && ViewModel.QueuedJob!.Status == OptimizationJobStatus.Running)
+                    {
+                        <div class="lf-field">
+                            <div class="label">Status</div>
+                            <div class="value">Running</div>
+                        </div>
+                        @if (ViewModel.QueuedJob.Progress != null)
+                        {
+                            <div class="lf-field">
+                                <div class="label">Progress</div>
+                                <div class="value">@ViewModel.QueuedJob.Progress.PerUn.ToString("P1")</div>
+                            </div>
+                        }
+                    }
+                </div>
+                <MudSpacer />
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@ViewModel.RefreshQueueStatus" Size="Size.Small" />
+            </div>
+        </MudPaper>
+    }
 
     @* ▉▉▉▉___  Toolbar: [Abort] [Optimize] *@
     <MudPaper id="TopActionAndProgressBar" Class="gap-6 d-flex flex-row justify-end pa-6">
@@ -170,6 +225,30 @@
                 <text>Optimize</text>
             }
         </MudButton>
+
+        @if (ViewModel!.HasQueuedJob)
+        {
+            <MudButton OnClick="@ViewModel!.OnCancelQueued" Color="Color.Warning" Variant="Variant.Outlined" Size="Size.Large" StartIcon="@Icons.Material.Filled.Cancel">
+                @if (ViewModel.QueuedJob!.Status == OptimizationJobStatus.Queued)
+                {
+                    <text>Cancel Queued (#@(ViewModel.QueuePosition ?? 0))</text>
+                }
+                else if (ViewModel.QueuedJob.Status == OptimizationJobStatus.Running)
+                {
+                    <text>Cancel Running</text>
+                }
+                else
+                {
+                    <text>@ViewModel.QueuedJob.Status.ToString()</text>
+                }
+            </MudButton>
+        }
+        else
+        {
+            <MudButton OnClick="@(() => ViewModel!.OnQueue())" Color="Color.Secondary" Variant="Variant.Outlined" Size="Size.Large" StartIcon="@Icons.Material.Filled.Queue" Disabled="@ViewModel!.IsRunning">
+                <text>Queue</text>
+            </MudButton>
+        }
     </MudPaper>
 
     <MudPaper Class="pa-6">

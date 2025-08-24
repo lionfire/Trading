@@ -1,5 +1,6 @@
 ﻿using ReactiveUI;
 using System.Reactive;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading;
 
@@ -9,10 +10,12 @@ public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<
 
     string Path { get; }
 
+    [JsonIgnore]
     HierarchicalPropertyInfo Info { get; }
 
     #endregion
 
+    [JsonIgnore]
     Type ValueType { get; }
     int? OptimizeOrder { get; set; }
     double? Exponent { get; }
@@ -42,5 +45,6 @@ public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<
 
     IParameterOptimizationOptions Clone();
 
+    [JsonIgnore]
     IObservable<Unit> SomethingChanged { get; }
 }

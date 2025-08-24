@@ -12,7 +12,11 @@
   <ItemGroup>
     <PackageReference Include="McMaster.Extensions.Hosting.CommandLine" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Orleans.Client" />
     <PackageReference Include="Oakton" />
+    <PackageReference Include="Spectre.Console" />
+    <PackageReference Include="Humanizer.Core" />
+    <PackageReference Include="System.Text.Json" />
     <PackageReference Include="Winton.Extensions.Configuration.Consul" />
       </ItemGroup>
 
@@ -22,6 +26,8 @@
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Binance\LionFire.Trading.Binance.csproj" />
     <ProjectReference Include="..\LionFire.Trading.HistoricalData\LionFire.Trading.Historical.Framework.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Indicators\LionFire.Trading.Indicators.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
   </ItemGroup>
 
   <ItemGroup>

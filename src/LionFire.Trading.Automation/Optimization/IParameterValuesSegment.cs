@@ -1,6 +1,7 @@
 ﻿
 using LionFire.Trading.Backtesting2;
 using LionFire.Trading.Optimizing2;
+using System.Text.Json.Serialization;
 
 namespace LionFire.Trading.Automation.Optimization;
 
@@ -11,6 +12,7 @@ public interface IParameterValuesSegment
     //IPParameterOptimization ParameterRange { get; }
     //long MaxPosition { get; set; }
     //long Position { get; set; }
+    [JsonIgnore]
     HierarchicalPropertyInfo Info { get; }
     void MoveNext();
 }
@@ -20,6 +22,8 @@ public class ParameterValuesSegment<T> : IParameterValuesSegment
     where T : INumber<T>
 {
     public PParameterOptimization<T> ParameterRange { get; }
+
+    [JsonIgnore]
     public HierarchicalPropertyInfo Info { get; }
 
     public ParameterValuesSegment(PParameterOptimization<T> parameterRange, HierarchicalPropertyInfo info)

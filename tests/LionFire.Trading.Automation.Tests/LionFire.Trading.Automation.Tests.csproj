@@ -15,12 +15,19 @@
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="xunit" />
 		<PackageReference Include="xunit.runner.visualstudio" />
+		<PackageReference Include="Microsoft.Orleans.TestingHost" />
+		<PackageReference Include="Microsoft.Orleans.Sdk" />
+		<PackageReference Include="Moq" />
+		<PackageReference Include="FluentAssertions" />
+		<PackageReference Include="Microsoft.Extensions.Hosting" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
 		<ProjectReference Include="..\..\src\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
 		<ProjectReference Include="..\..\src\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
+		<ProjectReference Include="..\..\src\LionFire.Trading.Automation.Orleans\LionFire.Trading.Automation.Orleans.csproj" />
+		<ProjectReference Include="..\..\src\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
 		<ProjectReference Include="..\..\src\LionFire.Trading.Indicators.QuantConnect\LionFire.Trading.Indicators.QuantConnect.csproj" />
 		<ProjectReference Include="..\..\src\LionFire.Trading\LionFire.Trading.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Tests\LionFire.Trading.Tests.csproj" />

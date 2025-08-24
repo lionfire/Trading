@@ -1,0 +1,255 @@
+@page "/optimize/queue"
+@inherits ReactiveComponentBase<OptimizationQueueVM>
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using LionFire.Trading.Optimization.Queue
+@using Humanizer
+
+<PageTitle>Optimization Queue</PageTitle>
+
+<div class="d-flex flex-column flex-grow-1 gap-4">
+    
+    @* Header and Controls *@
+    <MudPaper Class="pa-4">
+        <div class="d-flex flex-row align-center gap-4 mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Queue" Size="Size.Large" />
+            <MudText Typo="Typo.h4">Optimization Queue</MudText>
+            <MudSpacer />
+            
+            <MudSwitch @bind-Value="ViewModel!.AutoRefresh" Label="Auto Refresh" Color="Color.Primary" />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                          OnClick="@ViewModel!.RefreshAsync" 
+                          Disabled="@ViewModel!.IsLoading"
+                          Size="Size.Large" />
+        </div>
+        
+        @* Queue Status Summary *@
+        @if (ViewModel!.QueueStatus != null)
+        {
+            <div class="d-flex flex-row gap-6 mb-4">
+                <div class="lf-field">
+                    <div class="label">Queued</div>
+                    <div class="value">@ViewModel.QueueStatus.QueuedCount</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Running</div>
+                    <div class="value">@ViewModel.QueueStatus.RunningCount</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Completed</div>
+                    <div class="value">@ViewModel.QueueStatus.CompletedCount</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Failed</div>
+                    <div class="value">@ViewModel.QueueStatus.FailedCount</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Active Silos</div>
+                    <div class="value">@ViewModel.QueueStatus.ActiveSilos</div>
+                </div>
+                @if (ViewModel.QueueStatus.AverageJobDuration.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Avg Duration</div>
+                        <div class="value">@ViewModel.FormatDuration(ViewModel.QueueStatus.AverageJobDuration)</div>
+                    </div>
+                }
+            </div>
+        }
+        
+        @* Status Filter *@
+        <div class="d-flex flex-row align-center gap-2">
+            <MudText>Filter:</MudText>
+            <MudButtonGroup Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small">
+                <MudButton OnClick="@(() => ViewModel!.SetStatusFilterAsync(null))" 
+                          Variant="@(ViewModel!.StatusFilter == null ? Variant.Filled : Variant.Outlined)">
+                    All
+                </MudButton>
+                <MudButton OnClick="@(() => ViewModel!.SetStatusFilterAsync(OptimizationJobStatus.Queued))" 
+                          Variant="@(ViewModel!.StatusFilter == OptimizationJobStatus.Queued ? Variant.Filled : Variant.Outlined)">
+                    Queued
+                </MudButton>
+                <MudButton OnClick="@(() => ViewModel!.SetStatusFilterAsync(OptimizationJobStatus.Running))" 
+                          Variant="@(ViewModel!.StatusFilter == OptimizationJobStatus.Running ? Variant.Filled : Variant.Outlined)">
+                    Running
+                </MudButton>
+                <MudButton OnClick="@(() => ViewModel!.SetStatusFilterAsync(OptimizationJobStatus.Completed))" 
+                          Variant="@(ViewModel!.StatusFilter == OptimizationJobStatus.Completed ? Variant.Filled : Variant.Outlined)">
+                    Completed
+                </MudButton>
+                <MudButton OnClick="@(() => ViewModel!.SetStatusFilterAsync(OptimizationJobStatus.Failed))" 
+                          Variant="@(ViewModel!.StatusFilter == OptimizationJobStatus.Failed ? Variant.Filled : Variant.Outlined)">
+                    Failed
+                </MudButton>
+            </MudButtonGroup>
+        </div>
+    </MudPaper>
+
+    @* Error Message *@
+    @if (!string.IsNullOrEmpty(ViewModel!.ErrorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Variant="Variant.Filled">
+            @ViewModel.ErrorMessage
+        </MudAlert>
+    }
+
+    @* Loading Indicator *@
+    @if (ViewModel!.IsLoading)
+    {
+        <div class="d-flex justify-center pa-4">
+            <MudProgressCircular Indeterminate="true" />
+        </div>
+    }
+
+    @* Jobs Table *@
+    <MudPaper Class="pa-0" Style="overflow: hidden;">
+        <MudDataGrid Items="@ViewModel!.Jobs" 
+                     Filterable="false" 
+                     SortMode="SortMode.Single" 
+                     Virtualize="true" 
+                     FixedHeader="true" 
+                     Height="600px"
+                     Dense="true"
+                     Hover="true"
+                     Striped="true">
+            <Columns>
+                <PropertyColumn Property="x => x.JobId" Title="Job ID" Sortable="true">
+                    <CellTemplate>
+                        <MudText Typo="Typo.caption" Style="font-family: monospace;">
+                            @context.Item.JobId.ToString()[..8]...
+                        </MudText>
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.Status" Title="Status" Sortable="true">
+                    <CellTemplate>
+                        <MudChip Size="Size.Small" 
+                                Color="@ViewModel.GetStatusColor(context.Item.Status)" 
+                                Variant="Variant.Filled">
+                            @ViewModel.GetStatusDisplayText(context.Item.Status)
+                        </MudChip>
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.Priority" Title="Priority" Sortable="true" />
+                
+                <PropertyColumn Property="x => x.CreatedTime" Title="Created" Sortable="true">
+                    <CellTemplate>
+                        <div>
+                            <MudText Typo="Typo.body2">@context.Item.CreatedTime.Humanize()</MudText>
+                            <MudText Typo="Typo.caption">@context.Item.CreatedTime.ToString("yyyy-MM-dd HH:mm")</MudText>
+                        </div>
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.StartedTime" Title="Started" Sortable="true">
+                    <CellTemplate>
+                        @if (context.Item.StartedTime.HasValue)
+                        {
+                            <div>
+                                <MudText Typo="Typo.body2">@context.Item.StartedTime.Value.Humanize()</MudText>
+                                <MudText Typo="Typo.caption">@context.Item.StartedTime.Value.ToString("HH:mm:ss")</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">-</MudText>
+                        }
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.Duration" Title="Duration" Sortable="false">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">@ViewModel.FormatDuration(context.Item.Duration)</MudText>
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.Progress" Title="Progress" Sortable="false">
+                    <CellTemplate>
+                        @if (context.Item.Status == OptimizationJobStatus.Running && context.Item.Progress != null)
+                        {
+                            <div style="min-width: 120px;">
+                                <MudProgressLinear Value="@context.Item.Progress.Percent" 
+                                                 Size="Size.Small" 
+                                                 Color="Color.Primary" />
+                                <MudText Typo="Typo.caption">
+                                    @context.Item.Progress.PerUn.ToString("P1") 
+                                    (@context.Item.Progress.Completed/@context.Item.Progress.Queued)
+                                </MudText>
+                            </div>
+                        }
+                        else if (context.Item.Status == OptimizationJobStatus.Completed)
+                        {
+                            <MudText Typo="Typo.body2">100%</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">-</MudText>
+                        }
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.EstimatedCompletionTime" Title="Est. Completion" Sortable="false">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">@ViewModel.FormatEstimatedCompletion(context.Item)</MudText>
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.AssignedSiloId" Title="Silo" Sortable="true">
+                    <CellTemplate>
+                        @if (!string.IsNullOrEmpty(context.Item.AssignedSiloId))
+                        {
+                            <MudText Typo="Typo.caption" Style="font-family: monospace;">
+                                @context.Item.AssignedSiloId
+                            </MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2">-</MudText>
+                        }
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <PropertyColumn Property="x => x.SubmittedBy" Title="Submitted By" Sortable="true">
+                    <CellTemplate>
+                        <MudText Typo="Typo.body2">@(context.Item.SubmittedBy ?? "Unknown")</MudText>
+                    </CellTemplate>
+                </PropertyColumn>
+                
+                <TemplateColumn Title="Actions" Sortable="false">
+                    <CellTemplate>
+                        @if (context.Item.Status == OptimizationJobStatus.Queued || context.Item.Status == OptimizationJobStatus.Running)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Cancel" 
+                                         Color="Color.Error" 
+                                         Size="Size.Small"
+                                         OnClick="@(() => ViewModel!.CancelJobAsync(context.Item.JobId))"
+                                         Title="Cancel Job" />
+                        }
+                        @if (!string.IsNullOrEmpty(context.Item.ResultPath))
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Folder" 
+                                         Color="Color.Primary" 
+                                         Size="Size.Small"
+                                         Href="@($"file:///{context.Item.ResultPath}")"
+                                         Target="_blank"
+                                         Title="Open Results" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    </MudPaper>
+    
+    @* Footer Info *@
+    <MudPaper Class="pa-2">
+        <MudText Typo="Typo.caption" Align="Align.Center">
+            Last updated: @(ViewModel!.QueueStatus?.Timestamp.ToString("yyyy-MM-dd HH:mm:ss") ?? "Never") | 
+            Showing @ViewModel!.Jobs.Count job(s)
+            @if (ViewModel!.StatusFilter.HasValue)
+            {
+                <text> (filtered by @ViewModel.GetStatusDisplayText(ViewModel.StatusFilter.Value))</text>
+            }
+        </MudText>
+    </MudPaper>
+</div>
