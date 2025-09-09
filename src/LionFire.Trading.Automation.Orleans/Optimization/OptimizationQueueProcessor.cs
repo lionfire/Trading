@@ -6,6 +6,7 @@ using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Optimization;
 using LionFire.Trading.Optimization.Queue;
 using LionFire.Trading.Grains.Optimization;
+using Orleans.Runtime;
 
 namespace LionFire.Trading.Automation.Orleans.Optimization;
 
@@ -96,8 +97,19 @@ public class OptimizationQueueProcessor : BackgroundService
 
     private async Task WaitForOrleansClusterReady(CancellationToken stoppingToken)
     {
+        // Option 1: Test with application grain (original approach)
+        await WaitForOrleansClusterReadyViaApplicationGrain(stoppingToken);
+        
+        // Option 2: Additional verification using Orleans Management Grain
+        await WaitForOrleansClusterReadyViaManagementGrain(stoppingToken);
+    }
+
+    private async Task WaitForOrleansClusterReadyViaApplicationGrain(CancellationToken stoppingToken)
+    {
         const int maxRetries = 60; // 5 minutes with 5-second intervals
         var retryCount = 0;
+        
+        _logger.LogDebug("Testing Orleans cluster readiness via application grain...");
         
         while (!stoppingToken.IsCancellationRequested && retryCount < maxRetries)
         {
@@ -113,7 +125,7 @@ public class OptimizationQueueProcessor : BackgroundService
                 // This will throw if Orleans isn't ready
                 await testGrain.GetQueueStatusAsync();
                 
-                _logger.LogInformation("Orleans cluster connection verified successfully");
+                _logger.LogInformation("Orleans cluster connection verified successfully via application grain");
                 return;
             }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
@@ -126,6 +138,62 @@ public class OptimizationQueueProcessor : BackgroundService
                 {
                     _logger.LogError("Orleans cluster failed to become ready after {MaxRetries} attempts", maxRetries);
                     throw new InvalidOperationException("Orleans cluster is not ready", ex);
+                }
+                
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
+    private async Task WaitForOrleansClusterReadyViaManagementGrain(CancellationToken stoppingToken)
+    {
+        const int maxRetries = 12; // 1 minute with 5-second intervals
+        var retryCount = 0;
+        
+        _logger.LogDebug("Testing Orleans cluster readiness via management grain...");
+        
+        while (!stoppingToken.IsCancellationRequested && retryCount < maxRetries)
+        {
+            try
+            {
+                // Use Orleans built-in management grain to check cluster status
+                var managementGrain = _grainFactory.GetGrain<IManagementGrain>("0");
+                
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+                using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
+                
+                // Get active silos - this will throw if cluster isn't ready
+                var hosts = await managementGrain.GetHosts(true);
+                
+                if (hosts?.Values?.Any(h => h.Status == SiloStatus.Active) == true)
+                {
+                    var activeSilos = hosts.Values.Count(h => h.Status == SiloStatus.Active);
+                    _logger.LogInformation("Orleans cluster verified via management grain: {ActiveSilos} active silo(s) found", activeSilos);
+                    return;
+                }
+                else
+                {
+                    _logger.LogDebug("No active silos found in cluster yet (attempt {RetryCount}/{MaxRetries})", retryCount + 1, maxRetries);
+                }
+            }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                retryCount++;
+                _logger.LogDebug("Orleans management grain not accessible yet (attempt {RetryCount}/{MaxRetries}): {Message}", 
+                    retryCount, maxRetries, ex.Message);
+                
+                if (retryCount >= maxRetries)
+                {
+                    _logger.LogWarning("Could not verify Orleans cluster status via management grain after {MaxRetries} attempts", maxRetries);
+                    // Don't fail here - the application grain test already passed
+                    return;
                 }
                 
                 try
