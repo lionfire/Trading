@@ -1,342 +1,376 @@
-# Multi-Exchange Feed Integration - Technical Design
+# Phemex & MEXC Integration - Technical Design (Using Existing Architecture)
 
-## Architecture Overview (Generalized for Multiple Exchanges)
+## Architecture Overview - Integration Points
 
 ```
-┌──────────┬──────────┬──────────┐
-│  Phemex  │   MEXC   │ Binance  │  ← Exchange APIs
-│   API    │   API    │   API    │
-└─────┬────┴─────┬────┴─────┬────┘
-      │          │          │
-      └──────────┴──────────┘
-                 │
-         ┌───────▼────────┐
-         │   CCXT Library │  ← Unified Exchange Interface (v4.5.3)
-         │   (REST & WS)  │
-         └───────┬────────┘
-                 │
-      ┌──────────▼──────────┐
-      │ Exchange Abstraction │  ← Our abstraction layer
-      │      Interface       │
-      └──────────┬──────────┘
-                 │
-    ┌────────────┼────────────┐
-    │            │            │
-┌───▼───┐ ┌─────▼────┐ ┌─────▼────┐
-│Phemex │ │   MEXC   │ │ Binance  │  ← Exchange-specific adapters
-│Adapter│ │ Adapter  │ │ Adapter  │
-└───┬───┘ └─────┬────┘ └─────┬────┘
-    │           │            │
-    └───────────┴────────────┘
-                │
-      ┌─────────▼─────────┐
-      │  Unified Message  │  ← Common data model
-      │     Processor     │
-      └─────────┬─────────┘
-                │
-    ┌───────────┼───────────┐
-    │           │           │
-┌───▼──┐ ┌─────▼──┐ ┌──────▼──┐
-│Trades│ │ Order  │ │ Ticker  │
-│      │ │  Book  │ │         │
-└───┬──┘ └────┬───┘ └────┬────┘
-    │         │          │
-    └─────────┴──────────┘
-              │
-    ┌─────────▼─────────┐
-    │  Trading System   │
-    │   Integration     │
-    └───────────────────┘
+                    Existing Architecture                           New Components
+    ┌──────────────────────────────────────────────┐    ┌────────────────────────┐
+    │         LionFire.Trading.Exchanges           │    │    New Implementations │
+    │                                              │    │                        │
+    │  IExchangeClient                             │◄───┤  PhemexExchangeClient  │
+    │  IExchangeWebSocketClient                    │◄───┤  MexcExchangeClient    │
+    │  IExchangeRestClient                         │    └────────────────────────┘
+    │                                              │
+    │  ExchangeClientFactory                       │
+    │  ├─ CreateClient("binance") ✓                │
+    │  ├─ CreateClient("bybit") ✓                  │
+    │  ├─ CreateClient("phemex") [NEW]             │◄─── Register new exchanges
+    │  └─ CreateClient("mexc") [NEW]               │
+    └──────────────────────────────────────────────┘
+    
+    ┌──────────────────────────────────────────────┐    ┌────────────────────────┐
+    │          LionFire.Trading.Feeds              │    │    New Collectors      │
+    │                                              │    │                        │
+    │  FeedCollectorBase                           │◄───┤  PhemexFeedCollector   │
+    │  ├─ ProcessTrades()                          │    │  MexcFeedCollector     │
+    │  ├─ ProcessOrderBook()                       │    └────────────────────────┘
+    │  ├─ CalculateCVD()                           │
+    │  └─ CalculateDepths()                        │
+    │                                              │
+    │  Existing Models:                            │
+    │  ├─ MarketDataSnapshot                       │◄─── Reuse existing models
+    │  ├─ ExchangeTrade                            │
+    │  ├─ ExchangeOrderBook                        │
+    │  └─ ExchangeTicker                           │
+    └──────────────────────────────────────────────┘
 ```
 
-## Core Components
+## Implementation Plan
 
-### 1. Exchange Abstraction Layer
+### Phase 1: Phemex Exchange Client
+
+#### 1.1 Create PhemexExchangeClient
 ```csharp
-// Base interface for all exchange implementations
-public interface IExchangeFeedClient
-{
-    string ExchangeName { get; }
-    Task ConnectAsync(CancellationToken cancellationToken);
-    Task DisconnectAsync();
-    Task SubscribeAsync(string channel, string symbol);
-    Task UnsubscribeAsync(string channel, string symbol);
-    event EventHandler<UnifiedMarketData> DataReceived;
-    event EventHandler<ConnectionState> ConnectionStateChanged;
-}
+// Location: /LionFire.Trading.Exchanges/Phemex/PhemexExchangeClient.cs
 
-// CCXT-based implementation base class
-public abstract class CcxtExchangeFeedClient : IExchangeFeedClient
+public class PhemexExchangeClient : IExchangeWebSocketClient, IExchangeRestClient
 {
-    protected readonly ICcxtClient ccxtClient;
-    protected readonly ILogger logger;
+    private readonly CcxtClient ccxtClient;
+    private readonly ILogger<PhemexExchangeClient> logger;
+    private dynamic phemexExchange;
     
-    public abstract string ExchangeName { get; }
-    
-    protected CcxtExchangeFeedClient(ICcxtClient ccxtClient, ILogger logger)
+    public PhemexExchangeClient(
+        IOptions<PhemexExchangeOptions> options,
+        ILogger<PhemexExchangeClient> logger)
     {
-        this.ccxtClient = ccxtClient;
         this.logger = logger;
+        // Initialize CCXT Phemex instance
+        ccxtClient = new CcxtClient();
+        phemexExchange = ccxtClient.CreateExchange("phemex", new Dictionary<string, object>
+        {
+            ["apiKey"] = options.Value.ApiKey,
+            ["secret"] = options.Value.ApiSecret,
+            ["enableRateLimit"] = true
+        });
     }
     
-    // Common CCXT operations
-    protected virtual async Task<T> ExecuteCcxtOperation<T>(Func<Task<T>> operation)
+    // Implement IExchangeWebSocketClient methods
+    public async Task<IExchangeSubscription> SubscribeToTradesAsync(
+        string symbol, 
+        Action<ExchangeTrade> onData)
     {
-        // Error handling, retry logic, etc.
+        // Use CCXT Pro watchTrades
+        var subscription = new PhemexSubscription();
+        _ = Task.Run(async () =>
+        {
+            while (!subscription.IsCancelled)
+            {
+                var trades = await ccxtClient.WatchTrades(phemexExchange, symbol);
+                foreach (var trade in trades)
+                {
+                    onData(ConvertToExchangeTrade(trade));
+                }
+            }
+        });
+        return subscription;
     }
-}
-
-// Phemex-specific implementation
-public class PhemexFeedClient : CcxtExchangeFeedClient
-{
-    public override string ExchangeName => "phemex";
     
-    // Phemex-specific logic if needed
-}
-
-// MEXC-specific implementation
-public class MexcFeedClient : CcxtExchangeFeedClient
-{
-    public override string ExchangeName => "mexc";
+    public async Task<IExchangeSubscription> SubscribeToOrderBookAsync(
+        string symbol,
+        int depth,
+        Action<ExchangeOrderBook> onData)
+    {
+        // Use CCXT Pro watchOrderBook
+        // Similar pattern as trades
+    }
     
-    // MEXC-specific logic if needed
+    // Convert CCXT format to existing models
+    private ExchangeTrade ConvertToExchangeTrade(dynamic ccxtTrade)
+    {
+        return new ExchangeTrade
+        {
+            Symbol = ccxtTrade.symbol,
+            Price = Convert.ToDecimal(ccxtTrade.price),
+            Quantity = Convert.ToDecimal(ccxtTrade.amount),
+            Side = ccxtTrade.side == "buy" ? TradeSide.Buy : TradeSide.Sell,
+            Timestamp = DateTimeOffset.FromUnixTimeMilliseconds(ccxtTrade.timestamp),
+            TradeId = ccxtTrade.id?.ToString()
+        };
+    }
 }
 ```
 
-### 2. Unified Message Models
+#### 1.2 Register in ExchangeClientFactory
 ```csharp
-// Unified data model for all exchanges
-public abstract class UnifiedMarketData
-{
-    public string Exchange { get; set; }
-    public string Symbol { get; set; }
-    public DateTime Timestamp { get; set; }
-    public string DataType { get; set; }
-    public Dictionary<string, object> Metadata { get; set; }
-}
+// Location: /LionFire.Trading.Exchanges/Services/ExchangeClientFactory.cs
 
-public class UnifiedTrade : UnifiedMarketData
+public class ExchangeClientFactory : IExchangeClientFactory
 {
-    public decimal Price { get; set; }
-    public decimal Quantity { get; set; }
-    public string Side { get; set; }
-    public string TradeId { get; set; }
-}
-
-public class UnifiedOrderBook : UnifiedMarketData
-{
-    public List<PriceLevel> Bids { get; set; }
-    public List<PriceLevel> Asks { get; set; }
-    public long? Sequence { get; set; }
-}
-
-public class UnifiedTicker : UnifiedMarketData
-{
-    public decimal? Bid { get; set; }
-    public decimal? Ask { get; set; }
-    public decimal? Last { get; set; }
-    public decimal? Volume24h { get; set; }
-    public decimal? High24h { get; set; }
-    public decimal? Low24h { get; set; }
-}
-```
-
-### 3. Multi-Exchange Feed Manager
-```csharp
-public interface IMultiExchangeFeedManager
-{
-    Task<IExchangeFeedClient> GetOrCreateClient(string exchange);
-    Task<bool> AddSubscription(string exchange, SubscriptionRequest request);
-    Task<bool> RemoveSubscription(string exchange, string subscriptionId);
-    IEnumerable<SubscriptionInfo> GetActiveSubscriptions(string exchange = null);
-    Task ReconnectExchange(string exchange);
-    Task DisconnectExchange(string exchange);
-}
-
-public class MultiExchangeFeedManager : IMultiExchangeFeedManager
-{
-    private readonly Dictionary<string, IExchangeFeedClient> clients;
-    private readonly IServiceProvider serviceProvider;
-    private readonly ICcxtClient ccxtClient;
-    
-    public async Task<IExchangeFeedClient> GetOrCreateClient(string exchange)
+    public IExchangeClient CreateClient(string exchange)
     {
-        if (!clients.ContainsKey(exchange))
+        return exchange.ToLowerInvariant() switch
         {
-            var client = CreateExchangeClient(exchange);
-            await client.ConnectAsync(CancellationToken.None);
-            clients[exchange] = client;
-        }
-        return clients[exchange];
-    }
-    
-    private IExchangeFeedClient CreateExchangeClient(string exchange)
-    {
-        return exchange.ToLower() switch
-        {
-            "phemex" => new PhemexFeedClient(ccxtClient, logger),
-            "mexc" => new MexcFeedClient(ccxtClient, logger),
-            "binance" => new BinanceFeedClient(ccxtClient, logger),
+            "binance" => serviceProvider.GetRequiredService<BinanceExchangeClient>(),
+            "bybit" => serviceProvider.GetRequiredService<BybitExchangeClient>(),
+            "phemex" => serviceProvider.GetRequiredService<PhemexExchangeClient>(),  // NEW
+            "mexc" => serviceProvider.GetRequiredService<MexcExchangeClient>(),      // NEW
             _ => throw new NotSupportedException($"Exchange {exchange} not supported")
         };
     }
 }
 ```
 
-### 4. CCXT Integration Layer
+### Phase 2: Phemex Feed Collector
+
+#### 2.1 Create PhemexFeedCollector
 ```csharp
-public interface ICcxtClient
-{
-    Task<dynamic> CreateExchange(string exchangeId, Dictionary<string, object> config);
-    Task<dynamic> WatchTrades(dynamic exchange, string symbol);
-    Task<dynamic> WatchOrderBook(dynamic exchange, string symbol, int? limit = null);
-    Task<dynamic> WatchTicker(dynamic exchange, string symbol);
-    Task<dynamic> WatchOHLCV(dynamic exchange, string symbol, string timeframe);
-}
+// Location: /LionFire.Trading.Feeds.Phemex/PhemexFeedCollector.cs
 
-public class CcxtClient : ICcxtClient
+public class PhemexFeedCollector : FeedCollectorBase
 {
-    private readonly string ccxtVersion = "4.5.3";
+    private readonly IExchangeWebSocketClient exchangeClient;
+    private readonly Dictionary<string, IExchangeSubscription> subscriptions;
     
-    public async Task<dynamic> CreateExchange(string exchangeId, Dictionary<string, object> config)
+    public PhemexFeedCollector(
+        IExchangeClientFactory clientFactory,
+        IOptions<PhemexFeedOptions> options,
+        ILogger<PhemexFeedCollector> logger) 
+        : base(logger, options.Value)
     {
-        // Initialize CCXT exchange instance
-        // Handle authentication if API keys provided
-        // Configure rate limiting
+        exchangeClient = clientFactory.CreateClient("phemex") as IExchangeWebSocketClient;
+        subscriptions = new Dictionary<string, IExchangeSubscription>();
     }
     
-    public async Task<dynamic> WatchTrades(dynamic exchange, string symbol)
+    public override async Task StartAsync(CancellationToken cancellationToken)
     {
-        // Use CCXT Pro WebSocket watching
-        // Transform CCXT format to our unified format
+        await base.StartAsync(cancellationToken);
+        
+        foreach (var symbol in Options.Symbols)
+        {
+            // Subscribe to trades
+            var tradeSub = await exchangeClient.SubscribeToTradesAsync(
+                symbol,
+                trade => ProcessTrade(trade));  // Use base class method
+            
+            // Subscribe to order book
+            var bookSub = await exchangeClient.SubscribeToOrderBookAsync(
+                symbol,
+                Options.OrderBookDepth,
+                book => ProcessOrderBook(book));  // Use base class method
+                
+            subscriptions[$"{symbol}_trades"] = tradeSub;
+            subscriptions[$"{symbol}_book"] = bookSub;
+        }
+    }
+    
+    protected override void ProcessTrade(ExchangeTrade trade)
+    {
+        // Base class handles CVD calculation
+        base.ProcessTrade(trade);
+        
+        // Any Phemex-specific processing
+        if (trade.Symbol.EndsWith("PERP"))
+        {
+            // Handle perpetual-specific logic
+        }
+    }
+    
+    protected override MarketDataSnapshot CreateSnapshot(string symbol)
+    {
+        var snapshot = base.CreateSnapshot(symbol);
+        
+        // Base class already calculates depths (0.1%, 0.25%, etc.)
+        // Add any Phemex-specific fields if needed
+        
+        return snapshot;
     }
 }
 ```
 
-## Connection Management
+### Phase 3: Dependency Injection Setup
 
-### Connection States
-- `Disconnected`: Initial state or after disconnect
-- `Connecting`: Attempting to establish connection
-- `Connected`: WebSocket connected, not authenticated
-- `Authenticated`: Ready to receive market data
-- `Reconnecting`: Connection lost, attempting to reconnect
-- `Error`: Unrecoverable error state
+```csharp
+// In Program.cs or Startup.cs
 
-### Reconnection Strategy
-1. Exponential backoff starting at 1 second
-2. Maximum retry interval: 60 seconds
-3. Maximum retry attempts: 10
-4. Reset retry count on successful connection
-5. Preserve subscriptions across reconnections
+services.Configure<PhemexExchangeOptions>(configuration.GetSection("Exchanges:Phemex"));
+services.Configure<MexcExchangeOptions>(configuration.GetSection("Exchanges:Mexc"));
 
-## Data Flow
+// Register exchange clients
+services.AddSingleton<PhemexExchangeClient>();
+services.AddSingleton<MexcExchangeClient>();
 
-### Incoming Data Processing
-1. Receive raw WebSocket message
-2. Parse JSON to identify message type
-3. Deserialize to strongly-typed model
-4. Validate data integrity
-5. Transform to internal format
-6. Publish to subscribers
-7. Update metrics and monitoring
+// Register feed collectors
+services.AddHostedService<PhemexFeedCollector>();
+services.AddHostedService<MexcFeedCollector>();
 
-### Subscription Flow
-```
-Client Request → Validate → Queue → Send to Phemex → Await Confirmation → Update State → Notify Client
+// Factory already registered
+services.AddSingleton<IExchangeClientFactory, ExchangeClientFactory>();
 ```
 
-## Error Handling
-
-### Error Categories
-1. **Network Errors**: Connection failures, timeouts
-2. **Protocol Errors**: Invalid messages, authentication failures
-3. **Data Errors**: Malformed data, validation failures
-4. **System Errors**: Internal exceptions, resource exhaustion
-
-### Recovery Mechanisms
-- Automatic reconnection for network errors
-- Message replay for missed data (if supported)
-- Circuit breaker for repeated failures
-- Dead letter queue for unprocessable messages
-
-## Configuration Schema
+### Phase 4: Configuration
 
 ```json
 {
-  "Phemex": {
-    "WebSocket": {
-      "Url": "wss://phemex.com/ws",
-      "TestnetUrl": "wss://testnet-api.phemex.com/ws",
-      "UseTestnet": true,
-      "ReconnectDelayMs": 1000,
-      "MaxReconnectAttempts": 10,
-      "HeartbeatIntervalMs": 30000,
-      "RequestTimeoutMs": 5000
-    },
-    "Authentication": {
+  "Exchanges": {
+    "Phemex": {
       "ApiKey": "{{PHEMEX_API_KEY}}",
-      "ApiSecret": "{{PHEMEX_API_SECRET}}"
+      "ApiSecret": "{{PHEMEX_API_SECRET}}",
+      "TestMode": true,
+      "Symbols": ["BTC/USDT", "ETH/USDT"],
+      "OrderBookDepth": 20,
+      "EnableCVD": true,
+      "CalculateDepths": [0.001, 0.0025, 0.005, 0.01]
     },
-    "Subscriptions": {
-      "MaxSymbolsPerConnection": 50,
-      "DefaultChannels": ["trades", "orderbook", "ticker"],
+    "Mexc": {
+      "ApiKey": "{{MEXC_API_KEY}}",
+      "ApiSecret": "{{MEXC_API_SECRET}}",
+      "TestMode": true,
+      "Symbols": ["BTC/USDT", "ETH/USDT"],
       "OrderBookDepth": 20
-    },
-    "RateLimits": {
-      "MaxRequestsPerSecond": 10,
-      "MaxSubscriptionsPerSecond": 5
     }
   }
 }
 ```
 
-## Performance Considerations
+## Integration with Existing Components
 
-### Optimization Strategies
-1. **Message Batching**: Process multiple messages in single operation
-2. **Memory Pooling**: Reuse buffers for message processing
-3. **Async Processing**: Non-blocking I/O throughout
-4. **Data Compression**: Use compression if supported by Phemex
-5. **Selective Subscriptions**: Only subscribe to needed data
+### Using Existing Models
 
-### Monitoring Metrics
-- Connection uptime percentage
-- Message processing latency (p50, p95, p99)
-- Messages per second throughput
-- Error rate by category
-- Memory usage and GC pressure
-- Active subscription count
-- Data gap detection rate
+```csharp
+// All these models are already defined and will be reused:
 
-## Security Considerations
+public class ExchangeTrade
+{
+    public string Symbol { get; set; }
+    public decimal Price { get; set; }
+    public decimal Quantity { get; set; }
+    public TradeSide Side { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
+    public string TradeId { get; set; }
+}
 
-1. **Credential Management**: Use secure vault for API keys
-2. **TLS/SSL**: Enforce encrypted connections
-3. **Input Validation**: Sanitize all incoming data
-4. **Rate Limiting**: Respect API limits to avoid bans
-5. **Audit Logging**: Log all subscription changes
-6. **Access Control**: Limit who can manage subscriptions
+public class ExchangeOrderBook
+{
+    public string Symbol { get; set; }
+    public List<PriceLevel> Bids { get; set; }
+    public List<PriceLevel> Asks { get; set; }
+    public DateTimeOffset Timestamp { get; set; }
+}
+
+public class MarketDataSnapshot
+{
+    public string Exchange { get; set; }
+    public string Symbol { get; set; }
+    public decimal LastPrice { get; set; }
+    public decimal Bid { get; set; }
+    public decimal Ask { get; set; }
+    public decimal CVD { get; set; }  // Calculated by base class
+    public OrderBookDepth Depths { get; set; }  // Calculated by base class
+    // ... other existing fields
+}
+```
+
+### Leveraging Base Class Functionality
+
+The `FeedCollectorBase` provides:
+- **CVD Calculation**: Automatic cumulative volume delta tracking
+- **Order Book Depth**: Multi-level depth calculations (0.1%, 0.25%, etc.)
+- **Snapshot Management**: Periodic snapshot creation
+- **Event Publishing**: Built-in event system for data distribution
+- **Metrics**: Performance and data quality metrics
+
+### NATS Integration (Optional - Proprietary Pattern)
+
+If using the proprietary pattern with NATS:
+
+```csharp
+public class PhemexNatsFeeder : PhemexFeedCollector
+{
+    private readonly INatsConnection natsConnection;
+    
+    protected override async Task PublishSnapshot(MarketDataSnapshot snapshot)
+    {
+        await base.PublishSnapshot(snapshot);
+        
+        // Publish to NATS
+        var subject = $"market.{snapshot.Exchange}.{snapshot.Symbol}";
+        await natsConnection.PublishAsync(subject, snapshot);
+    }
+}
+```
 
 ## Testing Strategy
 
-### Unit Test Coverage
-- Message parsing logic
-- Data transformation rules
-- Error handling scenarios
-- Reconnection logic
-- Subscription management
+### Unit Tests
+```csharp
+[TestClass]
+public class PhemexExchangeClientTests
+{
+    [TestMethod]
+    public async Task SubscribeToTrades_Should_ConvertCcxtFormat()
+    {
+        // Arrange
+        var mockCcxt = new Mock<ICcxtClient>();
+        var client = new PhemexExchangeClient(mockCcxt.Object);
+        
+        // Act
+        var trades = new List<ExchangeTrade>();
+        await client.SubscribeToTradesAsync("BTC/USDT", t => trades.Add(t));
+        
+        // Assert
+        Assert.IsTrue(trades.All(t => t.Symbol == "BTC/USDT"));
+    }
+}
+```
 
-### Integration Test Scenarios
-- Connect to testnet
-- Subscribe to multiple symbols
-- Handle connection drops
-- Verify data accuracy
-- Test rate limiting
+### Integration Tests
+```csharp
+[TestClass]
+[TestCategory("Integration")]
+public class PhemexFeedCollectorIntegrationTests
+{
+    [TestMethod]
+    public async Task Collector_Should_InheritBaseCalculations()
+    {
+        // Test that CVD and depth calculations work
+        var collector = new PhemexFeedCollector(/* dependencies */);
+        await collector.StartAsync(CancellationToken.None);
+        
+        // Wait for data
+        await Task.Delay(5000);
+        
+        var snapshot = collector.GetLatestSnapshot("BTC/USDT");
+        
+        // Verify base class calculations
+        Assert.IsNotNull(snapshot.CVD);
+        Assert.IsNotNull(snapshot.Depths);
+        Assert.IsTrue(snapshot.Depths.Depth_0_1_Percent > 0);
+    }
+}
+```
 
-### Performance Benchmarks
-- Target: < 10ms processing latency
-- Support 100+ symbol subscriptions
-- Handle 10,000 messages/second
-- Memory usage < 500MB
-- CPU usage < 20% on standard hardware
+## Migration Path
+
+1. **No Breaking Changes**: Existing Binance/Bybit implementations continue working
+2. **Gradual Rollout**: Deploy Phemex first, then MEXC
+3. **Feature Flags**: Use configuration to enable/disable exchanges
+4. **Monitoring**: Use existing metrics infrastructure
+
+## Benefits of This Approach
+
+1. **Reuse Existing Code**: Leverage proven abstractions and base classes
+2. **Consistent Behavior**: All exchanges follow same patterns
+3. **Reduced Development Time**: No need to create new frameworks
+4. **Unified Data Model**: `MarketDataSnapshot` works across all exchanges
+5. **Built-in Features**: CVD, depth calculations come for free
+6. **Tested Infrastructure**: Base classes are already production-tested

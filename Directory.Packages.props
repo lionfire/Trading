@@ -25,6 +25,7 @@
     <PackageVersion Include="Binance.Net" Version="10.18.0" />
     <PackageVersion Include="Bybit.Net" Version="3.14.2" />
     <PackageVersion Include="BinanceDotNet" Version="4.12.0" />
+    <PackageVersion Include="ccxt" Version="4.5.2" />
     <PackageVersion Include="BlazorGridStack" Version="1.0.12" />
     <PackageVersion Include="Blazorise.Bootstrap" Version="1.7.5" />
     <PackageVersion Include="Blazorise.Icons.FontAwesome" Version="1.7.5" />

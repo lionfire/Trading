@@ -9,6 +9,7 @@ using LionFire.Trading.Automation.Optimization.Enumerators;
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Backtesting2;
 using LionFire.Trading.Journal;
+using LionFire.Trading.Optimization;
 using LionFire.Validation;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
@@ -159,10 +160,11 @@ public partial class OptimizationTask : ReactiveObject, ICancelableRunnable
 
     public IOptimizationStrategy OptimizationStrategy { get; private set; }
 
+    public OptimizationProgress? Progress => OptimizationStrategy.Progress;
 
     public string? OptimizationDirectory => MultiSimContext.OutputDirectory;
 
-    public BacktestsJournal Journal => MultiSimContext.Journal;
+    public BacktestsJournal? Journal => MultiSimContext.Journal;
 
     public Task? RunTask { get; private set; }
 

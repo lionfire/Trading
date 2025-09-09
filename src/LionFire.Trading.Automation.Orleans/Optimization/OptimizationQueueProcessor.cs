@@ -163,7 +163,7 @@ public class OptimizationQueueProcessor : BackgroundService
                     try
                     {
                         // Report progress to queue
-                        var progress = optimizationTask.Progress;
+                        var progress = optimizationTask.OptimizationStrategy.Progress;
                         await queueGrain.UpdateJobProgressAsync(jobId, progress);
                         
                         // Send heartbeat

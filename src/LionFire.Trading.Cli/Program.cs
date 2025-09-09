@@ -10,58 +10,63 @@ using Winton.Extensions.Configuration.Consul.Parsers;
 using Microsoft.Extensions.Configuration;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.HistoricalData.Retrieval;
-using System.Xml.Linq;
 using LionFire.Trading.Indicators;
-using Oakton.Descriptions;
+using LionFire.Trading.Cli.Commands;
+using LionFire.Trading.Hosting;
+using LionFire.Hosting.CommandLine;
+using LionFire.Trading.Hosting.Configuration;
 
-#if TODO
-return await new HostApplicationBuilder()
-#else
-return await Host.CreateDefaultBuilder()
-#endif
-    .LionFire()
-    .UseHistoricalBars()
-    .ConfigureHostConfiguration(c =>
-        c
-              .AddConsul("LionFire.Trading", options => { options.Optional = true; options.Parser = new SimpleConfigurationParser(); })
-              .AddEnvironmentVariables("DOTNET_")
-        )
-
-    .ConfigureServices((context, services) =>
+return await new HostApplicationBuilderProgram()
+    .DefaultArgs("help") // Show help when no command is specified
+    
+    .RootCommand(builder => 
     {
-        services
-
-            .AddSingleton<BinanceClientProvider>()
-            .AddSingleton<IndicatorProvider>()
-            .AddHistoricalBars(context.Configuration)
-            .AddIndicators()
-            .AddOrleansClient(builder =>
+        // Configure with .env file support using standard trading configuration
+        builder.ConfigureTradingConfiguration(System.Environment.GetCommandLineArgs());
+        
+        // Add additional configuration sources
+        builder.Configuration
+            .AddEnvironmentVariables("DOTNET_")
+#if DEBUG // TODO: how to best configure this for real?
+            .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                // TODO: Configure Orleans client from configuration
-                builder.UseLocalhostClustering();
+                ["LionFire:Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
+                ["LionFire:Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
             })
+#endif
         ;
+
+        // Apply LionFire hosting extensions
+        builder.LionFire()
+            .ConfigureServices((context, services) =>
+            {
+                services
+                    .AddSingleton<BinanceClientProvider>()
+                    .AddSingleton<IndicatorProvider>()
+                    .AddHistoricalBars(context.Configuration)
+                    .AddIndicators();
+                    // Orleans client removed - not needed for Phemex commands
+            });
     })
-    .MultiCommandProgram()
-        .Command("backtest",
-            typeof(BacktestCommand)
-        )
-        .Command("data",
-            typeof(ListAvailableHistoricalDataCommand),
-            typeof(DumpBarsHierarchicalDataCommand),
-            typeof(RetrieveHistoricalDataJob)
-        )
-        .Command("indicator",
-            typeof(ListIndicatorsCommand),
-            typeof(CalculateIndicatorCommand)
-        )
-        .Command("optimize",
-            typeof(OptimizeQueueAddCommand),
-            typeof(OptimizeQueueListCommand),
-            typeof(OptimizeQueueCancelCommand),
-            typeof(OptimizeQueueStatusCommand)
-        )
-.Run(args)
+    
+    // Register hierarchical commands with exchange areas
+    .Command("phemex spot balance", PhemexHandlers.SpotBalance)
+    .Command("phemex futures balance", PhemexHandlers.FuturesBalance)
+    .Command("phemex coin-futures balance", PhemexHandlers.CoinFuturesBalance)
+    .Command("phemex spot positions", PhemexHandlers.SpotPositions)
+    .Command("phemex futures positions", PhemexHandlers.FuturesPositions)
+    .Command("phemex coin-futures positions", PhemexHandlers.CoinFuturesPositions)
+    .Command("phemex subaccounts", PhemexHandlers.Subaccounts)
+    .Command("phemex spot ticker", PhemexHandlers.SpotTicker)
+    .Command("phemex futures ticker", PhemexHandlers.FuturesTicker)
+    .Command("phemex spot place-order", PhemexHandlers.SpotPlaceOrder)
+    .Command("phemex futures place-order", PhemexHandlers.FuturesPlaceOrder)
+    .Command("phemex spot open", PhemexHandlers.SpotOpen)
+    .Command("phemex futures open", PhemexHandlers.FuturesOpen)
+    .Command("phemex spot close", PhemexHandlers.SpotClose)
+    .Command("phemex futures close", PhemexHandlers.FuturesClose)
+    
+    .RunAsync(args)
 //.RunOaktonCommands(args);
 ;
 
@@ -81,15 +86,16 @@ public static class HostApplicationBuilderX_Local
 
     public static IHostBuilder UseHistoricalBars(this IHostBuilder hostBuilder)
     {
-        hostBuilder.ConfigureHostConfiguration(c => c
+        hostBuilder.ConfigureHostConfiguration(c => 
+        {
 #if DEBUG // TODO: how to best configure this for real?
-            .AddInMemoryCollection(new Dictionary<string, string?>
+            c.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["LionFire:Trading:HistoricalData:Windows:BaseDir"] = @"c:\st\Investing-HistoricalData", // HARDCODE
                 ["LionFire:Trading:HistoricalData:Unix:BaseDir"] = @"/st/Investing-HistoricalData", // HARDCODE
-            })
+            });
 #endif
-        )
+        })
             ;
         return hostBuilder;
     }

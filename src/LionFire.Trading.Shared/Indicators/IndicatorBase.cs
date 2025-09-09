@@ -326,6 +326,11 @@ public abstract partial class IndicatorBase<TIndicator> : IIndicator, IExecutabl
 
 
 
+    public async Task CalculateToTime(DateTimeOffset date)
+    {
+        throw new NotImplementedException();
+    }
+
     public async Task CalculateToTime(DateTime date)
     {
 

@@ -211,7 +211,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
 
         // Get current price from the latest bar
         var currentBar = Bars[0];
-        double currentPrice = currentBar.Close;
+        double currentPrice = Convert.ToDouble(currentBar.Close);
 
         // Check for exit conditions first
         if (inPosition && currentTradeBlock.HasValue)
@@ -232,7 +232,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
         }
     }
 
-    private void CheckEntryConditions(IKline currentBar, POrderBlocksBot<TValue> parameters)
+    private void CheckEntryConditions(HLC<TValue> currentBar, POrderBlocksBot<TValue> parameters)
     {
         // Get the most recent signals from the order blocks indicator
         var signals = GetRecentSignals();
@@ -243,7 +243,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
             if (signal.Confidence < parameters.MinConfidence) continue;
 
             bool shouldTrade = false;
-            LongAndShort direction = LongAndShort.None;
+            LongAndShort direction = LongAndShort.Unspecified;
 
             switch (signal.Type)
             {
@@ -276,34 +276,32 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
                     break;
             }
 
-            if (shouldTrade && direction != LongAndShort.None)
+            if (shouldTrade && direction != LongAndShort.Unspecified)
             {
                 // Calculate risk/reward
-                double riskReward = CalculateRiskReward(currentBar.Close, signal.Block);
+                double riskReward = CalculateRiskReward(Convert.ToDouble(currentBar.Close), signal.Block);
                 
                 if (riskReward >= parameters.MinRiskReward)
                 {
                     // Enter trade
                     Direction = direction;
-                    if (TryOpen())
-                    {
-                        inPosition = true;
-                        currentTradeBlock = signal.Block;
-                        entryPrice = currentBar.Close;
-                        barsSinceEntry = 0;
-                        lastSignal = signal;
-                        
-                        Debug.WriteLine($"OrderBlocksBot: Entered {direction} at {entryPrice} on {signal.Type} signal, " +
-                            $"Block: {signal.Block.Bottom:F2}-{signal.Block.Top:F2}, Confidence: {signal.Confidence:F2}");
-                        
-                        break; // Only enter one trade at a time
-                    }
+                    TryOpen();
+                    inPosition = true;
+                    currentTradeBlock = signal.Block;
+                    entryPrice = Convert.ToDouble(currentBar.Close);
+                    barsSinceEntry = 0;
+                    lastSignal = signal;
+                    
+                    Debug.WriteLine($"OrderBlocksBot: Entered {direction} at {entryPrice} on {signal.Type} signal, " +
+                        $"Block: {signal.Block.Bottom:F2}-{signal.Block.Top:F2}, Confidence: {signal.Confidence:F2}");
+                    
+                    break; // Only enter one trade at a time
                 }
             }
         }
     }
 
-    private void CheckExitConditions(IKline currentBar, POrderBlocksBot<TValue> parameters)
+    private void CheckExitConditions(HLC<TValue> currentBar, POrderBlocksBot<TValue> parameters)
     {
         bool shouldExit = false;
         string exitReason = "";
@@ -316,7 +314,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
             if (Direction == LongAndShort.Long)
             {
                 // Exit long if price breaks below the order block
-                if (currentBar.Close < block.Bottom)
+                if (Convert.ToDouble(currentBar.Close) < block.Bottom)
                 {
                     shouldExit = true;
                     exitReason = "Block invalidated (price below support)";
@@ -325,7 +323,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
             else if (Direction == LongAndShort.Short)
             {
                 // Exit short if price breaks above the order block
-                if (currentBar.Close > block.Top)
+                if (Convert.ToDouble(currentBar.Close) > block.Top)
                 {
                     shouldExit = true;
                     exitReason = "Block invalidated (price above resistance)";
@@ -358,18 +356,16 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
 
         if (shouldExit)
         {
-            if (TryClose())
-            {
-                Debug.WriteLine($"OrderBlocksBot: Exited {Direction} position. Reason: {exitReason}");
-                inPosition = false;
-                currentTradeBlock = null;
-                barsSinceEntry = 0;
-                Direction = LongAndShort.None;
-            }
+            TryClose();
+            Debug.WriteLine($"OrderBlocksBot: Exited {Direction} position. Reason: {exitReason}");
+            inPosition = false;
+            currentTradeBlock = null;
+            barsSinceEntry = 0;
+            Direction = LongAndShort.Unspecified;
         }
     }
 
-    private void UpdateStopsAndTargets(IKline currentBar, POrderBlocksBot<TValue> parameters)
+    private void UpdateStopsAndTargets(HLC<TValue> currentBar, POrderBlocksBot<TValue> parameters)
     {
         if (ATR.Size == 0) return;
 
@@ -389,8 +385,8 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
                 stopLoss = Math.Max(stopLoss, currentTradeBlock.Value.Bottom - (atr * 0.1));
             }
 
-            Account.SetStopLosses(Symbol, Direction, stopLoss, StopLossFlags.TightenOnly);
-            Account.SetTakeProfits(Symbol, Direction, takeProfit, StopLossFlags.Unspecified);
+            Account.SetStopLosses(Symbol, Direction, TValue.CreateChecked(stopLoss), StopLossFlags.TightenOnly);
+            Account.SetTakeProfits(Symbol, Direction, TValue.CreateChecked(takeProfit), StopLossFlags.Unspecified);
         }
         else if (Direction == LongAndShort.Short)
         {
@@ -405,8 +401,8 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
                 stopLoss = Math.Min(stopLoss, currentTradeBlock.Value.Top + (atr * 0.1));
             }
 
-            Account.SetStopLosses(Symbol, Direction, stopLoss, StopLossFlags.TightenOnly);
-            Account.SetTakeProfits(Symbol, Direction, takeProfit, StopLossFlags.Unspecified);
+            Account.SetStopLosses(Symbol, Direction, TValue.CreateChecked(stopLoss), StopLossFlags.TightenOnly);
+            Account.SetTakeProfits(Symbol, Direction, TValue.CreateChecked(takeProfit), StopLossFlags.Unspecified);
         }
     }
 
@@ -445,7 +441,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
         if (OrderBlocksState == null) return signals;
 
         var currentBar = Bars[0];
-        double currentPrice = currentBar.Close;
+        double currentPrice = Convert.ToDouble(currentBar.Close);
 
         // Check for blocks near current price
         foreach (var block in OrderBlocksState.AllBlocks)
@@ -461,7 +457,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
                     Type = OrderBlockSignalType.Approaching,
                     Block = block,
                     Price = currentPrice,
-                    Timestamp = currentBar.Time,
+                    Timestamp = DateTime.UtcNow,
                     Confidence = block.Confidence
                 });
             }
@@ -474,7 +470,7 @@ public class OrderBlocksBot<TValue> : StandardBot2<POrderBlocksBot<TValue>, TVal
                     Type = OrderBlockSignalType.Touch,
                     Block = block,
                     Price = currentPrice,
-                    Timestamp = currentBar.Time,
+                    Timestamp = DateTime.UtcNow,
                     Confidence = block.Confidence
                 });
             }
