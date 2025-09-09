@@ -46,7 +46,14 @@ public class OptimizationQueueProcessor : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("OptimizationQueueProcessor starting");
+        await Task.Delay(3_000);
+
+        _logger.LogInformation("OptimizationQueueProcessor starting - waiting for Orleans cluster to be ready");
+        
+        // Wait for Orleans cluster to be ready
+        await WaitForOrleansClusterReady(stoppingToken);
+        
+        _logger.LogInformation("Orleans cluster is ready - starting queue processing");
         
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -87,6 +94,52 @@ public class OptimizationQueueProcessor : BackgroundService
         }
     }
 
+    private async Task WaitForOrleansClusterReady(CancellationToken stoppingToken)
+    {
+        const int maxRetries = 60; // 5 minutes with 5-second intervals
+        var retryCount = 0;
+        
+        while (!stoppingToken.IsCancellationRequested && retryCount < maxRetries)
+        {
+            try
+            {
+                // Try to get a simple grain to test cluster connectivity
+                var testGrain = _grainFactory.GetGrain<IOptimizationQueueGrain>("health-check");
+                
+                // Use a simple operation with timeout to test readiness
+                using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
+                
+                // This will throw if Orleans isn't ready
+                await testGrain.GetQueueStatusAsync();
+                
+                _logger.LogInformation("Orleans cluster connection verified successfully");
+                return;
+            }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                retryCount++;
+                _logger.LogDebug("Orleans cluster not ready yet (attempt {RetryCount}/{MaxRetries}): {Message}", 
+                    retryCount, maxRetries, ex.Message);
+                
+                if (retryCount >= maxRetries)
+                {
+                    _logger.LogError("Orleans cluster failed to become ready after {MaxRetries} attempts", maxRetries);
+                    throw new InvalidOperationException("Orleans cluster is not ready", ex);
+                }
+                
+                try
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        }
+    }
+
     private async Task ProcessQueueAsync(CancellationToken stoppingToken)
     {
         // Check if we have capacity for more jobs
@@ -99,6 +152,7 @@ public class OptimizationQueueProcessor : BackgroundService
         
         try
         {
+            // TODO: 
             var job = await queueGrain.DequeueJobAsync(_siloId, _maxConcurrentJobs);
             if (job == null)
             {
