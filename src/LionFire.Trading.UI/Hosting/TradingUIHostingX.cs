@@ -15,6 +15,7 @@ public static class TradingUIHostingX
         return services
             .AddMvvm()
             .AddAsyncDataMvvm()
+            .AddReactivePersistenceMvvm()
             .AddTransient<ScannerVM>()
             ;
     }
