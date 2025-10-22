@@ -6,6 +6,7 @@ using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.Optimization;
 using LionFire.Trading.Optimization.Queue;
 using LionFire.Trading.Grains.Optimization;
+using Orleans;
 using Orleans.Runtime;
 
 namespace LionFire.Trading.Automation.Orleans.Optimization;
@@ -164,7 +165,7 @@ public class OptimizationQueueProcessor : BackgroundService
             try
             {
                 // Use Orleans built-in management grain to check cluster status
-                var managementGrain = _grainFactory.GetGrain<IManagementGrain>("0");
+                var managementGrain = _grainFactory.GetGrain<IManagementGrain>(0);
                 
                 using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(10));
                 using var combinedCts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken, timeoutCts.Token);
@@ -172,9 +173,9 @@ public class OptimizationQueueProcessor : BackgroundService
                 // Get active silos - this will throw if cluster isn't ready
                 var hosts = await managementGrain.GetHosts(true);
                 
-                if (hosts?.Values?.Any(h => h.Status == SiloStatus.Active) == true)
+                if (hosts?.Values?.Any(h => h == SiloStatus.Active) == true)
                 {
-                    var activeSilos = hosts.Values.Count(h => h.Status == SiloStatus.Active);
+                    var activeSilos = hosts.Values.Count(h => h == SiloStatus.Active);
                     _logger.LogInformation("Orleans cluster verified via management grain: {ActiveSilos} active silo(s) found", activeSilos);
                     return;
                 }
