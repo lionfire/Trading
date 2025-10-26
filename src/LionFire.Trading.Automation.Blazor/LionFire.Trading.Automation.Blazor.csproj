@@ -49,7 +49,6 @@
 
 	<ItemGroup>
 	  <Folder Include="Infra\" />
-	  <Folder Include="Portfolios\" />
 	  <Folder Include="Optimization\Charts\" />
 	</ItemGroup>
 
