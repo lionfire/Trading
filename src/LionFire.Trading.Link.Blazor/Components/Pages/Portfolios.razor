@@ -18,7 +18,14 @@
                         ReadOnly=false>
         @* RowClick="@((_,e)=> {
 if(!Editiing){NavigationManager.NavigateTo($"/portfolios/{e.Item.Key}"); })" *@
+        <Columns>
+            <HierarchyColumn T="Portfolio2VM" />
 
+            <PropertyColumn T="Portfolio2VM" TProperty="string" Property="x => x.Key" Title="Key" Editable="false" />
+
+            <PropertyColumn T="Portfolio2VM" TProperty="string" Property="x => x.Value.Name" Title="Name" />
+            <PropertyColumn T="Portfolio2VM" TProperty="string" Property="x => x.Value.Comment" Title="Comment" />
+        </Columns>
     </ObservableDataView>
 </div>
 

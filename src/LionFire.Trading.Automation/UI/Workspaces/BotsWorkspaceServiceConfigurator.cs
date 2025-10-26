@@ -15,6 +15,7 @@ public class WorkspaceChildTypeConfigurator<T> : IWorkspaceServiceConfigurator
 {
 
     public bool Recursive { get; set; } = false;
+    public int RecursionDepth { get; set; } = int.MaxValue;
     public bool AutoSave { get; set; } = true;
 
     public ValueTask ConfigureWorkspaceServices(IServiceCollection services, UserWorkspacesService userWorkspacesService, string? workspaceId)
@@ -24,7 +25,7 @@ public class WorkspaceChildTypeConfigurator<T> : IWorkspaceServiceConfigurator
         if (workspaceReference != null)
         {
             services
-               .RegisterObservablesInSubDirForType<T>(userWorkspacesService.ServiceProvider, workspaceReference, recursive: Recursive, autosave: AutoSave)
+               .RegisterObservablesInSubDirForType<T>(userWorkspacesService.ServiceProvider, workspaceReference, recursive: Recursive, autosave: AutoSave, recursionDepth: RecursionDepth)
                //.AddSingleton<BotsProvider>()
                ;
         }
