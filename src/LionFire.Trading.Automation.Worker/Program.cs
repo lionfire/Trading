@@ -4,6 +4,7 @@ using LionFire.Trading.Indicators;
 using LionFire.Trading.Automation.Blazor.Optimization;
 //using LionFire.Trading.Automation.Orleans.Hosting;
 using LionFire.Logging;
+using Microsoft.Extensions.Logging;
 
 //var customLoggerProvider = new CustomLoggerProvider();
 
@@ -38,6 +39,10 @@ Host.CreateApplicationBuilder(args)
         #endregion
 
         #region Logging
+            .AddLogging(b =>
+            {
+                b.AddFile("logs/app-{Date}.log", minimumLevel: LogLevel.Information);
+            })
             //.AddSingleton(customLoggerProvider)
             //.AddLogging(b =>
             //{
