@@ -5,6 +5,7 @@ using LionFire.Referencing;
 using LionFire.Vos.Schemas;
 using Microsoft.CodeAnalysis;
 using ReactiveUI;
+using ReactiveUI.SourceGenerators;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -18,7 +19,7 @@ namespace LionFire.Trading.Automation;
 
 [LionFire.Ontology.Alias("Portfolio")]
 [Vos(VosFlags.PreferDirectory)]
-public class Portfolio2 : ReactiveObject
+public partial class Portfolio2 : ReactiveObject
 {
     static ObjectIDGenerator generator = new ObjectIDGenerator();
 
@@ -36,8 +37,11 @@ public class Portfolio2 : ReactiveObject
         }
     }
 
-    public string? Name { get; set; }
-    public string? Comment { get; set; }
+    [Reactive]
+    private string? _name;
+
+    [Reactive]
+    private string? _comment;
     
         [Set]
     public SourceCache<
