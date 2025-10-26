@@ -4,6 +4,7 @@
 @using LionFire.Reactive.Persistence
 @using LionFire.Trading.Automation
 @using Microsoft.Extensions.DependencyInjection
+@using LionFire.Data.Mvvm
 
 <div class="pa-6">
                         @* Data="ViewModel!.Data" *@
@@ -112,11 +113,11 @@
 
     ObservableDataView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
 
-    // protected override void OnParametersSet()
-    // {
-    //     // ViewModel!.ServiceProvider = WorkspaceServices;
-    //     base.OnParametersSet();
-    // }
+    protected override void OnParametersSet()
+    {
+        // ViewModel!.ServiceProvider = WorkspaceServices;
+        base.OnParametersSet();
+    }
 
     // protected override void OnInitialized()
     // {
