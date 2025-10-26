@@ -8,28 +8,29 @@
 
 @* @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<ObservableDataViewVM<string, Portfolio>> *@
 
-                    @* ViewModel="ViewModel" *@
-                    @* Data="ViewModel!.Data" *@
-                    @* DataServiceProvider="WorkspaceServices" *@
-    @* @ref=ItemsEditor *@
-<ObservableDataView 
-                    TKey="string"
-                    TValue="Portfolio2"
-                    TValueVM="Portfolio2VM"
-                    AllowedEditModes=EditMode.All
-                    ReadOnly=false>
-                    @* RowClick="@((_,e)=> {
+<div class="pa-6">
+    <ObservableDataView @ref=ItemsEditor
+                        DataServiceProvider="WorkspaceServices"
+                        TKey="string"
+                        TValue="Portfolio2"
+                        TValueVM="Portfolio2VM"
+                        AllowedEditModes=EditMode.All
+                        ReadOnly=false>
+        @* RowClick="@((_,e)=> {
 if(!Editiing){NavigationManager.NavigateTo($"/portfolios/{e.Item.Key}"); })" *@
 
-</ObservableDataView>
+    </ObservableDataView>
+</div>
 
 @code {
     // ENH idea: standardize on AmbientServices, and have ObservableDataView use it.
-    // [CascadingParameter(Name = "WorkspaceServices")]
-    // public IServiceProvider? WorkspaceServices { get; set; }
+    [CascadingParameter(Name = "WorkspaceServices")]
+    public IServiceProvider? WorkspaceServices { get; set; }
 
+    [CascadingParameter(Name = "WorkspaceId")]
+    public string? WorkspaceId { get; set; }
 
-    // ObservableDataView<string, Portfolio, PortfolioVM>? ItemsEditor { get; set; }
+    ObservableDataView<string, Portfolio2, Portfolio2VM>? ItemsEditor { get; set; }
 
     // public class PortfoliosVM : ObservableDataViewVM<string, Portfolio>
     // //: AsyncVMSourceCacheVM<string, BotEntity, BotVM>
