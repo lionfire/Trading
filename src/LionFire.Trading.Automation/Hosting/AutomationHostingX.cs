@@ -57,11 +57,11 @@ public static class AutomationHostingX
             ;
     }
 
-    public static IServiceCollection AddWorkspaceChildType<T>(this IServiceCollection services)
+    public static IServiceCollection AddWorkspaceChildType<T>(this IServiceCollection services, bool recursive = false)
         where T : notnull
     {
         return services
-                .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, WorkspaceChildTypeConfigurator<T>>( new WorkspaceChildTypeConfigurator<T>() { /*Recursive = false*/ })
+                .TryAddEnumerableSingleton<IWorkspaceServiceConfigurator, WorkspaceChildTypeConfigurator<T>>( new WorkspaceChildTypeConfigurator<T>() { Recursive = recursive })
             ;
     }
     public static IServiceCollection AutomationModel(this IServiceCollection services, IConfiguration configuration)
@@ -72,7 +72,7 @@ public static class AutomationHostingX
             .AddSingleton<BacktestsRepository>()
             .AddSingleton<BacktestBatchJournalCsvSerialization>()
 
-            .AddWorkspaceChildType<Portfolio2>()
+            .AddWorkspaceChildType<Portfolio2>(recursive: true)
             .AddWorkspaceChildType<BotEntity>()
 
             .AddWorkspaceDocumentService<string, BotEntity>()
