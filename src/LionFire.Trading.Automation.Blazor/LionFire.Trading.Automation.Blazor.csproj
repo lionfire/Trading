@@ -30,6 +30,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<ProjectReference Include="..\..\..\Core\src\LionFire.Data.Async.Mvvm\LionFire.Data.Async.Mvvm.csproj" />
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
 		<ProjectReference Include="..\..\..\core\src\LionFire.Orleans.Hosting\LionFire.Orleans.Hosting.csproj" />
 		<ProjectReference Include="..\..\..\Trading.Proprietary\src\FireLynx.Blazor.Public\FireLynx.Blazor.Public.csproj" />
