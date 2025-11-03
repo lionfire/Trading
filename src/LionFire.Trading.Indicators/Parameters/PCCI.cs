@@ -25,7 +25,7 @@ public class PCCI<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// <summary>
     /// The period for CCI calculation (default: 20)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 5,
         DefaultMax = 100,
@@ -46,7 +46,7 @@ public class PCCI<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// The constant used in CCI calculation (default: 0.015)
     /// This is the traditional CCI constant that normalizes the oscillator
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.001,
         DefaultMin = 0.01,
         DefaultMax = 0.05,
@@ -59,7 +59,7 @@ public class PCCI<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

@@ -25,7 +25,7 @@ public class PIchimokuCloud<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, 
     /// <summary>
     /// Conversion Line Period (Tenkan-sen) - default: 9
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 3,
         DefaultMax = 30,
@@ -45,7 +45,7 @@ public class PIchimokuCloud<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, 
     /// <summary>
     /// Base Line Period (Kijun-sen) - default: 26
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -65,7 +65,7 @@ public class PIchimokuCloud<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, 
     /// <summary>
     /// Leading Span B Period (Senkou Span B) - default: 52
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 3,
         DefaultMin = 20,
         DefaultMax = 100,
@@ -85,7 +85,7 @@ public class PIchimokuCloud<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, 
     /// <summary>
     /// Displacement - periods ahead for leading spans and behind for lagging span (default: 26)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -105,7 +105,7 @@ public class PIchimokuCloud<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, 
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

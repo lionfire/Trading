@@ -26,7 +26,7 @@ public class PADX<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// The period for ADX calculation (default: 14)
     /// Used for smoothing True Range, +DM, -DM, and calculating ADX from DX values
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -47,7 +47,7 @@ public class PADX<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// Strong trend threshold for ADX (default: 25)
     /// Values above this level typically indicate a strong trend
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 10,
         DefaultMin = 15,
         DefaultMax = 35,
@@ -61,7 +61,7 @@ public class PADX<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// Very strong trend threshold for ADX (default: 50)
     /// Values above this level indicate a very strong trend
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 30,
         DefaultMin = 40,
         DefaultMax = 70,
@@ -74,7 +74,7 @@ public class PADX<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

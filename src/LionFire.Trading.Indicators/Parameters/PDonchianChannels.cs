@@ -25,7 +25,7 @@ public class PDonchianChannels<TPrice, TOutput> : IndicatorParameters<HLC<TPrice
     /// <summary>
     /// The period for Donchian Channels calculation (default: 20)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 5,
         DefaultMax = 100,
@@ -45,7 +45,7 @@ public class PDonchianChannels<TPrice, TOutput> : IndicatorParameters<HLC<TPrice
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

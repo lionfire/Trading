@@ -25,7 +25,7 @@ public class PHullMovingAverage<TPrice, TOutput> : IndicatorParameters<TPrice, T
     /// <summary>
     /// The period for Hull Moving Average calculation (default: 14)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 5,
         DefaultMax = 100,
@@ -45,7 +45,7 @@ public class PHullMovingAverage<TPrice, TOutput> : IndicatorParameters<TPrice, T
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

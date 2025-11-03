@@ -25,7 +25,7 @@ public class PChaikinMoneyFlow<TInput, TOutput> : IndicatorParameters<TInput, TO
     /// <summary>
     /// The period for CMF calculation (default: 21)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -45,7 +45,7 @@ public class PChaikinMoneyFlow<TInput, TOutput> : IndicatorParameters<TInput, TO
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

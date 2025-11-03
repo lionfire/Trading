@@ -26,7 +26,7 @@ public class PChoppinessIndex<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>
     /// <summary>
     /// The period for Choppiness Index calculation (default: 14)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -47,7 +47,7 @@ public class PChoppinessIndex<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>
     /// Choppy/consolidating threshold (default: 61.8)
     /// Values above this level indicate choppy/sideways market conditions
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 50,
         DefaultMin = 55,
         DefaultMax = 75,
@@ -61,7 +61,7 @@ public class PChoppinessIndex<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>
     /// Trending threshold (default: 38.2)
     /// Values below this level indicate trending market conditions
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0,
         DefaultMin = 25,
         DefaultMax = 45,
@@ -74,7 +74,7 @@ public class PChoppinessIndex<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

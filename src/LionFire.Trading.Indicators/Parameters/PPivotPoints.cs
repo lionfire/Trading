@@ -26,7 +26,7 @@ public class PPivotPoints<TInput, TOutput> : IndicatorParameters<TInput, TOutput
     /// <summary>
     /// The period type for pivot calculation (default: Daily)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         OptimizePriority = -1,
         DefaultValue = PivotPointsPeriod.Daily)]
     public PivotPointsPeriod PeriodType { get; set; } = PivotPointsPeriod.Daily;
@@ -34,7 +34,7 @@ public class PPivotPoints<TInput, TOutput> : IndicatorParameters<TInput, TOutput
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

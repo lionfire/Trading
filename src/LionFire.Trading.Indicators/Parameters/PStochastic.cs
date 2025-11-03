@@ -26,7 +26,7 @@ public class PStochastic<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// The period for %K calculation (default: 14)
     /// Represents the number of periods to look back for high/low range
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 30,
@@ -47,7 +47,7 @@ public class PStochastic<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// The smoothing period for %K (default: 3)
     /// This creates the slow %K by smoothing the fast %K
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 1,
         DefaultMax = 10,
@@ -64,7 +64,7 @@ public class PStochastic<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// The period for %D signal line calculation (default: 3)
     /// %D is a moving average of the slow %K
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 1,
         DefaultMax = 10,
@@ -80,7 +80,7 @@ public class PStochastic<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// <summary>
     /// Overbought level threshold (default: 80)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 50,
         DefaultMin = 70,
         DefaultMax = 90,
@@ -93,7 +93,7 @@ public class PStochastic<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// <summary>
     /// Oversold level threshold (default: 20)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0,
         DefaultMin = 10,
         DefaultMax = 30,
@@ -106,7 +106,7 @@ public class PStochastic<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

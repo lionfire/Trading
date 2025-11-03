@@ -58,8 +58,8 @@ public class HierarchicalPropertyInfo : IKeyable<string>
 
     public Type ValueType => LastPropertyInfo.PropertyType;
     public PropertyInfo LastPropertyInfo => PropertyInfos!.LastOrDefault();
-    public ParameterAttribute ParameterAttribute => parameterAttribute ??= LastPropertyInfo?.GetCustomAttribute<ParameterAttribute>()!;
-    private ParameterAttribute? parameterAttribute;
+    public TradingParameterAttribute ParameterAttribute => parameterAttribute ??= LastPropertyInfo?.GetCustomAttribute<TradingParameterAttribute>()!;
+    private TradingParameterAttribute? parameterAttribute;
 
     #endregion
 

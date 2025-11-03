@@ -37,7 +37,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<RSI_QC<TPrice, TOutput>
     /// <summary>
     /// The period over which to calculate the RSI. Default is 14.
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultValue = 14,
@@ -57,7 +57,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<RSI_QC<TPrice, TOutput>
     /// <summary>
     /// The type of moving average to use for smoothing. Default is Wilders.
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         OptimizePriority = -3, 
         OptimizerHints = OptimizationDistributionKind.Category, 
         DefaultValue = MAT.Wilders,
@@ -80,7 +80,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<RSI_QC<TPrice, TOutput>
     /// The overbought threshold level. Default is 70.
     /// Signals potential selling opportunity when RSI exceeds this level.
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 50,
         DefaultMin = 60,
         DefaultValue = 70,
@@ -94,7 +94,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<RSI_QC<TPrice, TOutput>
     /// The oversold threshold level. Default is 30.
     /// Signals potential buying opportunity when RSI falls below this level.
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0,
         DefaultMin = 10,
         DefaultValue = 30,

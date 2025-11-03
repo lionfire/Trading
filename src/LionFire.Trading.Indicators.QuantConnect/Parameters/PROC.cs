@@ -36,7 +36,7 @@ public class PROC<TPrice, TOutput> : IndicatorParameters<ROC_QC<TPrice, TOutput>
     /// <summary>
     /// The period over which to calculate the ROC. Default is 10.
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 2,
         DefaultValue = 10,

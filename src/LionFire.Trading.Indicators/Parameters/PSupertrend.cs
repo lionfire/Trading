@@ -25,7 +25,7 @@ public class PSupertrend<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// <summary>
     /// The period for ATR calculation (default: 10)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 30,
@@ -45,7 +45,7 @@ public class PSupertrend<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// <summary>
     /// The multiplier for ATR bands calculation (default: 3.0)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.5,
         DefaultMin = 1.0,
         DefaultMax = 5.0,
@@ -58,7 +58,7 @@ public class PSupertrend<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOu
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

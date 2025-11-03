@@ -25,7 +25,7 @@ public class PKlingerOscillator<TInput, TOutput> : IndicatorParameters<TInput, T
     /// <summary>
     /// The fast period for EMA calculation (default: 34)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -45,7 +45,7 @@ public class PKlingerOscillator<TInput, TOutput> : IndicatorParameters<TInput, T
     /// <summary>
     /// The slow period for EMA calculation (default: 55)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 20,
         DefaultMax = 100,
@@ -65,7 +65,7 @@ public class PKlingerOscillator<TInput, TOutput> : IndicatorParameters<TInput, T
     /// <summary>
     /// The signal period for EMA calculation of the Klinger line (default: 13)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 3,
         DefaultMax = 30,
@@ -85,7 +85,7 @@ public class PKlingerOscillator<TInput, TOutput> : IndicatorParameters<TInput, T
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

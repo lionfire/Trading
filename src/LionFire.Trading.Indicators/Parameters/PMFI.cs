@@ -25,7 +25,7 @@ public class PMFI<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// The period for MFI calculation (default: 14)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -45,7 +45,7 @@ public class PMFI<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// Overbought level threshold (default: 80)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 50,
         DefaultMin = 70,
         DefaultMax = 90,
@@ -58,7 +58,7 @@ public class PMFI<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// Oversold level threshold (default: 20)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0,
         DefaultMin = 10,
         DefaultMax = 30,
@@ -71,7 +71,7 @@ public class PMFI<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

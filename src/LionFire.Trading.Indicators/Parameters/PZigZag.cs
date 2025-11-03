@@ -25,7 +25,7 @@ public class PZigZag<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The minimum percentage deviation required to form a new pivot point (default: 5.0%)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.1,
         DefaultMin = 1.0,
         DefaultMax = 20.0,
@@ -45,7 +45,7 @@ public class PZigZag<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The minimum number of bars required between pivot points (default: 12)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 3,
         DefaultMax = 50,
@@ -65,7 +65,7 @@ public class PZigZag<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// Maximum number of recent pivot points to retain in memory (default: 100)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 10,
         DefaultMin = 50,
         DefaultMax = 500,
@@ -78,7 +78,7 @@ public class PZigZag<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

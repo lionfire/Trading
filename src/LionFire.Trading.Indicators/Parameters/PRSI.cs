@@ -25,7 +25,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The period for RSI calculation (default: 14)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -45,7 +45,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// Overbought level threshold (default: 70)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 50,
         DefaultMin = 60,
         DefaultMax = 90,
@@ -58,7 +58,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// Oversold level threshold (default: 30)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0,
         DefaultMin = 10,
         DefaultMax = 40,
@@ -71,7 +71,7 @@ public class PRSI<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

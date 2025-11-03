@@ -26,7 +26,7 @@ public class PWilliamsR<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOut
     /// The period for Williams %R calculation (default: 14)
     /// Represents the number of periods to look back for high/low range
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -47,7 +47,7 @@ public class PWilliamsR<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOut
     /// Overbought level threshold (default: -20)
     /// Williams %R values above this level indicate overbought conditions
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = -50,
         DefaultMin = -30,
         DefaultMax = -10,
@@ -61,7 +61,7 @@ public class PWilliamsR<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOut
     /// Oversold level threshold (default: -80)
     /// Williams %R values below this level indicate oversold conditions
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = -100,
         DefaultMin = -90,
         DefaultMax = -70,
@@ -74,7 +74,7 @@ public class PWilliamsR<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOut
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

@@ -26,7 +26,7 @@ public class PParabolicSAR<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, T
     /// The initial acceleration factor (default: 0.02)
     /// Controls how quickly the SAR moves towards the price
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.001,
         DefaultMin = 0.01,
         DefaultMax = 0.05,
@@ -41,7 +41,7 @@ public class PParabolicSAR<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, T
     /// The maximum acceleration factor (default: 0.20)
     /// The acceleration factor will not exceed this value
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.05,
         DefaultMin = 0.10,
         DefaultMax = 0.50,
@@ -55,7 +55,7 @@ public class PParabolicSAR<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, T
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

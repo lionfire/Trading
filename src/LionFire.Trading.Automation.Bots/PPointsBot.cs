@@ -12,7 +12,7 @@ public class PPointsBot
 
     #region Common for points systems
 
-    [Parameter(
+    [TradingParameter(
         OptimizePriority = -10.0, 
         OptimizeOrderTiebreaker = -50, 
         DefaultValue = 1, 
@@ -26,7 +26,7 @@ public class PPointsBot
         )]
     public int OpenThreshold { get; set; }
 
-    [Parameter(OptimizePriority = -10.5, DefaultValue = 1,
+    [TradingParameter(OptimizePriority = -10.5, DefaultValue = 1,
         HardValueMin = 1, HardValueMax = int.MaxValue,
         ValueMax = 100,
         DefaultMax = 30)]
@@ -36,10 +36,10 @@ public class PPointsBot
 
     #region Opening
 
-    [Parameter("If 1.0, open entire position, or a portion of position size if less than 1.0", OptimizePriority = -20, DefaultValue = 1.0f, HardValueMin = 0f, DefaultMin = 0.1, DefaultMax = 1.0f, HardValueMax = 1.0f, Step = 0.05f)]
+    [TradingParameter("If 1.0, open entire position, or a portion of position size if less than 1.0", OptimizePriority = -20, DefaultValue = 1.0f, HardValueMin = 0f, DefaultMin = 0.1, DefaultMax = 1.0f, HardValueMax = 1.0f, Step = 0.05f)]
     public float IncrementalOpenAmount { get; set; }
 
-    [Parameter("Multiply the current open score by this after opening a position", 
+    [TradingParameter("Multiply the current open score by this after opening a position", 
         OptimizePriority = -20, // Depends on non-1 values for IncrementalOpenAmount
         DefaultValue = 0.5f, 
         HardValueMin = 0f, 
@@ -50,7 +50,7 @@ public class PPointsBot
         )]
     public float OpenScoreMultiplierAfterOpen { get; set; }
 
-    [Parameter("Multiply the current open score by this after closing a position",
+    [TradingParameter("Multiply the current open score by this after closing a position",
         OptimizePriority = -21,
         DefaultValue = 0.25f, 
         HardValueMin = 0f, 
@@ -64,7 +64,7 @@ public class PPointsBot
 
     #region Closing
 
-    [Parameter("If 1.0, close entire position size, or a portion of position size if less than 1.0", 
+    [TradingParameter("If 1.0, close entire position size, or a portion of position size if less than 1.0", 
         DefaultValue = 1.0f,
         OptimizePriority = -30, // Depends on non-1 values for IncrementalOpenAmount
         HardValueMin = 0f, 
@@ -74,7 +74,7 @@ public class PPointsBot
         Step = 0.05f)]
     public float IncrementalCloseAmount { get; set; }
 
-    [Parameter("Multiply the current close score by this after closing a position", 
+    [TradingParameter("Multiply the current close score by this after closing a position", 
         DefaultValue = 1f,
         OptimizePriority = -30,
         HardValueMin = 0f, 
@@ -84,7 +84,7 @@ public class PPointsBot
         Step = 0.05f)]
     public float CloseScoreMultiplierAfterClose { get; set; }
 
-    [Parameter("Multiply the current close score by this after opening a position", 
+    [TradingParameter("Multiply the current close score by this after opening a position", 
         DefaultValue = 0.9f,
         OptimizePriority = -30,
         HardValueMin = 0f, 

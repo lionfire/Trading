@@ -25,7 +25,7 @@ public class PKeltnerChannels<TInput, TOutput> : IndicatorParameters<TInput, TOu
     /// <summary>
     /// The period for the EMA calculation (default: 20)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -45,7 +45,7 @@ public class PKeltnerChannels<TInput, TOutput> : IndicatorParameters<TInput, TOu
     /// <summary>
     /// The period for the ATR calculation (default: 10)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 30,
@@ -65,7 +65,7 @@ public class PKeltnerChannels<TInput, TOutput> : IndicatorParameters<TInput, TOu
     /// <summary>
     /// The ATR multiplier for the channel bands (default: 2.0)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.5,
         DefaultMin = 1.0,
         DefaultMax = 4.0,
@@ -78,7 +78,7 @@ public class PKeltnerChannels<TInput, TOutput> : IndicatorParameters<TInput, TOu
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

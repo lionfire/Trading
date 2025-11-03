@@ -25,7 +25,7 @@ public class PVWAP<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// How often to reset the VWAP calculation (default: Daily)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         DefaultValue = VWAPResetPeriod.Daily,
         OptimizePriority = 5)]
     public VWAPResetPeriod ResetPeriod { get; set; } = VWAPResetPeriod.Daily;
@@ -34,13 +34,13 @@ public class PVWAP<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// Custom reset time for when ResetPeriod is set to Custom
     /// Only used when ResetPeriod = Custom
     /// </summary>
-    [Parameter(OptimizePriority = -5)]
+    [TradingParameter(OptimizePriority = -5)]
     public TimeSpan? CustomResetTime { get; set; }
 
     /// <summary>
     /// Whether to use typical price (H+L+C)/3 instead of close price for calculation
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         DefaultValue = true,
         OptimizePriority = 3)]
     public bool UseTypicalPrice { get; set; } = true;
@@ -48,7 +48,7 @@ public class PVWAP<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

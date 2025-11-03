@@ -25,7 +25,7 @@ public class PTEMA<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The period for TEMA calculation (default: 14)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -46,13 +46,13 @@ public class PTEMA<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// Optional smoothing factor override. 
     /// If not specified (null or zero), will be calculated as 2/(Period+1)
     /// </summary>
-    [Parameter(OptimizePriority = -5)]
+    [TradingParameter(OptimizePriority = -5)]
     public TOutput? SmoothingFactor { get; set; }
 
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

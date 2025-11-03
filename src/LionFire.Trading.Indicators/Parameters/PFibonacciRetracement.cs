@@ -25,7 +25,7 @@ public class PFibonacciRetracement<TInput, TOutput> : IndicatorParameters<TInput
     /// <summary>
     /// The lookback period to find swing high and low points (default: 100)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 10,
         DefaultMin = 20,
         DefaultMax = 200,
@@ -45,7 +45,7 @@ public class PFibonacciRetracement<TInput, TOutput> : IndicatorParameters<TInput
     /// <summary>
     /// Whether to include extension levels (161.8% and 261.8%) in calculations (default: true)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         OptimizePriority = -5,
         DefaultValue = true)]
     public bool IncludeExtensionLevels { get; set; } = true;
@@ -53,7 +53,7 @@ public class PFibonacciRetracement<TInput, TOutput> : IndicatorParameters<TInput
     /// <summary>
     /// Minimum price swing percentage to consider a valid swing high/low (default: 1.0%)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.1,
         DefaultMin = 0.5,
         DefaultMax = 5.0,
@@ -66,7 +66,7 @@ public class PFibonacciRetracement<TInput, TOutput> : IndicatorParameters<TInput
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

@@ -25,7 +25,7 @@ public class PLinearRegression<TPrice, TOutput> : IndicatorParameters<TPrice, TO
     /// <summary>
     /// The period for Linear Regression calculation (default: 14)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 100,
@@ -45,7 +45,7 @@ public class PLinearRegression<TPrice, TOutput> : IndicatorParameters<TPrice, TO
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

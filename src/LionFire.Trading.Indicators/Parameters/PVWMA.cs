@@ -25,7 +25,7 @@ public class PVWMA<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// The period for VWMA calculation (default: 20)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 5,
         DefaultMax = 100,
@@ -45,7 +45,7 @@ public class PVWMA<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

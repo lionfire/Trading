@@ -46,7 +46,7 @@ public class POrderBlocksBot<TValue> : PStandardBot2<POrderBlocksBot<TValue>, TV
     /// <summary>
     /// Minimum confidence to enter a trade (0-1)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.1,
         DefaultMin = 0.3,
         DefaultMax = 0.8,
@@ -59,7 +59,7 @@ public class POrderBlocksBot<TValue> : PStandardBot2<POrderBlocksBot<TValue>, TV
     /// <summary>
     /// Risk/reward ratio threshold for taking trades
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.5,
         DefaultMin = 1.0,
         DefaultMax = 3.0,
@@ -72,7 +72,7 @@ public class POrderBlocksBot<TValue> : PStandardBot2<POrderBlocksBot<TValue>, TV
     /// <summary>
     /// ATR multiplier for stop loss placement
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.5,
         DefaultMin = 1.0,
         DefaultMax = 3.0,
@@ -85,7 +85,7 @@ public class POrderBlocksBot<TValue> : PStandardBot2<POrderBlocksBot<TValue>, TV
     /// <summary>
     /// ATR multiplier for take profit placement
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.5,
         DefaultMin = 1.5,
         DefaultMax = 4.0,
@@ -98,19 +98,19 @@ public class POrderBlocksBot<TValue> : PStandardBot2<POrderBlocksBot<TValue>, TV
     /// <summary>
     /// Trade on approaching signals
     /// </summary>
-    [Parameter]
+    [TradingParameter]
     public bool TradeOnApproaching { get; set; } = false;
 
     /// <summary>
     /// Trade on touch signals
     /// </summary>
-    [Parameter]
+    [TradingParameter]
     public bool TradeOnTouch { get; set; } = true;
 
     /// <summary>
     /// Trade on failed breakout signals
     /// </summary>
-    [Parameter]
+    [TradingParameter]
     public bool TradeOnFailedBreakout { get; set; } = true;
 
     #region Lifecycle

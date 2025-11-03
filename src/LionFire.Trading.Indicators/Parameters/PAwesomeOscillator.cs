@@ -25,7 +25,7 @@ public class PAwesomeOscillator<TPrice, TOutput> : IndicatorParameters<HLC<TPric
     /// <summary>
     /// The fast period for SMA calculation (default: 5)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 2,
         DefaultMax = 15,
@@ -45,7 +45,7 @@ public class PAwesomeOscillator<TPrice, TOutput> : IndicatorParameters<HLC<TPric
     /// <summary>
     /// The slow period for SMA calculation (default: 34)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -65,7 +65,7 @@ public class PAwesomeOscillator<TPrice, TOutput> : IndicatorParameters<HLC<TPric
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

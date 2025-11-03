@@ -25,14 +25,14 @@ public class PHeikinAshi<TInput, TOutput> : IndicatorParameters<TInput, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     /// <summary>
     /// Doji threshold for determining if open and close are approximately equal
     /// Default: 0.001 (0.1% price difference)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.0001,
         DefaultMin = 0.0005,
         DefaultMax = 0.01,

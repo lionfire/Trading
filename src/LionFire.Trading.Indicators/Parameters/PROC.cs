@@ -25,7 +25,7 @@ public class PROC<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The period for ROC calculation (default: 10)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 2,
         DefaultMax = 50,
@@ -45,7 +45,7 @@ public class PROC<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

@@ -27,7 +27,7 @@ public static class BotParameterEquality
         foreach (var property in type1.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(pi => pi.GetCustomAttribute<NotAParameterAttribute>() == null))
         {
-            var parameterAttr = property.GetCustomAttribute<ParameterAttribute>();
+            var parameterAttr = property.GetCustomAttribute<TradingParameterAttribute>();
             if (parameterAttr != null)
             {
                 var value1 = property.GetValue(entry1);

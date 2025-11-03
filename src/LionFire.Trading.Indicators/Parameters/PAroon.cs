@@ -26,7 +26,7 @@ public class PAroon<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// The period for Aroon calculation (default: 14)
     /// Represents the number of periods to look back for highest high and lowest low
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -47,7 +47,7 @@ public class PAroon<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// Threshold for strong uptrend detection (default: 70)
     /// When Aroon Up is above this level and Aroon Down is below (100 - this level), indicates strong uptrend
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 50,
         DefaultMin = 60,
         DefaultMax = 90,
@@ -61,7 +61,7 @@ public class PAroon<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// Threshold for strong downtrend detection (default: 70)
     /// When Aroon Down is above this level and Aroon Up is below (100 - this level), indicates strong downtrend
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 50,
         DefaultMin = 60,
         DefaultMax = 90,
@@ -74,7 +74,7 @@ public class PAroon<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint PreferredImplementation { get; set; } = ImplementationHint.Auto;
 
     #endregion

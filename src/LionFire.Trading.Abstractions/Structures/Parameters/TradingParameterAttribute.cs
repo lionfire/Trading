@@ -9,14 +9,14 @@ using System.Threading.Tasks;
 namespace LionFire.Trading;
 
 [System.AttributeUsage(AttributeTargets.Property, Inherited = false, AllowMultiple = false)]
-public sealed class ParameterAttribute : Attribute
+public sealed class TradingParameterAttribute : Attribute
 {
 
-    public ParameterAttribute(string description)
+    public TradingParameterAttribute(string description)
     {
         this.Description = description;
     }
-    public ParameterAttribute()
+    public TradingParameterAttribute()
     {
     }
 

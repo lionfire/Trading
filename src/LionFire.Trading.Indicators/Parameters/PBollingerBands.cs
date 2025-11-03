@@ -25,7 +25,7 @@ public class PBollingerBands<TInput, TOutput> : IndicatorParameters<TInput, TOut
     /// <summary>
     /// The period for moving average and standard deviation calculation (default: 20)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -45,7 +45,7 @@ public class PBollingerBands<TInput, TOutput> : IndicatorParameters<TInput, TOut
     /// <summary>
     /// The number of standard deviations from the middle band (default: 2.0)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 0.5,
         DefaultMin = 1.0,
         DefaultMax = 3.0,
@@ -58,7 +58,7 @@ public class PBollingerBands<TInput, TOutput> : IndicatorParameters<TInput, TOut
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion

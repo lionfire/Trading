@@ -25,7 +25,7 @@ public class PMACD<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The fast period for EMA calculation (default: 12)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 3,
         DefaultMax = 30,
@@ -45,7 +45,7 @@ public class PMACD<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The slow period for EMA calculation (default: 26)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 2,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -65,7 +65,7 @@ public class PMACD<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// The signal period for EMA calculation of the MACD line (default: 9)
     /// </summary>
-    [Parameter(
+    [TradingParameter(
         HardValueMin = 1,
         DefaultMin = 3,
         DefaultMax = 30,
@@ -85,7 +85,7 @@ public class PMACD<TPrice, TOutput> : IndicatorParameters<TPrice, TOutput>
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [Parameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -10)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion
