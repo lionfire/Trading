@@ -27,4 +27,10 @@ public static class OptimizationQueueHostingExtensions
     public static IHostBuilder AddOptimizationQueue(this IHostBuilder hostBuilder) 
         => hostBuilder.ConfigureServices((context, services) 
             => services.AddOptimizationQueue());
+
+
+    public static ISiloBuilder AddOptimizationQueueGrains(this ISiloBuilder silo)
+    {
+        throw new NotImplementedException();
+    }
 }

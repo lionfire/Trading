@@ -36,7 +36,7 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
 
     #region Parameters
 
-    [Parameter(HardValueMin = 2,
+    [TradingParameter(HardValueMin = 2,
         DefaultMin = 3, 
         DefaultMax = 100,
         ValueMax = 300, 
@@ -52,7 +52,7 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
         SearchLogarithmExponent = 2.0)]
     public int Period { get; set; }
 
-    [Parameter(OptimizePriority = -3, OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = MAT.Wilders,
+    [TradingParameter(OptimizePriority = -3, OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = MAT.Wilders,
         HardValueMin = 0, // TEMP - shouldn't need for Enums.
         HardValueMax = 10,
         DefaultSearchSpaces = [
