@@ -7,14 +7,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-	  <Content Remove="Components\Pages\Vos.razor" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <None Include="Components\Pages\Vos.razor" />
-	</ItemGroup>
-
-	<ItemGroup>
 		<SupportedPlatform Include="browser" />
 	</ItemGroup>
 
@@ -41,5 +33,9 @@
 		<ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Blazor\LionFire.Trading.Blazor.csproj" />
 		<ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Components\Pages\" />
 	</ItemGroup>
 </Project>

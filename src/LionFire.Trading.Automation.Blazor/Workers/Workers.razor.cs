@@ -6,7 +6,7 @@ using LionFire.Orleans_;
 using LionFire.Structures;
 using LionFire.UI.ViewModels;
 
-namespace LionFire.Trading.Link.Blazor;
+namespace LionFire.Trading.Automation.Blazor.Workers;
 
 public partial class Workers
 {
