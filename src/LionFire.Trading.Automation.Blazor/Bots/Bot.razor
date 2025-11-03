@@ -5,79 +5,32 @@
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Logging
 @using MudBlazor.Components
+@using ReactiveUI
 
 @inject ILogger<Bot> Logger
 @inject IServiceProvider ServiceProvider
 
-<h3>Bot @BotId</h3>
+<div class="pa-4">
 
-@if (VM?.Value != null)
-{
-    <MudTextField @bind-Value="VM.Value.Name" Label="Name" />
-    <MudTextField @bind-Value="VM.Value.Comments" Label="Comments" />
-    <MudTextField @bind-Value="VM.Value.Description" Label="Description" />
+    <h3>Bot @BotId</h3>
 
-    <MudButton OnClick="Save" Color="Color.Primary">Save</MudButton>
-}
-else if (VM != null)
-{
-    <MudProgressCircular Indeterminate="true" />
-    <p>Loading bot...</p>
-}
-else
-{
-    <MudAlert Severity="Severity.Error">WorkspaceServices not available</MudAlert>
-}
-
-@code {
-    [Parameter]
-    public string? BotId { get; set; }
-
-    [CascadingParameter(Name = "WorkspaceServices")]
-    public IServiceProvider? WorkspaceServices { get; set; }
-
-    private ObservableReaderWriterItemVM<string, BotEntity, BotVM>? VM { get; set; }
-
-    protected override async Task OnParametersSetAsync()
+    @if (VM?.Value != null)
     {
-        // Try workspace services first, fall back to root services (for debugging/testing)
-        var effectiveServices = WorkspaceServices ?? ServiceProvider;
+        <MudTextField @bind-Value="VM.Value.Name" Label="Name" />
+        <MudTextField @bind-Value="VM.Value.Comments" Label="Comments" />
+        <MudTextField @bind-Value="VM.Value.Description" Label="Description" />
 
-        if (WorkspaceServices == null)
-        {
-            Logger.LogWarning("WorkspaceServices cascading parameter not found. Falling back to root ServiceProvider. " +
-                "For production use, this page should be rendered within a workspace layout that provides WorkspaceServices.");
-        }
-
-        // Get reader/writer from services
-        var reader = effectiveServices.GetService<IObservableReader<string, BotEntity>>();
-        var writer = effectiveServices.GetService<IObservableWriter<string, BotEntity>>();
-
-        if (reader == null || writer == null)
-        {
-            Logger.LogError("Bot persistence services not registered. Reader: {ReaderAvailable}, Writer: {WriterAvailable}. " +
-                "Source: {ServiceSource}",
-                reader != null, writer != null, WorkspaceServices != null ? "Workspace" : "Root");
-
-            Logger.LogError("This means either: 1) Workspace layout is not being used, or 2) Workspace configurators haven't run yet, or 3) BotEntity workspace configurator not registered");
-            return;
-        }
-
-        Logger.LogInformation("Loaded Bot persistence services from {ServiceSource}", WorkspaceServices != null ? "Workspace" : "Root");
-
-        // Create VM with services
-        VM = new ObservableReaderWriterItemVM<string, BotEntity, BotVM>(reader, writer);
-        VM.Id = BotId;
-
-        await base.OnParametersSetAsync();
+        <MudButton OnClick="Save" Color="Color.Primary">Save</MudButton>
     }
-
-    private async Task Save()
+    else if (VM != null)
     {
-        if (VM?.Value != null)
-        {
-            await VM.Write();
-            // TODO: Show success message via Snackbar
-        }
+        <MudProgressCircular Indeterminate="true" />
+        <p>Loading bot...</p>
     }
-}
+    else
+    {
+        <MudAlert Severity="Severity.Error">WorkspaceServices not available</MudAlert>
+    }
+</div>
+
+

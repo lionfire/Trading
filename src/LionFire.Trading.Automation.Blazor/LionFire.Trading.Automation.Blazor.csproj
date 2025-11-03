@@ -6,6 +6,10 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Content Remove="Vos\Vos.razor" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <SupportedPlatform Include="browser" />
@@ -50,6 +54,10 @@
 	<ItemGroup>
 	  <Folder Include="Infra\" />
 	  <Folder Include="Optimization\Charts\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="Vos\Vos.razor" />
 	</ItemGroup>
 
 
