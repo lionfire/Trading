@@ -253,3 +253,4 @@ paket-files/
 /benchmarks/LionFire.Trading.Indicators.Benchmarks/SimpleBenchmark/Reports
 
 build
+/.claude/settings.local.json
