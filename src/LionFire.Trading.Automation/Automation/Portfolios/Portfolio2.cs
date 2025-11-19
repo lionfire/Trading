@@ -42,6 +42,12 @@ public partial class Portfolio2 : ReactiveObject
 
     [Reactive]
     private string? _comment;
+
+    /// <summary>
+    /// List of bot IDs in this portfolio.
+    /// </summary>
+    [Reactive]
+    private List<string>? _botIds;
     
         [Set]
     public SourceCache<

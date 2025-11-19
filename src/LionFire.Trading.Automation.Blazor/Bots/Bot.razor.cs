@@ -14,23 +14,41 @@ public partial class Bot : ComponentBase
     [Parameter]
     public string? BotId { get; set; }
 
-    [CascadingParameter(Name = "WorkspaceServices")]
-    public IServiceProvider? WorkspaceServices { get; set; }
+    /// <summary>
+    /// User-level services where bots are stored.
+    /// </summary>
+    [CascadingParameter(Name = "UserServices")]
+    public IServiceProvider? UserServices { get; set; }
+
+    /// <summary>
+    /// Root service provider fallback (for debugging/testing).
+    /// </summary>
+    [Inject]
+    private IServiceProvider ServiceProvider { get; set; } = null!;
+
+    [Inject]
+    private ILogger<Bot> Logger { get; set; } = null!;
 
     private ObservableReaderWriterItemVM<string, BotEntity, BotVM>? VM { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
-        // Try workspace services first, fall back to root services (for debugging/testing)
-        var effectiveServices = WorkspaceServices ?? ServiceProvider;
-
-        if (WorkspaceServices == null)
+        if (string.IsNullOrEmpty(BotId))
         {
-            Logger.LogWarning("WorkspaceServices cascading parameter not found. Falling back to root ServiceProvider. " +
-                "For production use, this page should be rendered within a workspace layout that provides WorkspaceServices.");
+            Logger.LogError("BotId parameter is required");
+            return;
         }
 
-        // Get reader/writer from services
+        // Try user services first, fall back to root services (for debugging/testing)
+        var effectiveServices = UserServices ?? ServiceProvider;
+
+        if (UserServices == null)
+        {
+            Logger.LogWarning("UserServices cascading parameter not found. Falling back to root ServiceProvider. " +
+                "For production use, this page should be rendered within a layout that provides UserServices.");
+        }
+
+        // Get reader/writer from services 
         var readerWriter = effectiveServices.GetService<IObservableReaderWriter<string, BotEntity>>();
         IObservableReader<string, BotEntity>? reader = readerWriter ?? effectiveServices.GetService<IObservableReader<string, BotEntity>>();
         IObservableWriter<string, BotEntity>? writer = readerWriter ?? effectiveServices.GetService<IObservableWriter<string, BotEntity>>();
@@ -38,14 +56,15 @@ public partial class Bot : ComponentBase
         if (reader == null || writer == null)
         {
             Logger.LogError("Bot persistence services not registered. Reader: {ReaderAvailable}, Writer: {WriterAvailable}. " +
-                "Source: {ServiceSource}",
-                reader != null, writer != null, WorkspaceServices != null ? "Workspace" : "Root");
+                "Source: {ServiceSource}. ",
+                reader != null, writer != null, UserServices != null ? "User" : "Root");
 
-            Logger.LogError("This means either: 1) Workspace layout is not being used, or 2) Workspace configurators haven't run yet, or 3) BotEntity workspace configurator not registered");
+            Logger.LogError("This means either: 1) Layout is not providing UserServices, or 2) UserBotServicesConfigurator hasn't run yet, or 3) BotEntity user-level configurator not registered");
             return;
         }
 
-        Logger.LogInformation("Loaded Bot persistence services from {ServiceSource}", WorkspaceServices != null ? "Workspace" : "Root");
+        Logger.LogInformation("Loaded Bot persistence services from {ServiceSource} for bot {BotId}",
+            UserServices != null ? "User" : "Root", BotId);
 
         // Create VM with services
         VM = new ObservableReaderWriterItemVM<string, BotEntity, BotVM>(reader, writer);
@@ -62,6 +81,7 @@ public partial class Bot : ComponentBase
         if (VM?.Value != null)
         {
             await VM.Write();
+            Logger.LogInformation("Saved bot {BotId}", BotId);
             // TODO: Show success message via Snackbar
         }
     }
