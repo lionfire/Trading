@@ -1,16 +1,24 @@
-﻿namespace LionFire.Mvvm;
+﻿using ReactiveUI;
+
+namespace LionFire.Mvvm;
 
 public class KeyValueVM<TKey, TValue> : VMBase<TKey, TValue>
    where TKey : notnull
-   where TValue : notnull
+   where TValue : class
 {
     public override TKey Key { get; }
-    public override TValue Value { get; }
 
-    public KeyValueVM(TKey key, TValue value) 
+    public override TValue? Value
+    {
+        get => _value;
+        set => this.RaiseAndSetIfChanged(ref _value, value);
+    }
+    private TValue? _value;
+
+    public KeyValueVM(TKey key, TValue? value)
     {
         this.Key = key;
-        this.Value = value;
+        this._value = value;
     }
 }
 
