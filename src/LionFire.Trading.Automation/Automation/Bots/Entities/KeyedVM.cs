@@ -1,19 +1,24 @@
 ﻿using LionFire.Structures;
+using ReactiveUI;
 
 namespace LionFire.Mvvm;
 
 public class KeyedVM<TKey, TValue> : VMBase<TKey, TValue>
   where TKey : notnull
-    where TValue : notnull, IKeyed<TKey>
+    where TValue : class, IKeyed<TKey>
 {
-    public override TValue Value => value;
-    private TValue value;
-
-    public override TKey Key => value.Key;
-
-    public KeyedVM(TValue value) 
+    public override TValue? Value
     {
-        this.value = value;
+        get => _value;
+        set => this.RaiseAndSetIfChanged(ref _value, value);
+    }
+    private TValue? _value;
+
+    public override TKey Key => _value!.Key;
+
+    public KeyedVM(TValue value)
+    {
+        this._value = value;
     }
 }
 
