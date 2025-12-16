@@ -40,9 +40,12 @@ public class BotVM : KeyValueVM<string, BotEntity> //: IKeyed<IReference>
     {
         get
         {
-            foreach (var x in Value.Backtests.Items)
+            if (Value != null)
             {
+                foreach (var x in Value.Backtests.Items)
+                {
 
+                }
             }
             yield break;
 

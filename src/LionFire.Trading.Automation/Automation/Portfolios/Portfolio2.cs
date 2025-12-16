@@ -48,10 +48,10 @@ public partial class Portfolio2 : ReactiveObject
     /// </summary>
     [Reactive]
     private List<string>? _botIds;
-    
-        [Set]
+
+    [Set]
     public SourceCache<
-        (OptimizationRunReference key, SourceCache<BacktestReference, BacktestReference>), OptimizationRunReference>? OptimizationBacktestReferences
+    (OptimizationRunReference key, SourceCache<BacktestReference, BacktestReference>), OptimizationRunReference>? OptimizationBacktestReferences
     { get; set; }
     object OptimizationBacktestReferencesLock = new();
 

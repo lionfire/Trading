@@ -15,6 +15,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LionFire.Referencing;
+using System.IO;
 
 namespace LionFire.Hosting;
 
@@ -73,10 +75,7 @@ public static class AutomationHostingX
             .AddSingleton<BacktestBatchJournalCsvSerialization>()
 
             .AddWorkspaceChildType<Portfolio2>(recursive: true, recursionDepth: 1)
-            .AddWorkspaceChildType<BotEntity>()
 
-            .AddWorkspaceDocumentService<string, BotEntity>()
-            //.AddWorkspaceDocumentService<string, Portfolio2>()
             ;
     }
 
@@ -92,15 +91,13 @@ public static class AutomationHostingX
             //.AddTransient(typeof(PSimAccount<>))
             ;
 
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceDocumentRunner<string, BotEntity>, WorkspaceDocumentRunner<string, BotEntity, BotRunner>>());
+        // REMOVED: Bot runner now registered at user level, not workspace level
+        // services.TryAddEnumerable(ServiceDescriptor.Singleton<IWorkspaceDocumentRunner<string, BotEntity>, WorkspaceDocumentRunner<string, BotEntity, BotRunner>>());
 
         return services
             //.AddHostedSingleton<AutomationRuntime>()
             ;
     }
-
-
-
 
     //private static string GetAutomationEntityDir<T>(IServiceProvider serviceProvider)
     //{

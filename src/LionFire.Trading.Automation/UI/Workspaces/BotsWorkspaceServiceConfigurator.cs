@@ -20,10 +20,25 @@ public class WorkspaceChildTypeConfigurator<T> : IWorkspaceServiceConfigurator
 
     public ValueTask ConfigureWorkspaceServices(IServiceCollection services, UserWorkspacesService userWorkspacesService, string? workspaceId)
     {
-        var workspaceReference = userWorkspacesService.UserWorkspaces.GetChildSubpath(workspaceId);
+        System.Diagnostics.Debug.WriteLine($"[WorkspaceChildTypeConfigurator<{typeof(T).Name}>] ConfigureWorkspaceServices called for workspaceId: {workspaceId}");
 
-        if (workspaceReference != null)
+        if (userWorkspacesService.UserWorkspaces == null)
         {
+            System.Diagnostics.Debug.WriteLine($"[WorkspaceChildTypeConfigurator<{typeof(T).Name}>] UserWorkspaces is null - skipping registration");
+            // UserWorkspaces not initialized yet - skip registration
+            return ValueTask.CompletedTask;
+        }
+
+        var workspaceReference = userWorkspacesService.UserWorkspaces.GetChildSubpath(workspaceId);
+        System.Diagnostics.Debug.WriteLine($"[WorkspaceChildTypeConfigurator<{typeof(T).Name}>] workspaceReference: {workspaceReference}");
+
+        if (workspaceReference == null)
+        {
+            System.Diagnostics.Debug.WriteLine($"[WorkspaceChildTypeConfigurator<{typeof(T).Name}>] workspaceReference is null - skipping registration");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"[WorkspaceChildTypeConfigurator<{typeof(T).Name}>] Registering observables for type {typeof(T).Name} at {workspaceReference}");
             services
                .RegisterObservablesInSubDirForType<T>(userWorkspacesService.ServiceProvider, workspaceReference, recursive: Recursive, autosave: AutoSave, recursionDepth: RecursionDepth)
                //.AddSingleton<BotsProvider>()

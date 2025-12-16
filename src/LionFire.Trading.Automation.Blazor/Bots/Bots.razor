@@ -1,127 +1,331 @@
 @page "/bots"
-@* @inherits ReactiveUI.Blazor.ReactiveInjectableComponentBase<BotsVM> *@
 
 @using LionFire.Reactive.Persistence
 @using LionFire.Trading.Automation
 @using Microsoft.Extensions.DependencyInjection
 @using LionFire.Data.Mvvm
+@using DynamicData
+@using DynamicData.Binding
+@using System.Reactive.Linq
+@using Microsoft.Extensions.Logging
+@using ReactiveUI
+@using System.Diagnostics
+
+@implements IDisposable
 
 <div class="pa-6">
-                        @* Data="ViewModel!.Data" *@
-    <ObservableDataView @ref=ItemsEditor
-                        DataServiceProvider="WorkspaceServices"
-                        TKey="string"
-                        TValue="BotEntity"
-                        TValueVM="BotVM"
-                        AllowedEditModes=EditMode.All
-                        ReadOnly=false>
-        @* EditMode="DataGridEditMode.Cell" *@
-        <Columns>
-            <HierarchyColumn T="BotVM" />
+	@if (string.IsNullOrEmpty(EffectivePortfolioId))
+	{
+		<MudAlert Severity="Severity.Info">
+			<MudText>No portfolio selected. Please select a portfolio to view its bots.</MudText>
+		</MudAlert>
+	}
+	else if (CurrentPortfolio == null)
+	{
+		<MudAlert Severity="Severity.Warning">
+			<MudText>Portfolio '@EffectivePortfolioId' not found.</MudText>
+		</MudAlert>
+	}
+	else if (FilteredBotCache != null)
+	{
+		<MudText Typo="Typo.h5" Class="mb-4">
+			Bots in Portfolio: @CurrentPortfolio.Name
+		</MudText>
 
-            @* <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Key" /> *@
-            @* Editable="false" *@
-            <TemplateColumn T="BotVM">
-                <HeaderTemplate>
-                    Status
-                </HeaderTemplate>
-                <CellTemplate>
-                    <MudLink Href="@($"/bots/{context.Item.Key}")">
-                        <MudIcon Icon="@Icons.Material.Outlined.Circle" />
-                    </MudLink>
-                    @* <MudIcon Icon="@Icons.Material.Filled.Circle" /> *@
-                    @* <MudIcon Color="@Color.Primary" Icon="@Icons.Material.Outlined.Circle" /> *@
-                    @* <MudIcon Color=@Color.Primary Icon="@Icons.Material.Filled.Circle" /> *@
-                    @* <MudIcon Color="@Color.Secondary" Icon="@Icons.Material.Outlined.Circle" />
-                    <MudIcon Color=@Color.Secondary Icon="@Icons.Material.Filled.Circle" />
-                    <MudIcon Color="@Color.Tertiary" Icon="@Icons.Material.Outlined.Circle" />
-                    <MudIcon Color=@Color.Tertiary Icon="@Icons.Material.Filled.Circle" />
-                    <MudIcon Color="@Color.Error" Icon="@Icons.Material.Outlined.Circle" />
-                    <MudIcon Color=@Color.Error Icon="@Icons.Material.Filled.Circle" /> *@
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn T="BotVM">
-                <HeaderTemplate>
-                    Enabled
-                </HeaderTemplate>
-                <CellTemplate>
-                    @if (context.Item?.Value != null)
-                    {
-                        <div>
-                            <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled" Color="Color.Primary" ThumbIcon="@Icons.Material.Filled.Radar" Size="Size.Small" ></MudSwitch>
-                        </div>
-                    }
-                </CellTemplate>
-            </TemplateColumn>
-            <TemplateColumn T="BotVM">
-                <HeaderTemplate>
-                    Live
-                </HeaderTemplate>
-                <CellTemplate>
-                    @if (context.Item?.Value != null)
-                    {
-                        <div>
-                            <MudSwitch T="bool" ThumbIcon="@Icons.Material.Rounded.AttachMoney" @bind-Value="context.Item.Value.Live" Color=@((context.Item.IsLive ? Color.Secondary : Color.Default)) Size="Size.Small" ></MudSwitch>
-                        </div>
-                    }
-                </CellTemplate>
-            </TemplateColumn>
+		<ObservableDataView @ref=ItemsEditor
+							DataReader="@FilteredBotCache"
+							DataServiceProvider="UserServices"
+							TKey="string"
+							TValue="BotEntity"
+							TValueVM="BotVM"
+							AllowedEditModes=EditMode.All
+							ReadOnly=false>
+			<Columns>
+				<HierarchyColumn T="BotVM" />
 
+				<TemplateColumn T="BotVM">
+					<HeaderTemplate>
+						Status
+					</HeaderTemplate>
+					<CellTemplate>
+						<MudLink Href="@($"/bots/{context.Item.Key}")">
+							<MudIcon Icon="@Icons.Material.Outlined.Circle" />
+						</MudLink>
+					</CellTemplate>
+				</TemplateColumn>
+				<TemplateColumn T="BotVM">
+					<HeaderTemplate>
+						Enabled
+					</HeaderTemplate>
+					<CellTemplate>
+						@if (context.Item?.Value != null)
+						{
+							<div>
+								<MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled" Color="Color.Primary" ThumbIcon="@Icons.Material.Filled.Radar" Size="Size.Small"></MudSwitch>
+							</div>
+						}
+					</CellTemplate>
+				</TemplateColumn>
+				<TemplateColumn T="BotVM">
+					<HeaderTemplate>
+						Live
+					</HeaderTemplate>
+					<CellTemplate>
+						@if (context.Item?.Value != null)
+						{
+							<div>
+								<MudSwitch T="bool" ThumbIcon="@Icons.Material.Rounded.AttachMoney" @bind-Value="context.Item.Value.Live" Color=@((context.Item.IsLive ? Color.Secondary : Color.Default)) Size="Size.Small"></MudSwitch>
+							</div>
+						}
+					</CellTemplate>
+				</TemplateColumn>
 
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Exchange" Title="Exchange" />
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.ExchangeArea" Title="Area" />
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Symbol" Title="Symbol" />
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.TimeFrame" Title="TimeFrame" />
+				<TemplateColumn T="BotVM" Title="Exchange">
+					<CellTemplate>@context.Item?.Value?.Exchange</CellTemplate>
+				</TemplateColumn>
+				<TemplateColumn T="BotVM" Title="Area">
+					<CellTemplate>@context.Item?.Value?.ExchangeArea</CellTemplate>
+				</TemplateColumn>
+				<TemplateColumn T="BotVM" Title="Symbol">
+					<CellTemplate>@context.Item?.Value?.Symbol</CellTemplate>
+				</TemplateColumn>
+				<TemplateColumn T="BotVM" Title="TimeFrame">
+					<CellTemplate>@context.Item?.Value?.TimeFrame</CellTemplate>
+				</TemplateColumn>
 
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.BotTypeName" Title="Type" />
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Name" />
-            <PropertyColumn Property="x => x.AD" Title="AD" T="BotVM" TProperty="double?" />
-            <PropertyColumn T="BotVM" TProperty="string" Property="x => x.Value.Comments" />
-                @* TODO: Some summary stats:  AD, MHWT, W%, TPM *@
-        </Columns>
-        <ChildRowContent>
-            <MudCard>
-                <MudCardHeader>
-                    <CardHeaderContent>
-                        <MudText Typo="Typo.h6">@context.Item.Value.Name</MudText>
-                    </CardHeaderContent>
-                </MudCardHeader>
-                <MudCardContent>
-                    <MudText>Enabled: <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled">Enabled</MudSwitch></MudText>
-                    <MudText>Comments: @context.Item.Value.Comments</MudText>
-                </MudCardContent>
-            </MudCard>
-        </ChildRowContent>
-        <ContextMenu>
-            <MudMenuItem Icon="@Icons.Material.Filled.Delete">
-                Delete @context.Value.Name
-            </MudMenuItem>
-            @* <MudMenuItem Icon="@Icons.Material.Filled.Info" OnClick="@ShowHiddenInfo">
-                View Details for @_contextRow?.HwId
-            </MudMenuItem> *@
-        </ContextMenu>
-    </ObservableDataView>
+				<TemplateColumn T="BotVM" Title="Type">
+					<CellTemplate>@context.Item?.Value?.BotTypeName</CellTemplate>
+				</TemplateColumn>
+				<TemplateColumn T="BotVM" Title="Name">
+					<CellTemplate>@context.Item?.Value?.Name</CellTemplate>
+				</TemplateColumn>
+				<PropertyColumn Property="x => x.AD" Title="AD" T="BotVM" TProperty="double?" />
+				<TemplateColumn T="BotVM" Title="Comments">
+					<CellTemplate>@context.Item?.Value?.Comments</CellTemplate>
+				</TemplateColumn>
+			</Columns>
+			<ChildRowContent>
+				@if (context.Item?.Value != null)
+				{
+					<MudCard>
+						<MudCardHeader>
+							<CardHeaderContent>
+								<MudText Typo="Typo.h6">@context.Item.Value.Name</MudText>
+							</CardHeaderContent>
+						</MudCardHeader>
+						<MudCardContent>
+							<MudText>Enabled: <MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled">Enabled</MudSwitch></MudText>
+							<MudText>Comments: @context.Item.Value.Comments</MudText>
+						</MudCardContent>
+					</MudCard>
+				}
+			</ChildRowContent>
+			<ContextMenu>
+				<MudMenuItem Icon="@Icons.Material.Filled.Delete">
+					Delete @context?.Value?.Name
+				</MudMenuItem>
+			</ContextMenu>
+		</ObservableDataView>
+
+		@* Display bots that failed to load *@
+		@if (LoadFailures.Any())
+		{
+			<MudDivider Class="my-4" />
+			<MudText Typo="Typo.h6" Color="Color.Error" Class="mb-2">
+				<MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+				Failed to Load (@LoadFailures.Count)
+			</MudText>
+			<MudAlert Severity="Severity.Warning" Class="mb-2">
+				The following bot IDs are in this portfolio but could not be loaded from disk.
+				They may have been deleted or moved.
+			</MudAlert>
+			<MudTable Items="@LoadFailures" Dense="true" Hover="true">
+				<HeaderContent>
+					<MudTh>Bot ID</MudTh>
+					<MudTh>Error</MudTh>
+					<MudTh>Actions</MudTh>
+				</HeaderContent>
+				<RowTemplate>
+					<MudTd DataLabel="Bot ID">
+						<MudText Color="Color.Error">@context.BotId</MudText>
+					</MudTd>
+					<MudTd DataLabel="Error">@context.ErrorMessage</MudTd>
+					<MudTd DataLabel="Actions">
+						<MudButton Variant="Variant.Text"
+								   Color="Color.Error"
+								   Size="Size.Small"
+								   StartIcon="@Icons.Material.Filled.RemoveCircle"
+								   OnClick="@(() => RemoveFailedBot(context.BotId))">
+							Remove from Portfolio
+						</MudButton>
+					</MudTd>
+				</RowTemplate>
+			</MudTable>
+		}
+	}
+	else
+	{
+		<MudProgressCircular Indeterminate="true" />
+		<MudText>Loading bots...</MudText>
+	}
 </div>
 
 @code {
-    // ENH idea: standardize on AmbientServices, and have ObservableDataView use it.
-    [CascadingParameter(Name = "WorkspaceServices")]
-    public IServiceProvider? WorkspaceServices { get; set; }
+	// User-level services (for workspaces, bots)
+	[CascadingParameter(Name = "UserServices")]
+	public IServiceProvider? UserServices { get; set; }
 
-    [CascadingParameter(Name = "WorkspaceId")]
-    public string? WorkspaceId { get; set; }
+	// Workspace-level services (for portfolios)
+	[CascadingParameter(Name = "WorkspaceServices")]
+	public IServiceProvider? WorkspaceServices { get; set; }
 
-    ObservableDataView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
+	// Portfolio ID from layout (stateful navigation)
+	[CascadingParameter(Name = "PortfolioId")]
+	public string? CascadedPortfolioId { get; set; }
 
-    protected override void OnParametersSet()
-    {
-        // ViewModel!.ServiceProvider = WorkspaceServices;
-        base.OnParametersSet();
-    }
+	// Portfolio ID from query string (direct links/bookmarks)
+	[Parameter]
+	[SupplyParameterFromQuery(Name = "portfolio")]
+	public string? QueryPortfolioId { get; set; }
 
-    // protected override void OnInitialized()
-    // {
-    //     base.OnInitialized();
-    // }
+	// Resolved portfolio (query wins if present)
+	private string? EffectivePortfolioId => QueryPortfolioId ?? CascadedPortfolioId;
 
+	private Portfolio2? CurrentPortfolio { get; set; }
+
+	private PortfolioFilteredBotCache? FilteredBotCache { get; set; }
+
+	ObservableDataView<string, BotEntity, BotVM>? ItemsEditor { get; set; }
+
+	[Inject]
+	private ILogger<Bots>? Logger { get; set; }
+
+	/// <summary>
+	/// List of bots that failed to load (for display in the UI).
+	/// </summary>
+	private List<BotLoadFailure> LoadFailures { get; set; } = new();
+
+	private IDisposable? loadFailuresSubscription;
+
+	protected override async Task OnParametersSetAsync()
+	{
+		var portfolioId = EffectivePortfolioId;
+
+		if (string.IsNullOrEmpty(portfolioId))
+		{
+			Logger?.LogInformation("No portfolio selected");
+			CurrentPortfolio = null;
+			FilteredBotCache?.Dispose();
+			FilteredBotCache = null;
+			return;
+		}
+
+		if (WorkspaceServices == null)
+		{
+			Logger?.LogError("WorkspaceServices not available");
+			return;
+		}
+
+		if (UserServices == null)
+		{
+			Logger?.LogError("UserServices not available");
+			return;
+		}
+
+		// Load portfolio from workspace
+		var portfolioReader = WorkspaceServices.GetService<IObservableReader<string, Portfolio2>>();
+		if (portfolioReader == null)
+		{
+			Logger?.LogWarning("Portfolio reader not available from WorkspaceServices - workspace may not be fully initialized yet");
+			CurrentPortfolio = null;
+			FilteredBotCache?.Dispose();
+			FilteredBotCache = null;
+			return;
+		}
+
+		var portfolioOptional = portfolioReader.Values.Lookup(portfolioId);
+		if (!portfolioOptional.HasValue)
+		{
+			Logger?.LogWarning("Portfolio '{PortfolioId}' not found", portfolioId);
+			CurrentPortfolio = null;
+			FilteredBotCache?.Dispose();
+			FilteredBotCache = null;
+			return;
+		}
+
+		var innerOptional = portfolioOptional.Value;
+		if (!innerOptional.HasValue)
+		{
+			Logger?.LogWarning("Portfolio '{PortfolioId}' not loaded", portfolioId);
+			CurrentPortfolio = null;
+			FilteredBotCache?.Dispose();
+			FilteredBotCache = null;
+			return;
+		}
+
+		if (CurrentPortfolio != innerOptional.Value)
+		{
+			CurrentPortfolio = innerOptional.Value;
+			Logger?.LogInformation("Loaded portfolio '{PortfolioName}' with {BotCount} bots",
+				CurrentPortfolio.Name, CurrentPortfolio.BotIds?.Count ?? 0);
+
+			// Get ALL user bots
+			var botReader = UserServices.GetService<IObservableReader<string, BotEntity>>();
+			if (botReader == null)
+			{
+				Logger?.LogError("Bot reader not available from UserServices");
+				return;
+			}
+
+			// Filter to only bots in this portfolio
+			loadFailuresSubscription?.Dispose();
+			FilteredBotCache?.Dispose();
+			FilteredBotCache = new PortfolioFilteredBotCache(botReader, CurrentPortfolio);
+
+			// Subscribe to load failures to update UI
+			loadFailuresSubscription = FilteredBotCache.LoadFailures.Connect()
+				.ToCollection()
+				.Subscribe(failures =>
+				{
+					LoadFailures = failures.ToList();
+					InvokeAsync(StateHasChanged);
+				});
+
+			// Load all values for the portfolio's bots (they're lazy-loaded by default)
+			Logger?.LogInformation($"[Bots] Calling ListenAllValues on FilteredBotCache");
+			await FilteredBotCache.ListenAllValues();
+
+			// WORKAROUND: Manually trigger loading of all bot values since ListenAllValues doesn't load existing values
+			// Subscribe to each bot's value observable to trigger the lazy loading
+			var keys = FilteredBotCache.Keys.Items.ToList();
+			Logger?.LogInformation($"[Bots] FilteredBotCache has {keys.Count} keys. Subscribing to value observables...");
+
+			foreach (var key in keys)
+			{
+				Logger?.LogDebug($"[Bots] Subscribing to value observable for bot key: {key}");
+				_ = FilteredBotCache.GetValueObservable(key).Subscribe(x =>
+				{
+					Debug.WriteLine("DISCARDING New bot value: " + key + " " + x);
+				});
+			}
+
+			Logger?.LogInformation($"[Bots] Finished subscribing to {keys.Count} bot value observables");
+		}
+
+		await base.OnParametersSetAsync();
+	}
+
+	public void Dispose()
+	{
+		loadFailuresSubscription?.Dispose();
+		FilteredBotCache?.Dispose();
+	}
+
+	private void RemoveFailedBot(string botId)
+	{
+		if (FilteredBotCache?.RemoveFailedBot(botId) == true)
+		{
+			Logger?.LogInformation("Removed failed bot '{BotId}' from portfolio", botId);
+		}
+	}
 }
