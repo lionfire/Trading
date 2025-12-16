@@ -40,7 +40,7 @@ public class BotHarnessFactory
     /// <param name="serviceProvider"></param>
     /// <param name="botEntity"></param>
     /// <returns></returns>
-    public ILiveBotHarness Create(BotEntity botEntity)
+    public IRealtimeBotHarness Create(BotEntity botEntity)
     {
         botEntity.ValidateOrThrow();
 
@@ -50,7 +50,7 @@ public class BotHarnessFactory
 
             // Create BotHarness with the correct numeric type
             var harnessType = typeof(BotHarness<>).MakeGenericType(numericType);
-            return (ILiveBotHarness)ActivatorUtilities.CreateInstance(ServiceProvider, harnessType, bot);
+            return (IRealtimeBotHarness)ActivatorUtilities.CreateInstance(ServiceProvider, harnessType, bot);
         }
         //else if (botEntity.PBotHarness != null)
         //{
@@ -292,7 +292,7 @@ public class BotHarnessFactory
         }
     }
 
-    private ILiveBotHarness Create_FromOptimizationRunReference(BotEntity botEntity)
+    private IRealtimeBotHarness Create_FromOptimizationRunReference(BotEntity botEntity)
     {
         #region Validating and deducing arguments
 

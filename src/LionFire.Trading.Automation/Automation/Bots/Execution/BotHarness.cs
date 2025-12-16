@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 
 namespace LionFire.Trading.Automation;
 
-public interface ILiveBotHarness : IBotHarness, IHostedService
+public interface IRealtimeBotHarness : IBotHarness, IHostedService
 {
 }
 
@@ -15,7 +15,7 @@ public interface ILiveBotHarness : IBotHarness, IHostedService
 /// </summary>
 /// <typeparam name="TPrecision"></typeparam>
 public sealed class BotHarness<TPrecision> : BotHarnessBase
-    , ILiveBotHarness
+    , IRealtimeBotHarness
     where TPrecision : struct, INumber<TPrecision>
 {
 

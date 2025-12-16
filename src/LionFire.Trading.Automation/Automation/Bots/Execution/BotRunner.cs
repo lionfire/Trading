@@ -46,7 +46,7 @@ public class BotRunner : Runner<BotEntity, BotRunner>, IRunner<BotEntity>
     // - IObservableList<StatusIndicators> StatusIndicators // Error, Warning, Info, etc.
     // ENH: And if it doesn't implement it directly, ability to use Adapter to bind it
     // ENH: Eliminate BotRunner, and use Runner
-    ILiveBotHarness? harness;
+    IRealtimeBotHarness? harness;
 
     #endregion
 
