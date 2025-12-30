@@ -8,6 +8,11 @@ public interface IIndicator2
     int MaxLookback { get; }
     uint? DefaultMaxFastForwardBars => 5;
     bool IsReady { get; }
+
+    /// <summary>
+    /// Resets the indicator state to its initial condition.
+    /// </summary>
+    void Clear();
 }
 
 
@@ -33,9 +38,6 @@ public interface IIndicator2<TParameters, TInput, TOutput>
     //    new HistoricalIndicatorExecutorX<ITIndicator, >
     //}
     //static abstract IOComponent Characteristics(TValue parameter);
-
-
-    void Clear();
 
     #region Input Handling
 

@@ -27,13 +27,28 @@ public enum DataPointAspect
     //BidderVolume, // etc.
 
     /// <summary>
-    /// An aspect of the price.  
+    /// An aspect of the price.
     /// Typically Close, Open, WeightedClose, VolumeWeightedClose, but could also be High, or Low
     /// </summary>
     //Price = 1 << 15,
     //Any = 0xFFFF,
     HLC = High | Low | Close,
     OHLC = Open | High | Low | Close,
+
+    /// <summary>
+    /// (High + Low) / 2 - Typical price based on high and low
+    /// </summary>
+    HL2 = 1 << 5,
+
+    /// <summary>
+    /// (High + Low + Close) / 3 - Typical price
+    /// </summary>
+    HLC3 = 1 << 6,
+
+    /// <summary>
+    /// (Open + High + Low + Close) / 4 - Average price
+    /// </summary>
+    OHLC4 = 1 << 7,
 }
 
 public static class DataPointAspectX
@@ -57,14 +72,15 @@ public static class DataPointAspectX
             DataPointAspect.Low => kline.LowPrice,
             DataPointAspect.Close => kline.ClosePrice,
             DataPointAspect.Volume => kline.Volume,
+            DataPointAspect.HL2 => (kline.HighPrice + kline.LowPrice) / 2m,
+            DataPointAspect.HLC3 => (kline.HighPrice + kline.LowPrice + kline.ClosePrice) / 3m,
+            DataPointAspect.OHLC4 => (kline.OpenPrice + kline.HighPrice + kline.LowPrice + kline.ClosePrice) / 4m,
             //DataPointAspect.HLC => new HLC<decimal>
             //{
             //    High = kline.HighPrice,
             //    Low = kline.LowPrice,
             //    Close = kline.ClosePrice,
             //},
-
-            // TODO: More aspects
             _ => throw new NotImplementedException(),
         };
     }
