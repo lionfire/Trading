@@ -14,7 +14,7 @@
 	
   <ItemGroup>
     <ProjectReference Include="..\..\..\core\src\LionFire.Orleans.Structures.Abstractions\LionFire.Orleans.Structures.Abstractions.csproj" />
-    <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Notifications.Abstractions\LionFire.Trading.Notifications.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Notifications.Abstractions\LionFire.Trading.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
   </ItemGroup>
 	

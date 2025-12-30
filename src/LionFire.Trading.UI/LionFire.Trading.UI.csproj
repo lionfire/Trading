@@ -13,7 +13,7 @@
     <ProjectReference Include="..\..\..\Core\src\LionFire.Data.Async.Mvvm\LionFire.Data.Async.Mvvm.csproj" />
     <ProjectReference Include="..\..\..\Core\src\LionFire.Structures\LionFire.Structures.csproj" />
     <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Grains.Client\LionFire.Trading.Grains.Client.csproj" />
-    <ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Notifications.Abstractions\LionFire.Trading.Notifications.Abstractions.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Notifications.Abstractions\LionFire.Trading.Notifications.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Abstractions\LionFire.Trading.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Binance.Grains.Abstractions\LionFire.Trading.Binance.Grains.Abstractions.csproj" />
   </ItemGroup>

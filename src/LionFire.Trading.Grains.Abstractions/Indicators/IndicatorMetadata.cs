@@ -43,4 +43,3 @@ public record IndicatorMetadata
     public required string ExchangeSymbolTimeFrame { get; init; }
 }
 
-#endregion
