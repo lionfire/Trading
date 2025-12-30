@@ -1,0 +1,40 @@
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Class="mr-2" />
+            Bot Error: @BotId
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            <MudText Typo="Typo.subtitle2">The bot encountered an error and is in a faulted state.</MudText>
+        </MudAlert>
+
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Error Message:</MudText>
+        <MudPaper Class="pa-4" Elevation="0" Style="background-color: var(--mud-palette-background-grey); font-family: monospace; white-space: pre-wrap; word-break: break-word; max-height: 400px; overflow-y: auto;">
+            @ErrorMessage
+        </MudPaper>
+
+        <MudText Typo="Typo.caption" Class="mt-4" Style="color: gray;">
+            To recover from this error, disable the bot and then re-enable it to restart.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Default" OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter]
+    public string BotId { get; set; } = string.Empty;
+
+    [Parameter]
+    public string ErrorMessage { get; set; } = string.Empty;
+
+    private void Cancel() => MudDialog?.Cancel();
+}

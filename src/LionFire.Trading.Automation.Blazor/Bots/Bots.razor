@@ -10,7 +10,12 @@
 @using Microsoft.Extensions.Logging
 @using ReactiveUI
 @using System.Diagnostics
+@using System.Timers
+@using LionFire.Trading.Grains.Bots
+@using Orleans
+@using MudBlazor
 
+@inject IDialogService DialogService
 @implements IDisposable
 
 <div class="pa-6">
@@ -48,9 +53,51 @@
 						Status
 					</HeaderTemplate>
 					<CellTemplate>
-						<MudLink Href="@($"/bots/{context.Item.Key}")">
-							<MudIcon Icon="@Icons.Material.Outlined.Circle" />
-						</MudLink>
+						@{
+							var botKey = context.Item?.Key;
+							var status = botKey != null ? GetBotStatus(botKey) : null;
+						}
+						@if (status != null)
+						{
+							var statusColor = GetStatusColor(status.State);
+							var statusIcon = GetStatusIcon(status.State);
+							@if (status.State == RealtimeBotState.Faulted && !string.IsNullOrEmpty(status.ErrorMessage))
+							{
+								<MudTooltip Text="@status.ErrorMessage" Placement="Placement.Top">
+									<MudChip T="string" Size="Size.Small" Color="statusColor" Icon="@statusIcon" OnClick="@(() => ShowErrorDialog(botKey!, status.ErrorMessage!))">
+										@status.State.ToString()
+									</MudChip>
+								</MudTooltip>
+							}
+							else
+							{
+								<MudChip T="string" Size="Size.Small" Color="statusColor" Icon="@statusIcon">
+									@status.State.ToString()
+								</MudChip>
+							}
+							@if (status.State == RealtimeBotState.CatchingUp)
+							{
+								<MudText Typo="Typo.caption" Class="ml-1">@status.BarsCaughtUp bars</MudText>
+							}
+							@if (status.LastBarTime != null)
+							{
+								<MudText Typo="Typo.caption" Class="ml-1" Style="color: gray;">@status.LastBarTime.Value.ToString("HH:mm:ss")</MudText>
+							}
+						}
+						else if (context.Item?.Value?.Enabled == true)
+						{
+							<MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">
+								Loading...
+							</MudChip>
+						}
+						else
+						{
+							<MudLink Href="@($"/bots/{context.Item?.Key}")">
+								<MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Stop">
+									Stopped
+								</MudChip>
+							</MudLink>
+						}
 					</CellTemplate>
 				</TemplateColumn>
 				<TemplateColumn T="BotVM">
@@ -60,8 +107,15 @@
 					<CellTemplate>
 						@if (context.Item?.Value != null)
 						{
+							var isInProgress = operationsInProgress.Contains(context.Item.Key);
 							<div>
-								<MudSwitch T="bool" @bind-Value="context.Item.Value.Enabled" Color="Color.Primary" ThumbIcon="@Icons.Material.Filled.Radar" Size="Size.Small"></MudSwitch>
+								<MudSwitch T="bool"
+									Value="@context.Item.Value.Enabled"
+									ValueChanged="@((bool enabled) => ToggleBotEnabledAsync(context.Item.Key, context.Item.Value, enabled))"
+									Color="Color.Primary"
+									ThumbIcon="@Icons.Material.Filled.Radar"
+									Size="Size.Small"
+									Disabled="@isInProgress" />
 							</div>
 						}
 					</CellTemplate>
@@ -200,6 +254,13 @@
 	[Inject]
 	private ILogger<Bots>? Logger { get; set; }
 
+	[Inject]
+	private IServiceProvider? ServiceProvider { get; set; }
+
+	// Orleans cluster client - fetched from services if available (optional)
+	private IClusterClient? ClusterClient { get; set; }
+	private bool clusterClientChecked = false;
+
 	/// <summary>
 	/// List of bots that failed to load (for display in the UI).
 	/// </summary>
@@ -207,13 +268,41 @@
 
 	private IDisposable? loadFailuresSubscription;
 
+	// Harness status tracking
+	private Dictionary<string, RealtimeBotStatus> botStatuses = new();
+	private HashSet<string> operationsInProgress = new();
+	private System.Timers.Timer? statusPollingTimer;
+
+	private IClusterClient? GetClusterClient()
+	{
+		if (!clusterClientChecked && ServiceProvider != null)
+		{
+			clusterClientChecked = true;
+			try
+			{
+				ClusterClient = ServiceProvider.GetService<IClusterClient>();
+				if (ClusterClient == null)
+				{
+					Logger?.LogWarning("[Bots] IClusterClient not available - harness control will be disabled");
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger?.LogWarning(ex, "[Bots] Failed to get IClusterClient - harness control will be disabled");
+			}
+		}
+		return ClusterClient;
+	}
+
 	protected override async Task OnParametersSetAsync()
 	{
 		var portfolioId = EffectivePortfolioId;
+		Logger?.LogDebug("[Bots] OnParametersSetAsync - PortfolioId={PortfolioId}, WorkspaceServices={WS}, UserServices={US}",
+			portfolioId, WorkspaceServices != null ? "set" : "null", UserServices != null ? "set" : "null");
 
 		if (string.IsNullOrEmpty(portfolioId))
 		{
-			Logger?.LogInformation("No portfolio selected");
+			Logger?.LogInformation("[Bots] No portfolio selected");
 			CurrentPortfolio = null;
 			FilteredBotCache?.Dispose();
 			FilteredBotCache = null;
@@ -222,13 +311,19 @@
 
 		if (WorkspaceServices == null)
 		{
-			Logger?.LogError("WorkspaceServices not available");
+			Logger?.LogWarning("[Bots] WorkspaceServices not available - layout may not be fully initialized yet");
+			CurrentPortfolio = null;
+			FilteredBotCache?.Dispose();
+			FilteredBotCache = null;
 			return;
 		}
 
 		if (UserServices == null)
 		{
-			Logger?.LogError("UserServices not available");
+			Logger?.LogWarning("[Bots] UserServices not available - layout may not be fully initialized yet");
+			CurrentPortfolio = null;
+			FilteredBotCache?.Dispose();
+			FilteredBotCache = null;
 			return;
 		}
 
@@ -236,12 +331,13 @@
 		var portfolioReader = WorkspaceServices.GetService<IObservableReader<string, Portfolio2>>();
 		if (portfolioReader == null)
 		{
-			Logger?.LogWarning("Portfolio reader not available from WorkspaceServices - workspace may not be fully initialized yet");
+			Logger?.LogWarning("[Bots] Portfolio reader not available from WorkspaceServices - workspace may not be fully initialized yet");
 			CurrentPortfolio = null;
 			FilteredBotCache?.Dispose();
 			FilteredBotCache = null;
 			return;
 		}
+		Logger?.LogDebug("[Bots] PortfolioReader available with {Count} values", portfolioReader.Values.Count);
 
 		var portfolioOptional = portfolioReader.Values.Lookup(portfolioId);
 		if (!portfolioOptional.HasValue)
@@ -273,9 +369,13 @@
 			var botReader = UserServices.GetService<IObservableReader<string, BotEntity>>();
 			if (botReader == null)
 			{
-				Logger?.LogError("Bot reader not available from UserServices");
+				Logger?.LogError("[Bots] Bot reader (IObservableReader<string, BotEntity>) not available from UserServices. Check that TradingLayoutVM.ConfigureUserServices is calling UserBotsX.AddUserBots");
+				CurrentPortfolio = null;
+				FilteredBotCache?.Dispose();
+				FilteredBotCache = null;
 				return;
 			}
+			Logger?.LogDebug("[Bots] BotReader available with {Count} keys", botReader.Keys.Count);
 
 			// Filter to only bots in this portfolio
 			loadFailuresSubscription?.Dispose();
@@ -310,6 +410,12 @@
 			}
 
 			Logger?.LogInformation($"[Bots] Finished subscribing to {keys.Count} bot value observables");
+
+			// Start polling for harness status
+			StartStatusPolling();
+
+			// Do initial status poll
+			await PollBotStatusesAsync();
 		}
 
 		await base.OnParametersSetAsync();
@@ -317,6 +423,7 @@
 
 	public void Dispose()
 	{
+		StopStatusPolling();
 		loadFailuresSubscription?.Dispose();
 		FilteredBotCache?.Dispose();
 	}
@@ -328,4 +435,214 @@
 			Logger?.LogInformation("Removed failed bot '{BotId}' from portfolio", botId);
 		}
 	}
+
+	#region Harness Control
+
+	private void StartStatusPolling()
+	{
+		// Only start polling if we have Orleans client
+		if (GetClusterClient() == null)
+		{
+			Logger?.LogDebug("[Bots] IClusterClient not available - status polling disabled");
+			return;
+		}
+
+		if (statusPollingTimer == null)
+		{
+			statusPollingTimer = new System.Timers.Timer(3000); // Poll every 3 seconds
+			statusPollingTimer.Elapsed += OnStatusPollTimer;
+			statusPollingTimer.Start();
+			Logger?.LogDebug("[Bots] Started status polling timer");
+		}
+	}
+
+	private void StopStatusPolling()
+	{
+		if (statusPollingTimer != null)
+		{
+			statusPollingTimer.Stop();
+			statusPollingTimer.Elapsed -= OnStatusPollTimer;
+			statusPollingTimer.Dispose();
+			statusPollingTimer = null;
+			Logger?.LogDebug("[Bots] Stopped status polling timer");
+		}
+	}
+
+	private async void OnStatusPollTimer(object? sender, ElapsedEventArgs e)
+	{
+		await InvokeAsync(async () =>
+		{
+			await PollBotStatusesAsync();
+			StateHasChanged();
+		});
+	}
+
+	private async Task PollBotStatusesAsync()
+	{
+		var client = GetClusterClient();
+		if (client == null || FilteredBotCache == null) return;
+
+		var keys = FilteredBotCache.Keys.Items.ToList();
+		foreach (var botId in keys)
+		{
+			try
+			{
+				var grain = client.GetGrain<IRealtimeBotHarnessG>(botId);
+				var status = await grain.GetStatus();
+				botStatuses[botId] = status;
+			}
+			catch (Exception ex)
+			{
+				Logger?.LogDebug("[Bots] Failed to get status for {BotId}: {Message}", botId, ex.Message);
+			}
+		}
+	}
+
+	private RealtimeBotStatus? GetBotStatus(string botId)
+	{
+		return botStatuses.TryGetValue(botId, out var status) ? status : null;
+	}
+
+	private Color GetStatusColor(RealtimeBotState state)
+	{
+		return state switch
+		{
+			RealtimeBotState.Running => Color.Success,
+			RealtimeBotState.CatchingUp => Color.Warning,
+			RealtimeBotState.Starting => Color.Info,
+			RealtimeBotState.Faulted => Color.Error,
+			RealtimeBotState.Stopped => Color.Default,
+			_ => Color.Default
+		};
+	}
+
+	private string GetStatusIcon(RealtimeBotState state)
+	{
+		return state switch
+		{
+			RealtimeBotState.Running => Icons.Material.Filled.CheckCircle,
+			RealtimeBotState.CatchingUp => Icons.Material.Filled.Sync,
+			RealtimeBotState.Starting => Icons.Material.Filled.HourglassEmpty,
+			RealtimeBotState.Faulted => Icons.Material.Filled.Error,
+			RealtimeBotState.Stopped => Icons.Material.Filled.Stop,
+			_ => Icons.Material.Filled.Help
+		};
+	}
+
+	private async Task ToggleBotEnabledAsync(string botId, BotEntity bot, bool enabled)
+	{
+		var client = GetClusterClient();
+
+		// If no Orleans client, just update the local state
+		if (client == null)
+		{
+			Logger?.LogDebug("[Bots] ClusterClient not available - updating local state only");
+			bot.Enabled = enabled;
+			StateHasChanged();
+			return;
+		}
+
+		operationsInProgress.Add(botId);
+		StateHasChanged();
+
+		try
+		{
+			var grain = client.GetGrain<IRealtimeBotHarnessG>(botId);
+
+			if (enabled)
+			{
+				Logger?.LogInformation("[Bots] Enabling bot {BotId} - starting harness", botId);
+
+				var config = CreateConfiguration(botId, bot);
+				var validationResult = config.Validate();
+
+				if (!validationResult.IsValid)
+				{
+					Logger?.LogError("[Bots] Bot {BotId} configuration is invalid: {Errors}",
+						botId, string.Join("; ", validationResult.Errors));
+					return;
+				}
+
+				var result = await grain.Start(config);
+				if (result)
+				{
+					bot.Enabled = true;
+					Logger?.LogInformation("[Bots] Bot {BotId} harness started successfully", botId);
+				}
+				else
+				{
+					Logger?.LogWarning("[Bots] Bot {BotId} harness Start() returned false - may already be running", botId);
+					bot.Enabled = true; // Still set enabled since it might already be running
+				}
+			}
+			else
+			{
+				Logger?.LogInformation("[Bots] Disabling bot {BotId} - stopping harness", botId);
+				await grain.Stop();
+				bot.Enabled = false;
+				Logger?.LogInformation("[Bots] Bot {BotId} harness stopped successfully", botId);
+			}
+
+			// Refresh status
+			try
+			{
+				var status = await grain.GetStatus();
+				botStatuses[botId] = status;
+			}
+			catch { /* ignore status fetch errors */ }
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogError(ex, "[Bots] Failed to toggle bot {BotId} enabled state", botId);
+		}
+		finally
+		{
+			operationsInProgress.Remove(botId);
+			StateHasChanged();
+		}
+	}
+
+	private RealtimeBotConfiguration CreateConfiguration(string botId, BotEntity bot)
+	{
+		var config = new RealtimeBotConfiguration
+		{
+			BotTypeName = bot.BotTypeName ?? string.Empty,
+			AccountId = $"{bot.Exchange}.{bot.ExchangeArea}:default",
+			Parameters = new Dictionary<string, object>()
+		};
+
+		// Add primary market subscription
+		if (!string.IsNullOrEmpty(bot.Symbol) && bot.TimeFrame != null)
+		{
+			config.Markets.Add(new MarketSubscription
+			{
+				Exchange = bot.Exchange ?? "binance",
+				ExchangeArea = bot.ExchangeArea ?? "futures",
+				Symbol = bot.Symbol,
+				TimeFrame = bot.TimeFrame.ToShortString()
+			});
+		}
+
+		return config;
+	}
+
+	private async Task ShowErrorDialog(string botId, string errorMessage)
+	{
+		var parameters = new DialogParameters<BotErrorDialog>
+		{
+			{ x => x.BotId, botId },
+			{ x => x.ErrorMessage, errorMessage }
+		};
+
+		var options = new DialogOptions
+		{
+			CloseButton = true,
+			MaxWidth = MaxWidth.Medium,
+			FullWidth = true
+		};
+
+		await DialogService.ShowAsync<BotErrorDialog>("Bot Error Details", parameters, options);
+	}
+
+	#endregion
 }
