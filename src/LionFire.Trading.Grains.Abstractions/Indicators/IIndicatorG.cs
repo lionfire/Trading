@@ -12,6 +12,10 @@ namespace LionFire.Trading.Indicators.Grains;
 /// <para>
 /// Example: binance:futures:BTCUSDT:m1:SMA(20)
 /// </para>
+/// <para>
+/// For composite indicators that depend on other indicators:
+/// Example: binance:futures:BTCUSDT:m1:LC(8;RSI(14),ATR(14))
+/// </para>
 /// </remarks>
 public interface IIndicatorG : IGrainWithStringKey
 {
@@ -42,6 +46,11 @@ public interface IIndicatorG : IGrainWithStringKey
     ValueTask<bool> IsLive();
 
     /// <summary>
+    /// Returns whether the indicator has completed its warmup period and is producing valid values.
+    /// </summary>
+    ValueTask<bool> IsReady();
+
+    /// <summary>
     /// Returns the available date range for this indicator.
     /// </summary>
     /// <returns>Tuple of (earliest, latest) timestamps, either can be null if no data</returns>
@@ -51,6 +60,34 @@ public interface IIndicatorG : IGrainWithStringKey
     /// Gets metadata about this indicator (type, category, period, etc.).
     /// </summary>
     ValueTask<IndicatorMetadata> GetMetadata();
+
+    /// <summary>
+    /// Ensures the indicator is actively calculating values.
+    /// Call this to start receiving live data if not already subscribed.
+    /// </summary>
+    Task ActivateAsync();
+
+    #region Observer Pattern
+
+    /// <summary>
+    /// Subscribes an observer to receive indicator value updates.
+    /// </summary>
+    /// <param name="observer">The observer to receive notifications</param>
+    /// <returns>A subscription handle that can be used to unsubscribe</returns>
+    ValueTask<Guid> Subscribe(IIndicatorSubscriber observer);
+
+    /// <summary>
+    /// Unsubscribes an observer from receiving indicator value updates.
+    /// </summary>
+    /// <param name="subscriptionId">The subscription ID returned from Subscribe</param>
+    ValueTask Unsubscribe(Guid subscriptionId);
+
+    /// <summary>
+    /// Gets the current number of active subscribers.
+    /// </summary>
+    ValueTask<int> GetSubscriberCount();
+
+    #endregion
 }
 
 #region Legacy interfaces - kept for compatibility
