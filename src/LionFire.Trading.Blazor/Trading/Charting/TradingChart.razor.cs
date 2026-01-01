@@ -65,6 +65,11 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     public bool IsLoading { get; private set; }
     public string? ErrorMessage { get; private set; }
 
+    /// <summary>
+    /// The open time of the last bar on the chart. Used for gap detection.
+    /// </summary>
+    public DateTime? LastBarOpenTime { get; private set; }
+
     private string _selectedExchange = "binance";
     private string SelectedExchange
     {
@@ -284,13 +289,17 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
                 var chartData = ConvertToChartData(result.Values);
                 await _candlestickSeries.SetData(chartData);
 
+                // Track the last bar time for gap detection
+                LastBarOpenTime = result.Values[^1].OpenTime;
+
                 if (AutoFit && _chart != null)
                 {
                     var timeScale = await _chart.TimeScale();
                     await timeScale.FitContent();
                 }
 
-                Logger.LogInformation("Loaded {Count} bars for {Symbol}", result.Values.Count, Symbol);
+                Logger.LogInformation("Loaded {Count} bars for {Symbol}, last bar at {LastBar}",
+                    result.Values.Count, Symbol, LastBarOpenTime);
             }
             else
             {
@@ -367,6 +376,13 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
             };
 
             await _candlestickSeries.Update(chartData);
+
+            // Track the last bar time for gap detection
+            if (LastBarOpenTime == null || bar.OpenTime > LastBarOpenTime)
+            {
+                LastBarOpenTime = bar.OpenTime;
+            }
+
             Logger.LogTrace("Updated chart with bar at {Time}", bar.OpenTime);
         }
         catch (Exception ex)
