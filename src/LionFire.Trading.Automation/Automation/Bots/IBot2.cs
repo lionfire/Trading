@@ -23,7 +23,7 @@ public interface IBot2<TPrecision> : IBot2
     where TPrecision : struct, INumber<TPrecision>
 {
     IObservableCache<IPosition<TPrecision>, int> Positions { get; }
-    new BotContext<TPrecision>? Context { get; set; }
+    new IBotContext2<TPrecision>? Context { get; set; }
 }
 public interface IBot2<TParameters, TPrecision> : IBot2<TPrecision>
     where TPrecision : struct, INumber<TPrecision>

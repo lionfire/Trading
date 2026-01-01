@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Orleans;
 
 namespace LionFire.Trading.Grains.Bots;
@@ -61,4 +62,47 @@ public interface IRealtimeBotHarnessG : IGrainWithStringKey
     /// </summary>
     /// <returns>Status information including state, last bar time, and any error messages</returns>
     ValueTask<RealtimeBotStatus> GetStatus();
+
+    #region Logging
+
+    /// <summary>
+    /// Gets recent logs from the in-memory circular buffer.
+    /// </summary>
+    /// <param name="count">Maximum number of entries to return (default: 100)</param>
+    /// <param name="minLevel">Minimum log level filter</param>
+    /// <returns>Recent log entries, newest last</returns>
+    ValueTask<List<BotLogEntry>> GetRecentLogs(int count = 100, LogLevel minLevel = LogLevel.Trace);
+
+    /// <summary>
+    /// Gets log entries since a specific timestamp (for polling-based updates).
+    /// </summary>
+    /// <param name="since">Return logs after this timestamp</param>
+    /// <returns>Log entries created after the specified time</returns>
+    ValueTask<List<BotLogEntry>> GetLogsSince(DateTime since);
+
+    /// <summary>
+    /// Gets historical session metadata.
+    /// </summary>
+    /// <returns>List of past sessions with metadata (from current grain activation)</returns>
+    ValueTask<List<BotHarnessSession>> GetSessions();
+
+    /// <summary>
+    /// Subscribes an observer for real-time log updates.
+    /// </summary>
+    /// <param name="observer">The observer to receive log updates</param>
+    ValueTask SubscribeToLogs(IBotLogObserver observer);
+
+    /// <summary>
+    /// Unsubscribes an observer from log updates.
+    /// </summary>
+    /// <param name="observer">The observer to remove</param>
+    ValueTask UnsubscribeFromLogs(IBotLogObserver observer);
+
+    /// <summary>
+    /// Updates the configured log level for this harness.
+    /// </summary>
+    /// <param name="level">New minimum log level, or null to use system default</param>
+    ValueTask SetLogLevel(LogLevel? level);
+
+    #endregion
 }

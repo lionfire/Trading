@@ -13,12 +13,18 @@ public class MarketParticipantContext<TPrecision>
 
 }
 
-public sealed class BotContext<TPrecision> : MarketParticipantContext<TPrecision>, IBotContext // IBotContext<TPrecision>
+public sealed class BotContext<TPrecision> : MarketParticipantContext<TPrecision>, IBotContext, IBotContext2<TPrecision>
     where TPrecision : struct, INumber<TPrecision>
 {
     #region Identity
 
+    /// <summary>
+    /// Gets the numeric ID for this context (from Parameters).
+    /// </summary>
     public long Id => Parameters.Id;
+
+    /// <inheritdoc />
+    string IBotContext2<TPrecision>.Id => Id.ToString();
 
     #endregion
 
@@ -31,6 +37,9 @@ public sealed class BotContext<TPrecision> : MarketParticipantContext<TPrecision
     #region Relationships
 
     public SimContext<TPrecision> Sim { get; }
+
+    /// <inheritdoc />
+    IMarketContext<TPrecision> IBotContext2<TPrecision>.MarketContext => Sim;
 
     public IBot2 Bot { get; }
 
@@ -57,6 +66,8 @@ public sealed class BotContext<TPrecision> : MarketParticipantContext<TPrecision
 
     internal BotContext(SimContext<TPrecision> sim, PBotContext<TPrecision> parameters)
     {
+        SimAccountFactory = () => DefaultSimAccount ?? throw new Exception("DefaultSimAccount is null. Set either SimAccountFactory or DefaultSimAccount");
+
         Sim = sim;
         Parameters = parameters;
 
@@ -101,8 +112,13 @@ public sealed class BotContext<TPrecision> : MarketParticipantContext<TPrecision
     public Dictionary<ExchangeSymbol, ISimAccount<TPrecision>>? SimulatedAccounts { get; private set; }
     object simulatedAccountsLock = new();
 
+    public IAccount2<TPrecision>? Account { get; set; }
+    public Func<ISimAccount<TPrecision>> SimAccountFactory { get; set; }
     public ISimAccount<TPrecision>? DefaultSimAccount => defaultSimAccount;
     private ISimAccount<TPrecision>? defaultSimAccount;
+
+    /// <inheritdoc />
+    IAccount2<TPrecision> IBotContext2<TPrecision>.DefaultAccount => DefaultSimAccount ?? throw new InvalidOperationException("DefaultSimAccount is not initialized");
     //public long GetNextTransactionId() => defaultSimAccount.GetNextTransactionId();
 
     #endregion

@@ -53,6 +53,46 @@ public class RealtimeBotConfiguration
     public Dictionary<string, object> Parameters { get; set; }
 
     /// <summary>
+    /// Gets or sets the account mode for the bot.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Determines how the bot's trading account operates:
+    /// </para>
+    /// <list type="bullet">
+    ///   <item><description><see cref="BotAccountMode.LiveSimulated"/> - Realistic balance tracking (default)</description></item>
+    ///   <item><description><see cref="BotAccountMode.LivePaper"/> - Infinite capital mode</description></item>
+    ///   <item><description><see cref="BotAccountMode.LiveReal"/> - Real exchange trading (future)</description></item>
+    /// </list>
+    /// <para>
+    /// If not specified, defaults to <see cref="BotAccountMode.LiveSimulated"/>.
+    /// </para>
+    /// </remarks>
+    [Id(4)]
+    public BotAccountMode? AccountMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the live account configuration options.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Provides detailed configuration for the trading account including:
+    /// </para>
+    /// <list type="bullet">
+    ///   <item><description>Initial balance</description></item>
+    ///   <item><description>Base currency</description></item>
+    ///   <item><description>Fill simulation mode (simple vs realistic)</description></item>
+    ///   <item><description>Slippage settings</description></item>
+    ///   <item><description>Leverage</description></item>
+    /// </list>
+    /// <para>
+    /// If not specified, default options based on <see cref="AccountMode"/> will be used.
+    /// </para>
+    /// </remarks>
+    [Id(5)]
+    public LiveAccountOptions? AccountOptions { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of RealtimeBotConfiguration with empty collections.
     /// </summary>
     public RealtimeBotConfiguration()

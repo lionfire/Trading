@@ -23,7 +23,7 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     #region BotContext
 
-    public BotContext<TPrecision>? Context
+    public IBotContext2<TPrecision>? Context
     {
         get => context;
         set
@@ -32,8 +32,8 @@ public abstract class BotBase2<TParameters, TPrecision>
             context = value;
         }
     }
-    private BotContext<TPrecision>? context = null!; // OnBar, OnTick are guaranteed to have PBacktests set
-    IBotContext IBot2.Context { get => Context ?? throw new InvalidOperationException(); set => Context = (BotContext<TPrecision>?)value; }
+    private IBotContext2<TPrecision>? context = null!; // OnBar, OnTick are guaranteed to have PBacktests set
+    IBotContext IBot2.Context { get => Context as IBotContext ?? throw new InvalidOperationException("Context is not IBotContext"); set => Context = (IBotContext2<TPrecision>?)value; }
 
     #endregion
 
@@ -43,7 +43,7 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     // Override the abstract property from base class
     public override IPMarketProcessor Parameters => parameters;
-    
+
     // Strongly-typed property for derived classes
     public TParameters TypedParameters
     {
@@ -55,12 +55,12 @@ public abstract class BotBase2<TParameters, TPrecision>
         }
     }
     private TParameters parameters = null!; // OnBar, OnTick are guaranteed to have PBacktests set
-    
+
     // Interface implementations
-    TParameters IBot2<TParameters, TPrecision>.Parameters 
-    { 
-        get => parameters; 
-        set 
+    TParameters IBot2<TParameters, TPrecision>.Parameters
+    {
+        get => parameters;
+        set
         {
             parameters = value;
             OnParametersSet();
@@ -87,7 +87,17 @@ public abstract class BotBase2<TParameters, TPrecision>
     //    }
     //}
 
-    public virtual void Init() { }
+    public virtual void Init()
+    {
+        InitAccount();
+        if (Account == null) throw new InvalidOperationException($"Failed to resolve {nameof(Account)}");
+    }
+
+    public virtual void InitAccount()
+    {
+        ArgumentNullException.ThrowIfNull(Context, nameof(Context));
+        Account = Context.DefaultAccount;
+    }
 
     #endregion
 
@@ -95,11 +105,21 @@ public abstract class BotBase2<TParameters, TPrecision>
 
     public IObservableCache<IPosition<TPrecision>, int> Positions => positions;
 
-
     protected SourceCache<IPosition<TPrecision>, int> positions = new(p => p.Id); // OPTIMIZE idea: if it has a dedicated DefaultAccount, use its position list directly instead of this field.
 
     //public IEnumerable<IPosition> CompatiblePositions => Positions.Items.Where(p => p.SymbolId.DefaultSymbol == DefaultSymbol);
     //public IEnumerable<IPosition> BotPositions => CompatiblePositions.Where(p => p.SymbolId.DefaultSymbol == DefaultSymbol && p.Label == );
+
+    #region State
+
+    public IAccount2<TPrecision> Account { get; private set; } = null!;
+    public IAccount2<double> DoubleAccount => Account as IAccount2<double> ?? (doubleAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<double, decimal>(DecimalAccount));
+    private IAccount2<double>? doubleAccountAdapter;
+    public IAccount2<decimal> DecimalAccount => Account as IAccount2<decimal> ?? (decimalAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<decimal, double>(DoubleAccount));
+    private IAccount2<decimal>? decimalAccountAdapter;
+
+    #endregion
+
 
     #endregion
 
