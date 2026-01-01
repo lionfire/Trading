@@ -17,6 +17,7 @@ public abstract class PSymbolBot2<TConcrete> : PBot2<TConcrete>, IPSymbolBot2
 }
 
 
+// Adds a bit of convenience for the common case of bots that primarily target one symbol on one exchange area.
 public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, TValue>
       where TParameters : PSymbolBot2<TParameters>
     where TValue : struct, INumber<TValue>
@@ -37,7 +38,6 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, TValue>
     public override void Init()
     {
         base.Init();
-        if (Context == null) throw new ArgumentNullException(nameof(Context));
 
         //if(PMultiSim is IPTimeFrameMarketProcessor tf)
         //{
@@ -48,10 +48,9 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, TValue>
         //}
 
 
-        //Account = Context.Sim.DefaultAccount as IAccount2<TValue> ?? throw new NotImplementedException();
 
         if (ExchangeSymbol == null) throw new InvalidOperationException($"Failed to resolve {nameof(ExchangeSymbol)}");
-        if (Account == null) throw new InvalidOperationException($"Failed to resolve {nameof(Account)}");
+  
     }
 
     protected override void OnParametersSet()
@@ -61,14 +60,4 @@ public class SymbolBot2<TParameters, TValue> : Bot2<TParameters, TValue>
 
     #endregion
 
-    #region State
-
-    //public IAccount2<TValue> Account { get; set; } = default!;
-    public IAccount2<TValue> Account => Context.DefaultSimAccount!;
-    public IAccount2<double> DoubleAccount => Account as IAccount2<double> ?? (doubleAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<double, decimal>(DecimalAccount));
-    private IAccount2<double>? doubleAccountAdapter;
-    public IAccount2<decimal> DecimalAccount => Account as IAccount2<decimal> ?? (decimalAccountAdapter ??= Account == null ? throw new NotSupportedException() : new AccountPrecisionAdapter<decimal, double>(DoubleAccount));
-    private IAccount2<decimal>? decimalAccountAdapter;
-
-    #endregion
 }

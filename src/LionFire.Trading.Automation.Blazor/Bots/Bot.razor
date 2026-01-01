@@ -1,33 +1,197 @@
 @page "/bots/{BotId}"
 @using LionFire.Mvvm
 @using LionFire.Trading.Automation
+@using LionFire.Trading.Grains.Bots
 @using LionFire.Reactive.Persistence
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Logging
-@using MudBlazor.Components
-@using ReactiveUI
+@using Orleans
+
+@implements IDisposable
 
 <div class="pa-4">
+    <MudBreadcrumbs Items="@_breadcrumbs" Class="mb-4" />
 
-    <h3>Bot @BotId</h3>
+    <MudGrid>
+        @* Left Column: Bot Info & Controls *@
+        <MudItem xs="12" md="4">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h5">@(VM?.Value?.Name ?? BotId)</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        @if (HarnessStatus != null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(HarnessStatus.State)"
+                                     Icon="@GetStatusIcon(HarnessStatus.State)">
+                                @HarnessStatus.State
+                            </MudChip>
+                        }
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (VM?.Value != null)
+                    {
+                        <MudTextField @bind-Value="VM.Value.Name" Label="Name" Class="mb-3" />
 
-    @if (VM?.Value != null)
-    {
-        <MudTextField @bind-Value="VM.Value.Name" Label="Name" />
-        <MudTextField @bind-Value="VM.Value.Comments" Label="Comments" />
-        <MudTextField @bind-Value="VM.Value.Description" Label="Description" />
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudTextField Value="@VM.Value.Symbol" Label="Symbol" ReadOnly Class="mb-2" />
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudTextField Value="@VM.Value.TimeFrame?.ToShortString()" Label="TimeFrame" ReadOnly Class="mb-2" />
+                            </MudItem>
+                        </MudGrid>
 
-        <MudButton OnClick="Save" Color="Color.Primary">Save</MudButton>
-    }
-    else if (VM != null)
-    {
-        <MudProgressCircular Indeterminate="true" />
-        <p>Loading bot...</p>
-    }
-    else
-    {
-        <MudAlert Severity="Severity.Error">WorkspaceServices not available</MudAlert>
-    }
+                        <MudTextField Value="@($"{VM.Value.Exchange}.{VM.Value.ExchangeArea}")" Label="Exchange" ReadOnly Class="mb-3" />
+
+                        <MudDivider Class="my-3" />
+
+                        <MudSelect T="LogLevel?" Label="Log Level" @bind-Value="_selectedLogLevel"
+                                   Class="mb-3" Margin="Margin.Dense">
+                            <MudSelectItem T="LogLevel?" Value="@((LogLevel?)null)">Default (System)</MudSelectItem>
+                            @foreach (LogLevel level in Enum.GetValues<LogLevel>())
+                            {
+                                <MudSelectItem T="LogLevel?" Value="@((LogLevel?)level)">@level</MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        <MudTextField @bind-Value="VM.Value.Comments" Label="Comments" Lines="3" Class="mb-2" />
+                    }
+                    else if (VM != null)
+                    {
+                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" />
+                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="60%" Class="mt-2" />
+                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="40%" Class="mt-2" />
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Error">Bot services not available</MudAlert>
+                    }
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Save"
+                               Disabled="@(VM?.Value == null)">
+                        Save
+                    </MudButton>
+                    @if (HarnessStatus?.State == RealtimeBotState.Stopped || HarnessStatus == null)
+                    {
+                        <MudButton Color="Color.Success" Variant="Variant.Outlined" OnClick="StartBot"
+                                   Disabled="@(VM?.Value == null || _operationInProgress)"
+                                   StartIcon="@Icons.Material.Filled.PlayArrow">
+                            Start
+                        </MudButton>
+                    }
+                    else if (HarnessStatus?.State == RealtimeBotState.Running ||
+                             HarnessStatus?.State == RealtimeBotState.CatchingUp ||
+                             HarnessStatus?.State == RealtimeBotState.Starting)
+                    {
+                        <MudButton Color="Color.Error" Variant="Variant.Outlined" OnClick="StopBot"
+                                   Disabled="@_operationInProgress"
+                                   StartIcon="@Icons.Material.Filled.Stop">
+                            Stop
+                        </MudButton>
+                    }
+                    else if (HarnessStatus?.State == RealtimeBotState.Faulted)
+                    {
+                        <MudButton Color="Color.Warning" Variant="Variant.Outlined" OnClick="StopBot"
+                                   Disabled="@_operationInProgress"
+                                   StartIcon="@Icons.Material.Filled.Refresh">
+                            Reset
+                        </MudButton>
+                    }
+                </MudCardActions>
+            </MudCard>
+
+            @* Status Details Card *@
+            @if (HarnessStatus != null && HarnessStatus.State != RealtimeBotState.Stopped)
+            {
+                <MudCard Class="mt-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Status Details</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudSimpleTable Dense Hover>
+                            <tbody>
+                                <tr>
+                                    <td><strong>State</strong></td>
+                                    <td>@HarnessStatus.State</td>
+                                </tr>
+                                @if (HarnessStatus.LastBarTime.HasValue)
+                                {
+                                    <tr>
+                                        <td><strong>Last Bar</strong></td>
+                                        <td>@HarnessStatus.LastBarTime.Value.ToString("g")</td>
+                                    </tr>
+                                }
+                                @if (HarnessStatus.State == RealtimeBotState.CatchingUp)
+                                {
+                                    <tr>
+                                        <td><strong>Bars Caught Up</strong></td>
+                                        <td>@HarnessStatus.BarsCaughtUp</td>
+                                    </tr>
+                                }
+                                @if (!string.IsNullOrEmpty(HarnessStatus.ErrorMessage))
+                                {
+                                    <tr>
+                                        <td><strong>Error</strong></td>
+                                        <td style="color: var(--mud-palette-error);">@HarnessStatus.ErrorMessage</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    </MudCardContent>
+                </MudCard>
+            }
+
+            @* Session History Card *@
+            <MudCard Class="mt-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Session History</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                                       OnClick="RefreshSessions" Title="Refresh" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent Style="max-height: 250px; overflow-y: auto;">
+                    @if (Sessions != null && Sessions.Any())
+                    {
+                        @foreach (var session in Sessions.OrderByDescending(s => s.StartTime).Take(10))
+                        {
+                            <MudPaper Class="pa-2 mb-2" Elevation="0" Style="background-color: var(--mud-palette-background-grey);">
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.caption">@session.StartTime.ToLocalTime().ToString("g")</MudText>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(session.FinalState)">
+                                        @session.FinalState
+                                    </MudChip>
+                                </div>
+                                <MudText Typo="Typo.body2">
+                                    Duration: @FormatDuration((session.EndTime ?? DateTime.UtcNow) - session.StartTime)
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Logs: @session.TotalLogCount | Errors: @session.ErrorCount
+                                </MudText>
+                            </MudPaper>
+                        }
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                            No sessions recorded yet
+                        </MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        @* Right Column: Live Logs *@
+        <MudItem xs="12" md="8">
+            <BotLogViewer BotId="@BotId" />
+        </MudItem>
+    </MudGrid>
 </div>
-
-

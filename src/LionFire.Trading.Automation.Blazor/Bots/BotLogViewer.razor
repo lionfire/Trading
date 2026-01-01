@@ -1,0 +1,344 @@
+@using LionFire.Trading.Grains.Bots
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@using Orleans
+
+@implements IDisposable
+
+<MudCard>
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Terminal" Class="mr-2" />
+                Live Logs
+                @if (_observerSubscribed)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Success" Size="Size.Small" Class="ml-2" Title="Connected" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Circle" Color="Color.Warning" Size="Size.Small" Class="ml-2" Title="Connecting..." />
+                }
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudToggleIconButton @bind-Toggled="AutoScroll"
+                                 Icon="@Icons.Material.Filled.VerticalAlignBottom"
+                                 ToggledIcon="@Icons.Material.Filled.VerticalAlignTop"
+                                 Title="Auto-scroll" ToggledTitle="Manual scroll" />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="RefreshLogs" Title="Refresh" />
+            <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="ClearLogs" Title="Clear" />
+            <MudSelect T="LogLevel" @bind-Value="FilterLevel" Dense Style="width: 120px;" Margin="Margin.Dense">
+                @foreach (LogLevel level in Enum.GetValues<LogLevel>())
+                {
+                    <MudSelectItem Value="@level">@level</MudSelectItem>
+                }
+            </MudSelect>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent Style="padding: 0;">
+        <div style="height: 500px; overflow-y: auto; font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace; font-size: 12px; background-color: #1e1e1e; color: #d4d4d4; padding: 8px;">
+            @if (FilteredLogs.Any())
+            {
+                @foreach (var entry in FilteredLogs)
+                {
+                    <div style="margin-bottom: 2px; padding: 2px 4px; border-radius: 2px; @GetLogEntryStyle(entry.Level)">
+                        <span style="color: #888;">[@entry.Timestamp.ToString("HH:mm:ss.fff")]</span>
+                        <span style="@GetLevelColor(entry.Level)">[@GetLevelAbbrev(entry.Level)]</span>
+                        <span>@entry.Message</span>
+                        @if (!string.IsNullOrEmpty(entry.ExceptionMessage))
+                        {
+                            <div style="color: #f44336; margin-left: 20px; white-space: pre-wrap;">
+                                @entry.ExceptionType: @entry.ExceptionMessage
+                            </div>
+                        }
+                    </div>
+                }
+            }
+            else
+            {
+                <div style="color: #888; text-align: center; padding: 40px;">
+                    @if (IsLoading)
+                    {
+                        <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                        <div class="mt-2">Loading logs...</div>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Style="font-size: 48px; opacity: 0.5;" />
+                        <div class="mt-2">No logs yet. Logs will appear when the bot harness is running.</div>
+                    }
+                </div>
+            }
+        </div>
+    </MudCardContent>
+    <MudCardActions>
+        <MudText Typo="Typo.caption" Color="Color.Secondary">
+            Showing @FilteredLogs.Count() of @Logs.Count logs
+            @if (_lastLogTime != DateTime.MinValue)
+            {
+                <text> | Last update: @_lastLogTime.ToString("HH:mm:ss")</text>
+            }
+        </MudText>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter]
+    public string? BotId { get; set; }
+
+    [Inject]
+    private IServiceProvider ServiceProvider { get; set; } = null!;
+
+    [Inject]
+    private ILogger<BotLogViewer> Logger { get; set; } = null!;
+
+    private IClusterClient? ClusterClient { get; set; }
+    private List<BotLogEntry> Logs { get; set; } = new();
+    private LogLevel FilterLevel { get; set; } = LogLevel.Information;
+    private bool AutoScroll { get; set; } = true;
+    private bool IsLoading { get; set; } = true;
+    private DateTime _lastLogTime = DateTime.MinValue;
+    private bool _observerSubscribed;
+
+    // Observer implementation
+    private BotLogObserverImpl? _observer;
+    private IBotLogObserver? _observerRef;
+
+    // Fallback timer for reconnection attempts
+    private System.Timers.Timer? _reconnectTimer;
+
+    private IEnumerable<BotLogEntry> FilteredLogs => Logs
+        .Where(l => l.Level >= FilterLevel)
+        .TakeLast(500);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !string.IsNullOrEmpty(BotId))
+        {
+            ClusterClient = ServiceProvider.GetService<IClusterClient>();
+            if (ClusterClient != null)
+            {
+                await LoadInitialLogs();
+                await SubscribeToLogObserver();
+                StartReconnectTimer();
+            }
+            else
+            {
+                Logger.LogWarning("[BotLogViewer] IClusterClient not available - log viewing disabled");
+                IsLoading = false;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+    }
+
+    private async Task LoadInitialLogs()
+    {
+        if (ClusterClient == null || string.IsNullOrEmpty(BotId)) return;
+
+        try
+        {
+            IsLoading = true;
+            var grain = ClusterClient.GetGrain<IRealtimeBotHarnessG>(BotId);
+            var logs = await grain.GetRecentLogs(500, LogLevel.Trace);
+            Logs = logs;
+            if (logs.Any())
+            {
+                _lastLogTime = logs.Max(l => l.Timestamp);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[BotLogViewer] Failed to load initial logs for {BotId}", BotId);
+        }
+        finally
+        {
+            IsLoading = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task SubscribeToLogObserver()
+    {
+        if (ClusterClient == null || string.IsNullOrEmpty(BotId)) return;
+
+        try
+        {
+            // Create the observer implementation
+            _observer = new BotLogObserverImpl(
+                OnLogsReceived,
+                OnStateChanged);
+
+            // Create the grain observer reference
+            _observerRef = ClusterClient.CreateObjectReference<IBotLogObserver>(_observer);
+
+            // Subscribe to the grain
+            var grain = ClusterClient.GetGrain<IRealtimeBotHarnessG>(BotId);
+            await grain.SubscribeToLogs(_observerRef);
+
+            _observerSubscribed = true;
+            Logger.LogDebug("[BotLogViewer] Subscribed to log observer for {BotId}", BotId);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "[BotLogViewer] Failed to subscribe to log observer for {BotId}", BotId);
+            _observerSubscribed = false;
+        }
+    }
+
+    private async Task UnsubscribeFromLogObserver()
+    {
+        if (ClusterClient == null || string.IsNullOrEmpty(BotId) || _observerRef == null) return;
+
+        try
+        {
+            var grain = ClusterClient.GetGrain<IRealtimeBotHarnessG>(BotId);
+            await grain.UnsubscribeFromLogs(_observerRef);
+            _observerSubscribed = false;
+            Logger.LogDebug("[BotLogViewer] Unsubscribed from log observer for {BotId}", BotId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "[BotLogViewer] Failed to unsubscribe from log observer for {BotId}", BotId);
+        }
+    }
+
+    private void StartReconnectTimer()
+    {
+        // Timer to periodically check connection and re-subscribe if needed
+        _reconnectTimer = new System.Timers.Timer(10000); // Check every 10 seconds
+        _reconnectTimer.Elapsed += async (s, e) =>
+        {
+            if (!_observerSubscribed)
+            {
+                Logger.LogDebug("[BotLogViewer] Attempting to reconnect observer for {BotId}", BotId);
+                await SubscribeToLogObserver();
+            }
+        };
+        _reconnectTimer.Start();
+    }
+
+    private async void OnLogsReceived(List<BotLogEntry> entries)
+    {
+        if (entries == null || entries.Count == 0) return;
+
+        try
+        {
+            await InvokeAsync(() =>
+            {
+                Logs.AddRange(entries);
+                _lastLogTime = entries.Max(l => l.Timestamp);
+
+                // Keep buffer limited
+                while (Logs.Count > 2000)
+                {
+                    Logs.RemoveAt(0);
+                }
+
+                StateHasChanged();
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "[BotLogViewer] Error processing received logs");
+        }
+    }
+
+    private async void OnStateChanged(RealtimeBotState newState)
+    {
+        try
+        {
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "[BotLogViewer] Error handling state change");
+        }
+    }
+
+    private async Task RefreshLogs()
+    {
+        _lastLogTime = DateTime.MinValue;
+        Logs.Clear();
+        await LoadInitialLogs();
+    }
+
+    private void ClearLogs()
+    {
+        Logs.Clear();
+        StateHasChanged();
+    }
+
+    private string GetLevelAbbrev(LogLevel level) => level switch
+    {
+        LogLevel.Trace => "TRC",
+        LogLevel.Debug => "DBG",
+        LogLevel.Information => "INF",
+        LogLevel.Warning => "WRN",
+        LogLevel.Error => "ERR",
+        LogLevel.Critical => "CRT",
+        _ => "???"
+    };
+
+    private string GetLevelColor(LogLevel level) => level switch
+    {
+        LogLevel.Trace => "color: #666;",
+        LogLevel.Debug => "color: #888;",
+        LogLevel.Information => "color: #4fc3f7;",
+        LogLevel.Warning => "color: #ffb74d;",
+        LogLevel.Error => "color: #f44336;",
+        LogLevel.Critical => "color: #ff1744; font-weight: bold;",
+        _ => ""
+    };
+
+    private string GetLogEntryStyle(LogLevel level) => level switch
+    {
+        LogLevel.Error or LogLevel.Critical => "background-color: rgba(244, 67, 54, 0.15);",
+        LogLevel.Warning => "background-color: rgba(255, 183, 77, 0.1);",
+        _ => ""
+    };
+
+    public void Dispose()
+    {
+        _reconnectTimer?.Stop();
+        _reconnectTimer?.Dispose();
+
+        // Fire-and-forget unsubscribe (best effort)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await UnsubscribeFromLogObserver();
+            }
+            catch { /* Ignore errors during disposal */ }
+        });
+    }
+
+    /// <summary>
+    /// Observer implementation for receiving log updates from the grain.
+    /// </summary>
+    private class BotLogObserverImpl : IBotLogObserver
+    {
+        private readonly Action<List<BotLogEntry>> _onLogsReceived;
+        private readonly Action<RealtimeBotState> _onStateChanged;
+
+        public BotLogObserverImpl(
+            Action<List<BotLogEntry>> onLogsReceived,
+            Action<RealtimeBotState> onStateChanged)
+        {
+            _onLogsReceived = onLogsReceived;
+            _onStateChanged = onStateChanged;
+        }
+
+        public void OnLogsReceived(List<BotLogEntry> entries)
+        {
+            _onLogsReceived(entries);
+        }
+
+        public void OnStateChanged(RealtimeBotState newState)
+        {
+            _onStateChanged(newState);
+        }
+    }
+}

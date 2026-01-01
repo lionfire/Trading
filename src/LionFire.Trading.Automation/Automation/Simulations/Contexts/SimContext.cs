@@ -27,7 +27,7 @@ public interface ISimContext
 /// </summary>
 /// <typeparam name = "TPrecision" ></ typeparam >
 //[FriendClass(typeof(BatchHarness<>))]  // TODO - get this working again. Not sure why it broke
-public class SimContext<TPrecision> : ISimContext
+public class SimContext<TPrecision> : ISimContext, IMarketContext<TPrecision>
 where TPrecision : struct, INumber<TPrecision>
 {
     #region Id
@@ -114,6 +114,16 @@ where TPrecision : struct, INumber<TPrecision>
     #region Simulation Time
 
     public DateTimeOffset SimulatedCurrentDate { get; internal set; }
+
+    #region IMarketContext
+
+    /// <inheritdoc />
+    public DateTimeOffset CurrentTime => SimulatedCurrentDate;
+
+    /// <inheritdoc />
+    public bool IsLive => false;
+
+    #endregion
 
     #region (Derived)
 

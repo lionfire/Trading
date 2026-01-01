@@ -3,6 +3,7 @@ using LionFire.IO.Reactive.Hjson;
 using LionFire.Ontology;
 using LionFire.Trading.Automation;
 using LionFire.Validation;
+using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Nito.Disposables;
 using ReactiveUI;
@@ -59,6 +60,14 @@ public partial class BotEntity : ReactiveObject, IValidatable
     /// </summary>
     [Reactive]
     private Type? liveNumericTypeOverride;
+
+    /// <summary>
+    /// Minimum log level to capture for this bot's harness.
+    /// Null means use the system default log level.
+    /// Logs below this level will be filtered out.
+    /// </summary>
+    [Reactive]
+    private LogLevel? logLevel;
 
     [Reactive]
     private string? symbol;
