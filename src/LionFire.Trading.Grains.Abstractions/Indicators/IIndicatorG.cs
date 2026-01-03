@@ -61,12 +61,6 @@ public interface IIndicatorG : IGrainWithStringKey
     /// </summary>
     ValueTask<IndicatorMetadata> GetMetadata();
 
-    /// <summary>
-    /// Ensures the indicator is actively calculating values.
-    /// Call this to start receiving live data if not already subscribed.
-    /// </summary>
-    Task ActivateAsync();
-
     #region Observer Pattern
 
     /// <summary>

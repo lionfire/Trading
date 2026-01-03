@@ -136,18 +136,18 @@ public class SMA_FP<TPrice, TOutput> : SingleInputIndicatorBase<SMA_FP<TPrice, T
             if (IsReady)
             {
                 currentValue = sum / TOutput.CreateChecked(Period);
-                
+
                 if (subject != null)
                 {
                     subject.OnNext(new List<TOutput> { currentValue });
                 }
-                
+
                 OnNext_PopulateOutput(currentValue, output, ref outputIndex, ref outputSkip);
             }
             else
             {
-                // Output default value while warming up
-                OnNext_PopulateOutput(default(TOutput)!, output, ref outputIndex, ref outputSkip);
+                // Output NaN while warming up (so consumers can filter invalid values)
+                OnNext_PopulateOutput(TOutput.CreateChecked(double.NaN), output, ref outputIndex, ref outputSkip);
             }
         }
     }

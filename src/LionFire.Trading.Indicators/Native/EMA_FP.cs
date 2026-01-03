@@ -171,13 +171,13 @@ public class EMA_FP<TPrice, TOutput> : SingleInputIndicatorBase<EMA_FP<TPrice, T
                     {
                         subject.OnNext(new List<TOutput> { emaValue });
                     }
-                    
+
                     OnNext_PopulateOutput(emaValue, output, ref outputIndex, ref outputSkip);
                 }
                 else
                 {
-                    // Output default value while warming up
-                    OnNext_PopulateOutput(default(TOutput)!, output, ref outputIndex, ref outputSkip);
+                    // Output NaN while warming up (so consumers can filter invalid values)
+                    OnNext_PopulateOutput(TOutput.CreateChecked(double.NaN), output, ref outputIndex, ref outputSkip);
                 }
             }
             else

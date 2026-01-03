@@ -29,10 +29,11 @@ public abstract class RSIBase<TInput, TOutput>
     public abstract TOutput CurrentValue { get; }
     
     public virtual bool IsOverbought => IsReady && CurrentValue > OverboughtLevel;
-    
+
     public virtual bool IsOversold => IsReady && CurrentValue < OversoldLevel;
 
-    public int MaxLookback => Parameters.Period;
+    // RSI needs Period + 1 bars because IsReady checks dataPointsReceived > Period
+    public int MaxLookback => Parameters.Period + 1;
     
     public abstract bool IsReady { get; }
     
