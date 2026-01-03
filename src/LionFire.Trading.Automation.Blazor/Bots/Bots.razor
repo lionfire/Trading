@@ -92,11 +92,9 @@
 						}
 						else
 						{
-							<MudLink Href="@($"/bots/{context.Item?.Key}")">
-								<MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Stop">
-									Stopped
-								</MudChip>
-							</MudLink>
+							<MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Stop">
+								Stopped
+							</MudChip>
 						}
 					</CellTemplate>
 				</TemplateColumn>
@@ -151,7 +149,16 @@
 					<CellTemplate>@context.Item?.Value?.BotTypeName</CellTemplate>
 				</TemplateColumn>
 				<TemplateColumn T="BotVM" Title="Name">
-					<CellTemplate>@context.Item?.Value?.Name</CellTemplate>
+					<CellTemplate>
+						@if (context.Item?.Key != null)
+						{
+							<MudLink Href="@($"/bots/{context.Item.Key}")">@(context.Item.Value?.Name ?? context.Item.Key)</MudLink>
+						}
+						else
+						{
+							@context.Item?.Value?.Name
+						}
+					</CellTemplate>
 				</TemplateColumn>
 				<PropertyColumn Property="x => x.AD" Title="AD" T="BotVM" TProperty="double?" />
 				<TemplateColumn T="BotVM" Title="Comments">
