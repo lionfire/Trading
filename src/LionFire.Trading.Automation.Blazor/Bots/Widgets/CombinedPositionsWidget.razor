@@ -1,0 +1,309 @@
+@using LionFire.Trading.Grains.Bots
+
+<div class="widget-container combined-positions">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Positions & Orders</MudText>
+        <div class="d-flex align-center gap-1">
+            @if (OpenPositions?.Count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success">@OpenPositions.Count pos</MudChip>
+            }
+            @if (OpenOrders?.Count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">@OpenOrders.Count ord</MudChip>
+            }
+        </div>
+    </div>
+    <div class="widget-content combined-content">
+        @* Open Positions Section *@
+        <div class="section positions-section">
+            <div class="section-header">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">OPEN POSITIONS</MudText>
+            </div>
+            @if (OpenPositions != null && OpenPositions.Count > 0)
+            {
+                <MudSimpleTable Dense="true" Hover="true" Class="compact-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Size</th>
+                            <th>Entry</th>
+                            <th>P&L</th>
+                            <th>SL</th>
+                            <th>TP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pos in OpenPositions)
+                        {
+                            <tr>
+                                <td>@pos.Symbol</td>
+                                <td>
+                                    <MudText Color="@(pos.Direction == "Long" ? Color.Success : Color.Error)" Typo="Typo.body2">
+                                        @pos.Direction
+                                    </MudText>
+                                </td>
+                                <td>@pos.Quantity.ToString("N4")</td>
+                                <td>@pos.EntryPrice.ToString("N2")</td>
+                                <td>
+                                    <MudText Color="@(pos.NetProfit >= 0 ? Color.Success : Color.Error)" Typo="Typo.body2">
+                                        @pos.NetProfit.ToString("N2")
+                                    </MudText>
+                                </td>
+                                <td>
+                                    @if (pos.StopLoss.HasValue)
+                                    {
+                                        <MudText Color="Color.Error" Typo="Typo.body2">@pos.StopLoss.Value.ToString("N2")</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Secondary" Typo="Typo.body2">-</MudText>
+                                    }
+                                </td>
+                                <td>
+                                    @if (pos.TakeProfit.HasValue)
+                                    {
+                                        <MudText Color="Color.Success" Typo="Typo.body2">@pos.TakeProfit.Value.ToString("N2")</MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Color="Color.Secondary" Typo="Typo.body2">-</MudText>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+            else
+            {
+                <div class="empty-banner">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">No Positions</MudText>
+                </div>
+            }
+        </div>
+
+        <MudDivider Class="my-1" />
+
+        @* Pending Orders Section *@
+        <div class="section orders-section">
+            <div class="section-header">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">PENDING ORDERS</MudText>
+            </div>
+            @if (OpenOrders != null && OpenOrders.Count > 0)
+            {
+                <MudSimpleTable Dense="true" Hover="true" Class="compact-table">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Type</th>
+                            <th>Side</th>
+                            <th>Qty</th>
+                            <th>Trigger</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var order in OpenOrders)
+                        {
+                            <tr>
+                                <td>@order.Symbol</td>
+                                <td>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetOrderTypeColor(order.OrderType)">
+                                        @order.OrderType
+                                    </MudChip>
+                                </td>
+                                <td>
+                                    <MudText Color="@(order.Side == "Buy" ? Color.Success : Color.Error)" Typo="Typo.body2">
+                                        @order.Side
+                                    </MudText>
+                                </td>
+                                <td>@order.Quantity.ToString("N4")</td>
+                                <td>@order.TriggerPrice.ToString("N2")</td>
+                                <td>@order.Status</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+            else
+            {
+                <div class="empty-banner">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">No pending orders</MudText>
+                </div>
+            }
+        </div>
+
+        <MudDivider Class="my-1" />
+
+        @* Trade History Section *@
+        <div class="section history-section @(_isHistoryExpanded ? "expanded" : "")">
+            <div class="section-header d-flex justify-space-between align-center">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">TRADE HISTORY</MudText>
+                @if (ClosedPositions != null && ClosedPositions.Count > DefaultHistoryCount)
+                {
+                    <MudIconButton Icon="@(_isHistoryExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                   Size="Size.Small" OnClick="ToggleHistoryExpanded"
+                                   Title="@(_isHistoryExpanded ? "Show less" : "Show more")" />
+                }
+            </div>
+            @if (ClosedPositions != null && ClosedPositions.Count > 0)
+            {
+                var displayPositions = _isHistoryExpanded
+                    ? ClosedPositions.Skip(_historyPage * ExpandedHistoryCount).Take(ExpandedHistoryCount).ToList()
+                    : ClosedPositions.Take(DefaultHistoryCount).ToList();
+
+                <MudSimpleTable Dense="true" Hover="true" Class="compact-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Symbol</th>
+                            <th>Side</th>
+                            <th>Entry</th>
+                            <th>Exit</th>
+                            <th>P&L</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pos in displayPositions)
+                        {
+                            <tr>
+                                <td><MudText Typo="Typo.caption">@pos.ExitTime.ToString("MM/dd HH:mm")</MudText></td>
+                                <td>@pos.Symbol</td>
+                                <td>
+                                    <MudText Color="@(pos.Direction == "Long" ? Color.Success : Color.Error)" Typo="Typo.body2">
+                                        @pos.Direction
+                                    </MudText>
+                                </td>
+                                <td>@pos.EntryPrice.ToString("N2")</td>
+                                <td>@pos.ExitPrice.ToString("N2")</td>
+                                <td>
+                                    <MudText Color="@(pos.RealizedPnL >= 0 ? Color.Success : Color.Error)" Typo="Typo.body2">
+                                        @pos.RealizedPnL.ToString("N2")
+                                    </MudText>
+                                </td>
+                                <td>
+                                    <MudChip T="string" Size="Size.Small" Color="@GetCloseReasonColor(pos.CloseReason)">
+                                        @pos.CloseReason
+                                    </MudChip>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+
+                @if (_isHistoryExpanded && ClosedPositions.Count > ExpandedHistoryCount)
+                {
+                    <div class="d-flex justify-center align-center gap-2 mt-2">
+                        <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft" Size="Size.Small"
+                                       Disabled="@(_historyPage == 0)" OnClick="PreviousHistoryPage" />
+                        <MudText Typo="Typo.caption">
+                            @(_historyPage + 1) / @TotalHistoryPages
+                        </MudText>
+                        <MudIconButton Icon="@Icons.Material.Filled.ChevronRight" Size="Size.Small"
+                                       Disabled="@(_historyPage >= TotalHistoryPages - 1)" OnClick="NextHistoryPage" />
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-banner">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">No trade history</MudText>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .combined-positions .combined-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow-y: auto;
+    }
+
+    .combined-positions .section {
+        flex-shrink: 0;
+    }
+
+    .combined-positions .section-header {
+        padding: 4px 8px;
+        background: var(--mud-palette-background-grey);
+        border-radius: 2px;
+    }
+
+    .combined-positions .empty-banner {
+        padding: 8px 12px;
+        text-align: center;
+        background: var(--mud-palette-background-grey);
+        border-radius: 4px;
+        opacity: 0.7;
+    }
+
+    .combined-positions .compact-table {
+        font-size: 0.8rem;
+    }
+
+    .combined-positions .compact-table th,
+    .combined-positions .compact-table td {
+        padding: 4px 8px;
+    }
+
+    .combined-positions .history-section.expanded {
+        flex: 1;
+        min-height: 150px;
+        overflow-y: auto;
+    }
+</style>
+
+@code {
+    private const int DefaultHistoryCount = 5;
+    private const int ExpandedHistoryCount = 30;
+
+    [Parameter] public List<BotPositionStatus>? OpenPositions { get; set; }
+    [Parameter] public List<BotOrderStatus>? OpenOrders { get; set; }
+    [Parameter] public List<BotClosedPositionStatus>? ClosedPositions { get; set; }
+
+    private bool _isHistoryExpanded = false;
+    private int _historyPage = 0;
+
+    private int TotalHistoryPages => ClosedPositions != null
+        ? (int)Math.Ceiling((double)ClosedPositions.Count / ExpandedHistoryCount)
+        : 0;
+
+    private void ToggleHistoryExpanded()
+    {
+        _isHistoryExpanded = !_isHistoryExpanded;
+        _historyPage = 0;
+    }
+
+    private void PreviousHistoryPage()
+    {
+        if (_historyPage > 0) _historyPage--;
+    }
+
+    private void NextHistoryPage()
+    {
+        if (_historyPage < TotalHistoryPages - 1) _historyPage++;
+    }
+
+    private Color GetOrderTypeColor(string orderType) => orderType switch
+    {
+        "StopLoss" => Color.Error,
+        "TakeProfit" => Color.Success,
+        "Stop" => Color.Warning,
+        "Limit" => Color.Info,
+        _ => Color.Default
+    };
+
+    private Color GetCloseReasonColor(string reason) => reason switch
+    {
+        "StopLoss" => Color.Error,
+        "TakeProfit" => Color.Success,
+        "Liquidation" => Color.Error,
+        _ => Color.Default
+    };
+}

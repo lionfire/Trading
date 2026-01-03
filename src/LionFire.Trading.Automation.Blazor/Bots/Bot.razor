@@ -14,8 +14,25 @@
 @implements IDisposable
 
 <div class="bot-dashboard">
-    <div class="bot-header pa-2">
+    <div class="bot-header pa-2 d-flex justify-space-between align-center">
         <MudBreadcrumbs Items="@_breadcrumbs" />
+        <div class="d-flex align-center gap-2">
+            @* Settings Menu *@
+            <MudMenu Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Dense="true"
+                     AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                <MudMenuItem>
+                    <div class="d-flex align-center justify-space-between" style="min-width: 200px;">
+                        <MudText Typo="Typo.body2">Positions Display</MudText>
+                        <MudSelect T="PositionsDisplayMode" @bind-Value="_positionsDisplayMode"
+                                   Dense="true" Margin="Margin.Dense" Style="max-width: 120px;">
+                            <MudSelectItem Value="PositionsDisplayMode.Combined">Combined</MudSelectItem>
+                            <MudSelectItem Value="PositionsDisplayMode.Separate">Separate</MudSelectItem>
+                            <MudSelectItem Value="PositionsDisplayMode.Both">Both</MudSelectItem>
+                        </MudSelect>
+                    </div>
+                </MudMenuItem>
+            </MudMenu>
+        </div>
     </div>
 
     <div class="bot-grid-container">
@@ -47,20 +64,36 @@
                               OnSave="Save" />
             </BlazorGridStackWidget>
 
-            @* Open Positions Widget *@
-            <BlazorGridStackWidget WidgetOptions="@(new() { X = 0, Y = 4, W = 6, H = 3, Id = "positions", MinW = 3, MinH = 2 })">
-                <OpenPositionsWidget Positions="@OpenPositions" />
-            </BlazorGridStackWidget>
+            @* Combined Positions Widget - shown when Combined or Both *@
+            @if (_positionsDisplayMode == PositionsDisplayMode.Combined || _positionsDisplayMode == PositionsDisplayMode.Both)
+            {
+                <BlazorGridStackWidget WidgetOptions="@(new() { X = 0, Y = 4, W = 6, H = 6, Id = "combined-positions", MinW = 4, MinH = 3 })">
+                    <CombinedPositionsWidget OpenPositions="@OpenPositions"
+                                            OpenOrders="@OpenOrders"
+                                            ClosedPositions="@ClosedPositions" />
+                </BlazorGridStackWidget>
+            }
 
-            @* Open Orders Widget *@
-            <BlazorGridStackWidget WidgetOptions="@(new() { X = 6, Y = 4, W = 6, H = 3, Id = "orders", MinW = 3, MinH = 2 })">
-                <OrdersWidget Orders="@OpenOrders" />
-            </BlazorGridStackWidget>
+            @* Separate Widgets - shown when Separate or Both *@
+            @if (_positionsDisplayMode == PositionsDisplayMode.Separate || _positionsDisplayMode == PositionsDisplayMode.Both)
+            {
+                var xOffset = _positionsDisplayMode == PositionsDisplayMode.Both ? 6 : 0;
 
-            @* Trade History Widget *@
-            <BlazorGridStackWidget WidgetOptions="@(new() { X = 0, Y = 7, W = 6, H = 3, Id = "trades", MinW = 3, MinH = 2 })">
-                <ClosedPositionsWidget Positions="@ClosedPositions" />
-            </BlazorGridStackWidget>
+                @* Open Positions Widget *@
+                <BlazorGridStackWidget WidgetOptions="@(new() { X = xOffset, Y = 4, W = 6, H = 3, Id = "positions", MinW = 3, MinH = 2 })">
+                    <OpenPositionsWidget Positions="@OpenPositions" />
+                </BlazorGridStackWidget>
+
+                @* Open Orders Widget *@
+                <BlazorGridStackWidget WidgetOptions="@(new() { X = xOffset + 6, Y = 4, W = 6, H = 3, Id = "orders", MinW = 3, MinH = 2 })">
+                    <OrdersWidget Orders="@OpenOrders" />
+                </BlazorGridStackWidget>
+
+                @* Trade History Widget *@
+                <BlazorGridStackWidget WidgetOptions="@(new() { X = xOffset, Y = 7, W = 6, H = 3, Id = "trades", MinW = 3, MinH = 2 })">
+                    <ClosedPositionsWidget Positions="@ClosedPositions" />
+                </BlazorGridStackWidget>
+            }
 
             @* Logs Widget *@
             <BlazorGridStackWidget WidgetOptions="@(new() { X = 6, Y = 7, W = 6, H = 3, Id = "logs", MinW = 3, MinH = 2 })">

@@ -13,6 +13,27 @@ using ReactiveUI;
 
 namespace LionFire.Trading.Automation.Blazor.Bots;
 
+/// <summary>
+/// Controls how positions/orders/trades are displayed in the dashboard.
+/// </summary>
+public enum PositionsDisplayMode
+{
+    /// <summary>
+    /// Show only the combined positions widget with all sections.
+    /// </summary>
+    Combined,
+
+    /// <summary>
+    /// Show separate widgets for positions, orders, and trades.
+    /// </summary>
+    Separate,
+
+    /// <summary>
+    /// Show both the combined widget and the separate widgets.
+    /// </summary>
+    Both
+}
+
 public partial class Bot : ComponentBase, IDisposable
 {
     private const string LayoutStorageKey = "bot-dashboard-layout";
@@ -43,6 +64,7 @@ public partial class Bot : ComponentBase, IDisposable
     private LogLevel? _selectedLogLevel;
     private bool _operationInProgress;
     private System.Timers.Timer? _statusTimer;
+    private PositionsDisplayMode _positionsDisplayMode = PositionsDisplayMode.Combined;
 
     // BlazorGridStack
     private BlazorGridStackBody? _grid;

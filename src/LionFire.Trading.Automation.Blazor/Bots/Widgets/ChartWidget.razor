@@ -1,13 +1,13 @@
 @using LionFire.Trading
 @using LionFire.Trading.Charting
 
-<div class="widget-container">
+<div class="widget-container" style="height: 100%; display: flex; flex-direction: column;">
     <div class="widget-header">
         <MudText Typo="Typo.subtitle1">@Symbol @TimeFrame?.ToShortString()</MudText>
         <MudIconButton Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small"
                        Title="Fullscreen" OnClick="ToggleFullscreen" />
     </div>
-    <div class="widget-content chart-content">
+    <div class="widget-content chart-content" style="flex: 1; min-height: 0; position: relative;">
         @if (!string.IsNullOrEmpty(Symbol))
         {
             @* TODO: Add indicator overlays in future *@
@@ -16,7 +16,7 @@
                 Exchange="@(Exchange ?? "binance")"
                 ExchangeArea="@(ExchangeArea ?? "futures")"
                 TimeFrameString="@(TimeFrame?.ToShortString() ?? "h1")"
-                Height="100%"
+                Height="calc(100% - 4px)"
                 BarCount="200" />
         }
         else
