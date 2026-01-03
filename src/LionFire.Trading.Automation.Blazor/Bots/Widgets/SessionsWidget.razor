@@ -1,0 +1,56 @@
+@using LionFire.Trading.Grains.Bots
+
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Session History</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small"
+                       OnClick="@(() => OnRefresh.InvokeAsync())" Title="Refresh" />
+    </div>
+    <div class="widget-content sessions-content">
+        @if (Sessions != null && Sessions.Any())
+        {
+            @foreach (var session in Sessions.OrderByDescending(s => s.StartTime).Take(10))
+            {
+                <MudPaper Class="pa-2 mb-2" Elevation="0"
+                          Style="background-color: var(--mud-palette-background-grey);">
+                    <div class="d-flex justify-space-between align-center">
+                        <MudText Typo="Typo.caption">@session.StartTime.ToLocalTime().ToString("g")</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(session.FinalState)">
+                            @session.FinalState
+                        </MudChip>
+                    </div>
+                    <MudText Typo="Typo.body2">
+                        Duration: @FormatDuration((session.EndTime ?? DateTime.UtcNow) - session.StartTime)
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Logs: @session.TotalLogCount | Errors: @session.ErrorCount
+                    </MudText>
+                </MudPaper>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="pa-4">
+                No sessions recorded yet
+            </MudText>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<BotHarnessSession>? Sessions { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
+
+    private Color GetStatusColor(RealtimeBotState state) => state switch
+    {
+        RealtimeBotState.Running => Color.Success,
+        RealtimeBotState.CatchingUp => Color.Warning,
+        RealtimeBotState.Starting => Color.Info,
+        RealtimeBotState.Faulted => Color.Error,
+        RealtimeBotState.Stopped => Color.Default,
+        _ => Color.Default
+    };
+
+    private static string FormatDuration(TimeSpan duration)
+        => $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+}

@@ -1,0 +1,119 @@
+@using LionFire.Trading.Grains.Bots
+@using LionFire.Trading.Automation
+@using Microsoft.Extensions.Logging
+
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Bot Info</MudText>
+        @if (Status != null)
+        {
+            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(Status.State)"
+                     Icon="@GetStatusIcon(Status.State)">
+                @Status.State
+            </MudChip>
+        }
+    </div>
+    <div class="widget-content">
+        @if (Bot != null)
+        {
+            <MudGrid Spacing="1">
+                <MudItem xs="12">
+                    <MudText Typo="Typo.h6">@(Bot.Name ?? BotId)</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Symbol</MudText>
+                    <MudText Typo="Typo.body2">@Bot.Symbol</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">TimeFrame</MudText>
+                    <MudText Typo="Typo.body2">@Bot.TimeFrame?.ToShortString()</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Exchange</MudText>
+                    <MudText Typo="Typo.body2">@($"{Bot.Exchange}.{Bot.ExchangeArea}")</MudText>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-2" />
+
+            <div class="d-flex gap-2 flex-wrap">
+                @if (Status?.State == RealtimeBotState.Stopped || Status == null)
+                {
+                    <MudButton Color="Color.Success" Variant="Variant.Filled" Size="Size.Small"
+                               OnClick="@(() => OnStart.InvokeAsync())"
+                               Disabled="@OperationInProgress"
+                               StartIcon="@Icons.Material.Filled.PlayArrow">
+                        Start
+                    </MudButton>
+                }
+                else if (Status?.State == RealtimeBotState.Running ||
+                         Status?.State == RealtimeBotState.CatchingUp ||
+                         Status?.State == RealtimeBotState.Starting)
+                {
+                    <MudButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Small"
+                               OnClick="@(() => OnStop.InvokeAsync())"
+                               Disabled="@OperationInProgress"
+                               StartIcon="@Icons.Material.Filled.Stop">
+                        Stop
+                    </MudButton>
+                }
+                else if (Status?.State == RealtimeBotState.Faulted)
+                {
+                    <MudButton Color="Color.Warning" Variant="Variant.Outlined" Size="Size.Small"
+                               OnClick="@(() => OnStop.InvokeAsync())"
+                               Disabled="@OperationInProgress"
+                               StartIcon="@Icons.Material.Filled.Refresh">
+                        Reset
+                    </MudButton>
+                }
+                <MudButton Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Small"
+                           OnClick="@(() => OnSave.InvokeAsync())"
+                           Disabled="@OperationInProgress">
+                    Save
+                </MudButton>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Status?.ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">
+                    @Status.ErrorMessage
+                </MudAlert>
+            }
+        }
+        else
+        {
+            <MudSkeleton SkeletonType="SkeletonType.Text" Width="80%" />
+            <MudSkeleton SkeletonType="SkeletonType.Text" Width="60%" Class="mt-2" />
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public BotEntity? Bot { get; set; }
+    [Parameter] public string? BotId { get; set; }
+    [Parameter] public RealtimeBotStatus? Status { get; set; }
+    [Parameter] public bool OperationInProgress { get; set; }
+    [Parameter] public EventCallback OnStart { get; set; }
+    [Parameter] public EventCallback OnStop { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    private Color GetStatusColor(RealtimeBotState state) => state switch
+    {
+        RealtimeBotState.Running => Color.Success,
+        RealtimeBotState.CatchingUp => Color.Warning,
+        RealtimeBotState.Starting => Color.Info,
+        RealtimeBotState.Faulted => Color.Error,
+        RealtimeBotState.Stopped => Color.Default,
+        _ => Color.Default
+    };
+
+    private string GetStatusIcon(RealtimeBotState state) => state switch
+    {
+        RealtimeBotState.Running => Icons.Material.Filled.PlayArrow,
+        RealtimeBotState.CatchingUp => Icons.Material.Filled.Sync,
+        RealtimeBotState.Starting => Icons.Material.Filled.HourglassTop,
+        RealtimeBotState.Faulted => Icons.Material.Filled.Error,
+        RealtimeBotState.Stopped => Icons.Material.Filled.Stop,
+        _ => Icons.Material.Filled.QuestionMark
+    };
+}

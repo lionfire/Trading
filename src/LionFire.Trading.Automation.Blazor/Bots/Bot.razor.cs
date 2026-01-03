@@ -1,9 +1,12 @@
+using BlazorGridStack;
+using BlazorGridStack.Models;
 using LionFire.Mvvm;
 using LionFire.Reactive.Persistence;
 using LionFire.Trading.Grains.Bots;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.JSInterop;
 using MudBlazor;
 using Orleans;
 using ReactiveUI;
@@ -12,6 +15,8 @@ namespace LionFire.Trading.Automation.Blazor.Bots;
 
 public partial class Bot : ComponentBase, IDisposable
 {
+    private const string LayoutStorageKey = "bot-dashboard-layout";
+
     [Parameter]
     public string? BotId { get; set; }
 
@@ -24,13 +29,32 @@ public partial class Bot : ComponentBase, IDisposable
     [Inject]
     private ILogger<Bot> Logger { get; set; } = null!;
 
+    [Inject]
+    private IJSRuntime JSRuntime { get; set; } = null!;
+
     private IClusterClient? ClusterClient { get; set; }
     private ObservableReaderWriterItemVM<string, BotEntity, BotVM>? VM { get; set; }
     private RealtimeBotStatus? HarnessStatus { get; set; }
+    private BotAccountStatus? AccountStatus { get; set; }
     private List<BotHarnessSession>? Sessions { get; set; }
+    private List<BotPositionStatus>? OpenPositions { get; set; }
+    private List<BotClosedPositionStatus>? ClosedPositions { get; set; }
+    private List<BotOrderStatus>? OpenOrders { get; set; }
     private LogLevel? _selectedLogLevel;
     private bool _operationInProgress;
     private System.Timers.Timer? _statusTimer;
+
+    // BlazorGridStack
+    private BlazorGridStackBody? _grid;
+    private BlazorGridStackBodyOptions _gridOptions = new()
+    {
+        Column = 12,
+        CellHeight = "80",
+        Margin = "4",
+        Float = true,
+        Animate = true,
+        DisableOneColumnMode = true
+    };
 
     private List<BreadcrumbItem> _breadcrumbs = new()
     {
@@ -81,7 +105,7 @@ public partial class Bot : ComponentBase, IDisposable
             {
                 if (v != null)
                 {
-                    _selectedLogLevel = v.LogLevel; // Now nullable
+                    _selectedLogLevel = v.LogLevel;
                     _breadcrumbs[1] = new BreadcrumbItem(v.Name ?? BotId, href: null, disabled: true);
                 }
                 InvokeAsync(StateHasChanged);
@@ -92,6 +116,16 @@ public partial class Bot : ComponentBase, IDisposable
         StartStatusPolling();
 
         await base.OnParametersSetAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Restore saved layout from localStorage
+            await RestoreLayout();
+        }
+        await base.OnAfterRenderAsync(firstRender);
     }
 
     private void StartStatusPolling()
@@ -114,6 +148,10 @@ public partial class Bot : ComponentBase, IDisposable
             var grain = ClusterClient.GetGrain<IRealtimeBotHarnessG>(BotId);
             HarnessStatus = await grain.GetStatus();
             Sessions = await grain.GetSessions();
+            AccountStatus = await grain.GetAccountStatus();
+            OpenPositions = await grain.GetOpenPositions();
+            ClosedPositions = await grain.GetClosedPositions();
+            OpenOrders = await grain.GetOpenOrders();
         }
         catch (Exception ex)
         {
@@ -248,28 +286,24 @@ public partial class Bot : ComponentBase, IDisposable
         }
     }
 
-    private Color GetStatusColor(RealtimeBotState state) => state switch
-    {
-        RealtimeBotState.Running => Color.Success,
-        RealtimeBotState.CatchingUp => Color.Warning,
-        RealtimeBotState.Starting => Color.Info,
-        RealtimeBotState.Faulted => Color.Error,
-        RealtimeBotState.Stopped => Color.Default,
-        _ => Color.Default
-    };
+    #region Layout Persistence
 
-    private string GetStatusIcon(RealtimeBotState state) => state switch
+    private Task OnLayoutChanged(BlazorGridStackWidgetListEventArgs args)
     {
-        RealtimeBotState.Running => Icons.Material.Filled.PlayArrow,
-        RealtimeBotState.CatchingUp => Icons.Material.Filled.Sync,
-        RealtimeBotState.Starting => Icons.Material.Filled.HourglassTop,
-        RealtimeBotState.Faulted => Icons.Material.Filled.Error,
-        RealtimeBotState.Stopped => Icons.Material.Filled.Stop,
-        _ => Icons.Material.Filled.QuestionMark
-    };
+        // TODO: Implement layout persistence with BlazorGridStack API
+        // The Save/Load API requires serializing BlazorGridStackWidgetOptions
+        Logger.LogDebug("Layout changed - persistence not yet implemented");
+        return Task.CompletedTask;
+    }
 
-    private static string FormatDuration(TimeSpan duration)
-        => $"{(int)duration.TotalHours:00}:{duration.Minutes:00}:{duration.Seconds:00}";
+    private Task RestoreLayout()
+    {
+        // TODO: Implement layout restoration from localStorage
+        // Requires deserializing saved widget positions and calling _grid.Load()
+        return Task.CompletedTask;
+    }
+
+    #endregion
 
     public void Dispose()
     {

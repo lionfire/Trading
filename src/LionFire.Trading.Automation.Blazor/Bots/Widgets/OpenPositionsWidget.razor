@@ -1,0 +1,71 @@
+@using LionFire.Trading.Grains.Bots
+
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Open Positions</MudText>
+        <MudChip T="string" Size="Size.Small" Color="Color.Primary">@(Positions?.Count ?? 0)</MudChip>
+    </div>
+    <div class="widget-content datagrid-content">
+        @if (Positions != null && Positions.Count > 0)
+        {
+            <MudDataGrid Items="@Positions" Dense="true" Hover="true" FixedHeader="true"
+                         Height="100%" Class="positions-grid">
+                <Columns>
+                    <PropertyColumn Property="x => x.Symbol" Title="Symbol" />
+                    <TemplateColumn Title="Side">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="@(context.Item.Direction == "Long" ? Color.Success : Color.Error)">
+                                @context.Item.Direction
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.Quantity" Title="Size" Format="N4" />
+                    <PropertyColumn Property="x => x.EntryPrice" Title="Entry" Format="N2" />
+                    <PropertyColumn Property="x => x.CurrentPrice" Title="Current" Format="N2" />
+                    <TemplateColumn Title="P&L">
+                        <CellTemplate>
+                            <MudText Color="@(context.Item.NetProfit >= 0 ? Color.Success : Color.Error)">
+                                @context.Item.NetProfit.ToString("N2")
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="SL">
+                        <CellTemplate>
+                            @if (context.Item.StopLoss.HasValue)
+                            {
+                                <MudText Color="Color.Error">@context.Item.StopLoss.Value.ToString("N2")</MudText>
+                            }
+                            else
+                            {
+                                <MudText Color="Color.Secondary">-</MudText>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="TP">
+                        <CellTemplate>
+                            @if (context.Item.TakeProfit.HasValue)
+                            {
+                                <MudText Color="Color.Success">@context.Item.TakeProfit.Value.ToString("N2")</MudText>
+                            }
+                            else
+                            {
+                                <MudText Color="Color.Secondary">-</MudText>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="pa-4">
+                No open positions
+            </MudText>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<BotPositionStatus>? Positions { get; set; }
+}

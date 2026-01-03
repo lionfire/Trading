@@ -1,0 +1,68 @@
+@using LionFire.Trading.Grains.Bots
+
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Trade History</MudText>
+        <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@(Positions?.Count ?? 0)</MudChip>
+    </div>
+    <div class="widget-content datagrid-content">
+        @if (Positions != null && Positions.Count > 0)
+        {
+            <MudDataGrid Items="@Positions" Dense="true" Hover="true" FixedHeader="true"
+                         Height="100%" Class="trades-grid">
+                <Columns>
+                    <TemplateColumn Title="Time">
+                        <CellTemplate>
+                            <MudText Typo="Typo.caption">@context.Item.ExitTime.ToString("MM/dd HH:mm")</MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.Symbol" Title="Symbol" />
+                    <TemplateColumn Title="Side">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="@(context.Item.Direction == "Long" ? Color.Success : Color.Error)">
+                                @context.Item.Direction
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.Quantity" Title="Size" Format="N4" />
+                    <PropertyColumn Property="x => x.EntryPrice" Title="Entry" Format="N2" />
+                    <PropertyColumn Property="x => x.ExitPrice" Title="Exit" Format="N2" />
+                    <TemplateColumn Title="P&L">
+                        <CellTemplate>
+                            <MudText Color="@(context.Item.RealizedPnL >= 0 ? Color.Success : Color.Error)">
+                                @context.Item.RealizedPnL.ToString("N2")
+                            </MudText>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Reason">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="@GetCloseReasonColor(context.Item.CloseReason)">
+                                @context.Item.CloseReason
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="pa-4">
+                No trade history
+            </MudText>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<BotClosedPositionStatus>? Positions { get; set; }
+
+    private Color GetCloseReasonColor(string reason) => reason switch
+    {
+        "StopLoss" => Color.Error,
+        "TakeProfit" => Color.Success,
+        "Liquidation" => Color.Error,
+        _ => Color.Default
+    };
+}

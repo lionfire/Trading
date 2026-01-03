@@ -1,0 +1,52 @@
+@using LionFire.Trading.Grains.Bots
+
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Account</MudText>
+        @if (AccountStatus != null)
+        {
+            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                @AccountStatus.Mode
+            </MudChip>
+        }
+    </div>
+    <div class="widget-content">
+        @if (AccountStatus != null)
+        {
+            <MudGrid Spacing="1">
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Balance</MudText>
+                    <MudText Typo="Typo.h6">@AccountStatus.Balance.ToString("N2")</MudText>
+                    <MudText Typo="Typo.caption">@AccountStatus.BaseCurrency</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Equity</MudText>
+                    <MudText Typo="Typo.h6">@AccountStatus.Equity.ToString("N2")</MudText>
+                    <MudText Typo="Typo.caption">@AccountStatus.BaseCurrency</MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Unrealized P&L</MudText>
+                    <MudText Typo="Typo.body1" Color="@(AccountStatus.UnrealizedPnL >= 0 ? Color.Success : Color.Error)">
+                        @(AccountStatus.UnrealizedPnL >= 0 ? "+" : "")@AccountStatus.UnrealizedPnL.ToString("N2")
+                    </MudText>
+                </MudItem>
+                <MudItem xs="6">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Realized P&L</MudText>
+                    <MudText Typo="Typo.body1" Color="@(AccountStatus.RealizedPnL >= 0 ? Color.Success : Color.Error)">
+                        @(AccountStatus.RealizedPnL >= 0 ? "+" : "")@AccountStatus.RealizedPnL.ToString("N2")
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                No account data available
+            </MudText>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public BotAccountStatus? AccountStatus { get; set; }
+}

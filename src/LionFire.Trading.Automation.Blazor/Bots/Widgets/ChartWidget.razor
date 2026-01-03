@@ -1,0 +1,44 @@
+@using LionFire.Trading
+@using LionFire.Trading.Charting
+
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">@Symbol @TimeFrame?.ToShortString()</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small"
+                       Title="Fullscreen" OnClick="ToggleFullscreen" />
+    </div>
+    <div class="widget-content chart-content">
+        @if (!string.IsNullOrEmpty(Symbol))
+        {
+            @* TODO: Add indicator overlays in future *@
+            <TradingChart
+                Symbol="@Symbol"
+                Exchange="@(Exchange ?? "binance")"
+                ExchangeArea="@(ExchangeArea ?? "futures")"
+                TimeFrameString="@(TimeFrame?.ToShortString() ?? "h1")"
+                Height="100%"
+                BarCount="200" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="pa-4">
+                No symbol configured
+            </MudText>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? Symbol { get; set; }
+    [Parameter] public string? Exchange { get; set; }
+    [Parameter] public string? ExchangeArea { get; set; }
+    [Parameter] public TimeFrame? TimeFrame { get; set; }
+
+    private bool _isFullscreen = false;
+
+    private void ToggleFullscreen()
+    {
+        _isFullscreen = !_isFullscreen;
+        // TODO: Implement fullscreen mode via JS interop
+    }
+}

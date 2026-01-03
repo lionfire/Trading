@@ -1,0 +1,12 @@
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Logs</MudText>
+    </div>
+    <div class="widget-content logs-content">
+        <BotLogViewer BotId="@BotId" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public string? BotId { get; set; }
+}

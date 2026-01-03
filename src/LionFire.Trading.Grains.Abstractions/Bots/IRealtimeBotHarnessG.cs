@@ -105,4 +105,37 @@ public interface IRealtimeBotHarnessG : IGrainWithStringKey
     ValueTask SetLogLevel(LogLevel? level);
 
     #endregion
+
+    #region Account
+
+    /// <summary>
+    /// Gets the current account state including balance and equity.
+    /// </summary>
+    /// <returns>Account status with balance, equity, and P&L information, or null if no account is configured or bot is not running.</returns>
+    ValueTask<BotAccountStatus?> GetAccountStatus();
+
+    #endregion
+
+    #region Positions and Orders
+
+    /// <summary>
+    /// Gets all open positions for the bot's account.
+    /// </summary>
+    /// <returns>List of open positions, or empty list if no account is configured or bot is not running.</returns>
+    ValueTask<List<BotPositionStatus>> GetOpenPositions();
+
+    /// <summary>
+    /// Gets closed positions from the current session.
+    /// </summary>
+    /// <param name="limit">Maximum number of positions to return (newest first)</param>
+    /// <returns>List of closed positions, or empty list if no account is configured or bot is not running.</returns>
+    ValueTask<List<BotClosedPositionStatus>> GetClosedPositions(int limit = 100);
+
+    /// <summary>
+    /// Gets all open orders (pending, stop loss, take profit).
+    /// </summary>
+    /// <returns>List of open orders, or empty list if no account is configured or bot is not running.</returns>
+    ValueTask<List<BotOrderStatus>> GetOpenOrders();
+
+    #endregion
 }

@@ -1,0 +1,121 @@
+/* Bot Dashboard Container */
+.bot-dashboard {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--mud-palette-background);
+    overflow: hidden;
+}
+
+.bot-header {
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    background: var(--mud-palette-surface);
+    flex-shrink: 0;
+}
+
+.bot-grid-container {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+}
+
+/* GridStack Customizations */
+::deep .grid-stack {
+    background: var(--mud-palette-background);
+}
+
+::deep .grid-stack-item-content {
+    background: var(--mud-palette-surface);
+    border: 1px solid var(--mud-palette-lines-default);
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+::deep .grid-stack-item.ui-resizable-resizing,
+::deep .grid-stack-item.ui-draggable-dragging {
+    opacity: 0.85;
+    z-index: 100;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+::deep .grid-stack-item.ui-draggable-dragging .grid-stack-item-content {
+    border-color: var(--mud-palette-primary);
+}
+
+/* Widget Container Styles */
+::deep .widget-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+::deep .widget-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--mud-palette-lines-default);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--mud-palette-background-grey);
+    flex-shrink: 0;
+}
+
+::deep .widget-content {
+    flex: 1;
+    overflow: auto;
+    padding: 8px;
+}
+
+/* Specific content types */
+::deep .chart-content {
+    padding: 0;
+    overflow: hidden;
+}
+
+::deep .datagrid-content {
+    padding: 0;
+}
+
+::deep .logs-content {
+    padding: 0;
+}
+
+::deep .sessions-content {
+    overflow-y: auto;
+}
+
+/* DataGrid adjustments within widgets */
+::deep .positions-grid,
+::deep .trades-grid,
+::deep .orders-grid {
+    height: 100%;
+}
+
+::deep .mud-table-container {
+    max-height: 100%;
+}
+
+/* Resize handle styling */
+::deep .ui-resizable-se {
+    background: transparent;
+    border-right: 2px solid var(--mud-palette-lines-default);
+    border-bottom: 2px solid var(--mud-palette-lines-default);
+    width: 12px;
+    height: 12px;
+    right: 0;
+    bottom: 0;
+}
+
+::deep .ui-resizable-se:hover {
+    border-color: var(--mud-palette-primary);
+}
+
+/* Dark theme optimizations */
+::deep .grid-stack-placeholder {
+    background: var(--mud-palette-primary-darken);
+    opacity: 0.2;
+    border: 2px dashed var(--mud-palette-primary);
+    border-radius: 4px;
+}

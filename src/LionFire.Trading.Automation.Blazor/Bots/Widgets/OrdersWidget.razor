@@ -1,0 +1,75 @@
+@using LionFire.Trading.Grains.Bots
+
+<div class="widget-container">
+    <div class="widget-header">
+        <MudText Typo="Typo.subtitle1">Open Orders</MudText>
+        <MudChip T="string" Size="Size.Small" Color="Color.Warning">@(Orders?.Count ?? 0)</MudChip>
+    </div>
+    <div class="widget-content datagrid-content">
+        @if (Orders != null && Orders.Count > 0)
+        {
+            <MudDataGrid Items="@Orders" Dense="true" Hover="true" FixedHeader="true"
+                         Height="100%" Class="orders-grid">
+                <Columns>
+                    <PropertyColumn Property="x => x.Symbol" Title="Symbol" />
+                    <TemplateColumn Title="Type">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="@GetOrderTypeColor(context.Item.OrderType)">
+                                @context.Item.OrderType
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Side">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="@(context.Item.Side == "Buy" ? Color.Success : Color.Error)">
+                                @context.Item.Side
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.Quantity" Title="Qty" Format="N4" />
+                    <PropertyColumn Property="x => x.TriggerPrice" Title="Trigger" Format="N2" />
+                    <TemplateColumn Title="Limit">
+                        <CellTemplate>
+                            @if (context.Item.LimitPrice.HasValue)
+                            {
+                                <MudText>@context.Item.LimitPrice.Value.ToString("N2")</MudText>
+                            }
+                            else
+                            {
+                                <MudText Color="Color.Secondary">Market</MudText>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Status">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                @context.Item.Status
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="pa-4">
+                No open orders
+            </MudText>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public List<BotOrderStatus>? Orders { get; set; }
+
+    private Color GetOrderTypeColor(string orderType) => orderType switch
+    {
+        "StopLoss" => Color.Error,
+        "TakeProfit" => Color.Success,
+        "Stop" => Color.Warning,
+        "Limit" => Color.Info,
+        _ => Color.Default
+    };
+}
