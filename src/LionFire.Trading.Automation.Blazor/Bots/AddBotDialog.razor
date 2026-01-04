@@ -1,0 +1,195 @@
+@using LionFire.Trading.Automation
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+            Add Bot
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" @bind-IsValid="_isValid">
+            <MudStack Spacing="3">
+                <MudSelect T="string"
+                           Label="Bot Type"
+                           @bind-Value="_botTypeName"
+                           Required="true"
+                           RequiredError="Bot type is required"
+                           Variant="Variant.Outlined"
+                           AnchorOrigin="Origin.BottomCenter">
+                    @foreach (var botType in BotTypes)
+                    {
+                        <MudSelectItem Value="@botType">@botType</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudTextField T="string"
+                              Label="Symbol"
+                              @bind-Value="_symbol"
+                              Required="true"
+                              RequiredError="Symbol is required"
+                              Placeholder="e.g., BTCUSDT"
+                              Variant="Variant.Outlined" />
+
+                <MudStack Row Spacing="2">
+                    <MudSelect T="string"
+                               Label="Exchange"
+                               @bind-Value="_exchange"
+                               Variant="Variant.Outlined"
+                               Style="flex: 1;">
+                        <MudSelectItem Value="@("binance")">Binance</MudSelectItem>
+                        <MudSelectItem Value="@("bitfinex")">Bitfinex</MudSelectItem>
+                    </MudSelect>
+
+                    <MudSelect T="string"
+                               Label="Area"
+                               @bind-Value="_exchangeArea"
+                               Variant="Variant.Outlined"
+                               Style="flex: 1;">
+                        <MudSelectItem Value="@("futures")">Futures</MudSelectItem>
+                        <MudSelectItem Value="@("spot")">Spot</MudSelectItem>
+                    </MudSelect>
+                </MudStack>
+
+                <MudSelect T="string"
+                           Label="TimeFrame"
+                           @bind-Value="_timeFrameString"
+                           Required="true"
+                           RequiredError="TimeFrame is required"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("m1")">1 Minute</MudSelectItem>
+                    <MudSelectItem Value="@("m5")">5 Minutes</MudSelectItem>
+                    <MudSelectItem Value="@("m15")">15 Minutes</MudSelectItem>
+                    <MudSelectItem Value="@("m30")">30 Minutes</MudSelectItem>
+                    <MudSelectItem Value="@("h1")">1 Hour</MudSelectItem>
+                    <MudSelectItem Value="@("h4")">4 Hours</MudSelectItem>
+                    <MudSelectItem Value="@("d1")">1 Day</MudSelectItem>
+                    <MudSelectItem Value="@("w1")">1 Week</MudSelectItem>
+                </MudSelect>
+
+                <MudTextField T="string"
+                              Label="Name (optional)"
+                              @bind-Value="_name"
+                              Placeholder="Auto-generated if empty"
+                              Variant="Variant.Outlined" />
+
+                <MudTextField T="string"
+                              Label="Comments (optional)"
+                              @bind-Value="_comments"
+                              Lines="2"
+                              Variant="Variant.Outlined" />
+
+                <MudStack Row Spacing="4">
+                    <MudSwitch T="bool"
+                               @bind-Value="_enabled"
+                               Label="Enabled"
+                               Color="Color.Primary" />
+                    <MudSwitch T="bool"
+                               @bind-Value="_live"
+                               Label="Live Trading"
+                               Color="Color.Secondary" />
+                </MudStack>
+
+                @if (_live)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        Live trading will execute real trades on your account!
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
+        <MudButton Color="Color.Success"
+                   Variant="Variant.Filled"
+                   Disabled="@(!_isValid)"
+                   OnClick="Confirm">
+            Add Bot
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public IEnumerable<string> BotTypes { get; set; } = [];
+
+    private MudForm? _form;
+    private bool _isValid;
+
+    // Form fields
+    private string? _botTypeName;
+    private string? _symbol;
+    private string _exchange = "binance";
+    private string _exchangeArea = "futures";
+    private string? _timeFrameString;
+    private string? _name;
+    private string? _comments;
+    private bool _enabled = false;
+    private bool _live = false;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Confirm()
+    {
+        if (string.IsNullOrWhiteSpace(_botTypeName) ||
+            string.IsNullOrWhiteSpace(_symbol) ||
+            string.IsNullOrWhiteSpace(_timeFrameString))
+        {
+            return;
+        }
+
+        var result = new AddBotDialogResult
+        {
+            BotTypeName = _botTypeName,
+            Symbol = _symbol.ToUpperInvariant(),
+            Exchange = _exchange,
+            ExchangeArea = _exchangeArea,
+            TimeFrame = TimeFrame.Parse(_timeFrameString),
+            Name = string.IsNullOrWhiteSpace(_name) ? null : _name,
+            Comments = string.IsNullOrWhiteSpace(_comments) ? null : _comments,
+            Enabled = _enabled,
+            Live = _live
+        };
+
+        MudDialog.Close(DialogResult.Ok(result));
+    }
+
+    /// <summary>
+    /// Shows the Add Bot dialog.
+    /// </summary>
+    /// <param name="dialogService">The dialog service.</param>
+    /// <param name="botTypes">Available bot type names.</param>
+    /// <returns>The dialog result, or null if cancelled.</returns>
+    public static async Task<AddBotDialogResult?> ShowAsync(
+        IDialogService dialogService,
+        IEnumerable<string> botTypes)
+    {
+        var parameters = new DialogParameters<AddBotDialog>
+        {
+            { x => x.BotTypes, botTypes }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            Position = DialogPosition.Center
+        };
+
+        var dialog = await dialogService.ShowAsync<AddBotDialog>("Add Bot", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is AddBotDialogResult addResult)
+        {
+            return addResult;
+        }
+
+        return null;
+    }
+}

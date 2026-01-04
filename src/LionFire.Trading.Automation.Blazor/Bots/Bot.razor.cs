@@ -309,6 +309,28 @@ public partial class Bot : ComponentBase, IDisposable
         }
     }
 
+    #region Parameters
+
+    private async Task OnParametersChanged(IPBot2? parameters)
+    {
+        if (VM?.Value == null) return;
+
+        Logger.LogInformation("Parameters updated for bot {BotId}", BotId);
+
+        // Save the bot entity
+        try
+        {
+            await VM.Write();
+            Logger.LogInformation("Saved bot {BotId} after parameter update", BotId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving bot {BotId} after parameter update", BotId);
+        }
+    }
+
+    #endregion
+
     #region Layout Persistence
 
     private Task OnLayoutChanged(BlazorGridStackWidgetListEventArgs args)

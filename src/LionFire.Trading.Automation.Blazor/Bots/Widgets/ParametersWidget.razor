@@ -1,0 +1,288 @@
+@using LionFire.Trading.Automation
+@using LionFire.IO.Reactive.Hjson
+@using LionFire.TypeRegistration
+@using Hjson
+@using System.Text
+@using Newtonsoft.Json
+
+@inject BotTypeRegistry BotTypeRegistry
+
+<div class="widget-container">
+    <div class="widget-header d-flex justify-space-between align-center">
+        <MudText Typo="Typo.subtitle1">Parameters</MudText>
+        <div class="d-flex gap-1">
+            @if (_isDirty)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning">Modified</MudChip>
+            }
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           Size="Size.Small"
+                           OnClick="ReloadParameters"
+                           Disabled="@_isSaving"
+                           Title="Reload from bot" />
+        </div>
+    </div>
+    <div class="widget-content" style="display: flex; flex-direction: column; height: 100%;">
+        @if (Bot == null)
+        {
+            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" />
+        }
+        else if (Bot.Parameters == null)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true">
+                No parameters configured for this bot.
+            </MudAlert>
+            <MudText Typo="Typo.caption" Class="mt-2">
+                Bot Type: @(Bot.BotTypeName ?? "Not set")
+            </MudText>
+
+            @if (!string.IsNullOrEmpty(Bot.BotTypeName))
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           Class="mt-3"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="InitializeParameters"
+                           Disabled="@_isInitializing">
+                    @(_isInitializing ? "Initializing..." : "Initialize Parameters")
+                </MudButton>
+
+                @if (!string.IsNullOrEmpty(_errorMessage))
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">
+                        @_errorMessage
+                    </MudAlert>
+                }
+            }
+        }
+        else
+        {
+            <MudTextField T="string"
+                          @bind-Value="_hjsonText"
+                          @bind-Value:after="OnTextChanged"
+                          Variant="Variant.Outlined"
+                          Lines="12"
+                          Style="font-family: 'Consolas', 'Monaco', monospace; font-size: 12px;"
+                          Placeholder="HJSON parameters..."
+                          FullWidth="true"
+                          Immediate="false"
+                          DebounceInterval="500"
+                          Class="parameters-editor flex-grow-1" />
+
+            @if (!string.IsNullOrEmpty(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-2">
+                    @_errorMessage
+                </MudAlert>
+            }
+
+            <div class="d-flex gap-2 mt-2 justify-end">
+                <MudButton Variant="Variant.Text"
+                           Size="Size.Small"
+                           OnClick="ReloadParameters"
+                           Disabled="@(!_isDirty || _isSaving)">
+                    Discard
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="SaveParameters"
+                           Disabled="@(!_isDirty || _isSaving)"
+                           StartIcon="@(_isSaving ? Icons.Material.Filled.HourglassTop : Icons.Material.Filled.Save)">
+                    @(_isSaving ? "Saving..." : "Apply")
+                </MudButton>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public BotEntity? Bot { get; set; }
+    [Parameter] public EventCallback<IPBot2?> OnParametersChanged { get; set; }
+
+    private string? _hjsonText;
+    private string? _originalHjsonText;
+    private bool _isDirty;
+    private bool _isSaving;
+    private bool _isInitializing;
+    private string? _errorMessage;
+
+    protected override void OnParametersSet()
+    {
+        if (Bot?.Parameters != null && string.IsNullOrEmpty(_hjsonText))
+        {
+            LoadParametersToText();
+        }
+    }
+
+    private void LoadParametersToText()
+    {
+        if (Bot?.Parameters == null)
+        {
+            _hjsonText = null;
+            _originalHjsonText = null;
+            return;
+        }
+
+        try
+        {
+            var bytes = HjsonSerialization.Serialize(Bot.Parameters);
+            _hjsonText = Encoding.UTF8.GetString(bytes);
+            _originalHjsonText = _hjsonText;
+            _isDirty = false;
+            _errorMessage = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error serializing parameters: {ex.Message}";
+        }
+    }
+
+    private void OnTextChanged()
+    {
+        _isDirty = _hjsonText != _originalHjsonText;
+        _errorMessage = null;
+    }
+
+    private void ReloadParameters()
+    {
+        LoadParametersToText();
+        StateHasChanged();
+    }
+
+    private async Task SaveParameters()
+    {
+        if (string.IsNullOrWhiteSpace(_hjsonText) || Bot == null)
+        {
+            return;
+        }
+
+        _isSaving = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // Parse HJSON to validate syntax
+            var json = HjsonValue.Parse(_hjsonText).ToString(Stringify.Plain);
+
+            // Deserialize with type information
+            var settings = new JsonSerializerSettings
+            {
+                TypeNameHandling = TypeNameHandling.Objects,
+                DefaultValueHandling = DefaultValueHandling.IgnoreAndPopulate
+            };
+            var parameters = JsonConvert.DeserializeObject<IPBot2>(json, settings);
+
+            if (parameters == null)
+            {
+                _errorMessage = "Failed to deserialize parameters - result was null";
+                return;
+            }
+
+            // Update the bot
+            Bot.Parameters = parameters;
+            _originalHjsonText = _hjsonText;
+            _isDirty = false;
+
+            // Notify parent
+            await OnParametersChanged.InvokeAsync(parameters);
+        }
+        catch (JsonReaderException ex)
+        {
+            _errorMessage = $"JSON parse error: {ex.Message}";
+        }
+        catch (JsonSerializationException ex)
+        {
+            _errorMessage = $"JSON parse error: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task InitializeParameters()
+    {
+        if (Bot == null || string.IsNullOrEmpty(Bot.BotTypeName))
+        {
+            _errorMessage = "Bot type name is required to initialize parameters";
+            return;
+        }
+
+        _isInitializing = true;
+        _errorMessage = null;
+        StateHasChanged();
+
+        try
+        {
+            // Get the parameter type from the registry
+            // BotTypeName might be "PAtrBot" or "AtrBot" - try both patterns
+            var typeName = Bot.BotTypeName;
+            Type? parameterType = null;
+
+            // Try to find the type directly
+            parameterType = BotTypeRegistry.PBotRegistry.GetType(typeName);
+
+            // If not found and doesn't start with P, try with P prefix
+            if (parameterType == null && !typeName.StartsWith("P"))
+            {
+                parameterType = BotTypeRegistry.PBotRegistry.GetType("P" + typeName);
+            }
+
+            if (parameterType == null)
+            {
+                _errorMessage = $"Could not find parameter type for '{typeName}'. Available types: {string.Join(", ", BotTypeRegistry.PBotRegistry.Names.Keys.Take(10))}...";
+                return;
+            }
+
+            // If it's a generic type definition, we need to make it concrete
+            // Most bots use double as the numeric type
+            if (parameterType.IsGenericTypeDefinition)
+            {
+                parameterType = parameterType.MakeGenericType(typeof(double));
+            }
+
+            // Create an instance with default values
+            var parameters = Activator.CreateInstance(parameterType) as IPBot2;
+
+            if (parameters == null)
+            {
+                _errorMessage = $"Failed to create instance of {parameterType.Name}";
+                return;
+            }
+
+            // Set the parameters on the bot
+            Bot.Parameters = parameters;
+
+            // Load into the editor
+            LoadParametersToText();
+
+            // Notify parent to save
+            await OnParametersChanged.InvokeAsync(parameters);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error initializing parameters: {ex.Message}";
+        }
+        finally
+        {
+            _isInitializing = false;
+            StateHasChanged();
+        }
+    }
+}
+
+<style>
+    .parameters-editor textarea {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+        font-size: 12px !important;
+        line-height: 1.4 !important;
+    }
+</style>

@@ -54,7 +54,7 @@
             </BlazorGridStackWidget>
 
             @* Bot Info/Controls Widget *@
-            <BlazorGridStackWidget WidgetOptions="@(new() { X = 8, Y = 2, W = 4, H = 2, Id = "info", MinW = 2, MinH = 2 })">
+            <BlazorGridStackWidget WidgetOptions="@(new() { X = 8, Y = 2, W = 4, H = 3, Id = "info", MinW = 2, MinH = 2 })">
                 <BotInfoWidget Bot="@VM?.Value"
                               BotId="@BotId"
                               Status="@HarnessStatus"
@@ -98,6 +98,11 @@
             @* Logs Widget *@
             <BlazorGridStackWidget WidgetOptions="@(new() { X = 6, Y = 7, W = 6, H = 3, Id = "logs", MinW = 3, MinH = 2 })">
                 <LogsWidget BotId="@BotId" />
+            </BlazorGridStackWidget>
+
+            @* Parameters Widget *@
+            <BlazorGridStackWidget WidgetOptions="@(new() { X = 8, Y = 4, W = 4, H = 4, Id = "parameters", MinW = 3, MinH = 2 })">
+                <ParametersWidget Bot="@VM?.Value" OnParametersChanged="OnParametersChanged" />
             </BlazorGridStackWidget>
 
         </BlazorGridStackBody>

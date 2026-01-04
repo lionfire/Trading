@@ -16,6 +16,7 @@
 @using MudBlazor
 
 @inject IDialogService DialogService
+@inject BotTypeRegistry BotTypeRegistry
 @implements IDisposable
 
 <div class="pa-6">
@@ -33,9 +34,18 @@
 	}
 	else if (FilteredBotCache != null)
 	{
-		<MudText Typo="Typo.h5" Class="mb-4">
-			Bots in Portfolio: @CurrentPortfolio.Name
-		</MudText>
+		<MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+			<MudText Typo="Typo.h5">
+				Bots in Portfolio: @CurrentPortfolio.Name
+			</MudText>
+			<MudSpacer />
+			<MudButton StartIcon="@Icons.Material.Filled.Add"
+			           Variant="Variant.Outlined"
+			           Color="Color.Success"
+			           OnClick="AddBotAsync">
+				Add Bot
+			</MudButton>
+		</MudStack>
 
 		<ObservableDataView @ref=ItemsEditor
 							DataReader="@FilteredBotCache"
@@ -649,6 +659,62 @@
 		};
 
 		await DialogService.ShowAsync<BotErrorDialog>("Bot Error Details", parameters, options);
+	}
+
+	#endregion
+
+	#region Add Bot
+
+	private async Task AddBotAsync()
+	{
+		if (FilteredBotCache == null)
+		{
+			Logger?.LogWarning("[Bots] Cannot add bot - FilteredBotCache is null");
+			return;
+		}
+
+		// Get available bot types from registry
+		var botTypes = BotTypeRegistry.PBotRegistry.Names.Keys
+			.OrderBy(n => n)
+			.ToList();
+
+		if (!botTypes.Any())
+		{
+			Logger?.LogWarning("[Bots] No bot types registered in BotTypeRegistry");
+			await DialogService.ShowMessageBox(
+				"No Bot Types",
+				"No bot types are registered. Please ensure bot assemblies are loaded.",
+				yesText: "OK");
+			return;
+		}
+
+		var result = await AddBotDialog.ShowAsync(DialogService, botTypes);
+
+		if (result == null)
+		{
+			Logger?.LogDebug("[Bots] Add bot dialog cancelled");
+			return;
+		}
+
+		try
+		{
+			var key = result.GenerateKey();
+			var botEntity = result.ToBotEntity();
+
+			Logger?.LogInformation("[Bots] Creating new bot '{Key}' of type '{BotType}'", key, result.BotTypeName);
+
+			await FilteredBotCache.Write(key, botEntity);
+
+			Logger?.LogInformation("[Bots] Bot '{Key}' created successfully", key);
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogError(ex, "[Bots] Failed to create bot");
+			await DialogService.ShowMessageBox(
+				"Error",
+				$"Failed to create bot: {ex.Message}",
+				yesText: "OK");
+		}
 	}
 
 	#endregion
