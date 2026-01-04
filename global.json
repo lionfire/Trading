@@ -1,8 +1,7 @@
 {
   "projects": [ "src", "../Core/src", "../Trading.Proprietary/src", "../Core/src/LionFire.Applications.CommandLine", "src/Spotware" ],
   "sdk": {
-    "allowPreRelease": false,
-    "version": "9.0.107",
+    "version": "10.0.100",
     "rollForward": "latestMinor"
   }
 }
