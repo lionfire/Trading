@@ -61,6 +61,13 @@ public interface IIndicatorG : IGrainWithStringKey
     /// </summary>
     ValueTask<IndicatorMetadata> GetMetadata();
 
+    /// <summary>
+    /// Extends the indicator's historical data by fetching more bars.
+    /// Used by downstream composite indicators that need more warmup data.
+    /// </summary>
+    /// <param name="additionalBars">Number of additional bars to fetch and process</param>
+    ValueTask ExtendHistory(int additionalBars);
+
     #region Observer Pattern
 
     /// <summary>
