@@ -7,7 +7,7 @@
         <MudIconButton Icon="@Icons.Material.Filled.Fullscreen" Size="Size.Small"
                        Title="Fullscreen" OnClick="ToggleFullscreen" />
     </div>
-    <div class="widget-content chart-content" style="flex: 1; min-height: 0; position: relative;">
+    <div class="widget-content chart-content" style="flex: 1 1 0; min-height: 200px; position: relative; overflow: hidden;">
         @if (!string.IsNullOrEmpty(Symbol))
         {
             @* TODO: Add indicator overlays in future *@

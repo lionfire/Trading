@@ -55,6 +55,7 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     #region State
 
     private ChartComponent? _chart;
+    private ElementReference _containerRef;
     private ISeriesApi<long>? _candlestickSeries;
     private bool _isInitialized;
     private string? _previousSymbol;
@@ -119,8 +120,8 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
 
     #region Computed
 
-    private string ContainerStyle => $"height: {Height};";
-    private string ChartStyle => "width: 100%; height: 100%;";
+    // Using absolute positioning, height is handled by CSS inset properties
+    private string ContainerStyle => "";
 
     private TimeFrame? TimeFrame => LionFire.Trading.TimeFrame.TryParse(TimeFrameString);
 
@@ -187,6 +188,7 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
             // Configure chart options for dark theme
             var chartOptions = new ChartOptions
             {
+                AutoSize = true, // Auto-resize to container
                 Layout = new LayoutOptions
                 {
                     Background = new SolidColor { Color = ColorTranslator.FromHtml("#1e1e1e") },

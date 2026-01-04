@@ -2,9 +2,11 @@
 @using LightweightCharts.Blazor.Charts
 @using LightweightCharts.Blazor.Customization
 
-<div class="trading-chart-container" style="@ContainerStyle">
+<div class="trading-chart-container" style="@ContainerStyle" @ref="_containerRef">
     @* Chart Controls *@
-    <div class="trading-chart-controls">
+@*   
+OLD - decided not to have these here    
+<div class="trading-chart-controls">
         <MudSelect T="string" @bind-Value="SelectedExchange" Label="Exchange" Variant="Variant.Outlined"
                    Dense="true" Class="chart-control-select">
             <MudSelectItem Value="@("binance")">Binance</MudSelectItem>
@@ -21,7 +23,7 @@
         <MudTextField @bind-Value="SelectedSymbol" Label="Symbol" Variant="Variant.Outlined"
                       Dense="true" Class="chart-control-input" />
     </div>
-
+ *@
     @if (IsLoading)
     {
         <div class="trading-chart-loading">
@@ -37,15 +39,35 @@
         </div>
     }
 
-    <div style="@ChartStyle">
+    <div class="chart-wrapper">
         <ChartComponent @ref="_chart" />
     </div>
 </div>
 
 <style>
     .trading-chart-container {
-        position: relative;
-        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        min-height: 200px;
+        min-width: 300px;
+        overflow: hidden;
+    }
+
+    .chart-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+
+    /* Ensure the LightweightCharts canvas fills the wrapper */
+    .chart-wrapper > div {
+        width: 100% !important;
+        height: 100% !important;
     }
     .trading-chart-controls {
         display: flex;
