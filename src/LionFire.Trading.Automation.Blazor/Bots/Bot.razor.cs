@@ -75,7 +75,8 @@ public partial class Bot : ComponentBase, IDisposable
         Margin = "4",
         Float = true,
         Animate = true,
-        DisableOneColumnMode = true
+        DisableOneColumnMode = true,
+        Handle = ".widget-header" // Only allow dragging from the header, not the content
     };
 
     private List<BreadcrumbItem> _breadcrumbs = new()

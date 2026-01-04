@@ -65,6 +65,11 @@
     align-items: center;
     background: var(--mud-palette-background-grey);
     flex-shrink: 0;
+    cursor: move; /* Indicate draggable */
+}
+
+::deep .widget-header:active {
+    background: var(--mud-palette-action-default-hover);
 }
 
 ::deep .widget-content {
@@ -102,20 +107,36 @@
     max-height: 100%;
 }
 
-/* Resize handle styling */
+/* Resize handle styling - unrotated border, rotated icon */
 ::deep .ui-resizable-se {
-    background: transparent;
-    border-right: 2px solid var(--mud-palette-lines-default);
-    border-bottom: 2px solid var(--mud-palette-lines-default);
+    background: transparent !important;
     width: 12px;
     height: 12px;
     right: 0;
     bottom: 0;
-    transform: none;
+    transform: none !important;
+    border-right: 2px solid var(--mud-palette-lines-default);
+    border-bottom: 2px solid var(--mud-palette-lines-default);
+}
+
+::deep .ui-resizable-se::before {
+    content: '';
+    position: absolute;
+    right: 1px;
+    bottom: 1px;
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(-45deg, var(--mud-palette-lines-default) 30%, transparent 30%);
+    transform: rotate(0deg);
+    pointer-events: none;
 }
 
 ::deep .ui-resizable-se:hover {
     border-color: var(--mud-palette-primary);
+}
+
+::deep .ui-resizable-se:hover::before {
+    background: linear-gradient(-45deg, var(--mud-palette-primary) 30%, transparent 30%);
 }
 
 /* Dark theme optimizations */
