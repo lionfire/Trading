@@ -119,10 +119,18 @@ public class PortfolioFilteredBotCache : ReactiveSubsetReader<string, BotEntity>
 
     #region IObservableWriter Implementation
 
-    public ValueTask Write(string key, BotEntity value)
+    public async ValueTask Write(string key, BotEntity value)
     {
         if (writer == null) throw new NotSupportedException("Source does not support writing.");
-        return writer.Write(key, value);
+        await writer.Write(key, value);
+
+        // Add to portfolio if not already present
+        var botIds = portfolio.BotIds?.ToList() ?? new List<string>();
+        if (!botIds.Contains(key))
+        {
+            botIds.Add(key);
+            portfolio.BotIds = botIds;
+        }
     }
 
     public ValueTask<bool> Remove(string key)

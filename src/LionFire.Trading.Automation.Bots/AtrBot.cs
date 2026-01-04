@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Reflection;
 using MathNet.Numerics;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading.Automation.Bots;
 
@@ -135,6 +136,13 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
     #endregion
 
+
+    ILogger Logger { get; }
+    public AtrBot(ILogger<AtrBot<TValue>> logger)
+    {
+        Logger = logger;
+    }
+
     //public OutputComponentOptions OutputExecutionOptions { get; } = new OutputComponentOptions
     //{
     //    Memory = 2,
@@ -167,6 +175,7 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
     public override void OnBar()
     {
+        Logger.LogInformation($"OnBar called for {this.GetType().Name}");
         //if (barIndex++ % 50000 == 0)
         //{
         //    if (ATR.Size > 0) {
