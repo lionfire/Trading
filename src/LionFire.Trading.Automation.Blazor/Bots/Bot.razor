@@ -17,6 +17,14 @@
     <div class="bot-header pa-2 d-flex justify-space-between align-center">
         <MudBreadcrumbs Items="@_breadcrumbs" />
         <div class="d-flex align-center gap-2">
+            @* New Experience Link *@
+            <MudButton Href="@($"/workbench/bot/{BotId}")"
+                       Variant="Variant.Text"
+                       Size="Size.Small"
+                       StartIcon="@Icons.Material.Filled.AutoAwesome"
+                       Color="Color.Primary">
+                Try New Experience
+            </MudButton>
             @* Settings Menu *@
             <MudMenu Icon="@Icons.Material.Filled.Settings" Size="Size.Small" Dense="true"
                      AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
