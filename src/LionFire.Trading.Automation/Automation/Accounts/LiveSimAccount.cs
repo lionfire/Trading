@@ -1,4 +1,7 @@
 using System.Numerics;
+using LionFire.Trading.Automation.FillSimulation;
+using LionFire.Trading.Automation.PriceMonitoring;
+using LionFire.Trading.PriceMonitoring;
 
 namespace LionFire.Trading.Automation.Accounts;
 
@@ -68,8 +71,16 @@ public class LiveSimAccount<TPrecision> : LiveAccountBase<TPrecision>
     /// </summary>
     /// <param name="exchangeArea">The exchange and area for this account.</param>
     /// <param name="options">The account configuration options.</param>
-    public LiveSimAccount(ExchangeArea exchangeArea, LiveAccountOptions? options = null)
-        : base(exchangeArea, options ?? LiveAccountOptions.DefaultSimulated)
+    /// <param name="priceMonitor">Optional price monitor for getting current prices.</param>
+    /// <param name="pendingOrderManager">Optional pending order manager for SL/TP orders.</param>
+    /// <param name="fillSimulator">Optional fill simulator for calculating execution prices.</param>
+    public LiveSimAccount(
+        ExchangeArea exchangeArea,
+        LiveAccountOptions? options = null,
+        ILivePriceMonitor? priceMonitor = null,
+        IPendingOrderManager<TPrecision>? pendingOrderManager = null,
+        IFillSimulator<TPrecision>? fillSimulator = null)
+        : base(exchangeArea, options ?? LiveAccountOptions.DefaultSimulated, priceMonitor, pendingOrderManager, fillSimulator)
     {
         _balance = InitialBalance;
     }
