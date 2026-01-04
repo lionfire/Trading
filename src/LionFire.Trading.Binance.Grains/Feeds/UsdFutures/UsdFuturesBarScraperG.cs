@@ -94,6 +94,32 @@ public interface IUsdFuturesBarScraperG : IGrainWithStringKey
     /// <returns>A task representing the asynchronous operation.</returns>
     Task OnMissing((int missingCount, int tradeCount, bool missingInProgressBar) x);
 
+    #region Demand-Driven Architecture
+
+    /// <summary>
+    /// Activates the scraper with a specific subscriber grain key.
+    /// The scraper will call subscriber.OnBars() when new bars are retrieved.
+    /// </summary>
+    /// <param name="subscriberGrainKey">The grain key of the LastBarsG to receive bar updates.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task Activate(string subscriberGrainKey);
+
+    /// <summary>
+    /// Deactivates the scraper, stopping all polling.
+    /// Called when LastBarsG has no more subscribers.
+    /// </summary>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    Task Deactivate();
+
+    /// <summary>
+    /// Returns whether the scraper is currently active and polling.
+    /// </summary>
+    /// <returns>True if the scraper is active, false otherwise.</returns>
+    [ReadOnly]
+    Task<bool> IsActive();
+
+    #endregion
+
 }
 
 /// <summary>
@@ -375,13 +401,18 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     #region Event Handling
 
     /// <summary>
-    /// Handles newly retrieved bars from the scraper by publishing them to broadcast channels.
+    /// Handles newly retrieved bars from the scraper by publishing them to broadcast channels
+    /// and delivering directly to subscriber (if active in demand-driven mode).
     /// </summary>
     /// <param name="bars">The bars retrieved from Binance.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task OnBars(IEnumerable<BarEnvelope> bars)
     {
+        // Publish to broadcast channels (existing behavior, kept for transition)
         await BarsToBroadcastChannel(bars);
+
+        // Direct delivery to subscriber (demand-driven architecture)
+        await DeliverBarsToSubscriber(bars);
     }
 
     /// <summary>
@@ -491,6 +522,107 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     {
         Options.State.Offset = newValue;
         await Options.WriteStateAsync();
+    }
+
+    #endregion
+
+    #region Demand-Driven Architecture
+
+    /// <summary>
+    /// The grain key of the subscriber (LastBarsG) that receives bar updates.
+    /// Set via Activate(), cleared via Deactivate().
+    /// </summary>
+    private string? _subscriberGrainKey;
+
+    /// <summary>
+    /// Cached reference to the subscriber grain for direct bar delivery.
+    /// </summary>
+    private IBarSubscriber? _subscriber;
+
+    /// <summary>
+    /// Whether the scraper is currently active in demand-driven mode.
+    /// </summary>
+    private bool _isActive = false;
+
+    /// <inheritdoc/>
+    public Task Activate(string subscriberGrainKey)
+    {
+        if (_isActive && _subscriberGrainKey != null)
+        {
+            Logger.LogWarning("{grainId} Already active with {oldSubscriber}, replacing with {newSubscriber}",
+                this.GetPrimaryKeyString(), _subscriberGrainKey, subscriberGrainKey);
+        }
+
+        _subscriberGrainKey = subscriberGrainKey;
+        _subscriber = GrainFactory.GetGrain<IBarSubscriber>(subscriberGrainKey);
+        _isActive = true;
+
+        Logger.LogInformation("{grainId} Activated with subscriber {subscriberKey}",
+            this.GetPrimaryKeyString(), subscriberGrainKey);
+
+        // Initialize/reinitialize the timer to start polling
+        // Use default interval of 1 if not configured
+        if (Options.State.Interval <= 0)
+        {
+            Options.State.Interval = 1;
+        }
+        InitTimer();
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task Deactivate()
+    {
+        Logger.LogInformation("{grainId} Deactivating, stopping polling timer", this.GetPrimaryKeyString());
+
+        _subscriberGrainKey = null;
+        _subscriber = null;
+        _isActive = false;
+
+        // Stop the timer
+        timer?.Dispose();
+        timer = null;
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public Task<bool> IsActive() => Task.FromResult(_isActive);
+
+    /// <summary>
+    /// Delivers bars directly to the subscriber grain.
+    /// Called after broadcast channel delivery (during transition period).
+    /// </summary>
+    private async Task DeliverBarsToSubscriber(IEnumerable<BarEnvelope> bars)
+    {
+        if (!_isActive || _subscriber == null)
+        {
+            return;
+        }
+
+        // Filter for confirmed bars only for direct delivery
+        var confirmedBars = bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed)).ToArray();
+        if (confirmedBars.Length == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            Logger.LogTrace("{grainId} Delivering {count} bars directly to {subscriber}",
+                this.GetPrimaryKeyString(), confirmedBars.Length, _subscriberGrainKey);
+
+            await _subscriber.OnBars(confirmedBars);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "{grainId} Failed to deliver bars to subscriber {subscriber}, deactivating",
+                this.GetPrimaryKeyString(), _subscriberGrainKey);
+
+            // Subscriber may be dead, deactivate
+            await Deactivate();
+        }
     }
 
     #endregion
