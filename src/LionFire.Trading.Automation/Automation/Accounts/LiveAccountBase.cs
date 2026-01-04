@@ -1,7 +1,10 @@
 using System.Collections.Concurrent;
 using System.Numerics;
 using DynamicData;
+using LionFire.Trading.Automation.FillSimulation;
+using LionFire.Trading.Automation.PriceMonitoring;
 using LionFire.Trading.DataFlow;
+using LionFire.Trading.PriceMonitoring;
 
 namespace LionFire.Trading.Automation.Accounts;
 
@@ -115,6 +118,25 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
 
     #endregion
 
+    #region Service Dependencies
+
+    /// <summary>
+    /// The live price monitor for getting current prices.
+    /// </summary>
+    protected readonly ILivePriceMonitor? PriceMonitor;
+
+    /// <summary>
+    /// The pending order manager for SL/TP orders.
+    /// </summary>
+    protected readonly IPendingOrderManager<TPrecision>? PendingOrderManager;
+
+    /// <summary>
+    /// The fill simulator for calculating execution prices.
+    /// </summary>
+    protected readonly IFillSimulator<TPrecision>? FillSimulator;
+
+    #endregion
+
     #region Lifecycle
 
     /// <summary>
@@ -122,16 +144,34 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
     /// </summary>
     /// <param name="exchangeArea">The exchange and area for this account.</param>
     /// <param name="options">The account configuration options.</param>
-    protected LiveAccountBase(ExchangeArea exchangeArea, LiveAccountOptions options)
+    /// <param name="priceMonitor">Optional price monitor for getting current prices.</param>
+    /// <param name="pendingOrderManager">Optional pending order manager for SL/TP orders.</param>
+    /// <param name="fillSimulator">Optional fill simulator for calculating execution prices.</param>
+    protected LiveAccountBase(
+        ExchangeArea exchangeArea,
+        LiveAccountOptions options,
+        ILivePriceMonitor? priceMonitor = null,
+        IPendingOrderManager<TPrecision>? pendingOrderManager = null,
+        IFillSimulator<TPrecision>? fillSimulator = null)
     {
         ExchangeArea = exchangeArea;
         Options = options ?? throw new ArgumentNullException(nameof(options));
         InitialBalance = TPrecision.CreateChecked(options.InitialBalance);
         RealizedPnL = TPrecision.Zero;
 
+        PriceMonitor = priceMonitor;
+        PendingOrderManager = pendingOrderManager;
+        FillSimulator = fillSimulator ?? new SimpleFillSimulator<TPrecision>();
+
         _positionsSource = new SourceCache<IPosition<TPrecision>, int>(p => p.Id);
         _positionsCache = _positionsSource.AsObservableCache();
         _marketParameters = new LiveAccountMarketParameters(exchangeArea);
+
+        // Subscribe to order triggered events if we have a pending order manager
+        if (PendingOrderManager != null)
+        {
+            PendingOrderManager.OnOrderTriggered += HandleOrderTriggered;
+        }
     }
 
     #endregion
@@ -247,7 +287,7 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
 
     #endregion
 
-    #region IAccount2 Methods (Stubs for now)
+    #region IAccount2 Methods
 
     /// <inheritdoc />
     public MarketFeatures GetMarketFeatures(string symbol)
@@ -266,15 +306,123 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
         long? transactionId = null,
         JournalEntryFlags journalFlags = JournalEntryFlags.Unspecified)
     {
-        // This will be implemented when we have price monitoring
-        throw new NotImplementedException("ExecuteMarketOrder requires price monitor integration");
+        if (PriceMonitor == null)
+        {
+            return ValueTask.FromResult<IOrderResult>(new OrderResult
+            {
+                IsSuccess = false,
+                Error = "Price monitor not available - cannot execute market order"
+            });
+        }
+
+        var exchangeSymbol = new ExchangeSymbol(ExchangeArea.Exchange, ExchangeArea.Area, symbol);
+        var price = PriceMonitor.GetCurrentPrice(exchangeSymbol);
+
+        if (price == null || price.Value.Bid == null || price.Value.Ask == null)
+        {
+            return ValueTask.FromResult<IOrderResult>(new OrderResult
+            {
+                IsSuccess = false,
+                Error = $"No price data available for {symbol}"
+            });
+        }
+
+        var bid = TPrecision.CreateChecked(price.Value.Bid.Value);
+        var ask = TPrecision.CreateChecked(price.Value.Ask.Value);
+
+        // Use fill simulator to calculate execution price
+        var fillRequest = new FillRequest<TPrecision>
+        {
+            OrderType = FillOrderType.Market,
+            Direction = longAndShort,
+            Quantity = positionSize,
+            Bid = bid,
+            Ask = ask,
+            Symbol = exchangeSymbol
+        };
+
+        var fillResult = FillSimulator!.CalculateFill(fillRequest);
+
+        if (!fillResult.IsFilled)
+        {
+            return ValueTask.FromResult<IOrderResult>(new OrderResult
+            {
+                IsSuccess = false,
+                Error = fillResult.Reason ?? "Fill rejected"
+            });
+        }
+
+        // Open the position at the fill price
+        var position = OpenPosition(symbol, longAndShort, fillResult.FilledQuantity, fillResult.ExecutionPrice);
+
+        return ValueTask.FromResult<IOrderResult>(new OrderResult
+        {
+            IsSuccess = true,
+            Data = position
+        });
     }
 
     /// <inheritdoc />
     public virtual ValueTask<IOrderResult> ClosePosition(IPosition<TPrecision> position, JournalEntryFlags flags = JournalEntryFlags.Unspecified)
     {
-        // This will be implemented when we have price monitoring
-        throw new NotImplementedException("ClosePosition requires price monitor integration");
+        if (PriceMonitor == null)
+        {
+            return ValueTask.FromResult<IOrderResult>(new OrderResult
+            {
+                IsSuccess = false,
+                Error = "Price monitor not available - cannot close position"
+            });
+        }
+
+        var exchangeSymbol = new ExchangeSymbol(ExchangeArea.Exchange, ExchangeArea.Area, position.Symbol);
+        var price = PriceMonitor.GetCurrentPrice(exchangeSymbol);
+
+        if (price == null || price.Value.Bid == null || price.Value.Ask == null)
+        {
+            return ValueTask.FromResult<IOrderResult>(new OrderResult
+            {
+                IsSuccess = false,
+                Error = $"No price data available for {position.Symbol}"
+            });
+        }
+
+        var bid = TPrecision.CreateChecked(price.Value.Bid.Value);
+        var ask = TPrecision.CreateChecked(price.Value.Ask.Value);
+
+        // Use fill simulator to calculate exit price (closing is opposite direction)
+        var exitDirection = position.LongOrShort == LongAndShort.Long ? LongAndShort.Short : LongAndShort.Long;
+        var fillRequest = new FillRequest<TPrecision>
+        {
+            OrderType = FillOrderType.Market,
+            Direction = exitDirection,
+            Quantity = position.Quantity,
+            Bid = bid,
+            Ask = ask,
+            Symbol = exchangeSymbol
+        };
+
+        var fillResult = FillSimulator!.CalculateFill(fillRequest);
+
+        if (!fillResult.IsFilled)
+        {
+            return ValueTask.FromResult<IOrderResult>(new OrderResult
+            {
+                IsSuccess = false,
+                Error = fillResult.Reason ?? "Exit fill rejected"
+            });
+        }
+
+        // Clear any pending orders for this position
+        _ = PendingOrderManager?.ClearOrdersForPositionAsync(position.Id);
+
+        // Close the position and realize P&L
+        var pnl = ClosePosition(position.Id, fillResult.ExecutionPrice);
+
+        return ValueTask.FromResult<IOrderResult>(new OrderResult
+        {
+            IsSuccess = true,
+            Data = pnl
+        });
     }
 
     /// <inheritdoc />
@@ -286,13 +434,13 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
         decimal? marketExecuteAtPrice = null,
         (decimal? stop, decimal? limit)? stopLimit = null)
     {
-        throw new NotImplementedException();
+        throw new NotImplementedException("ClosePositionsForSymbol not yet implemented");
     }
 
     /// <inheritdoc />
     public ValueTask<IOrderResult> ReducePositionForSymbol(string symbol, LongAndShort longAndShort, double positionSize)
     {
-        throw new NotImplementedException();
+        throw new NotImplementedException("ReducePositionForSymbol not yet implemented");
     }
 
     /// <inheritdoc />
@@ -302,17 +450,169 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
     }
 
     /// <inheritdoc />
-    public ValueTask<IOrderResult> SetStopLosses(string symbol, LongAndShort direction, TPrecision sl, StopLossFlags flags)
+    public virtual async ValueTask<IOrderResult> SetStopLosses(string symbol, LongAndShort direction, TPrecision sl, StopLossFlags flags)
     {
-        // This will be implemented with pending order manager
-        throw new NotImplementedException("SetStopLosses requires pending order manager integration");
+        if (PendingOrderManager == null)
+        {
+            return new OrderResult
+            {
+                IsSuccess = false,
+                Error = "Pending order manager not available - cannot set stop losses"
+            };
+        }
+
+        // Find positions for this symbol and direction
+        var positions = _positions.Values
+            .Where(p => p.Symbol == symbol && p.Direction == direction && !p.IsClosed)
+            .ToList();
+
+        if (positions.Count == 0)
+        {
+            return OrderResult.NoopSuccess;
+        }
+
+        var results = new List<IOrderResult>();
+
+        foreach (var position in positions)
+        {
+            try
+            {
+                // Check if we should update or skip based on flags
+                if (flags.HasFlag(StopLossFlags.TightenOnly) && position.StopLoss != null)
+                {
+                    // For longs, only tighten (raise) the stop loss
+                    // For shorts, only tighten (lower) the stop loss
+                    var currentSl = position.StopLoss.Value;
+                    var shouldUpdate = direction == LongAndShort.Long
+                        ? sl > currentSl
+                        : sl < currentSl;
+
+                    if (!shouldUpdate)
+                    {
+                        results.Add(OrderResult.NoopSuccess);
+                        continue;
+                    }
+                }
+
+                // Cancel existing SL orders for this position if any
+                var existingOrders = PendingOrderManager.GetOrdersForPosition(position.Id)
+                    .Where(o => o.OrderType == SimulatedOrderType.StopLoss)
+                    .ToList();
+
+                foreach (var existingOrder in existingOrders)
+                {
+                    await PendingOrderManager.CancelOrderAsync(existingOrder.Id);
+                }
+
+                // Register new stop loss
+                await PendingOrderManager.RegisterStopLossAsync(position, sl);
+                position.StopLoss = sl;
+
+                results.Add(OrderResult.Success);
+            }
+            catch (Exception ex)
+            {
+                results.Add(new OrderResult
+                {
+                    IsSuccess = false,
+                    Error = ex.Message
+                });
+            }
+        }
+
+        return new OrderResult
+        {
+            IsSuccess = results.All(r => r.IsSuccess),
+            InnerResults = results
+        };
     }
 
     /// <inheritdoc />
-    public ValueTask<IOrderResult> SetTakeProfits(string symbol, LongAndShort direction, TPrecision tp, StopLossFlags flags)
+    public virtual async ValueTask<IOrderResult> SetTakeProfits(string symbol, LongAndShort direction, TPrecision tp, StopLossFlags flags)
     {
-        // This will be implemented with pending order manager
-        throw new NotImplementedException("SetTakeProfits requires pending order manager integration");
+        if (PendingOrderManager == null)
+        {
+            return new OrderResult
+            {
+                IsSuccess = false,
+                Error = "Pending order manager not available - cannot set take profits"
+            };
+        }
+
+        // Find positions for this symbol and direction
+        var positions = _positions.Values
+            .Where(p => p.Symbol == symbol && p.Direction == direction && !p.IsClosed)
+            .ToList();
+
+        if (positions.Count == 0)
+        {
+            return OrderResult.NoopSuccess;
+        }
+
+        var results = new List<IOrderResult>();
+
+        foreach (var position in positions)
+        {
+            try
+            {
+                // Cancel existing TP orders for this position if any
+                var existingOrders = PendingOrderManager.GetOrdersForPosition(position.Id)
+                    .Where(o => o.OrderType == SimulatedOrderType.TakeProfit)
+                    .ToList();
+
+                foreach (var existingOrder in existingOrders)
+                {
+                    await PendingOrderManager.CancelOrderAsync(existingOrder.Id);
+                }
+
+                // Register new take profit
+                await PendingOrderManager.RegisterTakeProfitAsync(position, tp);
+                position.TakeProfit = tp;
+
+                results.Add(OrderResult.Success);
+            }
+            catch (Exception ex)
+            {
+                results.Add(new OrderResult
+                {
+                    IsSuccess = false,
+                    Error = ex.Message
+                });
+            }
+        }
+
+        return new OrderResult
+        {
+            IsSuccess = results.All(r => r.IsSuccess),
+            InnerResults = results
+        };
+    }
+
+    #endregion
+
+    #region Order Triggered Handling
+
+    /// <summary>
+    /// Handles when a pending order (SL/TP) is triggered by the price monitor.
+    /// </summary>
+    private void HandleOrderTriggered(PendingOrder<TPrecision> order, TPrecision executionPrice)
+    {
+        if (!_positions.TryGetValue(order.PositionId, out var position))
+        {
+            // Position may have been closed by other means
+            return;
+        }
+
+        if (position.IsClosed)
+        {
+            return;
+        }
+
+        // Close the position at the execution price
+        ClosePosition(order.PositionId, executionPrice);
+
+        // Clear any remaining orders for this position
+        _ = PendingOrderManager?.ClearOrdersForPositionAsync(order.PositionId);
     }
 
     #endregion
