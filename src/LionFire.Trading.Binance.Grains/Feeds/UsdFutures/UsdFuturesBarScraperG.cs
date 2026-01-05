@@ -112,6 +112,20 @@ public interface IUsdFuturesBarScraperG : IGrainWithStringKey
     Task Deactivate();
 
     /// <summary>
+    /// Sends a heartbeat to renew the subscriber's lease.
+    /// Subscribers must call this periodically to prevent automatic deactivation.
+    /// </summary>
+    /// <param name="subscriberGrainKey">The grain key of the subscriber renewing its lease.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// This is essential for distributed system robustness. If a silo crashes,
+    /// OnDeactivateAsync won't be called. The heartbeat/lease pattern ensures
+    /// orphaned scrapers will automatically shut down when leases expire.
+    /// Default lease duration is 60 seconds, heartbeat every 30 seconds.
+    /// </remarks>
+    Task Heartbeat(string subscriberGrainKey);
+
+    /// <summary>
     /// Returns whether the scraper is currently active and polling.
     /// </summary>
     /// <returns>True if the scraper is active, false otherwise.</returns>
@@ -186,8 +200,11 @@ public class GrainOptionsMonitor<T> : IOptionsMonitor<T>
 /// - Increases delay when bars are missed (slow down to ensure bars are ready)
 /// - Decreases delay after consecutive successes (speed up to reduce latency)
 /// </para>
+/// <para>
+/// Inherits lease-based subscriber tracking from <see cref="BarScraperGBase"/>.
+/// </para>
 /// </remarks>
-public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
+public class UsdFuturesBarScraperG : BarScraperGBase, IUsdFuturesBarScraperG
 {
     /// <summary>
     /// Gets the persistent polling configuration options.
@@ -202,7 +219,13 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     /// <summary>
     /// Gets the logger for this grain.
     /// </summary>
-    public ILogger<UsdFuturesBarScraperG> Logger { get; }
+    public ILogger<UsdFuturesBarScraperG> TypedLogger { get; }
+
+    /// <inheritdoc/>
+    protected override ILogger Logger => TypedLogger;
+
+    /// <inheritdoc/>
+    protected override string GrainId => this.GetPrimaryKeyString();
 
     /// <summary>
     /// Gets the Binance REST API client for retrieving bar data.
@@ -277,7 +300,7 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
         IClusterClient clusterClient
         )
     {
-        Logger = logger;
+        TypedLogger = logger;
         BinanceRestClient = binanceRestClient;
         TentativeChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.TentativeBars);
         ConfirmedChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.ConfirmedBars);
@@ -366,6 +389,35 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #endregion
 
+    #region BarScraperGBase Overrides
+
+    /// <inheritdoc/>
+    protected override void OnFirstSubscriber()
+    {
+        // Initialize/reinitialize the bar retrieval timer
+        if (Options.State.Interval <= 0)
+        {
+            Options.State.Interval = 1;
+        }
+        InitTimer();
+    }
+
+    /// <inheritdoc/>
+    protected override Task OnLastSubscriberRemoved()
+    {
+        timer?.Dispose();
+        timer = null;
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
+    public override async Task RetrieveBars()
+    {
+        await Scraper.RetrieveBars();
+    }
+
+    #endregion
+
     /// <summary>
     /// Publishes bars to the appropriate broadcast channels based on their status.
     /// </summary>
@@ -402,7 +454,7 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     /// <summary>
     /// Handles newly retrieved bars from the scraper by publishing them to broadcast channels
-    /// and delivering directly to subscriber (if active in demand-driven mode).
+    /// and delivering directly to subscribers (if active in demand-driven mode).
     /// </summary>
     /// <param name="bars">The bars retrieved from Binance.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
@@ -411,8 +463,8 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
         // Publish to broadcast channels (existing behavior, kept for transition)
         await BarsToBroadcastChannel(bars);
 
-        // Direct delivery to subscriber (demand-driven architecture)
-        await DeliverBarsToSubscriber(bars);
+        // Direct delivery to subscribers (demand-driven architecture - handled by base class)
+        await DeliverBarsToSubscribers(bars);
     }
 
     /// <summary>
@@ -492,16 +544,6 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
 
     #endregion
 
-    #region Methods
-
-    /// <inheritdoc/>
-    public async Task RetrieveBars()
-    {
-        await Scraper.RetrieveBars();
-    }
-
-    #endregion
-
     #region Accessors
 
     /// <inheritdoc/>
@@ -522,107 +564,6 @@ public class UsdFuturesBarScraperG : Grain, IUsdFuturesBarScraperG
     {
         Options.State.Offset = newValue;
         await Options.WriteStateAsync();
-    }
-
-    #endregion
-
-    #region Demand-Driven Architecture
-
-    /// <summary>
-    /// The grain key of the subscriber (LastBarsG) that receives bar updates.
-    /// Set via Activate(), cleared via Deactivate().
-    /// </summary>
-    private string? _subscriberGrainKey;
-
-    /// <summary>
-    /// Cached reference to the subscriber grain for direct bar delivery.
-    /// </summary>
-    private IBarSubscriber? _subscriber;
-
-    /// <summary>
-    /// Whether the scraper is currently active in demand-driven mode.
-    /// </summary>
-    private bool _isActive = false;
-
-    /// <inheritdoc/>
-    public Task Activate(string subscriberGrainKey)
-    {
-        if (_isActive && _subscriberGrainKey != null)
-        {
-            Logger.LogWarning("{grainId} Already active with {oldSubscriber}, replacing with {newSubscriber}",
-                this.GetPrimaryKeyString(), _subscriberGrainKey, subscriberGrainKey);
-        }
-
-        _subscriberGrainKey = subscriberGrainKey;
-        _subscriber = GrainFactory.GetGrain<IBarSubscriber>(subscriberGrainKey);
-        _isActive = true;
-
-        Logger.LogInformation("{grainId} Activated with subscriber {subscriberKey}",
-            this.GetPrimaryKeyString(), subscriberGrainKey);
-
-        // Initialize/reinitialize the timer to start polling
-        // Use default interval of 1 if not configured
-        if (Options.State.Interval <= 0)
-        {
-            Options.State.Interval = 1;
-        }
-        InitTimer();
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task Deactivate()
-    {
-        Logger.LogInformation("{grainId} Deactivating, stopping polling timer", this.GetPrimaryKeyString());
-
-        _subscriberGrainKey = null;
-        _subscriber = null;
-        _isActive = false;
-
-        // Stop the timer
-        timer?.Dispose();
-        timer = null;
-
-        return Task.CompletedTask;
-    }
-
-    /// <inheritdoc/>
-    public Task<bool> IsActive() => Task.FromResult(_isActive);
-
-    /// <summary>
-    /// Delivers bars directly to the subscriber grain.
-    /// Called after broadcast channel delivery (during transition period).
-    /// </summary>
-    private async Task DeliverBarsToSubscriber(IEnumerable<BarEnvelope> bars)
-    {
-        if (!_isActive || _subscriber == null)
-        {
-            return;
-        }
-
-        // Filter for confirmed bars only for direct delivery
-        var confirmedBars = bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed)).ToArray();
-        if (confirmedBars.Length == 0)
-        {
-            return;
-        }
-
-        try
-        {
-            Logger.LogTrace("{grainId} Delivering {count} bars directly to {subscriber}",
-                this.GetPrimaryKeyString(), confirmedBars.Length, _subscriberGrainKey);
-
-            await _subscriber.OnBars(confirmedBars);
-        }
-        catch (Exception ex)
-        {
-            Logger.LogError(ex, "{grainId} Failed to deliver bars to subscriber {subscriber}, deactivating",
-                this.GetPrimaryKeyString(), _subscriberGrainKey);
-
-            // Subscriber may be dead, deactivate
-            await Deactivate();
-        }
     }
 
     #endregion
