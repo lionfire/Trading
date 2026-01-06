@@ -19,6 +19,12 @@ public class KlineArrayFile : IDisposable
     public bool IsComplete { get; set; }
     public bool ShouldSave { get; set; } = true;
 
+    /// <summary>
+    /// The file-based lock held for this download operation.
+    /// Released when this KlineArrayFile is disposed.
+    /// </summary>
+    public DownloadLock? Lock { get; set; }
+
     public static string CompletePathFromDownloadingPath(string downloadingPath) => downloadingPath.Replace(KlineArrayFileConstants.DownloadingFileExtension, "");
 
     public KlineArrayFile(string path, SymbolBarsRange reference, FileStream fileStream)
@@ -116,21 +122,30 @@ public class KlineArrayFile : IDisposable
 
     public void Dispose()
     {
-        FileStream?.Dispose();
-        if (!ShouldSave)
+        try
         {
-            DeleteExistingDownloadingFile();
-        }
-        else
-        {
-            if (IsComplete)
+            FileStream?.Dispose();
+            if (!ShouldSave)
             {
-                MoveDownloadingToComplete();
+                DeleteExistingDownloadingFile();
             }
             else
             {
-                MoveDownloadingToPartial();
+                if (IsComplete)
+                {
+                    MoveDownloadingToComplete();
+                }
+                else
+                {
+                    MoveDownloadingToPartial();
+                }
             }
+        }
+        finally
+        {
+            // Always release the lock, even if file operations fail
+            Lock?.Dispose();
+            Lock = null;
         }
     }
 }

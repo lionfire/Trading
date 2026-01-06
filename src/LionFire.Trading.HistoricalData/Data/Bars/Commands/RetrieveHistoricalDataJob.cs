@@ -332,38 +332,80 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                 (barsResult, info) = await RetrieveForDate(NextDate).ConfigureAwait(false);
                 if (barsResult == null)
                 {
+                    // QUICK FIX: Check if another process is actively downloading based on file timestamp
+                    // This works across processes, unlike the process-local DownloadProgressTracker
+                    var downloadingFileLastWrite = KlineArrayFileProvider!.GetDownloadingFileLastWriteTime(reference, NextDate);
+                    if (downloadingFileLastWrite.HasValue)
+                    {
+                        var fileAge = DateTime.UtcNow - downloadingFileLastWrite.Value;
+                        var activeDownloadThreshold = TimeSpan.FromSeconds(Debugger.IsAttached ? 180 : 30);
+
+                        if (fileAge < activeDownloadThreshold)
+                        {
+                            // File is being actively written by another process - wait without consuming retries
+                            Logger.LogDebug("{Reference} {NextDate} - Download file was modified {FileAge:F1}s ago (threshold: {Threshold}s). Another process appears to be actively downloading. Waiting 500ms...",
+                                reference, NextDate, fileAge.TotalSeconds, activeDownloadThreshold.TotalSeconds);
+                            await Task.Delay(500).ConfigureAwait(false);
+                            goto tryAgain;
+                        }
+                        else
+                        {
+                            Logger.LogWarning("{Reference} {NextDate} - Download file exists but hasn't been modified for {FileAge:F1}s (threshold: {Threshold}s). May be orphaned from crashed process.",
+                                reference, NextDate, fileAge.TotalSeconds, activeDownloadThreshold.TotalSeconds);
+                        }
+                    }
+
                     var since = DownloadProgressTracker.HowLongSinceProgress(Input.ExchangeFlag);
 
                     if (!since.HasValue)
                     {
+                        // No progress ever tracked for this exchange in this process - likely a stale file from a previous run
+                        Logger.LogWarning("{Reference} {NextDate} - No download progress tracked for exchange {Exchange}. Attempting to delete stale file.", reference, NextDate, Input.ExchangeFlag);
                         Debug.WriteLine($"{reference} {NextDate} - Attempting to delete stale file because it was not downloaded by this process.");
                         if (await KlineArrayFileProvider!.TryDeleteStaleDownloadFile(reference, NextDate))
                         {
+                            Logger.LogInformation("{Reference} {NextDate} - Deleted stale download file. Retrying.", reference, NextDate);
                             Debug.WriteLine($"{reference} {NextDate} - Deleted stale file because it was not downloaded by this process.");
                             goto tryAgain;
                         }
                         else
                         {
+                            Logger.LogWarning("{Reference} {NextDate} - File exists but was not considered stale. This may indicate concurrent download in progress or a stuck state.", reference, NextDate);
                             Debug.WriteLine($"{reference} {NextDate} - Did not delete file because it was not considered stale.  (Unexpected behavior may follow.)");
                         }
                     }
 
-                    if (since <= TimeSpan.FromSeconds(Debugger.IsAttached ? 180 : 30))
+                    var recentProgressThreshold = TimeSpan.FromSeconds(Debugger.IsAttached ? 180 : 30);
+                    if (since <= recentProgressThreshold)
                     {
-                        //Debug.WriteLine($"{input.Symbol} {input.SymbolBarsRange.Start} - {input.SymbolBarsRange.EndExclusive} -- File was downloaded by something else and should be ready now.  {fileDownloadedElsewhereRetries} retry attempts remaining.");
+                        // Recent progress detected - another process is likely downloading, wait briefly
+                        Logger.LogDebug("{Reference} {NextDate} - Download progress detected {Since:F1}s ago (threshold: {Threshold}s). Waiting for concurrent download to complete. Retries remaining: {Retries}",
+                            reference, NextDate, since?.TotalSeconds, recentProgressThreshold.TotalSeconds, fileDownloadedElsewhereRetries);
                         await Task.Delay(150).ConfigureAwait(false); // TODO OPTIMIZE ASYNCBLOCKING WAIT - use a semaphore
                         goto tryAgain;
                     }
                     else if (fileDownloadedElsewhereRetries-- > 0)
                     {
+                        // No recent progress but retries remaining - may be slow network or rate limiting
                         int waitTime = 350;
-                        Debug.WriteLine($"{reference} {NextDate} - File seems to be being downloaded by another process. {fileDownloadedElsewhereRetries} retry attempts remaining. Waiting {waitTime}ms and trying again" ); await Task.Delay(waitTime).ConfigureAwait(false);
+                        Logger.LogWarning("{Reference} {NextDate} - No download progress for {Since:F1}s (exceeds {Threshold}s threshold). Possible causes: rate limiting, network issues, or hung process. Retries remaining: {Retries}. Waiting {WaitTime}ms.",
+                            reference, NextDate, since?.TotalSeconds, recentProgressThreshold.TotalSeconds, fileDownloadedElsewhereRetries, waitTime);
+                        Debug.WriteLine($"{reference} {NextDate} - File seems to be being downloaded by another process. {fileDownloadedElsewhereRetries} retry attempts remaining. Waiting {waitTime}ms and trying again");
+                        await Task.Delay(waitTime).ConfigureAwait(false);
                         // TODO OPTIMIZE ASYNCBLOCKING WAIT - use a process spanning mutex
                         goto tryAgain;
                     }
-                    else // REVIEW - infinite loop bailout
+                    else // All retries exhausted
                     {
-                        throw new Exception($"Downloading data from exchange {Input.ExchangeFlag} has stalled for {since}. Assuming hung. Failed.");
+                        Logger.LogError("{Reference} {NextDate} - Historical data fetch TIMEOUT. Exchange: {Exchange}, stalled for {Since:F1}s. All {TotalRetries} retry attempts exhausted. Possible causes: exchange API rate limiting, network connectivity issues, or hung download process.",
+                            reference, NextDate, Input.ExchangeFlag, since?.TotalSeconds, TotalFileDownloadedElsewhereRetries);
+                        throw new HistoricalDataFetchTimeoutException($"Downloading data from exchange {Input.ExchangeFlag} has stalled for {since}. All {TotalFileDownloadedElsewhereRetries} retry attempts exhausted. Assuming hung.")
+                        {
+                            Exchange = Input.ExchangeFlag,
+                            StallDuration = since,
+                            Symbol = Input.Symbol,
+                            RetryAttemptsExhausted = TotalFileDownloadedElsewhereRetries
+                        };
                     }
                 }
                 // This logic has been encapsulated in callee
