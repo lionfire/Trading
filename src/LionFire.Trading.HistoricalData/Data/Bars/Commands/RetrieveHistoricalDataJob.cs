@@ -350,8 +350,19 @@ public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDa
                         }
                         else
                         {
-                            Logger.LogWarning("{Reference} {NextDate} - Download file exists but hasn't been modified for {FileAge:F1}s (threshold: {Threshold}s). May be orphaned from crashed process.",
+                            // File is stale/orphaned - attempt to delete it before proceeding
+                            Logger.LogWarning("{Reference} {NextDate} - Download file exists but hasn't been modified for {FileAge:F1}s (threshold: {Threshold}s). Attempting to delete orphaned file.",
                                 reference, NextDate, fileAge.TotalSeconds, activeDownloadThreshold.TotalSeconds);
+
+                            if (await KlineArrayFileProvider!.TryDeleteStaleDownloadFile(reference, NextDate, forceDeleteNonStale: true))
+                            {
+                                Logger.LogInformation("{Reference} {NextDate} - Successfully deleted orphaned download file. Retrying.", reference, NextDate);
+                                goto tryAgain;
+                            }
+                            else
+                            {
+                                Logger.LogWarning("{Reference} {NextDate} - Failed to delete orphaned file. May be locked by another process.", reference, NextDate);
+                            }
                         }
                     }
 
