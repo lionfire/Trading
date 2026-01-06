@@ -29,6 +29,7 @@ public partial class BotEntity : ReactiveObject, IValidatable
 
 
     [Reactive]
+    [property: JsonProperty("Enabled")]
     bool _enabled;
 
     /// <summary>
@@ -36,29 +37,36 @@ public partial class BotEntity : ReactiveObject, IValidatable
     /// (The account may be real money or demo.)
     /// </summary>
     [Reactive]
+    [property: JsonProperty("Live")]
     bool _live;
 
     [Reactive]
+    [property: JsonProperty("Name")]
     private string? _name;
 
     [Reactive]
+    [property: JsonProperty("Comments")]
     private string? _comments;
 
     [Reactive]
+    [property: JsonProperty("Description")]
     private string? _description;
 
     [Reactive]
+    [property: JsonProperty("BotTypeName")]
     private string? botTypeName;
 
     [Reactive]
+    [property: JsonProperty("BotTypeParameters")]
     private Type[]? botTypeParameters;
-    
+
     /// <summary>
     /// Override the numeric type for live trading.
     /// If set, bots will use this type for live trading regardless of the saved parameter type.
     /// Common values: typeof(decimal) for maximum accuracy, typeof(double) for performance.
     /// </summary>
     [Reactive]
+    [property: JsonProperty("LiveNumericTypeOverride")]
     private Type? liveNumericTypeOverride;
 
     /// <summary>
@@ -67,16 +75,23 @@ public partial class BotEntity : ReactiveObject, IValidatable
     /// Logs below this level will be filtered out.
     /// </summary>
     [Reactive]
+    [property: JsonProperty("LogLevel")]
     private LogLevel? logLevel;
 
     [Reactive]
+    [property: JsonProperty("Symbol")]
     private string? symbol;
 
     [Reactive]
+    [property: JsonProperty("Exchange")]
     private string? exchange;
+
     [Reactive]
+    [property: JsonProperty("ExchangeArea")]
     private string? exchangeArea;
+
     [Reactive]
+    [property: JsonProperty("TimeFrame")]
     private TimeFrame? timeFrame;
 
     #region Derived
