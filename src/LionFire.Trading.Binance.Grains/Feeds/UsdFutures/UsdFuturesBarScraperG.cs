@@ -5,7 +5,6 @@ using LionFire.Trading.Feeds;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Orleans.BroadcastChannel;
 using Orleans.Concurrency;
 using Orleans.Runtime;
 using System;
@@ -102,7 +101,24 @@ public interface IUsdFuturesBarScraperG : IGrainWithStringKey
     /// </summary>
     /// <param name="subscriberGrainKey">The grain key of the LastBarsG to receive bar updates.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Use this overload only when a single grain type implements <see cref="IBarSubscriber"/>.
+    /// If multiple grain types implement it, use <see cref="Activate(IBarSubscriber)"/> instead
+    /// to avoid Orleans grain type ambiguity.
+    /// </remarks>
     Task Activate(string subscriberGrainKey);
+
+    /// <summary>
+    /// Activates the scraper with a subscriber grain reference.
+    /// The scraper will call subscriber.OnBars() when new bars are retrieved.
+    /// </summary>
+    /// <param name="subscriber">The grain reference of the subscriber to receive bar updates.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Use this overload when multiple grain types implement <see cref="IBarSubscriber"/>.
+    /// The subscriber should pass <c>this.AsReference&lt;IBarSubscriber&gt;()</c>.
+    /// </remarks>
+    Task Activate(IBarSubscriber subscriber);
 
     /// <summary>
     /// Deactivates the scraper, stopping all polling.
@@ -233,26 +249,6 @@ public class UsdFuturesBarScraperG : BarScraperGBase, IUsdFuturesBarScraperG
     public IBinanceRestClient BinanceRestClient { get; }
 
     /// <summary>
-    /// Gets the broadcast channel provider for tentative (unconfirmed) bars.
-    /// </summary>
-    public IBroadcastChannelProvider TentativeChannelProvider { get; }
-
-    /// <summary>
-    /// Gets the broadcast channel provider for revision bars (bars that changed after initial publish).
-    /// </summary>
-    public IBroadcastChannelProvider RevisionChannelProvider { get; }
-
-    /// <summary>
-    /// Gets the broadcast channel provider for in-progress bars (current bar being formed).
-    /// </summary>
-    public IBroadcastChannelProvider InProgressChannelProvider { get; }
-
-    /// <summary>
-    /// Gets the broadcast channel provider for confirmed bars.
-    /// </summary>
-    public IBroadcastChannelProvider ConfirmedChannelProvider { get; }
-
-    /// <summary>
     /// Gets the underlying bar scraper implementation.
     /// </summary>
     UsdFuturesBarScraper Scraper { get; }
@@ -290,22 +286,16 @@ public class UsdFuturesBarScraperG : BarScraperGBase, IUsdFuturesBarScraperG
     /// <param name="state">Persistent state for scraper position.</param>
     /// <param name="logger">Logger instance.</param>
     /// <param name="binanceRestClient">Binance REST API client.</param>
-    /// <param name="clusterClient">Orleans cluster client for accessing broadcast channels.</param>
     /// <exception cref="ArgumentException">Thrown when grain key is not in expected format "{Symbol}^{TimeFrameString}".</exception>
     public UsdFuturesBarScraperG(
         [PersistentState("BinanceUsdFuturesBarScraperOptions", "Trading")] IPersistentState<BarPollerOptions> options,
         [PersistentState("BinanceUsdFuturesBarScrapeState", "Trading")] IPersistentState<BarScraperState> state,
         ILogger<UsdFuturesBarScraperG> logger,
-        IBinanceRestClient binanceRestClient,
-        IClusterClient clusterClient
+        IBinanceRestClient binanceRestClient
         )
     {
         TypedLogger = logger;
         BinanceRestClient = binanceRestClient;
-        TentativeChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.TentativeBars);
-        ConfirmedChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.ConfirmedBars);
-        RevisionChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.RevisionBars);
-        InProgressChannelProvider = clusterClient.GetBroadcastChannelProvider(BarsBroadcastChannelNames.InProgressBars);
 
         Options = options;
         State = state;
@@ -418,51 +408,15 @@ public class UsdFuturesBarScraperG : BarScraperGBase, IUsdFuturesBarScraperG
 
     #endregion
 
-    /// <summary>
-    /// Publishes bars to the appropriate broadcast channels based on their status.
-    /// </summary>
-    /// <param name="bars">The bars to publish.</param>
-    /// <returns>A task representing the asynchronous publish operation.</returns>
-    /// <remarks>
-    /// Bars are routed to different channels based on their status:
-    /// - Confirmed: Bars that are finalized and won't change
-    /// - Tentative: Bars that may still be revised
-    /// - InProgress: The current bar being formed
-    /// - Revision: Bars that changed after initial publish
-    /// </remarks>
-    private async Task BarsToBroadcastChannel(IEnumerable<BarEnvelope> bars)
-    {
-        var r = new ExchangeSymbolTimeFrame("binance", "futures", Symbol, TimeFrame);
-        var channelId = r.ToId();
-        Logger.LogTrace("Broadcasting to channel: {channelId}", channelId);
-
-        var confirmed = ConfirmedChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.ConfirmedBars, channelId));
-        var tentative = TentativeChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.TentativeBars, channelId));
-        var inProgress = InProgressChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.InProgressBars, channelId));
-        var revision = RevisionChannelProvider.GetChannelWriter<IEnumerable<BarEnvelope>>(ChannelId.Create(BarsBroadcastChannelNames.RevisionBars, channelId));
-
-        await Task.WhenAll(
-           confirmed.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Confirmed)).ToArray()),
-           tentative.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Tentative) || b.Status == BarStatus.Unspecified).ToArray()),
-           //tentative.Publish(bars.ToArray()),
-           revision.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.Revision)).ToArray()),
-           inProgress.Publish(bars.Where(b => b.Status.HasFlag(BarStatus.InProgress)).ToArray())
-           );
-    }
-
     #region Event Handling
 
     /// <summary>
-    /// Handles newly retrieved bars from the scraper by publishing them to broadcast channels
-    /// and delivering directly to subscribers (if active in demand-driven mode).
+    /// Handles newly retrieved bars from the scraper by delivering directly to subscribers.
     /// </summary>
     /// <param name="bars">The bars retrieved from Binance.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
     private async Task OnBars(IEnumerable<BarEnvelope> bars)
     {
-        // Publish to broadcast channels (existing behavior, kept for transition)
-        await BarsToBroadcastChannel(bars);
-
         // Direct delivery to subscribers (demand-driven architecture - handled by base class)
         await DeliverBarsToSubscribers(bars);
     }
