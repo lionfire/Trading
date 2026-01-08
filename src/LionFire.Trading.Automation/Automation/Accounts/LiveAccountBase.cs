@@ -118,6 +118,24 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
 
     #endregion
 
+    #region Events
+
+    /// <summary>
+    /// Event arguments for when a position is closed.
+    /// </summary>
+    public record PositionClosedEventArgs(
+        LivePosition<TPrecision> Position,
+        TPrecision ExitPrice,
+        TPrecision RealizedPnL,
+        DateTimeOffset ExitTime);
+
+    /// <summary>
+    /// Raised when a position is closed, providing full position details.
+    /// </summary>
+    public event Action<PositionClosedEventArgs>? PositionClosed;
+
+    #endregion
+
     #region Service Dependencies
 
     /// <summary>
@@ -225,14 +243,18 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
             throw new InvalidOperationException($"Position {positionId} not found");
         }
 
+        var exitTime = DateTimeOffset.UtcNow;
         position.ExitPrice = exitPrice;
-        position.ExitTime = DateTimeOffset.UtcNow;
+        position.ExitTime = exitTime;
         position.IsClosed = true;
 
         var pnl = CalculatePositionPnL(position, exitPrice);
         RealizedPnL += pnl;
 
         OnPositionClosed(pnl);
+
+        // Raise event with full position details for UI tracking
+        PositionClosed?.Invoke(new PositionClosedEventArgs(position, exitPrice, pnl, exitTime));
 
         _positionsSource.Remove(positionId);
 
@@ -501,11 +523,11 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
 
                 foreach (var existingOrder in existingOrders)
                 {
-                    await PendingOrderManager.CancelOrderAsync(existingOrder.Id);
+                    await PendingOrderManager.CancelOrderAsync(existingOrder.Id).ConfigureAwait(false);
                 }
 
                 // Register new stop loss
-                await PendingOrderManager.RegisterStopLossAsync(position, sl);
+                await PendingOrderManager.RegisterStopLossAsync(position, sl).ConfigureAwait(false);
                 position.StopLoss = sl;
 
                 results.Add(OrderResult.Success);
@@ -562,11 +584,11 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
 
                 foreach (var existingOrder in existingOrders)
                 {
-                    await PendingOrderManager.CancelOrderAsync(existingOrder.Id);
+                    await PendingOrderManager.CancelOrderAsync(existingOrder.Id).ConfigureAwait(false);
                 }
 
                 // Register new take profit
-                await PendingOrderManager.RegisterTakeProfitAsync(position, tp);
+                await PendingOrderManager.RegisterTakeProfitAsync(position, tp).ConfigureAwait(false);
                 position.TakeProfit = tp;
 
                 results.Add(OrderResult.Success);
