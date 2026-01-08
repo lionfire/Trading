@@ -328,6 +328,36 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
         long? transactionId = null,
         JournalEntryFlags journalFlags = JournalEntryFlags.Unspecified)
     {
+        // Check if this is a close operation
+        // CloseOnly flag OR negative position size indicates a close
+        var isCloseOperation = increasePositionFlags.HasFlag(PositionOperationFlags.CloseOnly)
+            || increasePositionFlags.HasFlag(PositionOperationFlags.Close)
+            || positionSize < TPrecision.Zero;
+
+        if (isCloseOperation)
+        {
+            // Find an existing position to close
+            var existingPosition = _positions.Values
+                .FirstOrDefault(p => p.Symbol == symbol && p.Direction == longAndShort);
+
+            if (existingPosition != null)
+            {
+                return ClosePosition(existingPosition, journalFlags);
+            }
+
+            // If CloseOnly is set and no position found, return error
+            if (increasePositionFlags.HasFlag(PositionOperationFlags.CloseOnly))
+            {
+                return ValueTask.FromResult<IOrderResult>(new OrderResult
+                {
+                    IsSuccess = false,
+                    Error = $"No {longAndShort} position found for {symbol} to close"
+                });
+            }
+
+            // Otherwise fall through to open a new position (if not CloseOnly)
+        }
+
         if (PriceMonitor == null)
         {
             return ValueTask.FromResult<IOrderResult>(new OrderResult
@@ -357,7 +387,7 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
         {
             OrderType = FillOrderType.Market,
             Direction = longAndShort,
-            Quantity = positionSize,
+            Quantity = positionSize, // By this point, we know it's an open operation with positive size
             Bid = bid,
             Ask = ask,
             Symbol = exchangeSymbol
