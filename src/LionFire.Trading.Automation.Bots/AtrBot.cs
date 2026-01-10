@@ -175,7 +175,11 @@ public class AtrBot<TValue> : StandardBot2<PAtrBot<TValue>, TValue>
 
     public override void OnBar()
     {
-        Logger.LogInformation($"OnBar called for {this.GetType().Name}");
+        Logger.LogDebug("[AtrBot] OnBar - ATR={ATR}, Size={Size}", ATR?[0], ATR?.Size ?? 0);
+
+        // Need at least 2 ATR values to compare ATR[0] with ATR[1]
+        if (ATR == null || ATR.Size < 2) return;
+
         //if (barIndex++ % 50000 == 0)
         //{
         //    if (ATR.Size > 0) {
