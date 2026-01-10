@@ -1,7 +1,6 @@
 ﻿using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Data;
 using LionFire.Trading.Indicators.Inputs;
-using Oakton.Descriptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;

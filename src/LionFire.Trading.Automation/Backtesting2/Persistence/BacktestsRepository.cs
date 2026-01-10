@@ -136,7 +136,14 @@ public class BacktestsRepository
 
         string dir = GetOptimizationRunDirectory(obr.OptimizationRunReference);
 
-        var pBotType = BotTypeRegistry.PBotRegistry.GetTypeFromNameOrThrow(obr.OptimizationRunReference.Bot);
+        // Resolve PBot type - may be open generic
+        var pBotType = BotTypeRegistry.GetPBotTypeOrThrow(obr.OptimizationRunReference.Bot);
+
+        // Close open generic with double for backtest performance
+        if (pBotType.IsGenericTypeDefinition && pBotType.GetGenericArguments().Length == 1)
+        {
+            pBotType = pBotType.MakeGenericType(typeof(double));
+        }
 
         return await Task.Run(() =>
         {
