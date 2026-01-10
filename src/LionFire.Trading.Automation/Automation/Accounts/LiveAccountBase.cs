@@ -441,6 +441,28 @@ public abstract class LiveAccountBase<TPrecision> : ILiveAccount<TPrecision>
         var bid = TPrecision.CreateChecked(price.Value.Bid.Value);
         var ask = TPrecision.CreateChecked(price.Value.Ask.Value);
 
+        // Sanity check: Reject exit if price is wildly different from entry price
+        // This catches cross-contamination bugs where wrong symbol's price is used
+        var entryPrice = position.EntryAverage;
+        var exitPrice = position.LongOrShort == LongAndShort.Long ? bid : ask;
+        if (entryPrice > TPrecision.Zero)
+        {
+            var priceRatio = exitPrice > entryPrice
+                ? double.CreateChecked(exitPrice / entryPrice)
+                : double.CreateChecked(entryPrice / exitPrice);
+
+            // Price changed by more than 100x? Something is very wrong!
+            if (priceRatio > 100.0)
+            {
+                return ValueTask.FromResult<IOrderResult>(new OrderResult
+                {
+                    IsSuccess = false,
+                    Error = $"PRICE SANITY CHECK FAILED for {position.Symbol}: Entry={entryPrice}, Exit={exitPrice}, Ratio={priceRatio:F1}x. " +
+                            $"Possible price monitor cross-contamination. ExchangeSymbol key: {exchangeSymbol.Exchange}:{exchangeSymbol.Area}:{exchangeSymbol.Symbol}"
+                });
+            }
+        }
+
         // Use fill simulator to calculate exit price (closing is opposite direction)
         var exitDirection = position.LongOrShort == LongAndShort.Long ? LongAndShort.Short : LongAndShort.Long;
         var fillRequest = new FillRequest<TPrecision>
