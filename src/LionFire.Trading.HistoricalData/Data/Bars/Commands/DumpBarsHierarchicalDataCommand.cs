@@ -1,6 +1,6 @@
 ﻿using LionFire.Trading.HistoricalData.Binance;
 using LionFire.Trading.HistoricalData.Serialization;
-using Oakton;
+using JasperFx.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LionFire.ExtensionMethods.Dumping;
@@ -13,7 +13,7 @@ public class DumpBarsHierarchicalDataInput : HistoricalDataJobInput
 }
 
 [Description("Dump bars", Name = "bars")]
-public class DumpBarsHierarchicalDataCommand : OaktonAsyncCommand<DumpBarsHierarchicalDataInput>
+public class DumpBarsHierarchicalDataCommand : JasperFxAsyncCommand<DumpBarsHierarchicalDataInput>
 {
     public DumpBarsHierarchicalDataInput Input { get; set; }
 

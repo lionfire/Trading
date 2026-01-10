@@ -1,14 +1,14 @@
 ﻿using Binance.Net.Enums;
 using LionFire.Trading.Exchanges.Binance;
 using McMaster.Extensions.CommandLineUtils;
-using Oakton;
+using JasperFx.CommandLine;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
 public class HistoricalDataJobInput : CommonTradingInput
 {
 
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     public SymbolBarsRange SymbolBarsRange { get; set; }
 
     [FlagAlias("fields", true)]
@@ -33,7 +33,7 @@ public class HistoricalDataJobInput : CommonTradingInput
     public bool NoVerifyFlag { get; set; }
 
     [FlagAlias("no-update-info", true)]
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     public bool NoUpdateInfoFlag { get; set; }
 
     //[FlagAlias("verbose", 'v')]
@@ -43,7 +43,7 @@ public class HistoricalDataJobInput : CommonTradingInput
     public bool DeleteExtraFilesFlag { get; set; }
 
     //[FlagAlias("keep-extra-files", true)]
-    //[Oakton.IgnoreOnCommandLine]
+    //[IgnoreOnCommandLine]
     //public bool KeepExtraFiles { get; set; }
 
     [FlagAlias("quiet", 'q')]
@@ -52,7 +52,7 @@ public class HistoricalDataJobInput : CommonTradingInput
     [FlagAlias("compression-level", 'z')]
     public int CompressFlag { get; set; } = 12; // TODO: use 0 thru 12 to control no compression up to max compression
 
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     [FlagAlias("compression-method", true)]
     public string CompressionMethod { get; set; } = "LZ4"; // TODO: Enum
 
@@ -63,19 +63,19 @@ public class HistoricalDataJobInput : CommonTradingInput
 
     #region Input: Derived
 
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     public Type? NativeNumericType { get; set; }
 
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     public FieldSet FieldSet { get; set; }
 
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     public TimeFrame TimeFrame => TimeFrame.TryParse(IntervalFlag);
 
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     public KlineInterval? KlineInterval => TimeFrame.Name.ToKlineInterval();
 
-    [Oakton.IgnoreOnCommandLine]
+    [IgnoreOnCommandLine]
     public DateTimeOffset EffectiveTo => TimeFrame.TimeSpanApproximation >= TimeSpan.FromSeconds(2) ? ToFlag - TimeSpan.FromSeconds(1) : ToFlag;
 
     public DateTimeOffset GetEffectiveTo(DateTimeOffset to) => TimeFrame.TimeSpanApproximation >= TimeSpan.FromSeconds(2) ? to - TimeSpan.FromSeconds(1) : to - TimeSpan.FromMilliseconds(1);

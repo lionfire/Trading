@@ -1,3 +1,3 @@
-﻿using Oakton;
+﻿using JasperFx;
 
-[assembly: OaktonCommandAssembly]
+[assembly: JasperFxAssembly]

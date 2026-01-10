@@ -1,6 +1,6 @@
 ﻿using LionFire.Trading.HistoricalData.Binance;
 using LionFire.Trading.HistoricalData.Serialization;
-using Oakton;
+using JasperFx.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LionFire.ExtensionMethods.Dumping;
@@ -13,7 +13,7 @@ namespace LionFire.Trading.HistoricalData;
 
 [Area("data")]
 [Description("List available historical data", Name = "list")]
-public class ListAvailableHistoricalDataCommand : OaktonAsyncCommand<HistoricalDataJobInput>
+public class ListAvailableHistoricalDataCommand : JasperFxAsyncCommand<HistoricalDataJobInput>
 {
     public ListAvailableHistoricalDataCommand()
     {

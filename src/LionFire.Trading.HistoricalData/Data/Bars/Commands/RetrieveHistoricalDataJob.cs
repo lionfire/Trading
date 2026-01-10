@@ -16,7 +16,7 @@ using System.Text.Json;
 using System.Text.Unicode;
 using YamlDotNet.Serialization;
 using ZeroFormatter;
-using Oakton;
+using JasperFx.CommandLine;
 using static AnyDiff.DifferenceLines;
 using K4os.Compression.LZ4;
 using Microsoft.Extensions.DependencyInjection;
@@ -83,7 +83,7 @@ public class RetrieveHistoricalDataParameters : HistoricalDataJobInput
 ///  
 /// </remarks>
 [Description("Retrieve historical data from source", Name = "retrieve")]
-public class RetrieveHistoricalDataJob : OaktonAsyncCommand<RetrieveHistoricalDataParameters> // RENAME: Binance... or refactor
+public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistoricalDataParameters> // RENAME: Binance... or refactor
 {
     #region Configuration
 
