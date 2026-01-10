@@ -3,7 +3,7 @@ using LionFire.Trading.HistoricalData.Sources;
 using LionFire.Trading.HistoricalData.Retrieval;
 using LionFire.ExtensionMethods.Dumping;
 using LionFire;
-using Oakton;
+using JasperFx.CommandLine;
 using Spectre.Console;
 using LionFire.Trading;
 using LionFire.Trading.Backtesting;
@@ -17,7 +17,7 @@ public class BacktestInput : CommonTradingInput
 
 [Area("backtest")]
 [Description("Conduct a single backtest", Name = "backtest")]
-public class BacktestCommand : OaktonAsyncCommand<BacktestInput>
+public class BacktestCommand : JasperFxAsyncCommand<BacktestInput>
 {
     public BacktestCommand()
     {

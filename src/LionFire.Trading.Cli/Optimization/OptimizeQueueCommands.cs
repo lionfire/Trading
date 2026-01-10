@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Orleans;
-using Oakton;
+using JasperFx.CommandLine;
 using Spectre.Console;
 using System.Text.Json;
 using Humanizer;
@@ -68,7 +68,7 @@ public class OptimizeQueueStatusInput
 
 [Area("optimize")]
 [Description("Add optimization job to queue", Name = "queue add")]
-public class OptimizeQueueAddCommand : OaktonAsyncCommand<OptimizeQueueAddInput>
+public class OptimizeQueueAddCommand : JasperFxAsyncCommand<OptimizeQueueAddInput>
 {
     public override async Task<bool> Execute(OptimizeQueueAddInput input)
     {
@@ -150,7 +150,7 @@ public class OptimizeQueueAddCommand : OaktonAsyncCommand<OptimizeQueueAddInput>
 
 [Area("optimize")]
 [Description("List optimization jobs in queue", Name = "queue list")]
-public class OptimizeQueueListCommand : OaktonAsyncCommand<OptimizeQueueListInput>
+public class OptimizeQueueListCommand : JasperFxAsyncCommand<OptimizeQueueListInput>
 {
     public override async Task<bool> Execute(OptimizeQueueListInput input)
     {
@@ -284,7 +284,7 @@ public class OptimizeQueueListCommand : OaktonAsyncCommand<OptimizeQueueListInpu
 
 [Area("optimize")]
 [Description("Cancel optimization job", Name = "queue cancel")]
-public class OptimizeQueueCancelCommand : OaktonAsyncCommand<OptimizeQueueCancelInput>
+public class OptimizeQueueCancelCommand : JasperFxAsyncCommand<OptimizeQueueCancelInput>
 {
     public override async Task<bool> Execute(OptimizeQueueCancelInput input)
     {
@@ -356,7 +356,7 @@ public class OptimizeQueueCancelCommand : OaktonAsyncCommand<OptimizeQueueCancel
 
 [Area("optimize")]
 [Description("Get optimization job status", Name = "queue status")]
-public class OptimizeQueueStatusCommand : OaktonAsyncCommand<OptimizeQueueStatusInput>
+public class OptimizeQueueStatusCommand : JasperFxAsyncCommand<OptimizeQueueStatusInput>
 {
     public override async Task<bool> Execute(OptimizeQueueStatusInput input)
     {

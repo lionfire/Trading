@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Oakton;
+using JasperFx.CommandLine;
 using Spectre.Console;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -359,7 +359,7 @@ public class PhemexOrderResponse
 
 [Area("phemex")]
 [Description("Check Phemex account balance", Name = "balance")]
-public class PhemexBalanceCommand : OaktonAsyncCommand<PhemexBalanceInput>
+public class PhemexBalanceCommand : JasperFxAsyncCommand<PhemexBalanceInput>
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<PhemexBalanceCommand>? _logger;
@@ -547,7 +547,7 @@ public class PhemexBalanceCommand : OaktonAsyncCommand<PhemexBalanceInput>
 
 [Area("phemex")]
 [Description("List Phemex subaccounts", Name = "subaccounts")]
-public class PhemexSubaccountsCommand : OaktonAsyncCommand<PhemexSubaccountsInput>
+public class PhemexSubaccountsCommand : JasperFxAsyncCommand<PhemexSubaccountsInput>
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<PhemexSubaccountsCommand>? _logger;
@@ -676,7 +676,7 @@ public class PhemexSubaccountsCommand : OaktonAsyncCommand<PhemexSubaccountsInpu
 
 [Area("phemex")]
 [Description("Show Phemex positions", Name = "positions")]
-public class PhemexPositionsCommand : OaktonAsyncCommand<PhemexPositionsInput>
+public class PhemexPositionsCommand : JasperFxAsyncCommand<PhemexPositionsInput>
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<PhemexPositionsCommand>? _logger;
@@ -864,7 +864,7 @@ public class PhemexPositionsCommand : OaktonAsyncCommand<PhemexPositionsInput>
 
 [Area("phemex")]
 [Description("Get current ticker price for a symbol")]
-public class PhemexTickerCommand : OaktonAsyncCommand<PhemexTickerInput>
+public class PhemexTickerCommand : JasperFxAsyncCommand<PhemexTickerInput>
 {
     private ILogger<PhemexTickerCommand>? _logger;
 
@@ -998,7 +998,7 @@ public class PhemexTickerCommand : OaktonAsyncCommand<PhemexTickerInput>
 
 [Area("phemex")]
 [Description("Place an order (paper or live)")]
-public class PhemexPlaceOrderCommand : OaktonAsyncCommand<PhemexOrderInput>
+public class PhemexPlaceOrderCommand : JasperFxAsyncCommand<PhemexOrderInput>
 {
     private ILogger<PhemexPlaceOrderCommand>? _logger;
 

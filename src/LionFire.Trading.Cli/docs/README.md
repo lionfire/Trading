@@ -221,7 +221,7 @@ lionfire-trading system health --check-orleans
 
 ### Adding New Commands
 
-1. Create command class implementing `OaktonAsyncCommand<TInput>`
+1. Create command class implementing `JasperFxAsyncCommand<TInput>`
 2. Add input class with `[Description]` attributes
 3. Use `[Area]` attribute for command grouping
 4. Support both table and JSON output formats
