@@ -70,8 +70,12 @@ public class BotHarnessFactory
 
     private (IBot2 bot, Type numericType) CreateBotFromParameters(BotEntity botEntity)
     {
-        var botType = BotTypeRegistry.BotRegistry.GetTypeFromNameOrThrow(botEntity.BotTypeName
-            ?? throw new ArgumentNullException(nameof(botEntity.BotTypeName)));
+        var botTypeName = botEntity.BotTypeName
+            ?? throw new ArgumentNullException(nameof(botEntity.BotTypeName));
+
+        // Resolve bot type - may return open generic which we'll close below
+        var botType = BotTypeRegistry.GetBotType(botTypeName)
+            ?? throw new ArgumentException($"Could not resolve bot type '{botTypeName}'");
 
         // Determine target numeric type based on override settings and bot context
         Type sourceNumericType = GetNumericTypeFromParameters(botEntity.Parameters);

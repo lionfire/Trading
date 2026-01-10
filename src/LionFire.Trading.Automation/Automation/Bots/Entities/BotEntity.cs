@@ -2,6 +2,7 @@
 using LionFire.IO.Reactive.Hjson;
 using LionFire.Ontology;
 using LionFire.Trading.Automation;
+using LionFire.Trading.Automation.Accounts;
 using LionFire.Validation;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -23,6 +24,7 @@ public partial class BotEntity : ReactiveObject, IValidatable
         ;
 
     //public Dictionary<string, object>? ParametersDictionary { get; set; }
+    [JsonProperty("Parameters", TypeNameHandling = TypeNameHandling.Auto)]
     public IPBot2? Parameters { get; set; }
 
     public OptimizationBacktestReference? BacktestReference { get; set; }
@@ -77,6 +79,21 @@ public partial class BotEntity : ReactiveObject, IValidatable
     [Reactive]
     [property: JsonProperty("LogLevel")]
     private LogLevel? logLevel;
+
+    /// <summary>
+    /// Account mode for live trading.
+    /// </summary>
+    /// <remarks>
+    /// <list type="bullet">
+    ///   <item><description><see cref="BotAccountMode.LiveSimulated"/> - Realistic balance tracking (default)</description></item>
+    ///   <item><description><see cref="BotAccountMode.LivePaper"/> - Infinite capital mode</description></item>
+    ///   <item><description><see cref="BotAccountMode.LiveReal"/> - Real exchange trading (future)</description></item>
+    /// </list>
+    /// If null, defaults to <see cref="BotAccountMode.LiveSimulated"/>.
+    /// </remarks>
+    [Reactive]
+    [property: JsonProperty("AccountMode")]
+    private BotAccountMode? accountMode;
 
     [Reactive]
     [property: JsonProperty("Symbol")]

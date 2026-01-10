@@ -1,9 +1,14 @@
-﻿using LionFire.TypeRegistration;
+using LionFire.TypeRegistration;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics.CodeAnalysis;
 
 namespace LionFire.Trading.Automation;
 
+/// <summary>
+/// Registry for bot types and their parameter types.
+/// Returns types as registered - open generic types may be returned and callers
+/// are responsible for closing them with appropriate type arguments.
+/// </summary>
 public class BotTypeRegistry
 {
     public TypeRegistry PBotRegistry { get; }
@@ -14,6 +19,38 @@ public class BotTypeRegistry
         PBotRegistry = serviceProvider.GetRequiredKeyedService<TypeRegistry>(typeof(IPBot2));
         BotRegistry = serviceProvider.GetRequiredKeyedService<TypeRegistry>(typeof(IBot2));
     }
+
+    /// <summary>
+    /// Resolves a bot type by name.
+    /// May return an open generic type - caller is responsible for closing it.
+    /// </summary>
+    public Type? GetBotType(string typeName)
+        => BotRegistry.GetTypeFromName(typeName)
+        ?? BotRegistry.GetTypeFromFullName(typeName);
+
+    /// <summary>
+    /// Resolves a bot type by name, throwing if not found.
+    /// May return an open generic type - caller is responsible for closing it.
+    /// </summary>
+    public Type GetBotTypeOrThrow(string typeName)
+        => GetBotType(typeName)
+        ?? throw new ArgumentException($"Could not resolve bot type '{typeName}'");
+
+    /// <summary>
+    /// Resolves a PBot (parameter) type by name.
+    /// May return an open generic type - caller is responsible for closing it.
+    /// </summary>
+    public Type? GetPBotType(string typeName)
+        => PBotRegistry.GetTypeFromName(typeName)
+        ?? PBotRegistry.GetTypeFromFullName(typeName);
+
+    /// <summary>
+    /// Resolves a PBot type by name, throwing if not found.
+    /// May return an open generic type - caller is responsible for closing it.
+    /// </summary>
+    public Type GetPBotTypeOrThrow(string typeName)
+        => GetPBotType(typeName)
+        ?? throw new ArgumentException($"Could not resolve PBot type '{typeName}'");
 
     public Type GetPBotForBot(Type botType)
     {
@@ -65,6 +102,7 @@ public class BotTypeRegistry
 
         return GetBotName(botType);
     }
+
     public string GetBotName(Type botType)
     {
 #if DEBUG

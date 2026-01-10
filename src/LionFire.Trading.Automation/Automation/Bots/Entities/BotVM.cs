@@ -5,7 +5,6 @@ using LionFire.Structures;
 using LionFire.Trading.Automation.Portfolios;
 using LionFire.Trading.Backtesting;
 using MediatR;
-using Oakton.Descriptions;
 using YamlDotNet.Core.Tokens;
 
 namespace LionFire.Trading.Automation;
