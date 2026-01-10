@@ -162,7 +162,7 @@
 					<CellTemplate>
 						@if (context.Item?.Key != null)
 						{
-							<MudLink Href="@($"/bots/{context.Item.Key}")">@(context.Item.Value?.Name ?? context.Item.Key)</MudLink>
+							<MudLink Href="@($"/workbench/bot/{context.Item.Key}")">@(context.Item.Value?.Name ?? context.Item.Key)</MudLink>
 						}
 						else
 						{
