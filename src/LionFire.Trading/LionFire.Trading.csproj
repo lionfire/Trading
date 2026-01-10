@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <VersionPrefix>1.0.1</VersionPrefix>
@@ -51,10 +51,10 @@
     <PackageReference Include="CsvHelper" />
     <PackageReference Include="DeferredEvents" />
     <PackageReference Include="Hjson" />
+    <PackageReference Include="JasperFx" />
     <PackageReference Include="MemoryPack" />
     <PackageReference Include="MemoryPack.Streaming" />
     <PackageReference Include="Microsoft.CSharp" />
-    <PackageReference Include="Oakton" />
     <!--<PackageReference Include="QuantConnect.Indicators" />-->
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Reactive" />

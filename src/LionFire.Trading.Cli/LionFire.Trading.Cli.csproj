@@ -13,7 +13,6 @@
     <PackageReference Include="McMaster.Extensions.Hosting.CommandLine" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
     <PackageReference Include="Microsoft.Orleans.Client" />
-    <PackageReference Include="Oakton" />
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="Humanizer.Core" />
     <PackageReference Include="System.Text.Json" />

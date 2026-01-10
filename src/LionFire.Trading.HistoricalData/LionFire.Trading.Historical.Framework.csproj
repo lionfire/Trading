@@ -15,7 +15,7 @@
 		<PackageReference Include="K4os.Compression.LZ4.Streams" />
 		<PackageReference Include="McMaster.Extensions.Hosting.CommandLine" />
 		<PackageReference Include="Microsoft.Extensions.Hosting" />
-		<PackageReference Include="Oakton" />
+		<PackageReference Include="JasperFx" />
 		<PackageReference Include="YamlDotNet" />
 		<PackageReference Include="ZeroFormatter.Analyzer" />
 	</ItemGroup>

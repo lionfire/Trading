@@ -28,6 +28,7 @@
     <PackageReference Include="Flurl.Http" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Spectre.Console" />
     <PackageReference Include="System.Reactive.Linq" />
     <PackageReference Include="System.Threading.Thread" />
   </ItemGroup>
