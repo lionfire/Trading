@@ -26,7 +26,24 @@ public interface IBarScraperG : IGrainWithStringKey
     /// </summary>
     /// <param name="subscriberGrainKey">The grain key of the subscriber (e.g., LastBarsG) to receive bar updates.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Use this overload when only one grain type implements <see cref="IBarSubscriber"/>.
+    /// If multiple grain types implement it, use <see cref="Activate(IBarSubscriber)"/> instead
+    /// to avoid Orleans grain type ambiguity.
+    /// </remarks>
     Task Activate(string subscriberGrainKey);
+
+    /// <summary>
+    /// Activates the scraper with a subscriber grain reference.
+    /// The scraper will call <see cref="IBarSubscriber.OnBars"/> when new bars are retrieved.
+    /// </summary>
+    /// <param name="subscriber">The grain reference of the subscriber to receive bar updates.</param>
+    /// <returns>A task representing the asynchronous operation.</returns>
+    /// <remarks>
+    /// Use this overload when multiple grain types implement <see cref="IBarSubscriber"/>.
+    /// The subscriber should pass <c>this.AsReference&lt;IBarSubscriber&gt;()</c>.
+    /// </remarks>
+    Task Activate(IBarSubscriber subscriber);
 
     /// <summary>
     /// Sends a heartbeat to renew the subscriber's lease.

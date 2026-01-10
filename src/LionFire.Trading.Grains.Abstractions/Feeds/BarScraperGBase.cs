@@ -131,6 +131,47 @@ public abstract class BarScraperGBase : Grain, IBarScraperG
     }
 
     /// <inheritdoc/>
+    public virtual Task Activate(IBarSubscriber subscriber)
+    {
+        // Get the subscriber's grain key from the reference
+        var subscriberGrainKey = subscriber.GetPrimaryKeyString();
+
+        var isNewSubscriber = !_subscriberLeases.ContainsKey(subscriberGrainKey);
+        var wasEmpty = _subscriberLeases.Count == 0;
+
+        // Set or renew the lease
+        _subscriberLeases[subscriberGrainKey] = DateTime.UtcNow.Add(LeaseTimeout);
+
+        // Cache the subscriber reference directly (avoids ambiguity with GetGrain<IBarSubscriber>)
+        if (isNewSubscriber)
+        {
+            _subscribers[subscriberGrainKey] = subscriber;
+            Logger.LogInformation("{grainId} Added subscriber {subscriberKey} via reference (total: {count})",
+                GrainId, subscriberGrainKey, _subscriberLeases.Count);
+        }
+        else
+        {
+            Logger.LogDebug("{grainId} Renewed lease for existing subscriber {subscriberKey}",
+                GrainId, subscriberGrainKey);
+        }
+
+        // Start timers if this is the first subscriber
+        if (wasEmpty)
+        {
+            // Start lease check timer
+            _leaseCheckTimer?.Dispose();
+            _leaseCheckTimer = RegisterTimer(CheckExpiredLeases, null!, LeaseCheckInterval, LeaseCheckInterval);
+
+            // Notify derived class to start polling
+            OnFirstSubscriber();
+
+            Logger.LogInformation("{grainId} Started polling (first subscriber)", GrainId);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc/>
     public virtual Task Heartbeat(string subscriberGrainKey)
     {
         if (_subscriberLeases.ContainsKey(subscriberGrainKey))
