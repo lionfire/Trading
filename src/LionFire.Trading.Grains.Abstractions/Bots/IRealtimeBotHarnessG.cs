@@ -71,6 +71,18 @@ public interface IRealtimeBotHarnessG : IGrainWithStringKey, IIndicatorSubscribe
     /// <returns>The configuration, or null if the bot hasn't been started.</returns>
     ValueTask<RealtimeBotConfiguration?> GetConfiguration();
 
+    /// <summary>
+    /// Updates the bot parameters at runtime.
+    /// </summary>
+    /// <param name="parametersJson">JSON string with bot parameters (serialized with TypeNameHandling.Auto)</param>
+    /// <returns>True if update succeeded, false if bot is not running or update failed</returns>
+    /// <remarks>
+    /// This allows updating bot parameters while the bot is running.
+    /// The bot must be started for this to succeed.
+    /// Changes are applied immediately and persisted to the configuration.
+    /// </remarks>
+    ValueTask<bool> UpdateParameters(string parametersJson);
+
     #region Logging
 
     /// <summary>

@@ -93,6 +93,25 @@ public class RealtimeBotConfiguration
     public LiveAccountOptions? AccountOptions { get; set; }
 
     /// <summary>
+    /// Gets or sets the fully-typed bot parameters as a JSON string with type information.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// This is the preferred way to pass bot parameters, as it preserves the full type information
+    /// including nested objects like indicator parameters (e.g., ATR settings).
+    /// </para>
+    /// <para>
+    /// When set, this takes precedence over the <see cref="Parameters"/> dictionary.
+    /// The grain will deserialize this JSON to recreate the typed parameters object.
+    /// </para>
+    /// <para>
+    /// The JSON should be serialized with Newtonsoft.Json TypeNameHandling.Auto to preserve types.
+    /// </para>
+    /// </remarks>
+    [Id(6)]
+    public string? BotParametersJson { get; set; }
+
+    /// <summary>
     /// Initializes a new instance of RealtimeBotConfiguration with empty collections.
     /// </summary>
     public RealtimeBotConfiguration()
