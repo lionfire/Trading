@@ -1,3 +1,4 @@
+using LionFire.Trading.Indicators.Grains;
 using Microsoft.Extensions.Logging;
 using Orleans;
 
@@ -27,9 +28,10 @@ namespace LionFire.Trading.Grains.Bots;
 /// - Catching up on historical bars when starting
 /// - Processing real-time bar updates
 /// - Bot lifecycle state management
+/// - Subscribing to indicator grains for signal data (implements IIndicatorSubscriber)
 /// </para>
 /// </remarks>
-public interface IRealtimeBotHarnessG : IGrainWithStringKey
+public interface IRealtimeBotHarnessG : IGrainWithStringKey, IIndicatorSubscriber
 {
     /// <summary>
     /// Starts the realtime bot harness with the specified configuration.
@@ -62,6 +64,12 @@ public interface IRealtimeBotHarnessG : IGrainWithStringKey
     /// </summary>
     /// <returns>Status information including state, last bar time, and any error messages</returns>
     ValueTask<RealtimeBotStatus> GetStatus();
+
+    /// <summary>
+    /// Gets the configuration used to start this bot harness.
+    /// </summary>
+    /// <returns>The configuration, or null if the bot hasn't been started.</returns>
+    ValueTask<RealtimeBotConfiguration?> GetConfiguration();
 
     #region Logging
 
