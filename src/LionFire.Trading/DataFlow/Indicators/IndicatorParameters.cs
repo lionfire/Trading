@@ -83,7 +83,11 @@ public abstract class IndicatorParameters<TInstance> : SlottedParameters<TInstan
                 {
                     if (firstParameter) firstParameter = false;
                     else sb.Append(", ");
-                    if (p is IKeyed<string> keyed)
+                    if (p == null)
+                    {
+                        sb.Append("null");
+                    }
+                    else if (p is IKeyed<string> keyed)
                     {
                         sb.Append(keyed.Key);
                     }

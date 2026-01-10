@@ -1,4 +1,4 @@
-﻿using Oakton;
+﻿using JasperFx.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LionFire.ExtensionMethods.Dumping;
@@ -14,7 +14,7 @@ public class ListIndicatorsInput : NetCoreInput { }
 
 [Area("indicator")]
 [Description("List available hierarchical data", Name = "list")]
-public class ListIndicatorsCommand : OaktonAsyncCommand<ListIndicatorsInput>
+public class ListIndicatorsCommand : JasperFxAsyncCommand<ListIndicatorsInput>
 {
     public ListIndicatorsCommand()
     {

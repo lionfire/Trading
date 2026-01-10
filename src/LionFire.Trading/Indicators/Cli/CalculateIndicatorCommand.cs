@@ -1,4 +1,4 @@
-﻿using Oakton;
+﻿using JasperFx.CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using LionFire.ExtensionMethods.Dumping;
@@ -18,7 +18,7 @@ public class CalculateIndicatorInput : CommonTradingInput
 
 [Area("indicator")]
 [Description("Calculate indicator values for hierarchical data", Name = "calculate")]
-public class CalculateIndicatorCommand : OaktonAsyncCommand<CalculateIndicatorInput>
+public class CalculateIndicatorCommand : JasperFxAsyncCommand<CalculateIndicatorInput>
 {
     public CalculateIndicatorCommand()
     {
