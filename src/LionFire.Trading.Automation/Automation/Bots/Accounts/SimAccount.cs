@@ -265,6 +265,7 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     public async void OnBar()
     {
         await ProcessStopLossAndTakeProfit();
+        UpdatePositionPrices();
 
         #region Log: aliveness
 
@@ -303,6 +304,23 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
             EntryType = JournalEntryType.Abort,
             Time = SimContext.SimulatedCurrentDate,
         });
+    }
+
+    /// <summary>
+    /// Updates LastPrice and P&L values for all open positions.
+    /// Called on each bar to ensure position values are current for UI display and potential stop-loss processing.
+    /// </summary>
+    private void UpdatePositionPrices()
+    {
+        foreach (var position in positions.KeyValues.Select(kvp => kvp.Value).OfType<SimPosition<TPrecision>>())
+        {
+            var currentPrice = CurrentPrice(position.Symbol);
+            position.LastPrice = currentPrice;
+
+            // Update unrealized P&L for display
+            position.GrossProfit = position.ProfitAtPrice(currentPrice);
+            position.NetProfit = position.GrossProfit - position.Commissions - position.Swap;
+        }
     }
 
     #endregion
@@ -507,18 +525,21 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
             }
             else
             {
-                //bool increase = requestedQuantityChangeRemaining > TPrecision.Zero
-                //    ? longAndShort == LongAndShort.Long
-                //    : longAndShort == LongAndShort.Short -- broken;
+                // Ensure quantity has correct sign: positive for longs, negative for shorts
+                // This is required for ProfitAtPrice calculation: (price - entry) * quantity
+                var signedQuantity = longAndShort == LongAndShort.Short
+                    ? -TPrecision.Abs(requestedQuantityChangeRemaining)
+                    : TPrecision.Abs(requestedQuantityChangeRemaining);
 
                 var p = new SimPosition<TPrecision>(GetMarketSim(symbol))
                 {
                     Id = positionIdCounter++,
                     EntryAverage = currentPrice.Value,
-                    Quantity = requestedQuantityChangeRemaining,
+                    Quantity = signedQuantity,
                     TakeProfit = default,
                     StopLoss = default,
                     EntryTime = DateTime,
+                    LastPrice = currentPrice.Value, // Initialize for UI display
                 };
                 positions.AddOrUpdate(p);
 
