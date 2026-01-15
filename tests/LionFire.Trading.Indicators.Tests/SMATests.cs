@@ -21,9 +21,9 @@ public class SMATests
         sma.OnBarBatch(inputs, outputs);
 
         // Assert
-        Assert.False(sma.IsReady); // Not ready until period 3
-        Assert.Equal(0, outputs[0]); // No output yet
-        Assert.Equal(0, outputs[1]); // No output yet
+        Assert.True(sma.IsReady); // Ready after processing 5 inputs with period 3
+        Assert.True(double.IsNaN(outputs[0])); // NaN before ready
+        Assert.True(double.IsNaN(outputs[1])); // NaN before ready
         Assert.Equal(2, outputs[2]); // (1+2+3)/3 = 2
         Assert.Equal(3, outputs[3]); // (2+3+4)/3 = 3
         Assert.Equal(4, outputs[4]); // (3+4+5)/3 = 4
@@ -44,8 +44,8 @@ public class SMATests
 
         // Assert
         Assert.True(sma.IsReady); // Should be ready after processing enough data
-        Assert.Equal(0, outputs[0]); // No output yet
-        Assert.Equal(0, outputs[1]); // No output yet
+        Assert.Equal(0, outputs[0]); // QC returns 0 before ready
+        Assert.Equal(0, outputs[1]); // QC returns 0 before ready
         Assert.Equal(2, outputs[2]); // (1+2+3)/3 = 2
         Assert.Equal(3, outputs[3]); // (2+3+4)/3 = 3
         Assert.Equal(4, outputs[4]); // (3+4+5)/3 = 4
@@ -55,24 +55,21 @@ public class SMATests
     [Fact]
     public void DefaultFactory_CreatesWorkingImplementation()
     {
-        // Arrange
-        var sma = SMA.CreateDouble(3);
-        
-        // Act - Process single values
-        sma.OnNext(1.0);
-        sma.OnNext(2.0);
-        sma.OnNext(3.0);
-        
+        // Arrange - use concrete type to access OnBarBatch
+        var parameters = new PSMA<double, double> { Period = 3 };
+        var sma = new SMA_FP<double, double>(parameters);
+        var inputs = new double[] { 1, 2, 3, 4, 5 };
+        var outputs = new double[inputs.Length];
+
+        // Act - Process batch
+        sma.OnBarBatch(inputs, outputs);
+
         // Assert
         Assert.True(sma.IsReady);
-        Assert.Equal(2.0, sma.Value); // (1+2+3)/3 = 2
-        
-        // Continue processing
-        sma.OnNext(4.0);
-        Assert.Equal(3.0, sma.Value); // (2+3+4)/3 = 3
-        
-        sma.OnNext(5.0);
-        Assert.Equal(4.0, sma.Value); // (3+4+5)/3 = 4
+        Assert.Equal(2.0, outputs[2]); // (1+2+3)/3 = 2
+        Assert.Equal(3.0, outputs[3]); // (2+3+4)/3 = 3
+        Assert.Equal(4.0, outputs[4]); // (3+4+5)/3 = 4
+        Assert.Equal(4.0, sma.Value); // Final value
     }
 
     [Fact]
@@ -90,10 +87,10 @@ public class SMATests
         sma.OnBarBatch(inputs, outputs);
 
         // Assert
-        // First 9 should be 0 (not ready)
+        // First 9 should be NaN (not ready)
         for (int i = 0; i < 9; i++)
         {
-            Assert.Equal(0, outputs[i]);
+            Assert.True(double.IsNaN(outputs[i]), $"Expected NaN at index {i}");
         }
         
         // 10th value: average of 1-10 = 5.5

@@ -18,11 +18,11 @@
     <PackageVersion Include="AspNetCore.HealthChecks.UI.InMemory.Storage" Version="9.0.0" />
     <PackageVersion Include="AspNetCore.HealthChecks.UI.SQLite.Storage" Version="9.0.0" />
     <PackageVersion Include="Baseline" Version="4.1.0" />
-    <PackageVersion Include="BenchmarkDotNet" Version="0.13.12" />
-    <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.13.12" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
     <PackageVersion Include="BernhardHaus.Collections.WeakDictionary" Version="1.0.3" />
     <PackageVersion Include="Bogus" Version="35.4.0" />
-    <PackageVersion Include="Binance.Net" Version="10.18.0" />
+    <PackageVersion Include="Binance.Net" Version="12.0.0" />
     <PackageVersion Include="Bybit.Net" Version="3.14.2" />
     <PackageVersion Include="BinanceDotNet" Version="4.12.0" />
     <PackageVersion Include="ccxt" Version="4.5.2" />
@@ -49,7 +49,7 @@
     <PackageVersion Include="Durian.FriendClass" Version="2.0.0" />
     <PackageVersion Include="DynamicData" Version="9.1.2" />
     <PackageVersion Include="FlexLabs.EntityFrameworkCore.Upsert" Version="9.0.0" />
-    <PackageVersion Include="FluentAssertions" Version="6.13.2" />
+    <PackageVersion Include="FluentAssertions" Version="7.0.0" />
     <PackageVersion Include="FluentEmail.Mailgun" Version="3.0.2" />
     <PackageVersion Include="Flurl.Http" Version="4.0.2" />
     <PackageVersion Include="GitVersion.MsBuild" Version="6.1.0" />
