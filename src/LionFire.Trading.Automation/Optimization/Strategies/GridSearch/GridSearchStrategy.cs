@@ -169,7 +169,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
         int maxBatchSize = OptimizationParameters.MaxBatchSize;
 
-        var ParametersToTest = Channel.CreateBounded<List<int>>(new BoundedChannelOptions(maxBatchSize * 2)
+        var ParametersToTest = Channel.CreateBounded<int[]>(new BoundedChannelOptions(maxBatchSize * 2)
         {
             FullMode = BoundedChannelFullMode.Wait,
             SingleReader = true,
@@ -185,19 +185,26 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
         var enqueueTask = Task.Run(async () =>
         {
+            Logger.LogInformation("Consumer starting. IsCancellationRequested={0}", CancellationToken.IsCancellationRequested);
+            int totalItemsRead = 0;
+
             List<int[]> batchStaging = new(OptimizationTask.Parameters.MaxBatchSize);
-            while (!CancellationToken.IsCancellationRequested
-            && !ParametersToTest.Reader.Completion.IsCompleted)
+            // NOTE: Don't check Completion.IsCompleted in the while condition - it causes a race condition
+            // where the producer finishes before the consumer reads. ReadAllAsync handles completion correctly.
+            while (!CancellationToken.IsCancellationRequested)
             {
                 batchStaging.Clear();
 
                 int zeroesCount = 0;
+                Logger.LogDebug("Consumer calling ReadAllAsync. Completion.IsCompleted={0}", ParametersToTest.Reader.Completion.IsCompleted);
                 await foreach (var parameters /*Bundle */in ParametersToTest.Reader.ReadAllAsync(CancellationToken)
                 .ConfigureAwait(false)
                 )
                 {
                     //foreach (var parameters in parametersBundle)
                     {
+                        totalItemsRead++;
+                        Logger.LogDebug("Consumer read item #{0}: [{1}]", totalItemsRead, string.Join(",", parameters));
                         //if (!parameters.Where(p => p != 0).Any())
                         //{
                         //    if (zeroesCount++ > 1)
@@ -207,13 +214,14 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                         //}
                         if (CancellationToken.IsCancellationRequested) { Debug.WriteLine("CancellationToken is canceled"); }
                         //Debug.WriteLine("R: " + parameters.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
-                        batchStaging.Add(parameters.ToArray());
+                        batchStaging.Add(parameters);  // parameters is already int[]
                         if (batchStaging.Count >= OptimizationTask.Parameters.MaxBatchSize)
                         {
                             break;
                         }
                     }
                 }
+                Logger.LogInformation("Consumer ReadAllAsync completed. totalItemsRead={0}, batchStaging.Count={1}", totalItemsRead, batchStaging.Count);
 
                 var pBotType = MultiSimContext.Parameters.PBotType ?? throw new ArgumentNullException("MultiSimContext.Parameters.PBotType");
                 
@@ -282,7 +290,7 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                         //}
                         , CancellationToken);
 
-                        Logger.Log(enqueueJobSW.ElapsedMilliseconds > 50 ? LogLevel.Information : LogLevel.Trace, "Enqueued batch #{0} {1} with {2} items in {3}ms", batchStagingIndex, job.Guid, batchStaging.Count, enqueueJobSW.ElapsedMilliseconds);
+                        Logger.LogInformation("Enqueued batch #{0} {1} with {2} items in {3}ms", batchStagingIndex, job.Guid, batchStaging.Count, enqueueJobSW.ElapsedMilliseconds);
                         BacktestsQueued += batchStaging.Count;
                     }
                 }
@@ -291,12 +299,20 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     Logger.LogInformation("BatchStaging is empty.");
                 }
 
-                if (batchStaging.Count == 0 && !CancellationToken.IsCancellationRequested)
+                if (batchStaging.Count == 0)
                 {
-                    var delay = TimeSpan.FromMilliseconds(1000);
-                    Logger.LogInformation($"Batch staging: no parameters available.  Delaying for {delay}ms.");
-                    await Task.Delay(delay, CancellationToken);
-                    //break;
+                    if (ParametersToTest.Reader.Completion.IsCompleted)
+                    {
+                        // Channel is complete and empty - we're done
+                        break;
+                    }
+                    else if (!CancellationToken.IsCancellationRequested)
+                    {
+                        // Channel is not complete but empty - wait for more items (shouldn't normally happen)
+                        var delay = TimeSpan.FromMilliseconds(1000);
+                        Logger.LogInformation($"Batch staging: no parameters available.  Delaying for {delay}ms.");
+                        await Task.Delay(delay, CancellationToken);
+                    }
                 }
             }
             Logger.LogInformation("Done enqueuing backtests");
@@ -313,6 +329,10 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
 
             try
             {
+                Logger.LogInformation("Producer starting. CurrentLevelIndex={0}, consumerFinished={1}, remainingBacktestsAllowed={2}, IsCancellationRequested={3}",
+                    State.CurrentLevelIndex, consumerFinished, remainingBacktestsAllowed, CancellationToken.IsCancellationRequested);
+
+                int itemsWritten = 0;
                 while (State.CurrentLevelIndex <= 0 && !consumerFinished && remainingBacktestsAllowed > 0 && !CancellationToken.IsCancellationRequested)
                 {
                     foreach (var bundle in State.CurrentLevel
@@ -321,17 +341,10 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     {
                         //foreach (var current in bundle)
                         {
-                            //var bundleCopy = bundle;
-                            //var list = bundle.ToList();
-                            //var list = new List<int[]>();
-                            //list.Add(bundleCopy);
-                            var list = new List<int>();
-                            list.Add(bundle);
+                            itemsWritten++;
+                            Logger.LogDebug("Producer writing item #{0}: [{1}]", itemsWritten, string.Join(",", bundle));
 
-
-                            //Debug.WriteLine("W:" + bundleCopy.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
-
-                            await ParametersToTest.Writer.WriteAsync(list, CancellationToken)
+                            await ParametersToTest.Writer.WriteAsync(bundle, CancellationToken)
                             .ConfigureAwait(false)
                             ;
                             //Debug.WriteLine("Write channel parameters: " + copy.Select(p => p.ToString()).Aggregate((x, y) => $"{x}, {y}"));
@@ -346,9 +359,10 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                     }
                     break; // TODO NEXT: Go up a level, or optimize promising regions
                 }
+                Logger.LogInformation("Producer wrote {0} items to channel", itemsWritten);
             }
-            catch (TaskCanceledException) { }
-            catch (OperationCanceledException) { }
+            catch (TaskCanceledException) { Logger.LogInformation("Producer caught TaskCanceledException"); }
+            catch (OperationCanceledException) { Logger.LogInformation("Producer caught OperationCanceledException"); }
 
             //while (!cancellationToken.IsCancellationRequested)
             //{

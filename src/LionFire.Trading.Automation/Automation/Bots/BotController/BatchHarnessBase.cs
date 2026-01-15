@@ -29,9 +29,8 @@ public abstract class BotHarnessBase
     {
         ArgumentNullException.ThrowIfNull(pBot);
 
-        //var bot = ActivatorUtilities.CreateInstance(p.PBot.MaterializedType) // FUTURE
-
-        var bot = (IBot2<TPrecision>)(Activator.CreateInstance(pBot.MaterializedType)
+        // Use ActivatorUtilities to support DI constructor injection (e.g., ILogger)
+        var bot = (IBot2<TPrecision>)(ActivatorUtilities.CreateInstance(multiSimContext.ServiceProvider, pBot.MaterializedType)
             ?? throw new Exception("Failed to create bot: " + pBot.MaterializedType));
 
         bot.Parameters = pBot;

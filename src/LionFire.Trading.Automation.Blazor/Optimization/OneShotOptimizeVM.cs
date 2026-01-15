@@ -143,6 +143,9 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     [Reactive]
     private bool _isAborting;
 
+    [Reactive]
+    private bool _isFaulted;
+
     //[Reactive]
     //public int TestsQueued { get; set; }
     
@@ -303,10 +306,45 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     #region Data Sources
 
     public List<string> Symbols = ["BTCUSDT", "ETHUSDT"];
-    public List<Type> BotTypes = [
-        typeof(PAtrBot<double>),
-        typeof(PDualAtrBot<double>),
-        ];
+
+    /// <summary>
+    /// Bot types available for optimization. Derived from BotTypeRegistry.
+    /// Open generic types are closed with double as the type argument.
+    /// </summary>
+    public List<Type> BotTypes => botTypes ??= GetBotTypesFromRegistry();
+    private List<Type>? botTypes;
+
+    private List<Type> GetBotTypesFromRegistry()
+    {
+        var result = new List<Type>();
+
+        foreach (var type in BotTypeRegistry.PBotRegistry.Names.Values)
+        {
+            try
+            {
+                Type closedType;
+                if (type.IsGenericTypeDefinition)
+                {
+                    // Close open generic with double (standard for trading bots)
+                    var typeArgs = type.GetGenericArguments();
+                    var closedArgs = typeArgs.Select(_ => typeof(double)).ToArray();
+                    closedType = type.MakeGenericType(closedArgs);
+                }
+                else
+                {
+                    closedType = type;
+                }
+                result.Add(closedType);
+            }
+            catch (Exception ex)
+            {
+                // Skip types that can't be closed with double
+                System.Diagnostics.Debug.WriteLine($"Could not close generic type {type.Name}: {ex.Message}");
+            }
+        }
+
+        return result.OrderBy(t => t.Name).ToList();
+    }
 
     #endregion
 
@@ -395,21 +433,30 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
         _ = Task.Run(async () =>
         {
-            ConsoleLog.LogInformation("Waiting for optimization to complete...");
-            await startTask;
-            await OptimizationTask.RunTask!;
-            ConsoleLog.LogInformation("Waiting for optimization to complete...done.");
-            IsRunning = false;
-            IsCompleted = true;
-            if (IsAborting)
+            try
             {
-                ConsoleLog.LogInformation("Aborted.");
-                IsAborted = true;
-                IsAborting = false;
+                ConsoleLog.LogInformation("Waiting for optimization to complete...");
+                await startTask;
+                await OptimizationTask.RunTask!;
+                ConsoleLog.LogInformation("Waiting for optimization to complete...done.");
+                IsRunning = false;
+                IsCompleted = true;
+                if (IsAborting)
+                {
+                    ConsoleLog.LogInformation("Aborted.");
+                    IsAborted = true;
+                    IsAborting = false;
+                }
+                else
+                {
+                    ConsoleLog.LogInformation("Finished.");
+                }
             }
-            else
+            catch (Exception ex)
             {
-                ConsoleLog.LogInformation("Finished.");
+                ConsoleLog.LogError(ex, "Optimization failed: {Message}\n{StackTrace}", ex.Message, ex.ToString());
+                IsRunning = false;
+                IsFaulted = true;
             }
             changes.OnNext(Unit.Default);
             //_ = InvokeAsync(StateHasChanged);
@@ -417,9 +464,16 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
         _ = Task.Run(async () =>
         {
-            await startTask;
-            await OptimizationTask.RunTask!;
-            LinesVM.Append("Optimization completed", category: GetType().FullName);
+            try
+            {
+                await startTask;
+                await OptimizationTask.RunTask!;
+                LinesVM.Append("Optimization completed", category: GetType().FullName);
+            }
+            catch (Exception ex)
+            {
+                LinesVM.Append($"Optimization FAILED: {ex}", category: GetType().FullName);
+            }
         });
     }
     

@@ -53,15 +53,26 @@ public partial class BacktestQueue : IHostedService
         Logger = logger;
         tcs = new();
 
-        QueuedJobsChannel = Channel.CreateBounded<BacktestJob>(new BoundedChannelOptions(10_000)
+        // Limit concurrent job execution to prevent memory exhaustion
+        // Each job can consume significant memory loading historical data
+        int maxConcurrent = Math.Max(1, Math.Min(Parameters.MaxConcurrentJobs, Environment.ProcessorCount / 2));
+        jobConcurrencySemaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
+
+        Logger.LogInformation("BacktestQueue configured with MaxConcurrentJobs={MaxConcurrent}", maxConcurrent);
+
+        // Limit queue size to create backpressure when jobs pile up
+        QueuedJobsChannel = Channel.CreateBounded<BacktestJob>(new BoundedChannelOptions(maxConcurrent * 4)
         {
             SingleReader = false,
             SingleWriter = false,
             FullMode = BoundedChannelFullMode.Wait
         });
     }
+
+    private readonly SemaphoreSlim jobConcurrencySemaphore;
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        Logger.LogInformation("BacktestQueue starting...");
         runTask = Task.Run(() => Run(cancellationToken));
         return Task.CompletedTask;
     }
@@ -70,13 +81,16 @@ public partial class BacktestQueue : IHostedService
     private async Task Run(CancellationToken cancellationToken)
     {
         int numThreads = Environment.ProcessorCount;
+        Logger.LogInformation("BacktestQueue Run starting with {NumThreads} consumer threads", numThreads);
         var consumers = new Task[numThreads];
         for (int i = 0; i < numThreads; i++)
         {
-            consumers[i] = Task.Run(() => Consume());
+            int threadIndex = i;
+            consumers[i] = Task.Run(() => Consume(threadIndex));
         }
 
         await Task.WhenAll(consumers).WaitAsync(cancellationToken);
+        Logger.LogInformation("BacktestQueue Run completed");
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
@@ -131,7 +145,14 @@ public partial class BacktestQueue : IHostedService
         }
         else
         {
+            var enqueueSw = Stopwatch.StartNew();
             await QueuedJobsChannel.Writer.WriteAsync(job, cancellationToken);
+            enqueueSw.Stop();
+            if (enqueueSw.ElapsedMilliseconds > 10)
+            {
+                Logger.LogWarning("BacktestQueue backpressure: waited {WaitMs}ms to enqueue job. Jobs={JobCount}, Running={RunningCount}",
+                    enqueueSw.ElapsedMilliseconds, Jobs.Count, RunningJobs.Count);
+            }
 
             //QueuedJobs.Enqueue(job); // OLD
 
@@ -148,33 +169,47 @@ public partial class BacktestQueue : IHostedService
 
     #region (Public) Methods
 
-    async Task Consume()
+    async Task Consume(int threadIndex)
     {
+        Logger.LogDebug("BacktestQueue Consumer {ThreadIndex} starting", threadIndex);
         try
         {
             while (await QueuedJobsChannel.Reader.WaitToReadAsync())
             {
+                Logger.LogDebug("Consumer {ThreadIndex} woke up - data available", threadIndex);
                 while (QueuedJobsChannel.Reader.TryRead(out var job))
                 {
-                    RunningJobs.AddOrThrow(job.Guid, job);
+                    // Wait for semaphore to limit concurrent job execution
+                    await jobConcurrencySemaphore.WaitAsync();
                     try
                     {
-                        await RunJob(job).ConfigureAwait(false);
+                        Logger.LogInformation("Consumer {ThreadIndex} starting job {JobGuid} (concurrent: {Concurrent})",
+                            threadIndex, job.Guid, jobConcurrencySemaphore.CurrentCount);
+                        RunningJobs.AddOrThrow(job.Guid, job);
+                        try
+                        {
+                            await RunJob(job).ConfigureAwait(false);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.LogError(ex, "Job threw exception");
+                            job.MultiSimContext.OnFaulted(ex);
+                        }
+                        if (job.MultiSimContext.CancellationToken.IsCancellationRequested)
+                        {
+                            Logger.LogDebug("Enqueued Job was canceled: " + job.Guid);
+                        }
                     }
-                    catch (Exception ex)
+                    finally
                     {
-                        Logger.LogError(ex, "Job threw exception");
-                        job.MultiSimContext.OnFaulted(ex);
-                    }
-                    if (job.MultiSimContext.CancellationToken.IsCancellationRequested)
-                    {
-                        Logger.LogDebug("Enqueued Job was canceled: " + job.Guid);
+                        jobConcurrencySemaphore.Release();
                     }
                     //Console.WriteLine($"Thread {Thread.CurrentThread.ManagedThreadId} consumed {item}");
                 }
             }
+            Logger.LogDebug("Consumer {ThreadIndex} exiting - channel completed", threadIndex);
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) { Logger.LogDebug("Consumer {ThreadIndex} canceled", threadIndex); }
     }
 
     /// <summary>
@@ -201,12 +236,14 @@ public partial class BacktestQueue : IHostedService
     private async ValueTask RunJob<TPrecision>(BacktestJob job)
         where TPrecision : struct, INumber<TPrecision>
     {
+        Logger.LogInformation("RunJob starting for {JobGuid} with {BatchCount} batches", job.Guid, job.BacktestBatches.Count());
         try
         {
             var sw = Stopwatch.StartNew();
             int count = 0;
             foreach (var batch in job.BacktestBatches)
             {
+                Logger.LogDebug("Processing batch {Count} for job {JobGuid}", count + 1, job.Guid);
                 if (job.MultiSimContext.CancellationToken.IsCancellationRequested)
                 {
                     Logger.LogInformation("Job {guid} canceled.", job.Guid);
@@ -217,13 +254,18 @@ public partial class BacktestQueue : IHostedService
                 {
                 };
 
+                Logger.LogDebug("Creating BatchContext for job {JobGuid}", job.Guid);
                 var batchContext = ActivatorUtilities.CreateInstance<BatchContext<TPrecision>>(
                    job.MultiSimContext.ServiceProvider,
                    job.MultiSimContext, pBatch);
 
+                Logger.LogDebug("Creating BatchHarness for job {JobGuid}", job.Guid);
                 var batchHarness = new BatchHarness<TPrecision>(batchContext);
+                Logger.LogDebug("Calling batchHarness.Init() for job {JobGuid}", job.Guid);
                 await batchHarness.Init().ConfigureAwait(false);
+                Logger.LogDebug("Calling batchHarness.Run() for job {JobGuid}", job.Guid);
                 await batchHarness.Run(job.MultiSimContext.CancellationToken);
+                Logger.LogDebug("batchHarness.Run() completed for job {JobGuid}", job.Guid);
 
                 count++;
             }
@@ -235,6 +277,18 @@ public partial class BacktestQueue : IHostedService
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "RunJob exception for {JobGuid}", job.Guid);
+
+            // Call OnFinished for all PBotWrappers so the optimization doesn't hang waiting
+            foreach (var batch in job.BacktestBatches)
+            {
+                foreach (var pBotWrapper in batch)
+                {
+                    try { pBotWrapper.OnFinished?.Invoke(); }
+                    catch { /* ignore callback errors */ }
+                }
+            }
+
             job.MultiSimContext.OnFaulted(ex);
             RunningJobs.Remove(job.Guid, out var _);
             FaultedJobs.AddOrThrow(job.Guid, job);

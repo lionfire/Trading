@@ -141,6 +141,12 @@ public partial class OptimizationTask : ReactiveObject, ICancelableRunnable
             {
                 await Journal.DisposeAsync();
             }
+
+            // Check if any backtest jobs failed and propagate the exception
+            if (MultiSimContext.Task.IsFaulted)
+            {
+                throw MultiSimContext.Task.Exception!;
+            }
         });
     }
 

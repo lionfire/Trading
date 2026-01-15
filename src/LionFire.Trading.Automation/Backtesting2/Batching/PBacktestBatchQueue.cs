@@ -12,10 +12,15 @@ public class PBacktestBatchQueue
     #region Clients
 
     /// <summary>
-    /// Not counting the job that is currently running.  Set to 0 to force one at a time.
+    /// Maximum number of jobs waiting in queue. Creates backpressure when exceeded.
     /// </summary>
-    public int MaxQueuedJobs { get; set; } = int.MaxValue;
-    public int MaxConcurrentJobs => 1;
+    public int MaxQueuedJobs { get; set; } = 100;
+
+    /// <summary>
+    /// Maximum number of jobs executing concurrently. Each job loads historical data
+    /// and can consume significant memory. Default is half the processor count.
+    /// </summary>
+    public int MaxConcurrentJobs { get; set; } = Math.Max(1, Environment.ProcessorCount / 2);
 
     #endregion
 
