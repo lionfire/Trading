@@ -1,5 +1,4 @@
-﻿using CryptoExchange.Net.CommonObjects;
-using DynamicData;
+﻿using DynamicData;
 using DynamicData.Binding;
 using LionFire.ExtensionMethods.Copying;
 using LionFire.Extensions.Logging;
