@@ -20,7 +20,7 @@ public class PBacktestBatchQueue
     /// Maximum number of jobs executing concurrently. Each job loads historical data
     /// and can consume significant memory. Default is half the processor count.
     /// </summary>
-    public int MaxConcurrentJobs { get; set; } = Math.Max(1, Environment.ProcessorCount / 2);
+    public int MaxConcurrentJobs { get; set; } = Math.Max(1, Environment.ProcessorCount - 1);
 
     #endregion
 

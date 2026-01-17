@@ -1,5 +1,6 @@
 ﻿using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Data;
+using LionFire.Trading.DataFlow;
 using LionFire.Trading.Indicators.Inputs;
 using System;
 using System.Collections.Generic;
@@ -141,9 +142,9 @@ public partial class BatchHarness<TPrecision>
 
     /// <summary>
     /// Invoked for each parameter.
-    /// 
+    ///
     /// 1. Hydrates unbound inputs to bound input
-    /// 2. 
+    /// 2.
     /// </summary>
     /// <param name="aggregatedPInputs"></param>
     /// <param name="batchInputMappings"></param>
@@ -160,14 +161,32 @@ public partial class BatchHarness<TPrecision>
 
         #region Hydrate unbound inputs to bound inputs
         {
-            IPInput pInput = (IPInput)parameterToValueMapping.Parameter.GetValue(pMarketListener, null)!;
+            var rawValue = parameterToValueMapping.Parameter.GetValue(pMarketListener, null);
+            if (rawValue == null)
+            {
+                throw new InvalidOperationException(
+                    $"Input parameter '{parameterToValueMapping.Parameter.Name}' on {pMarketListener.GetType().Name} is null. " +
+                    $"Ensure the parameter is initialized. For bots derived from PBarsBot2, call Init() after construction " +
+                    $"or after deserializing to initialize derived parameters like Bars from ExchangeSymbolTimeFrame.");
+            }
+            IPInput pInput = (IPInput)rawValue;
 
             while (pInput is IPInputThatSupportsUnboundInputs unboundInput) // Recurse
             {
-                // Example:
-                // unboundInput = ATR(3), no TF, no symbol
-                // PBoundInput pInput = ATR(3), m1, BTCUSDT.P
-                pInput = new PBoundInput(unboundInput, pMarketListener);
+                // Check for composite indicator pattern (e.g., ATR_MA needs ATR as input)
+                var baseIndicatorInput = TryResolveCompositeIndicatorInput(parameterToValueMapping.Parameter.Name, unboundInput, pMarketListener, aggregatedPInputs);
+                if (baseIndicatorInput != null)
+                {
+                    // Create bound input with the base indicator as the signal
+                    pInput = new PBoundInputWithSignal(unboundInput, pMarketListener, baseIndicatorInput);
+                }
+                else
+                {
+                    // Example:
+                    // unboundInput = ATR(3), no TF, no symbol
+                    // PBoundInput pInput = ATR(3), m1, BTCUSDT.P
+                    pInput = new PBoundInput(unboundInput, pMarketListener);
+                }
             }
 
             pHydratedInput = pInput;
@@ -222,7 +241,85 @@ public partial class BatchHarness<TPrecision>
 
     #endregion
 
-    
+    #region Composite Indicator Support
+
+    /// <summary>
+    /// Detects composite indicator patterns (e.g., ATR_MA, RSI_MA) and returns the base indicator's
+    /// already-resolved input to be used as the signal for the composite indicator.
+    /// </summary>
+    /// <param name="propertyName">The property name (e.g., "ATR_MA")</param>
+    /// <param name="unboundInput">The indicator parameters (e.g., PSimpleMovingAverage)</param>
+    /// <param name="pMarketListener">The bot parameters</param>
+    /// <param name="aggregatedPInputs">Already processed inputs (may contain the base indicator)</param>
+    /// <returns>The base indicator's PInput if this is a composite indicator, null otherwise</returns>
+    private static IPInput? TryResolveCompositeIndicatorInput(
+        string propertyName,
+        IPInputThatSupportsUnboundInputs unboundInput,
+        IPMarketProcessor pMarketListener,
+        Dictionary<string, PInputToEnumerator> aggregatedPInputs)
+    {
+        // Check for _MA suffix pattern (e.g., ATR_MA, RSI_MA)
+        if (!propertyName.EndsWith("_MA", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        // The unboundInput should be a moving average type indicator
+        var unboundTypeName = unboundInput.GetType().Name;
+        if (!unboundTypeName.Contains("MovingAverage", StringComparison.OrdinalIgnoreCase) &&
+            !unboundTypeName.Contains("SMA", StringComparison.OrdinalIgnoreCase) &&
+            !unboundTypeName.Contains("EMA", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        // Extract base indicator name (e.g., "ATR" from "ATR_MA")
+        var baseIndicatorName = propertyName[..^3]; // Remove "_MA"
+
+        // Try to find the base indicator in already aggregated inputs
+        // The key format varies, but we look for one that contains the base indicator type
+        foreach (var kvp in aggregatedPInputs)
+        {
+            // Check if this key represents the base indicator
+            // Keys look like: "Binance.futures:BTCUSDT/m1 > ATR(14)" or similar
+            if (kvp.Key.Contains(baseIndicatorName, StringComparison.OrdinalIgnoreCase) ||
+                kvp.Key.Contains($"{baseIndicatorName}(", StringComparison.OrdinalIgnoreCase))
+            {
+                return kvp.Value.PInput;
+            }
+        }
+
+        // If base indicator not found in aggregated inputs, try to find and create it from parameters
+        var baseIndicatorProperty = pMarketListener.GetType()
+            .GetProperty(baseIndicatorName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        if (baseIndicatorProperty != null)
+        {
+            var baseIndicatorParams = baseIndicatorProperty.GetValue(pMarketListener);
+            if (baseIndicatorParams is IPInputThatSupportsUnboundInputs baseUnbound)
+            {
+                // Create bound input for the base indicator
+                var baseBoundInput = new PBoundInput(baseUnbound, pMarketListener);
+                return baseBoundInput;
+            }
+        }
+
+        return null;
+    }
+
+    #endregion
+}
+
+/// <summary>
+/// A PBoundInput variant that allows explicitly specifying the input signal
+/// instead of auto-resolving from the source's signals.
+/// </summary>
+public class PBoundInputWithSignal : PBoundInput
+{
+    public PBoundInputWithSignal(IPInputThatSupportsUnboundInputs unboundInput, IPMarketProcessor root, IPInput explicitSignal)
+        : base(unboundInput, root, skipSignalResolution: true)
+    {
+        // Set the Signals property from the base class
+        Signals = [explicitSignal];
+    }
+
+    public new string Key => Signals[0]!.Key + " > " + PUnboundInput.Key;
 }
 
 public static class IMarketDataResolverX

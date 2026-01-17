@@ -158,11 +158,17 @@ public class BacktestsJournal : IAsyncDisposable
     {
         channel.Writer.Complete();
 
-        while (channel.Reader.TryPeek(out var _))
+        // Wait for the consumer task to finish processing all items
+        // This ensures all records are written before disposing the CSV writer
+        try
         {
-            Debug.WriteLine($"{this.GetType().Name} - Waiting for Reader to be emptied. Remaining: {channel.Reader.Count}");
-            await Task.Delay(100);
+            await consumeTask.ConfigureAwait(false);
         }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in BacktestsJournal consumer task during dispose");
+        }
+
         if (csv != null) { await csv.DisposeAsync(); }
 
         if (ZipOnDispose) { await ZipBatchDir(); }
@@ -220,27 +226,32 @@ public class BacktestsJournal : IAsyncDisposable
     public int FlushEvery { get; set; } = 50;
     public async Task Consume()
     {
-        //CancellationTokenSource localCTS = new();
-
-        //_ = Task.Run(() =>
-        //{
-        //    ((ManualResetEvent)MultiSimContext.CancellationToken.WaitHandle).WaitOne();
-        //}
-        //    );
-
+        int recordsWritten = 0;
         int flushCounter = 0;
         int flushEvery = FlushEvery;
-        //try
-        //{
-        await foreach (var item in channel.Reader.ReadAllAsync()
-            //.WithCancellation(MultiSimContext.CancellationToken)
-            )
+
+        try
         {
-            await csv.WriteRecordsAsync([item]);
-            if (flushCounter++ == flushEvery) { await csv.FlushAsync(); flushCounter = 0; }
+            await foreach (var item in channel.Reader.ReadAllAsync())
+            {
+                await csv.WriteRecordsAsync([item]);
+                recordsWritten++;
+                if (flushCounter++ == flushEvery) { await csv.FlushAsync(); flushCounter = 0; }
+            }
+
+            // Final flush to ensure all remaining records are written
+            if (recordsWritten > 0)
+            {
+                await csv.FlushAsync();
+            }
+
+            Logger.LogDebug("BacktestsJournal consumer finished. Records written: {RecordsWritten}", recordsWritten);
         }
-        //}
-        //catch (OperationCanceledException) { }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error in BacktestsJournal consumer. Records written before error: {RecordsWritten}", recordsWritten);
+            throw;
+        }
     }
 
     #endregion

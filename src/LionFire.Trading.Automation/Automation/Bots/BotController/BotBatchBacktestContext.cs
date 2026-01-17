@@ -1,6 +1,4 @@
-﻿
-using CryptoExchange.Net.CommonObjects;
-using LionFire.Trading.Automation.Journaling.Trades;
+﻿using LionFire.Trading.Automation.Journaling.Trades;
 using LionFire.Trading.Automation.Optimization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Diagnostics;
