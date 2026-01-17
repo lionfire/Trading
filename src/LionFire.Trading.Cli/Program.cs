@@ -65,7 +65,11 @@ return await new HostApplicationBuilderProgram()
     .Command("phemex futures open", PhemexHandlers.FuturesOpen)
     .Command("phemex spot close", PhemexHandlers.SpotClose)
     .Command("phemex futures close", PhemexHandlers.FuturesClose)
-    
+
+    // Optimization commands
+    .Command<OptimizeRunOptions>("optimize run", OptimizeRunHandler.Run,
+        builderBuilder: OptimizeRunHandler.ConfigureCommand)
+
     .RunAsync(args)
 //.RunOaktonCommands(args);
 ;

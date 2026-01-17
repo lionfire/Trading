@@ -28,6 +28,7 @@
     <ProjectReference Include="..\LionFire.Trading.Indicators\LionFire.Trading.Indicators.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Grains.Abstractions\LionFire.Trading.Grains.Abstractions.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Hosting\LionFire.Trading.Hosting.csproj" />
   </ItemGroup>
 
