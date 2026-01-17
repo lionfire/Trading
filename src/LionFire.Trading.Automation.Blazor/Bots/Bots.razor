@@ -12,6 +12,7 @@
 @using System.Diagnostics
 @using System.Timers
 @using LionFire.Trading.Grains.Bots
+@using LionFire.Trading.Grains.User
 @using Orleans
 @using MudBlazor
 
@@ -39,6 +40,28 @@
 				Bots in Portfolio: @CurrentPortfolio.Name
 			</MudText>
 			<MudSpacer />
+			<MudMenu Icon="@Icons.Material.Filled.ViewColumn"
+			         AnchorOrigin="Origin.BottomLeft"
+			         TransformOrigin="Origin.TopLeft"
+			         Dense="true"
+			         AriaLabel="Column Visibility">
+				@foreach (var col in ColumnDefinitions)
+				{
+					<MudMenuItem OnClick="@(() => ToggleColumnVisibility(col.Id))">
+						<MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+							<MudCheckBox T="bool" Value="@IsColumnVisible(col.Id)" ValueChanged="@((bool _) => ToggleColumnVisibility(col.Id))" Size="Size.Small" />
+							<MudText>@col.Name</MudText>
+						</MudStack>
+					</MudMenuItem>
+				}
+				<MudDivider />
+				<MudMenuItem OnClick="@ResetColumnVisibility">
+					<MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+						<MudIcon Icon="@Icons.Material.Filled.RestartAlt" Size="Size.Small" />
+						<MudText>Reset to Defaults</MudText>
+					</MudStack>
+				</MudMenuItem>
+			</MudMenu>
 			<MudButton StartIcon="@Icons.Material.Filled.Add"
 			           Variant="Variant.Outlined"
 			           Color="Color.Success"
@@ -58,122 +81,281 @@
 			<Columns>
 				<HierarchyColumn T="BotVM" />
 
-				<TemplateColumn T="BotVM">
-					<HeaderTemplate>
-						Status
-					</HeaderTemplate>
-					<CellTemplate>
-						@{
-							var botKey = context.Item?.Key;
-							var status = botKey != null ? GetBotStatus(botKey) : null;
-						}
-						@if (status != null)
-						{
-							var statusColor = GetStatusColor(status.State);
-							var statusIcon = GetStatusIcon(status.State);
-							@if (status.State == RealtimeBotState.Faulted && !string.IsNullOrEmpty(status.ErrorMessage))
+				@if (IsColumnVisible("status"))
+				{
+					<TemplateColumn T="BotVM">
+						<HeaderTemplate>
+							Status
+						</HeaderTemplate>
+						<CellTemplate>
+							@{
+								var botKey = context.Item?.Key;
+								var status = botKey != null ? GetBotStatus(botKey) : null;
+							}
+							@if (status != null)
 							{
-								<MudTooltip Text="@status.ErrorMessage" Placement="Placement.Top">
-									<MudChip T="string" Size="Size.Small" Color="statusColor" Icon="@statusIcon" OnClick="@(() => ShowErrorDialog(botKey!, status.ErrorMessage!))">
+								var statusColor = GetStatusColor(status.State);
+								var statusIcon = GetStatusIcon(status.State);
+								@if (status.State == RealtimeBotState.Faulted && !string.IsNullOrEmpty(status.ErrorMessage))
+								{
+									<MudTooltip Text="@status.ErrorMessage" Placement="Placement.Top">
+										<MudChip T="string" Size="Size.Small" Color="statusColor" Icon="@statusIcon" OnClick="@(() => ShowErrorDialog(botKey!, status.ErrorMessage!))">
+											@status.State.ToString()
+										</MudChip>
+									</MudTooltip>
+								}
+								else
+								{
+									<MudChip T="string" Size="Size.Small" Color="statusColor" Icon="@statusIcon">
 										@status.State.ToString()
 									</MudChip>
-								</MudTooltip>
+								}
+								@if (status.State == RealtimeBotState.CatchingUp)
+								{
+									<MudText Typo="Typo.caption" Class="ml-1">@status.BarsCaughtUp bars</MudText>
+								}
+								@if (status.LastBarTime != null)
+								{
+									<MudText Typo="Typo.caption" Class="ml-1" Style="color: gray;">@status.LastBarTime.Value.ToString("HH:mm:ss")</MudText>
+								}
+							}
+							else if (context.Item?.Value?.Enabled == true)
+							{
+								<MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">
+									Loading...
+								</MudChip>
 							}
 							else
 							{
-								<MudChip T="string" Size="Size.Small" Color="statusColor" Icon="@statusIcon">
-									@status.State.ToString()
+								<MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Stop">
+									Stopped
 								</MudChip>
 							}
-							@if (status.State == RealtimeBotState.CatchingUp)
+						</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("enabled"))
+				{
+					<TemplateColumn T="BotVM">
+						<HeaderTemplate>
+							Enabled
+						</HeaderTemplate>
+						<CellTemplate>
+							@if (context.Item?.Value != null)
 							{
-								<MudText Typo="Typo.caption" Class="ml-1">@status.BarsCaughtUp bars</MudText>
+								var isInProgress = operationsInProgress.Contains(context.Item.Key);
+								<div>
+									<MudSwitch T="bool"
+										Value="@context.Item.Value.Enabled"
+										ValueChanged="@((bool enabled) => ToggleBotEnabledAsync(context.Item.Key, context.Item.Value, enabled))"
+										Color="Color.Primary"
+										ThumbIcon="@Icons.Material.Filled.Radar"
+										Size="Size.Small"
+										Disabled="@isInProgress" />
+								</div>
 							}
-							@if (status.LastBarTime != null)
+						</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("live"))
+				{
+					<TemplateColumn T="BotVM">
+						<HeaderTemplate>
+							Live
+						</HeaderTemplate>
+						<CellTemplate>
+							@if (context.Item?.Value != null)
 							{
-								<MudText Typo="Typo.caption" Class="ml-1" Style="color: gray;">@status.LastBarTime.Value.ToString("HH:mm:ss")</MudText>
+								<div>
+									<MudSwitch T="bool" ThumbIcon="@Icons.Material.Rounded.AttachMoney" @bind-Value="context.Item.Value.Live" Color=@((context.Item.IsLive ? Color.Secondary : Color.Default)) Size="Size.Small"></MudSwitch>
+								</div>
 							}
-						}
-						else if (context.Item?.Value?.Enabled == true)
-						{
-							<MudChip T="string" Size="Size.Small" Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">
-								Loading...
-							</MudChip>
-						}
-						else
-						{
-							<MudChip T="string" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Stop">
-								Stopped
-							</MudChip>
-						}
-					</CellTemplate>
-				</TemplateColumn>
-				<TemplateColumn T="BotVM">
-					<HeaderTemplate>
-						Enabled
-					</HeaderTemplate>
-					<CellTemplate>
-						@if (context.Item?.Value != null)
-						{
-							var isInProgress = operationsInProgress.Contains(context.Item.Key);
-							<div>
-								<MudSwitch T="bool"
-									Value="@context.Item.Value.Enabled"
-									ValueChanged="@((bool enabled) => ToggleBotEnabledAsync(context.Item.Key, context.Item.Value, enabled))"
-									Color="Color.Primary"
-									ThumbIcon="@Icons.Material.Filled.Radar"
-									Size="Size.Small"
-									Disabled="@isInProgress" />
-							</div>
-						}
-					</CellTemplate>
-				</TemplateColumn>
-				<TemplateColumn T="BotVM">
-					<HeaderTemplate>
-						Live
-					</HeaderTemplate>
-					<CellTemplate>
-						@if (context.Item?.Value != null)
-						{
-							<div>
-								<MudSwitch T="bool" ThumbIcon="@Icons.Material.Rounded.AttachMoney" @bind-Value="context.Item.Value.Live" Color=@((context.Item.IsLive ? Color.Secondary : Color.Default)) Size="Size.Small"></MudSwitch>
-							</div>
-						}
-					</CellTemplate>
-				</TemplateColumn>
+						</CellTemplate>
+					</TemplateColumn>
+				}
 
-				<TemplateColumn T="BotVM" Title="Exchange">
-					<CellTemplate>@context.Item?.Value?.Exchange</CellTemplate>
-				</TemplateColumn>
-				<TemplateColumn T="BotVM" Title="Area">
-					<CellTemplate>@context.Item?.Value?.ExchangeArea</CellTemplate>
-				</TemplateColumn>
-				<TemplateColumn T="BotVM" Title="Symbol">
-					<CellTemplate>@context.Item?.Value?.Symbol</CellTemplate>
-				</TemplateColumn>
-				<TemplateColumn T="BotVM" Title="TimeFrame">
-					<CellTemplate>@context.Item?.Value?.TimeFrame</CellTemplate>
-				</TemplateColumn>
+				@if (IsColumnVisible("exchange"))
+				{
+					<TemplateColumn T="BotVM" Title="Exchange">
+						<CellTemplate>@context.Item?.Value?.Exchange</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("area"))
+				{
+					<TemplateColumn T="BotVM" Title="Area">
+						<CellTemplate>@context.Item?.Value?.ExchangeArea</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("symbol"))
+				{
+					<TemplateColumn T="BotVM" Title="Symbol">
+						<CellTemplate>@context.Item?.Value?.Symbol</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("timeframe"))
+				{
+					<TemplateColumn T="BotVM" Title="TimeFrame">
+						<CellTemplate>@context.Item?.Value?.TimeFrame</CellTemplate>
+					</TemplateColumn>
+				}
 
-				<TemplateColumn T="BotVM" Title="Type">
-					<CellTemplate>@context.Item?.Value?.BotTypeName</CellTemplate>
-				</TemplateColumn>
-				<TemplateColumn T="BotVM" Title="Name">
-					<CellTemplate>
-						@if (context.Item?.Key != null)
-						{
-							<MudLink Href="@($"/workbench/bot/{context.Item.Key}")">@(context.Item.Value?.Name ?? context.Item.Key)</MudLink>
-						}
-						else
-						{
-							@context.Item?.Value?.Name
-						}
-					</CellTemplate>
-				</TemplateColumn>
-				<PropertyColumn Property="x => x.AD" Title="AD" T="BotVM" TProperty="double?" />
-				<TemplateColumn T="BotVM" Title="Comments">
-					<CellTemplate>@context.Item?.Value?.Comments</CellTemplate>
-				</TemplateColumn>
+				@if (IsColumnVisible("type"))
+				{
+					<TemplateColumn T="BotVM" Title="Type">
+						<CellTemplate>@context.Item?.Value?.BotTypeName</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("name"))
+				{
+					<TemplateColumn T="BotVM" Title="Name">
+						<CellTemplate>
+							@if (context.Item?.Key != null)
+							{
+								<MudLink Href="@($"/workbench/bot/{context.Item.Key}")">@(context.Item.Value?.Name ?? context.Item.Key)</MudLink>
+							}
+							else
+							{
+								@context.Item?.Value?.Name
+							}
+						</CellTemplate>
+					</TemplateColumn>
+				}
+
+				@* Equity Columns *@
+				@if (IsColumnVisible("equity"))
+				{
+					<TemplateColumn T="BotVM" Title="Equity">
+						<CellTemplate>
+							@{
+								var botKey = context.Item?.Key;
+								var accountStatus = botKey != null ? GetAccountStatus(botKey) : null;
+							}
+							@if (accountStatus != null)
+							{
+								<MudText>@accountStatus.Equity.ToString("N2")</MudText>
+							}
+							else
+							{
+								<MudText Color="Color.Tertiary">--</MudText>
+							}
+						</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("eq-all-time"))
+				{
+					<TemplateColumn T="BotVM" Title="%Eq All">
+						<HeaderTemplate>
+							<MudTooltip Text="Equity change % all time (requires equity history tracking)">
+								<MudText>%Eq All</MudText>
+							</MudTooltip>
+						</HeaderTemplate>
+						<CellTemplate>
+							@{
+								var eqChange = GetEquityChange(context.Item?.Key, EquityPeriod.AllTime);
+							}
+							@if (eqChange.HasValue)
+							{
+								var color = eqChange.Value >= 0 ? Color.Success : Color.Error;
+								<MudText Color="@color">@(eqChange.Value >= 0 ? "+" : "")@eqChange.Value.ToString("P2")</MudText>
+							}
+							else
+							{
+								<MudTooltip Text="Equity history tracking not yet implemented">
+									<MudText Color="Color.Tertiary">--</MudText>
+								</MudTooltip>
+							}
+						</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("eq-30d"))
+				{
+					<TemplateColumn T="BotVM" Title="%Eq 30d">
+						<HeaderTemplate>
+							<MudTooltip Text="Equity change % last 30 days">
+								<MudText>%Eq 30d</MudText>
+							</MudTooltip>
+						</HeaderTemplate>
+						<CellTemplate>
+							@{
+								var eqChange = GetEquityChange(context.Item?.Key, EquityPeriod.Last30Days);
+							}
+							@if (eqChange.HasValue)
+							{
+								var color = eqChange.Value >= 0 ? Color.Success : Color.Error;
+								<MudText Color="@color">@(eqChange.Value >= 0 ? "+" : "")@eqChange.Value.ToString("P2")</MudText>
+							}
+							else
+							{
+								<MudTooltip Text="Equity history tracking not yet implemented">
+									<MudText Color="Color.Tertiary">--</MudText>
+								</MudTooltip>
+							}
+						</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("eq-7d"))
+				{
+					<TemplateColumn T="BotVM" Title="%Eq 7d">
+						<HeaderTemplate>
+							<MudTooltip Text="Equity change % last 7 days">
+								<MudText>%Eq 7d</MudText>
+							</MudTooltip>
+						</HeaderTemplate>
+						<CellTemplate>
+							@{
+								var eqChange = GetEquityChange(context.Item?.Key, EquityPeriod.Last7Days);
+							}
+							@if (eqChange.HasValue)
+							{
+								var color = eqChange.Value >= 0 ? Color.Success : Color.Error;
+								<MudText Color="@color">@(eqChange.Value >= 0 ? "+" : "")@eqChange.Value.ToString("P2")</MudText>
+							}
+							else
+							{
+								<MudTooltip Text="Equity history tracking not yet implemented">
+									<MudText Color="Color.Tertiary">--</MudText>
+								</MudTooltip>
+							}
+						</CellTemplate>
+					</TemplateColumn>
+				}
+				@if (IsColumnVisible("eq-1d"))
+				{
+					<TemplateColumn T="BotVM" Title="%Eq 1d">
+						<HeaderTemplate>
+							<MudTooltip Text="Equity change % last 24 hours">
+								<MudText>%Eq 1d</MudText>
+							</MudTooltip>
+						</HeaderTemplate>
+						<CellTemplate>
+							@{
+								var eqChange = GetEquityChange(context.Item?.Key, EquityPeriod.Last1Day);
+							}
+							@if (eqChange.HasValue)
+							{
+								var color = eqChange.Value >= 0 ? Color.Success : Color.Error;
+								<MudText Color="@color">@(eqChange.Value >= 0 ? "+" : "")@eqChange.Value.ToString("P2")</MudText>
+							}
+							else
+							{
+								<MudTooltip Text="Equity history tracking not yet implemented">
+									<MudText Color="Color.Tertiary">--</MudText>
+								</MudTooltip>
+							}
+						</CellTemplate>
+					</TemplateColumn>
+				}
+
+				@if (IsColumnVisible("ad"))
+				{
+					<PropertyColumn Property="x => x.AD" Title="AD" T="BotVM" TProperty="double?" />
+				}
+				@if (IsColumnVisible("comments"))
+				{
+					<TemplateColumn T="BotVM" Title="Comments">
+						<CellTemplate>@context.Item?.Value?.Comments</CellTemplate>
+					</TemplateColumn>
+				}
 			</Columns>
 			<ChildRowContent>
 				@if (context.Item?.Value != null)
@@ -433,6 +615,10 @@
 
 			// Do initial status poll
 			await PollBotStatusesAsync();
+			await PollAccountStatusesAsync();
+
+			// Load column preferences
+			await LoadColumnPreferencesAsync();
 		}
 
 		await base.OnParametersSetAsync();
@@ -490,6 +676,7 @@
 		await InvokeAsync(async () =>
 		{
 			await PollBotStatusesAsync();
+			await PollAccountStatusesAsync();
 			StateHasChanged();
 		});
 	}
@@ -718,4 +905,249 @@
 	}
 
 	#endregion
+
+	#region Column Visibility
+
+	private const string ViewId = "bots-list";
+
+	/// <summary>
+	/// Column definition for UI display and visibility management.
+	/// </summary>
+	public record ColumnDefinition(string Id, string Name, bool DefaultVisible = true);
+
+	/// <summary>
+	/// All available columns with their default visibility.
+	/// </summary>
+	private static readonly List<ColumnDefinition> ColumnDefinitions = new()
+	{
+		new("status", "Status", true),
+		new("enabled", "Enabled", true),
+		new("live", "Live", true),
+		new("exchange", "Exchange", false),
+		new("area", "Area", false),
+		new("symbol", "Symbol", true),
+		new("timeframe", "TimeFrame", true),
+		new("type", "Type", true),
+		new("name", "Name", true),
+		new("equity", "Equity", true),
+		new("eq-all-time", "%Eq All Time", false),
+		new("eq-30d", "%Eq 30d", false),
+		new("eq-7d", "%Eq 7d", false),
+		new("eq-1d", "%Eq 1d", true),
+		new("ad", "AD", false),
+		new("comments", "Comments", false),
+	};
+
+	/// <summary>
+	/// Current column visibility state (column ID -> visible).
+	/// </summary>
+	private Dictionary<string, bool> columnVisibility = new();
+
+	/// <summary>
+	/// Whether column preferences have been loaded from the grain.
+	/// </summary>
+	private bool preferencesLoaded = false;
+
+	/// <summary>
+	/// Checks if a column is visible.
+	/// </summary>
+	private bool IsColumnVisible(string columnId)
+	{
+		if (columnVisibility.TryGetValue(columnId, out var visible))
+		{
+			return visible;
+		}
+
+		// Default visibility from definition
+		var def = ColumnDefinitions.FirstOrDefault(c => c.Id == columnId);
+		return def?.DefaultVisible ?? true;
+	}
+
+	/// <summary>
+	/// Toggles column visibility and saves preferences.
+	/// </summary>
+	private async Task ToggleColumnVisibility(string columnId)
+	{
+		var currentVisible = IsColumnVisible(columnId);
+		columnVisibility[columnId] = !currentVisible;
+
+		Logger?.LogDebug("[Bots] Toggled column '{ColumnId}' visibility to {Visible}", columnId, !currentVisible);
+
+		// Save to preferences grain
+		await SaveColumnPreferencesAsync();
+		StateHasChanged();
+	}
+
+	/// <summary>
+	/// Resets all columns to their default visibility.
+	/// </summary>
+	private async Task ResetColumnVisibility()
+	{
+		columnVisibility.Clear();
+		Logger?.LogInformation("[Bots] Reset column visibility to defaults");
+
+		// Clear preferences in grain
+		var client = GetClusterClient();
+		if (client != null)
+		{
+			try
+			{
+				var grain = client.GetGrain<IUserPreferencesG>("Anonymous");
+				await grain.ClearColumnPreferences(ViewId);
+			}
+			catch (Exception ex)
+			{
+				Logger?.LogWarning(ex, "[Bots] Failed to clear column preferences in grain");
+			}
+		}
+
+		StateHasChanged();
+	}
+
+	/// <summary>
+	/// Loads column preferences from the user preferences grain.
+	/// </summary>
+	private async Task LoadColumnPreferencesAsync()
+	{
+		if (preferencesLoaded) return;
+
+		var client = GetClusterClient();
+		if (client == null)
+		{
+			Logger?.LogDebug("[Bots] ClusterClient not available - using default column visibility");
+			preferencesLoaded = true;
+			return;
+		}
+
+		try
+		{
+			var grain = client.GetGrain<IUserPreferencesG>("Anonymous");
+			var preferences = await grain.GetColumnPreferences(ViewId);
+
+			if (preferences != null)
+			{
+				columnVisibility = new Dictionary<string, bool>(preferences.ColumnVisibility);
+				Logger?.LogInformation("[Bots] Loaded column preferences with {Count} columns", preferences.ColumnVisibility.Count);
+			}
+			else
+			{
+				Logger?.LogDebug("[Bots] No saved column preferences - using defaults");
+			}
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogWarning(ex, "[Bots] Failed to load column preferences from grain");
+		}
+
+		preferencesLoaded = true;
+	}
+
+	/// <summary>
+	/// Saves column preferences to the user preferences grain.
+	/// </summary>
+	private async Task SaveColumnPreferencesAsync()
+	{
+		var client = GetClusterClient();
+		if (client == null)
+		{
+			Logger?.LogDebug("[Bots] ClusterClient not available - column preferences not saved");
+			return;
+		}
+
+		try
+		{
+			var grain = client.GetGrain<IUserPreferencesG>("Anonymous");
+			var preferences = new ColumnPreferences
+			{
+				ColumnVisibility = new Dictionary<string, bool>(columnVisibility)
+			};
+			await grain.SetColumnPreferences(ViewId, preferences);
+			Logger?.LogDebug("[Bots] Saved column preferences");
+		}
+		catch (Exception ex)
+		{
+			Logger?.LogWarning(ex, "[Bots] Failed to save column preferences to grain");
+		}
+	}
+
+	#endregion
+
+	#region Account Status and Equity
+
+	/// <summary>
+	/// Periods for equity change calculation.
+	/// </summary>
+	private enum EquityPeriod
+	{
+		AllTime,
+		Last30Days,
+		Last7Days,
+		Last1Day
+	}
+
+	/// <summary>
+	/// Cached account statuses from bot grains.
+	/// </summary>
+	private Dictionary<string, BotAccountStatus> accountStatuses = new();
+
+	/// <summary>
+	/// Gets the account status for a bot.
+	/// </summary>
+	private BotAccountStatus? GetAccountStatus(string? botId)
+	{
+		if (string.IsNullOrEmpty(botId)) return null;
+		return accountStatuses.TryGetValue(botId, out var status) ? status : null;
+	}
+
+	/// <summary>
+	/// Gets the equity change for a bot over a specified period.
+	/// </summary>
+	/// <remarks>
+	/// Currently returns null as equity history tracking is not yet implemented.
+	/// Future: Will calculate % change from historical equity snapshots stored in binary files.
+	/// </remarks>
+	private double? GetEquityChange(string? botId, EquityPeriod period)
+	{
+		// TODO: Implement equity history tracking
+		// This will require:
+		// 1. Periodic equity snapshots stored in HLC binary format with YAML frontmatter
+		// 2. Loading historical equity data for the specified period
+		// 3. Calculating % change from first value in period to current equity
+		return null;
+	}
+
+	/// <summary>
+	/// Polls account statuses along with bot statuses.
+	/// </summary>
+	private async Task PollAccountStatusesAsync()
+	{
+		var client = GetClusterClient();
+		if (client == null || FilteredBotCache == null) return;
+
+		var keys = FilteredBotCache.Keys.Items.ToList();
+		foreach (var botId in keys)
+		{
+			try
+			{
+				var grain = client.GetGrain<IRealtimeBotHarnessG>(botId);
+				var accountStatus = await grain.GetAccountStatus();
+				if (accountStatus != null)
+				{
+					accountStatuses[botId] = accountStatus;
+				}
+			}
+			catch (Exception ex)
+			{
+				Logger?.LogDebug("[Bots] Failed to get account status for {BotId}: {Message}", botId, ex.Message);
+			}
+		}
+	}
+
+	#endregion
+
+	protected override async Task OnInitializedAsync()
+	{
+		await LoadColumnPreferencesAsync();
+		await base.OnInitializedAsync();
+	}
 }
