@@ -188,19 +188,40 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
                 // - additive (step)
                 // - exponential
                 // - fibonacci
-                if (Options.EffectiveExponent != 1.0 && Options.EffectiveExponent != 0.0)
+
+                // If user explicitly set a Step value, always use linear distribution
+                // This allows users to override the exponential default for precise control
+                bool useLinear = Options.HasStep || Options.EffectiveExponent == 1.0 || Options.EffectiveExponent == 0.0;
+
+                if (!useLinear)
                 {
                     GetValue = GetDistributionValue;
 
                     // TODO Options.ExponentOrigin: Exponent basis point. (e.g. Zero, or EffectiveMinValue).  Maybe enum for this.  For now, assume EffectiveMinValue.
                     exponentDouble = Options.EffectiveExponent;
                     //testCount = Convert.ToUInt64(Math.Floor(Math.Pow(Convert.ToDouble(diff), 1.0 / exponentDouble)));
-                    testCount = diff < TValue.Zero ? 1L : Convert.ToUInt64(Math.Log(Convert.ToDouble(diff)) / Math.Log(exponentDouble));
+                    var baseTestCount = diff < TValue.Zero ? 1L : Convert.ToUInt64(Math.Log(Convert.ToDouble(diff)) / Math.Log(exponentDouble));
+                    // Apply level-based reduction (same as linear case) so that lower levels have fewer tests
+                    testCount = Math.Max(1UL, (ulong)double.Ceiling(baseTestCount / levelMultiplier));
+
+                    // Debug logging for distribution values
+                    Debug.WriteLine($"[ParameterLevelOfDetailInfo] Key={Info.Key}, Exponential distribution: exponent={exponentDouble:F4}, min={min}, max={max}, testCount={testCount}");
+                    for (int i = 0; i < Math.Min(10, (int)testCount); i++)
+                    {
+                        Debug.WriteLine($"  Index {i} -> {GetValue(i)}");
+                    }
                 }
                 else
                 {
                     GetValue = GetLinearValue;
                     exponentDouble = 0; // 0 means ignore this parameter (effective exponentAdjustment of 1)
+
+                    // Debug logging for linear values
+                    Debug.WriteLine($"[ParameterLevelOfDetailInfo] Key={Info.Key}, Linear distribution: min={min}, max={max}, step={step}, testCount={testCount}");
+                    for (int i = 0; i < Math.Min(10, (int)testCount); i++)
+                    {
+                        Debug.WriteLine($"  Index {i} -> {GetValue(i)}");
+                    }
                 }
 
                 //if (levelMultiplier != 1)
@@ -233,7 +254,19 @@ public class ParameterLevelOfDetailInfo<TValue> : IParameterLevelOfDetailInfo
     public readonly Func<int, TValue> GetValue;
 
     public TValue GetLinearValue(int index) => min + TValue.CreateChecked(index) * step;
-    public TValue GetDistributionValue(int index) => min + TValue.CreateChecked(Math.Pow(exponentDouble, index) - 1.0);
+    public TValue GetDistributionValue(int index)
+    {
+        // For exponential distribution, the formula is: min + (exponent^index - 1)
+        // For integer types, we use Math.Round to get better distribution instead of truncation
+        double rawValue = Math.Pow(exponentDouble, index) - 1.0;
+
+        // For integer types, use rounding to avoid clustering at low values
+        if (!TypeReflectionX.IsFloatingPoint<TValue>())
+        {
+            return min + TValue.CreateChecked(Math.Round(rawValue));
+        }
+        return min + TValue.CreateChecked(rawValue);
+    }
 
     public int GetLastDistributionValue(TValue max)
     {

@@ -165,6 +165,22 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         var optimizableParameters = State.OptimizableParameters;
         var unoptimizableParameters = State.UnoptimizableParameters;
 
+        // Log optimization parameters for debugging
+        Logger.LogInformation("Optimization Level {Level}: {Count} parameters to optimize, {TestCount:N0} test permutations",
+            State.CurrentLevelIndex, optimizableParameters.Count, State.CurrentLevel.TestPermutationCount);
+
+        foreach (var poo in optimizableParameters)
+        {
+            var levelParam = State.CurrentLevel.Parameters.FirstOrDefault(p => p.Key == poo.Info.Key);
+            Logger.LogInformation("  Parameter {Key}: TestCount={TestCount}, HasStep={HasStep}, Step={Step}, Min={Min}, Max={Max}",
+                poo.Info.Key,
+                levelParam?.TestCount ?? 0,
+                poo.HasStep,
+                poo.StepObj,
+                poo.MinValueObj,
+                poo.MaxValueObj);
+        }
+
         // Start a loop to read from the ParametersToTest channel
         var batchQueue = ServiceProvider.GetRequiredService<BacktestQueue>();
         int maxBatchSize = OptimizationParameters.MaxBatchSize;
@@ -256,8 +272,13 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
                                 int parameterIndex = 0;
                                 foreach (var kvp in optimizableParameters)
                                 {
-                                    kvp.Info.SetValue(pBot, State.CurrentLevel.Parameters[parameterIndex]
-                                        .GetValue(batchStaging[batchStagingIndex][parameterIndex]));
+                                    var valueIndex = batchStaging[batchStagingIndex][parameterIndex];
+                                    var paramValue = State.CurrentLevel.Parameters[parameterIndex].GetValue(valueIndex);
+
+                                    // Debug logging to trace parameter values
+                                    Debug.WriteLine($"[GridSearchStrategy] Setting {kvp.Info.Key}: index={valueIndex} -> value={paramValue}");
+
+                                    kvp.Info.SetValue(pBot, paramValue);
                                     parameterIndex++;
                                 }
 

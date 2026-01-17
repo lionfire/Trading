@@ -182,7 +182,11 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
             {
                 if (level.TestPermutationCount >= priorTestPermutationCount)
                 {
-                    throw new InvalidOperationException($"Loop detected.  Too many levels of detail being generated without progress: Level {result} and {result + 1} both have {level.TestPermutationCount} tests");
+                    // Cannot reduce further - parameter space is at minimum granularity
+                    // Accept this level as the minimum achievable, even if above MaxBacktests
+                    Debug.WriteLine($"[OptimizerLevelsOfDetail] Reached minimum granularity at level {result} with {level.TestPermutationCount:N0} tests " +
+                        $"(MaxBacktests: {POptimization.MaxBacktests:N0}). Cannot reduce further with {level.Parameters.Count} parameters.");
+                    return result;
                 }
                 priorTestPermutationCount = level.TestPermutationCount;
                 //if(result < -10_000) { throw new InvalidOperationException("Possible loop detected.  Too many levels of detail being generated."); }

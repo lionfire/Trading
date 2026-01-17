@@ -24,6 +24,7 @@ public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<
     object? MaxValueObj { get; }
     object? StepObj { get; }
     object? MinValueObj { get; }
+    bool HasStep { get; }
     //int? MinProbes { get; }
     //int? MaxProbes { get; }
 

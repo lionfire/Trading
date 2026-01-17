@@ -122,9 +122,10 @@ public class GridLevelOfDetail : ILevelOfDetail, IEnumerable<int[]>
             }
         }
 
-        public int[] Current => current;
+        // Return a copy to prevent mutation issues when consumers store the array
+        public int[] Current => (int[])current.Clone();
         int[] current;
-        object IEnumerator.Current => current;
+        object IEnumerator.Current => (int[])current.Clone();
 
 
         public void Dispose() { current = null!; max = null!; }
