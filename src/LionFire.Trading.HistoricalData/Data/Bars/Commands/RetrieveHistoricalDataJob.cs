@@ -1,6 +1,5 @@
 ﻿using Binance.Net.Clients;
 using Binance.Net.Interfaces;
-using CryptoExchange.Net.CommonObjects;
 using K4os.Compression.LZ4.Streams;
 using LionFire;
 using LionFire.ExtensionMethods.Cloning;
@@ -596,7 +595,7 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
                 Logger.LogInformation($"{Input.Symbol} {nextStartTime} - {requestTo}");
                 Debug.WriteLine($"Downloading {Input.Symbol} {nextStartTime} - {requestTo}");
                 DownloadProgressTracker.OnProgress(Input.ExchangeFlag);
-                CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinanceKline>> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime, endTime: requestTo.DateTime, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
+                CryptoExchange.Net.Objects.WebCallResult<IBinanceKline[]> result = (await BinanceClient!.UsdFuturesApi.ExchangeData.GetKlinesAsync(Input.Symbol, Input.KlineInterval ?? throw new ArgumentNullException(), startTime: nextStartTime, endTime: requestTo.DateTime, limit: Input.LimitFlag)) ?? throw new Exception("retrieve returned null");
 
                 await CheckWeight_Binance(result?.ResponseHeaders);
 

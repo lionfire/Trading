@@ -126,8 +126,12 @@ public class MarketDataResolver : IMarketDataResolver
                     var signals = new List<IHistoricalTimeSeries>();
                     foreach (var signal in pBoundInput.Signals)
                     {
-                        var resolved = ((IMarketDataResolver)this).Resolve(signal, slots.Slots[slotIndex++]);
+                        // Handle case where indicator has fewer explicit slot properties than signals
+                        // (e.g., PSimpleMovingAverage has no explicit IPInput properties but still accepts input)
+                        var slotInfo = slotIndex < slots.Slots.Count ? slots.Slots[slotIndex] : null;
+                        var resolved = ((IMarketDataResolver)this).Resolve(signal, slotInfo);
                         signals.Add(resolved);
+                        slotIndex++;
                     }
 
                     if (signals.Count != pIndicator.InputCount)

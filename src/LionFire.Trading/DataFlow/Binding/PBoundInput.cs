@@ -29,9 +29,20 @@ public class PBoundSlots
         #endregion
     }
 
+    /// <summary>
+    /// Constructor that skips automatic signal resolution. Used for composite indicators
+    /// where signals are explicitly provided.
+    /// </summary>
+    protected PBoundSlots(IPMayHaveUnboundInputSlots unboundInput, bool skipSignalResolution)
+    {
+        Parent = unboundInput;
+        // Signals will be set by derived class
+        Signals = null!;
+    }
+
     #region Relationships
 
-    public IReadOnlyList<IPInput?> Signals { get; }
+    public IReadOnlyList<IPInput?> Signals { get; protected set; }
 
     #endregion
 
@@ -147,6 +158,19 @@ public class PBoundInput : PBoundSlots, IPInput
 
     // REVIEW - can there be multiple upstream Inputs that are adapted to match the parent's expected Input type?
     public PBoundInput(IPInputThatSupportsUnboundInputs unboundInput, IPMarketProcessor root) : base(unboundInput, root)
+    {
+        if (root is IPTimeFrameMarketProcessor rootTimeFrame)
+        {
+            TimeFrame = rootTimeFrame.TimeFrame;
+        }
+    }
+
+    /// <summary>
+    /// Constructor that skips automatic signal resolution. Used for composite indicators
+    /// where signals are explicitly provided by derived classes.
+    /// </summary>
+    protected PBoundInput(IPInputThatSupportsUnboundInputs unboundInput, IPMarketProcessor root, bool skipSignalResolution)
+        : base(unboundInput, skipSignalResolution)
     {
         if (root is IPTimeFrameMarketProcessor rootTimeFrame)
         {

@@ -169,7 +169,7 @@ public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<Av
     #region Lifecycle
 
     public static AverageTrueRange<TPrice, TOutput> Create(PAverageTrueRange<TPrice, TOutput> p) => new AverageTrueRange<TPrice, TOutput>(p);
-    public AverageTrueRange(PAverageTrueRange<TPrice, TOutput> parameters) : base(new global::QuantConnect.Indicators.AverageTrueRange(parameters.Period, parameters.MovingAverageType))
+    public AverageTrueRange(PAverageTrueRange<TPrice, TOutput> parameters) : base(new global::QuantConnect.Indicators.AverageTrueRange("ATR", parameters.Period, parameters.MovingAverageType))
     {
         Parameters = parameters;
     }

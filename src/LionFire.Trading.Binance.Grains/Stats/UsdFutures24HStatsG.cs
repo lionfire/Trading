@@ -102,7 +102,7 @@ public class UsdFutures24HStatsG : IGrainBase, IUsdFuturesInfoG, IRemindable
         Logger.LogInformation("Retrieving 24h stats");
         Retrieves.Add(1);
 
-        CryptoExchange.Net.Objects.WebCallResult<IEnumerable<IBinance24HPrice>> info;
+        CryptoExchange.Net.Objects.WebCallResult<IBinance24HPrice[]> info;
 
         try
         {
