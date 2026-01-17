@@ -73,14 +73,29 @@ public class PAtrMaBot<TValue> : PStandardBot2<PAtrMaBot<TValue>, TValue>
 
     protected override void InferMissingParameters()
     {
+        // Initialize ATR if not set
+        ATR ??= new PAverageTrueRange<double, TValue>
+        {
+            Period = 14, // Default ATR period
+            Lookback = Lookback,
+            MovingAverageType = QuantConnect.Indicators.MovingAverageType.Wilders,
+        };
+
+        // Initialize ATR_MA if not set
+        ATR_MA ??= new PSimpleMovingAverage<double>
+        {
+            Period = 20, // Default MA period
+            Lookback = Lookback,
+        };
+
         InputLookbacks = [
             0,  // Bars
             Lookback, // ATR
             Lookback  // ATR_MA
         ];
 
-        if (ATR != null) ATR.Lookback = Lookback;
-        if (ATR_MA != null) ATR_MA.Lookback = Lookback;
+        ATR.Lookback = Lookback;
+        ATR_MA.Lookback = Lookback;
 
         base.InferMissingParameters();
     }
@@ -151,11 +166,11 @@ public class AtrMaBot<TValue> : StandardBot2<PAtrMaBot<TValue>, TValue>
         {
             if (!hasPosition)
             {
-                Logger.LogInformation("[AtrMaBot] BUY signal - ATR ({ATR:F6}) > ATR_MA ({ATR_MA:F6})", atr, atrMa);
+                Logger.LogTrace("[AtrMaBot] BUY signal - ATR ({ATR:F6}) > ATR_MA ({ATR_MA:F6})", atr, atrMa);
                 try
                 {
                     TryOpen();
-                    Logger.LogInformation("[AtrMaBot] Position opened. Positions count: {Count}, Balance: {Balance:F2}",
+                    Logger.LogTrace("[AtrMaBot] Position opened. Positions count: {Count}, Balance: {Balance:F2}",
                         DoubleAccount.Positions.Count, DoubleAccount.Balance);
                 }
                 catch (Exception ex)
@@ -173,11 +188,11 @@ public class AtrMaBot<TValue> : StandardBot2<PAtrMaBot<TValue>, TValue>
         {
             if (hasPosition)
             {
-                Logger.LogInformation("[AtrMaBot] CLOSE signal - ATR ({ATR:F6}) <= ATR_MA ({ATR_MA:F6})", atr, atrMa);
+                Logger.LogTrace("[AtrMaBot] CLOSE signal - ATR ({ATR:F6}) <= ATR_MA ({ATR_MA:F6})", atr, atrMa);
                 try
                 {
                     TryClose();
-                    Logger.LogInformation("[AtrMaBot] Position closed. Positions count: {Count}, Balance: {Balance:F2}",
+                    Logger.LogTrace("[AtrMaBot] Position closed. Positions count: {Count}, Balance: {Balance:F2}",
                         DoubleAccount.Positions.Count, DoubleAccount.Balance);
                 }
                 catch (Exception ex)

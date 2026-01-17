@@ -83,6 +83,18 @@ public interface IRealtimeBotHarnessG : IGrainWithStringKey, IIndicatorSubscribe
     /// </remarks>
     ValueTask<bool> UpdateParameters(string parametersJson);
 
+    /// <summary>
+    /// Updates the full bot configuration at runtime.
+    /// </summary>
+    /// <param name="config">The new configuration to apply</param>
+    /// <returns>True if update succeeded, false if bot is not running or update failed</returns>
+    /// <remarks>
+    /// This allows updating all configuration properties including markets, account settings, and parameters.
+    /// Changes to BotTypeName, Markets, or AccountId will require a bot restart to take effect.
+    /// The configuration is persisted immediately.
+    /// </remarks>
+    ValueTask<bool> UpdateConfiguration(RealtimeBotConfiguration config);
+
     #region Logging
 
     /// <summary>
