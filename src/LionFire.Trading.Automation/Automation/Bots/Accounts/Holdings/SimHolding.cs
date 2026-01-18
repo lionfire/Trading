@@ -26,8 +26,11 @@ public sealed class SimHolding<TPrecision> : Holding<TPrecision>, ISimHolding<TP
 
     public SimHolding(SimAccount<TPrecision> account, IPSimulatedHolding<TPrecision> pHolding) : base(pHolding)
     {
+        InitialBalance = pHolding.StartingBalance;
         Balance = pHolding.StartingBalance;
         Equity = Balance;
+        HighestBalance = Balance;
+        HighestEquity = Equity;
         Account = account;
     }
 
@@ -115,7 +118,19 @@ public sealed class SimHolding<TPrecision> : Holding<TPrecision>, ISimHolding<TP
 
     public TPrecision BalanceReturnOnInvestment => (Balance - InitialBalance) / InitialBalance;
     public double AnnualizedBalanceRoi => Convert.ToDouble(BalanceReturnOnInvestment) * ((SimContext.SimulatedCurrentDate - Start).TotalDays / 365);
-    public double AnnualizedBalanceRoiVsDrawdownPercent => AnnualizedBalanceRoi / Convert.ToDouble(MaxBalanceDrawdownPerunum);
+    /// <summary>
+    /// Annualized ROI divided by max drawdown (as perunum). Uses a floor of 0.1% drawdown to avoid infinity.
+    /// </summary>
+    public double AnnualizedBalanceRoiVsDrawdownPercent
+    {
+        get
+        {
+            var drawdown = Convert.ToDouble(MaxBalanceDrawdownPerunum);
+            // Use a minimum drawdown floor of 0.001 (0.1%) to avoid infinity
+            if (drawdown < 0.001) drawdown = 0.001;
+            return AnnualizedBalanceRoi / drawdown;
+        }
+    }
 
 
     #endregion
