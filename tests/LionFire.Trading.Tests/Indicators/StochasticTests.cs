@@ -107,8 +107,8 @@ public class StochasticTests
 
         // Default Stochastic should point to Stochastic_QC
         var indicator = new Stochastic<double, double>(parameters);
-        
-        // Create sample HLC data
+
+        // Create sample HLC data - need FastPeriod + SlowKPeriod + SlowDPeriod = 11+ bars
         var testData = new List<HLC<double>>
         {
             new HLC<double> { High = 110, Low = 90, Close = 100 },
@@ -119,12 +119,16 @@ public class StochasticTests
             new HLC<double> { High = 119, Low = 99, Close = 117 },
             new HLC<double> { High = 118, Low = 98, Close = 116 },
             new HLC<double> { High = 117, Low = 97, Close = 115 },
+            new HLC<double> { High = 116, Low = 96, Close = 114 },
+            new HLC<double> { High = 115, Low = 95, Close = 113 },
+            new HLC<double> { High = 116, Low = 94, Close = 112 },
+            new HLC<double> { High = 117, Low = 95, Close = 114 },
         };
-        
+
         // Act
         double[]? output = new double[testData.Count * 2];
         indicator.OnBarBatch(testData, output);
-        
+
         // Assert
         Assert.True(indicator.IsReady);
         Assert.NotEqual(0, indicator.PercentK);
