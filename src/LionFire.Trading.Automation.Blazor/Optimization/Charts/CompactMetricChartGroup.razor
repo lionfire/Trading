@@ -1,0 +1,66 @@
+@using MudBlazor
+
+<div class="compact-metric-chart-group" style="display: flex; flex-direction: column; align-items: center;">
+    <div style="position: relative;">
+        <CompactMetricChart ViewModel="@ViewModel" Metric="@CurrentMetric" Width="@Width" Height="@Height" />
+    </div>
+    <MudButtonGroup Size="Size.Small" Variant="Variant.Text" Style="margin-top: -4px;">
+        <MudButton OnClick="@CycleNext" Style="padding: 0 4px; min-width: 40px; font-size: 10px; height: 18px;"
+                   Color="Color.Default">
+            @GetMetricLabel(CurrentMetric)
+        </MudButton>
+        <MudMenu Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small"
+                 Style="padding: 0; min-width: 16px;" Dense="true"
+                 AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+            @foreach (var metric in Metrics)
+            {
+                <MudMenuItem OnClick="@(() => SelectMetric(metric))">
+                    @GetMetricLabel(metric)
+                </MudMenuItem>
+            }
+        </MudMenu>
+    </MudButtonGroup>
+</div>
+
+@code {
+    [Parameter]
+    public OneShotOptimizeVM? ViewModel { get; set; }
+
+    [Parameter]
+    public string[] Metrics { get; set; } = new[] { "AMWT", "WinRate" };
+
+    [Parameter]
+    public int Width { get; set; } = 120;
+
+    [Parameter]
+    public int Height { get; set; } = 60;
+
+    private int _currentIndex = 0;
+    private string CurrentMetric => Metrics.Length > 0 ? Metrics[_currentIndex] : "AD";
+
+    private void CycleNext()
+    {
+        _currentIndex = (_currentIndex + 1) % Metrics.Length;
+        StateHasChanged();
+    }
+
+    private void SelectMetric(string metric)
+    {
+        var index = Array.IndexOf(Metrics, metric);
+        if (index >= 0)
+        {
+            _currentIndex = index;
+            StateHasChanged();
+        }
+    }
+
+    private string GetMetricLabel(string metric) => metric switch
+    {
+        "AD" => "AD",
+        "Fitness" => "Fitness",
+        "WinRate" => "Win%",
+        "TotalTrades" => "Trades",
+        "AMWT" => "AMWT",
+        _ => metric
+    };
+}

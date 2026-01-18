@@ -152,32 +152,12 @@
                        </div> *@
 
             </div>
-            <div class="d-flex flex-column no-wrap lf-fieldset">
-
-                @* <div class="lf-field">
-                    <div class="caption"></div>
-                    <div class="value">@ViewModel.Progress.</div>
-                </div>
-                <div class="lf-field">
-                    <div class="caption"></div>
-                    <div class="value">@ViewModel.Progress.</div>
-                </div>
-                <div class="lf-field">
-                    <div class="caption"></div>
-                    <div class="value">@ViewModel.Progress.</div>
-                </div>
-                <div class="lf-field">
-                    <div class="caption"></div>
-                    <div class="value">@ViewModel.Progress.</div>
-                </div>
-                <div class="lf-field">
-                    <div class="caption"></div>
-                    <div class="value">@ViewModel.Progress.</div>
-                </div>
-                <div class="lf-field">
-                    <div class="caption"></div>
-                    <div class="value">@ViewModel.Progress.</div>
-                </div> *@
+            @* Compact metric charts *@
+            <div class="d-flex flex-row gap-2 align-end" style="margin-left: 16px;">
+                <LionFire.Trading.Automation.Blazor.Optimization.Charts.CompactMetricChart ViewModel="ViewModel" Metric="Fitness" Width="100" Height="50" />
+                <LionFire.Trading.Automation.Blazor.Optimization.Charts.CompactMetricChart ViewModel="ViewModel" Metric="AD" Width="100" Height="50" />
+                <LionFire.Trading.Automation.Blazor.Optimization.Charts.CompactMetricChart ViewModel="ViewModel" Metric="TotalTrades" Width="100" Height="50" />
+                <LionFire.Trading.Automation.Blazor.Optimization.Charts.CompactMetricChartGroup ViewModel="ViewModel" Metrics='@(new[] { "AMWT", "WinRate" })' Width="100" Height="50" />
             </div>
         }
 
@@ -255,102 +235,55 @@
         <GeneralParameters ViewModel="ViewModel" />
     </MudPaper>
 
-    <div style="overflow-y: auto; ">
-        @* min-height: calc(100% - 100px); *@
-        <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Border="true" Outlined="true" PanelClass="px-4 py-6 object-fill" ApplyEffectsToContainer="true" Style="min-height: calc(100% - 100px); height: calc(100% - 100px);">
+    @* ======================= NESTED TABS LAYOUT ======================= *@
+    <div style="overflow-y: auto; flex-grow: 1;">
+        @* Top-level horizontal category tabs (Parameters / Results) *@
+        <MudTabs @bind-ActivePanelIndex="_categoryTabIndex" Border="true" Outlined="true" Elevation="2" Rounded="true"
+                 ApplyEffectsToContainer="true" Style="height: 100%;">
             <ChildContent>
-                <MudTabPanel Text="Parameters">
-                    <OptimizeParameters ViewModel="ViewModel" />
+                @* ======================= PARAMETERS CATEGORY ======================= *@
+                <MudTabPanel Text="Parameters" Icon="@Icons.Material.Filled.Tune">
+                    @* Vertical sub-tabs for parameter-related content *@
+                    <MudTabs Position="Position.Left" @bind-ActivePanelIndex="_parameterSubTabIndex"
+                             MinimumTabWidth="160px" Class="vertical-subtabs" PanelClass="pa-4"
+                             Border="true" Style="height: 100%;">
+                        <MudTabPanel Text="Parameters" Icon="@Icons.Material.Filled.Settings">
+                            <OptimizeParameters ViewModel="ViewModel" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Level of Detail" Icon="@Icons.Material.Filled.Layers">
+                            <OptimizationStatus ViewModel="ViewModel" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Performance" Icon="@Icons.Material.Filled.Speed">
+                            <PerformanceTuning ViewModel="ViewModel" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Properties" Icon="@Icons.Material.Filled.ListAlt">
+                            <ObjectExplorer CurrentObject="ViewModel" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Output" Icon="@Icons.Material.Filled.Output">
+                            <OutputParameters ViewModel="ViewModel" />
+                        </MudTabPanel>
+                    </MudTabs>
                 </MudTabPanel>
-                <MudTabPanel Text="Level of Detail">
-                    <OptimizationStatus ViewModel="ViewModel" />
-                </MudTabPanel>
-                <MudTabPanel Text="Performance Tuning">
-                    <PerformanceTuning ViewModel="ViewModel" />
-                </MudTabPanel>
-                <MudTabPanel Text="Properties Explorer">
-                    <ObjectExplorer CurrentObject="ViewModel" />
-                </MudTabPanel>
-                <MudTabPanel Text="Output Settings">
-                    <OutputParameters ViewModel="ViewModel" />
-                </MudTabPanel>
-                <MudTabPanel Text="Results">
-                    <MudGrid>
-                        <MudItem>
-                            @if (ViewModel!.MultiSimContext?.Journal?.BatchDirectory != null)
-                            {
-                                <div>
-                                    Dir:
-                                    <a href="@($"file:///{ViewModel!.MultiSimContext?.Journal?.BatchDirectory}")">@ViewModel!.MultiSimContext?.Journal?.BatchDirectory</a>
-                                </div>
-                            }
-                        </MudItem>
-                    </MudGrid>
-                </MudTabPanel>
-                <MudTabPanel Text="Backtests">
-                    <BacktestResults ViewModel="ViewModel" />
 
-
+                @* ======================= RESULTS CATEGORY ======================= *@
+                <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Assessment">
+                    @* Vertical sub-tabs for results-related content *@
+                    <MudTabs Position="Position.Left" @bind-ActivePanelIndex="_resultsSubTabIndex"
+                             MinimumTabWidth="160px" Class="vertical-subtabs" PanelClass="pa-4"
+                             Border="true" Style="height: 100%;">
+                        <MudTabPanel Text="Summary" Icon="@Icons.Material.Filled.Summarize">
+                            <ResultsSummary ViewModel="ViewModel" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Backtests" Icon="@Icons.Material.Filled.TableChart">
+                            <BacktestResultsPanel ViewModel="ViewModel" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Statistics" Icon="@Icons.Material.Filled.BarChart">
+                            <LionFire.Trading.Automation.Blazor.Optimization.Charts.StatisticsHistogram ViewModel="ViewModel" />
+                        </MudTabPanel>
+                    </MudTabs>
                 </MudTabPanel>
             </ChildContent>
         </MudTabs>
-
-        @*      <MudExpansionPanels id="MainPanels" MultiExpansion=true>
-            <MudExpansionPanel Text="Parameters" @bind-Expanded=@ShowParameters>
-                <OptimizeParameters ViewModel="ViewModel" />
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="Level of Detail" @bind-Expanded=@ShowOptimizationStatus>
-                <OptimizationStatus ViewModel="ViewModel" />
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="Performance Tuning">
-                <PerformanceTuning ViewModel="ViewModel" />
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="Properties Explorer ">
-                <div class="overflow-auto">
-                    <ObjectExplorer CurrentObject="ViewModel" />
-                </div>
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="Output Settings">
-                <OutputParameters ViewModel="ViewModel" />
-            </MudExpansionPanel>
-            <MudExpansionPanel Text="Chart" >
-                <div>
-                    <OptimizationResultsChart />
-                </div>
-            </MudExpansionPanel>
-            <MudExpansionPanel Text="Results" @bind-Expanded=@ShowResults>
-                <MudGrid>
-                    <MudItem>
-                        @if (ViewModel!.OptimizationTask?.BacktestsJournal?.BatchDirectory != null)
-                        {
-                            <div>
-                                Dir:
-                                <a href="@($"file:///{ViewModel!.OptimizationTask?.BacktestsJournal?.BatchDirectory}")">@ViewModel!.OptimizationTask?.BacktestsJournal?.BatchDirectory</a>
-
-                            </div>
-                        }
-                    </MudItem>
-                </MudGrid>
-            </MudExpansionPanel>
-
-            <MudExpansionPanel Text="Backtests" @bind-Expanded=@ShowBacktests>
-                @if (ViewModel!.OptimizationTask?.BacktestsJournal?.ObservableCache?.Items != null)
-                {
-                    <MudDataGrid Items="ViewModel.OptimizationTask.BacktestsJournal.ObservableCache.Items" Virtualize="true" FixedHeader="true" Height="350px" SortMode="@_sortMode" Dense=true>
-                        <Columns>
-                            <PropertyColumn Property="x => x.StringId" />
-                            <PropertyColumn Property="x => x.Fitness" />
-                            <PropertyColumn Property="x => x.AD" />
-                        </Columns>
-                    </MudDataGrid>
-                }
-            </MudExpansionPanel>
-        </MudExpansionPanels>
- *@
     </div>
 
     <MudSpacer />

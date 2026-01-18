@@ -1,0 +1,249 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using Plotly.Blazor
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.Traces
+@using Plotly.Blazor.Traces.BarLib
+@using System.Reactive.Linq
+@implements IDisposable
+
+<MudPaper Class="pa-4" Elevation="1">
+    <div class="d-flex justify-space-between align-center mb-3">
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.BarChart" Class="mr-2" />
+            Result Distribution
+        </MudText>
+        <div class="d-flex align-center gap-2">
+            <MudSelect T="string" @bind-Value="SelectedMetric" Label="Metric" Variant="Variant.Outlined" Margin="MudBlazor.Margin.Dense" Style="width: 150px;">
+                <MudSelectItem Value="@("AD")">AD (AROI/DD%)</MudSelectItem>
+                <MudSelectItem Value="@("Fitness")">Fitness</MudSelectItem>
+                <MudSelectItem Value="@("WinRate")">Win Rate</MudSelectItem>
+                <MudSelectItem Value="@("TotalTrades")">Total Trades</MudSelectItem>
+                <MudSelectItem Value="@("AMWT")">AMWT (min)</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="double" @bind-Value="BucketSize" Label="Bucket Size" Variant="Variant.Outlined" Margin="MudBlazor.Margin.Dense" Style="width: 100px;">
+                @foreach (var size in GetBucketSizes())
+                {
+                    <MudSelectItem Value="@size">@size</MudSelectItem>
+                }
+            </MudSelect>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@Refresh" Size="Size.Small" />
+        </div>
+    </div>
+
+    <div class="d-flex justify-center gap-4 mb-2">
+        <div class="d-flex align-center gap-1">
+            <div style="width: 16px; height: 16px; background-color: #4CAF50; border-radius: 2px;"></div>
+            <MudText Typo="Typo.caption">Completed (@CompletedCount)</MudText>
+        </div>
+        <div class="d-flex align-center gap-1">
+            <div style="width: 16px; height: 16px; background-color: #f44336; border-radius: 2px;"></div>
+            <MudText Typo="Typo.caption">Aborted (@AbortedCount)</MudText>
+        </div>
+    </div>
+
+    <PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" Style="height: 400px;" />
+</MudPaper>
+
+@code {
+    private PlotlyChart? chart;
+    private Config? config;
+    private Layout? layout;
+    private IList<ITrace>? data;
+    private IDisposable? _subscription;
+
+    private string _selectedMetric = "AD";
+    private string SelectedMetric
+    {
+        get => _selectedMetric;
+        set
+        {
+            if (_selectedMetric != value)
+            {
+                _selectedMetric = value;
+                BucketSize = GetDefaultBucketSize();
+                Refresh();
+            }
+        }
+    }
+
+    private double _bucketSize = 0.5;
+    private double BucketSize
+    {
+        get => _bucketSize;
+        set
+        {
+            if (_bucketSize != value)
+            {
+                _bucketSize = value;
+                Refresh();
+            }
+        }
+    }
+
+    private int CompletedCount => ViewModel?.Backtests?.Items.Count(x => !x.IsAborted) ?? 0;
+    private int AbortedCount => ViewModel?.Backtests?.Items.Count(x => x.IsAborted) ?? 0;
+
+    private IEnumerable<double> GetBucketSizes() => SelectedMetric switch
+    {
+        "AD" => new[] { 0.25, 0.5, 1.0, 2.0 },
+        "Fitness" => new[] { 10.0, 25.0, 50.0, 100.0 },
+        "WinRate" => new[] { 0.05, 0.1, 0.2 },
+        "TotalTrades" => new[] { 5.0, 10.0, 25.0, 50.0 },
+        "AMWT" => new[] { 15.0, 30.0, 60.0, 120.0 },
+        _ => new[] { 1.0 }
+    };
+
+    private double GetDefaultBucketSize() => SelectedMetric switch
+    {
+        "AD" => 0.5,
+        "Fitness" => 25.0,
+        "WinRate" => 0.1,
+        "TotalTrades" => 10.0,
+        "AMWT" => 30.0,
+        _ => 1.0
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        config = new Config { Responsive = true };
+
+        layout = new Layout
+        {
+            Title = new Plotly.Blazor.LayoutLib.Title { Text = "Result Distribution" },
+            BarMode = BarModeEnum.Overlay,
+            XAxis = new List<XAxis>
+            {
+                new XAxis
+                {
+                    Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title { Text = GetAxisTitle() },
+                    AutoRange = Plotly.Blazor.LayoutLib.XAxisLib.AutoRangeEnum.True
+                }
+            },
+            YAxis = new List<YAxis>
+            {
+                new YAxis
+                {
+                    Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = "Count" }
+                }
+            },
+            PaperBgColor = "#1A1A27",
+            PlotBgColor = "#1A1A27",
+            Font = new Plotly.Blazor.LayoutLib.Font { Color = "#FFFFFF" }
+        };
+
+        data = GenerateHistogramData();
+
+        // Subscribe to data changes
+        if (ViewModel != null)
+        {
+            _subscription = ViewModel.DebouncedChanges
+                .Throttle(TimeSpan.FromMilliseconds(500))
+                .Subscribe(_ => InvokeAsync(Refresh));
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+    }
+
+    private string GetAxisTitle() => SelectedMetric switch
+    {
+        "AD" => "AD (AROI/DD%)",
+        "Fitness" => "Fitness",
+        "WinRate" => "Win Rate",
+        "TotalTrades" => "Total Trades",
+        "AMWT" => "AMWT (minutes)",
+        _ => SelectedMetric
+    };
+
+    private void Refresh()
+    {
+        if (layout?.XAxis != null && layout.XAxis.Count > 0)
+        {
+            layout.XAxis[0].Title = new Plotly.Blazor.LayoutLib.XAxisLib.Title { Text = GetAxisTitle() };
+        }
+        data = GenerateHistogramData();
+        chart?.React();
+        StateHasChanged();
+    }
+
+    private double GetMetricValue(BacktestBatchJournalEntry entry) => SelectedMetric switch
+    {
+        "AD" => entry.AD,
+        "Fitness" => entry.Fitness,
+        "WinRate" => entry.WinRate,
+        "TotalTrades" => entry.TotalTrades,
+        "AMWT" => entry.AMWT,
+        _ => entry.AD
+    };
+
+    private IList<ITrace> GenerateHistogramData()
+    {
+        var traces = new List<ITrace>();
+
+        if (ViewModel?.Backtests == null || ViewModel.Backtests.Count == 0)
+            return traces;
+
+        var completed = ViewModel.Backtests.Items.Where(x => !x.IsAborted).ToList();
+        var aborted = ViewModel.Backtests.Items.Where(x => x.IsAborted).ToList();
+
+        // Calculate histogram buckets
+        var allValues = ViewModel.Backtests.Items.Select(GetMetricValue).Where(v => !double.IsNaN(v) && !double.IsInfinity(v)).ToList();
+        if (allValues.Count == 0) return traces;
+
+        var minVal = Math.Floor(allValues.Min() / BucketSize) * BucketSize;
+        var maxVal = Math.Ceiling(allValues.Max() / BucketSize) * BucketSize;
+
+        var bucketLabels = new List<object>();
+        var completedCounts = new List<object>();
+        var abortedCounts = new List<object>();
+
+        for (var bucket = minVal; bucket < maxVal; bucket += BucketSize)
+        {
+            var bucketEnd = bucket + BucketSize;
+            var label = SelectedMetric == "WinRate"
+                ? $"{bucket:P0}-{bucketEnd:P0}"
+                : $"{bucket:F1}-{bucketEnd:F1}";
+
+            bucketLabels.Add(label);
+
+            var completedInBucket = completed.Count(x =>
+            {
+                var val = GetMetricValue(x);
+                return !double.IsNaN(val) && val >= bucket && val < bucketEnd;
+            });
+            completedCounts.Add(completedInBucket);
+
+            var abortedInBucket = aborted.Count(x =>
+            {
+                var val = GetMetricValue(x);
+                return !double.IsNaN(val) && val >= bucket && val < bucketEnd;
+            });
+            // Negative values for aborted to display below x-axis
+            abortedCounts.Add(-abortedInBucket);
+        }
+
+        // Completed tests (positive, green)
+        traces.Add(new Bar
+        {
+            Name = "Completed",
+            X = bucketLabels,
+            Y = completedCounts,
+            Marker = new Marker { Color = "#4CAF50" }
+        });
+
+        // Aborted tests (negative, red) - mirrored below x-axis
+        traces.Add(new Bar
+        {
+            Name = "Aborted",
+            X = bucketLabels,
+            Y = abortedCounts,
+            Marker = new Marker { Color = "#f44336" }
+        });
+
+        return traces;
+    }
+}

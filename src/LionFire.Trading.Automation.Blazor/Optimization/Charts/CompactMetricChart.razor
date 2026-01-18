@@ -1,0 +1,180 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using Plotly.Blazor
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.Traces
+@using Plotly.Blazor.Traces.BarLib
+@using System.Reactive.Linq
+@implements IDisposable
+
+<div class="compact-metric-chart" style="width: @(Width)px; height: @(Height)px; position: relative;">
+    <div class="metric-caption" style="position: absolute; top: 2px; left: 4px; z-index: 10; font-size: 10px; color: #888; pointer-events: none;">
+        @MetricLabel
+    </div>
+    <PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" Style="width: 100%; height: 100%;" />
+</div>
+
+@code {
+    [Parameter]
+    public string Metric { get; set; } = "AD";
+
+    [Parameter]
+    public int Width { get; set; } = 120;
+
+    [Parameter]
+    public int Height { get; set; } = 60;
+
+    private PlotlyChart? chart;
+    private Config? config;
+    private Layout? layout;
+    private IList<ITrace>? data;
+    private IDisposable? _subscription;
+
+    private string MetricLabel => Metric switch
+    {
+        "AD" => "AD",
+        "Fitness" => "Fitness",
+        "WinRate" => "Win%",
+        "TotalTrades" => "Trades",
+        "AMWT" => "AMWT",
+        _ => Metric
+    };
+
+    private double BucketSize => Metric switch
+    {
+        "AD" => 0.5,
+        "Fitness" => 50.0,
+        "WinRate" => 0.1,
+        "TotalTrades" => 10.0,
+        "AMWT" => 30.0,
+        _ => 1.0
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        config = new Config
+        {
+            Responsive = true,
+            DisplayModeBar = Plotly.Blazor.ConfigLib.DisplayModeBarEnum.False,
+            StaticPlot = true
+        };
+
+        layout = new Layout
+        {
+            Margin = new Plotly.Blazor.LayoutLib.Margin { L = 0, R = 0, T = 0, B = 0, Pad = 0 },
+            BarMode = BarModeEnum.Overlay,
+            ShowLegend = false,
+            XAxis = new List<XAxis>
+            {
+                new XAxis
+                {
+                    ShowTickLabels = false,
+                    ShowGrid = false,
+                    ZeroLine = false,
+                    Visible = false
+                }
+            },
+            YAxis = new List<YAxis>
+            {
+                new YAxis
+                {
+                    ShowTickLabels = false,
+                    ShowGrid = false,
+                    ZeroLine = false,
+                    Visible = false
+                }
+            },
+            PaperBgColor = "rgba(0,0,0,0)",
+            PlotBgColor = "rgba(0,0,0,0)"
+        };
+
+        data = GenerateHistogramData();
+
+        if (ViewModel != null)
+        {
+            _subscription = ViewModel.DebouncedChanges
+                .Throttle(TimeSpan.FromMilliseconds(500))
+                .Subscribe(_ => InvokeAsync(Refresh));
+        }
+
+        await base.OnInitializedAsync();
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+        Refresh();
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+    }
+
+    private void Refresh()
+    {
+        data = GenerateHistogramData();
+        chart?.React();
+        StateHasChanged();
+    }
+
+    private double GetMetricValue(BacktestBatchJournalEntry entry) => Metric switch
+    {
+        "AD" => entry.AD,
+        "Fitness" => entry.Fitness,
+        "WinRate" => entry.WinRate,
+        "TotalTrades" => entry.TotalTrades,
+        "AMWT" => entry.AMWT,
+        _ => entry.AD
+    };
+
+    private IList<ITrace> GenerateHistogramData()
+    {
+        var traces = new List<ITrace>();
+
+        if (ViewModel?.Backtests == null || ViewModel.Backtests.Count == 0)
+            return traces;
+
+        var completed = ViewModel.Backtests.Items.Where(x => !x.IsAborted).ToList();
+
+        var allValues = completed.Select(GetMetricValue).Where(v => !double.IsNaN(v) && !double.IsInfinity(v)).ToList();
+        if (allValues.Count == 0) return traces;
+
+        var minVal = Math.Floor(allValues.Min() / BucketSize) * BucketSize;
+        var maxVal = Math.Ceiling(allValues.Max() / BucketSize) * BucketSize;
+
+        var bucketLabels = new List<object>();
+        var completedCounts = new List<object>();
+
+        for (var bucket = minVal; bucket < maxVal; bucket += BucketSize)
+        {
+            var bucketEnd = bucket + BucketSize;
+            bucketLabels.Add(bucket);
+
+            var completedInBucket = completed.Count(x =>
+            {
+                var val = GetMetricValue(x);
+                return !double.IsNaN(val) && val >= bucket && val < bucketEnd;
+            });
+            completedCounts.Add(completedInBucket);
+        }
+
+        traces.Add(new Bar
+        {
+            X = bucketLabels,
+            Y = completedCounts,
+            Marker = new Marker { Color = GetMetricColor() }
+        });
+
+        return traces;
+    }
+
+    private string GetMetricColor() => Metric switch
+    {
+        "AD" => "#4CAF50",
+        "Fitness" => "#2196F3",
+        "WinRate" => "#9C27B0",
+        "TotalTrades" => "#FF9800",
+        "AMWT" => "#00BCD4",
+        _ => "#4CAF50"
+    };
+}
