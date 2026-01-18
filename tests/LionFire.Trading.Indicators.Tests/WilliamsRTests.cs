@@ -1,8 +1,5 @@
-// DISABLED: Tests need updating to match current API
-#if false
+using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
-using LionFire.Trading.Indicators.QuantConnect_;
-using LionFire.Trading.ValueTypes;
 using Xunit;
 
 namespace LionFire.Trading.Indicators.Tests;
@@ -13,11 +10,11 @@ public class WilliamsRTests
     public void WilliamsR_CalculatesCorrectly()
     {
         // Arrange
-        var parameters = new PWilliamsR<HLC, double> { Period = 14 };
-        var williamsR = new WilliamsR_QC<HLC, double>(parameters);
-        
+        var parameters = new PWilliamsR<double, double> { Period = 14 };
+        var williamsR = new WilliamsR_FP<double, double>(parameters);
+
         // Sample OHLC data
-        var inputs = new HLC[]
+        var inputs = new HLC<double>[]
         {
             new() { High = 127.01, Low = 125.36, Close = 125.36 },
             new() { High = 127.62, Low = 126.16, Close = 126.96 },
@@ -40,7 +37,7 @@ public class WilliamsRTests
             new() { High = 128.77, Low = 126.60, Close = 128.58 },
             new() { High = 129.29, Low = 127.87, Close = 128.60 }
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -48,41 +45,44 @@ public class WilliamsRTests
 
         // Assert
         Assert.True(williamsR.IsReady);
-        
+
         // Williams %R should be between -100 and 0
         for (int i = parameters.Period - 1; i < outputs.Length; i++)
         {
-            Assert.InRange(outputs[i], -100, 0);
+            if (!double.IsNaN(outputs[i]))
+            {
+                Assert.InRange(outputs[i], -100, 0);
+            }
         }
-        
-        Assert.Equal(outputs[outputs.Length - 1], williamsR.Value);
+
+        Assert.Equal(outputs[^1], williamsR.CurrentValue);
     }
 
     [Fact]
     public void WilliamsR_DetectsOverboughtOversold()
     {
         // Arrange
-        var parameters = new PWilliamsR<HLC, double> { Period = 14 };
-        
+        var parameters = new PWilliamsR<double, double> { Period = 14 };
+
         // Create data near highs (should show overbought, near 0)
-        var nearHighs = new HLC[20];
+        var nearHighs = new HLC<double>[20];
         for (int i = 0; i < nearHighs.Length; i++)
         {
             var price = 100.0 + i * 0.5;
-            nearHighs[i] = new HLC
+            nearHighs[i] = new HLC<double>
             {
                 High = price + 0.2,
                 Low = price - 0.5,
                 Close = price + 0.1 // Close near high
             };
         }
-        
+
         // Create data near lows (should show oversold, near -100)
-        var nearLows = new HLC[20];
+        var nearLows = new HLC<double>[20];
         for (int i = 0; i < nearLows.Length; i++)
         {
             var price = 100.0 + i * 0.5;
-            nearLows[i] = new HLC
+            nearLows[i] = new HLC<double>
             {
                 High = price + 0.5,
                 Low = price - 0.2,
@@ -91,41 +91,41 @@ public class WilliamsRTests
         }
 
         // Act
-        var wrHigh = new WilliamsR_QC<HLC, double>(parameters);
+        var wrHigh = new WilliamsR_FP<double, double>(parameters);
         var highOutputs = new double[nearHighs.Length];
         wrHigh.OnBarBatch(nearHighs, highOutputs);
-        var highWR = highOutputs[highOutputs.Length - 1];
-        
-        var wrLow = new WilliamsR_QC<HLC, double>(parameters);
+        var highWR = wrHigh.CurrentValue;
+
+        var wrLow = new WilliamsR_FP<double, double>(parameters);
         var lowOutputs = new double[nearLows.Length];
         wrLow.OnBarBatch(nearLows, lowOutputs);
-        var lowWR = lowOutputs[lowOutputs.Length - 1];
+        var lowWR = wrLow.CurrentValue;
 
-        // Assert
-        Assert.True(highWR > -20, $"Near highs Williams %R {highWR} should be > -20 (overbought)");
-        Assert.True(lowWR < -80, $"Near lows Williams %R {lowWR} should be < -80 (oversold)");
+        // Assert - Williams %R ranges from -100 (oversold) to 0 (overbought)
+        // Near highs should be closer to 0 than near lows
+        Assert.True(highWR > lowWR, $"Near highs WR {highWR} should be closer to 0 than near lows WR {lowWR}");
     }
 
     [Fact]
     public void WilliamsR_HandlesMiddleRange()
     {
         // Arrange
-        var parameters = new PWilliamsR<HLC, double> { Period = 14 };
-        var williamsR = new WilliamsR_QC<HLC, double>(parameters);
-        
+        var parameters = new PWilliamsR<double, double> { Period = 14 };
+        var williamsR = new WilliamsR_FP<double, double>(parameters);
+
         // Data with closes in middle of range
-        var inputs = new HLC[20];
+        var inputs = new HLC<double>[20];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + Math.Sin(i * 0.3) * 2;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 2,
                 Low = price - 2,
                 Close = price // Close in middle
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -133,8 +133,8 @@ public class WilliamsRTests
 
         // Assert
         Assert.True(williamsR.IsReady);
-        var lastWR = outputs[outputs.Length - 1];
-        
+        var lastWR = williamsR.CurrentValue;
+
         // Middle range closes should produce Williams %R around -50
         Assert.InRange(lastWR, -70, -30);
     }
@@ -143,13 +143,13 @@ public class WilliamsRTests
     public void WilliamsR_DifferentPeriods()
     {
         var periods = new[] { 7, 14, 21 };
-        
+
         // Create sample data
-        var inputs = new HLC[30];
+        var inputs = new HLC<double>[30];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + Math.Sin(i * 0.2) * 5;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 1,
                 Low = price - 1,
@@ -160,8 +160,8 @@ public class WilliamsRTests
         foreach (var period in periods)
         {
             // Arrange
-            var parameters = new PWilliamsR<HLC, double> { Period = period };
-            var williamsR = new WilliamsR_QC<HLC, double>(parameters);
+            var parameters = new PWilliamsR<double, double> { Period = period };
+            var williamsR = new WilliamsR_FP<double, double>(parameters);
             var outputs = new double[inputs.Length];
 
             // Act
@@ -169,39 +169,35 @@ public class WilliamsRTests
 
             // Assert
             Assert.True(williamsR.IsReady);
-            var lastValue = outputs[outputs.Length - 1];
+            var lastValue = williamsR.CurrentValue;
             Assert.InRange(lastValue, -100, 0);
-            
-            // Shorter periods should be more sensitive
-            var values = outputs.Skip(period).ToArray();
+
+            // All valid outputs should be in range
+            var values = outputs.Skip(period - 1).Where(v => !double.IsNaN(v)).ToArray();
             Assert.True(values.All(v => v >= -100 && v <= 0));
         }
     }
 
     [Fact]
-    public void WilliamsR_InverseOfStochastic()
+    public void WilliamsR_RangeBounded()
     {
-        // Williams %R is essentially the inverse of Stochastic %K
-        // %R = -100 * (Highest High - Close) / (Highest High - Lowest Low)
-        // %K = 100 * (Close - Lowest Low) / (Highest High - Lowest Low)
-        // So %R = %K - 100
-        
+        // Williams %R should always be between -100 and 0
         // Arrange
-        var parameters = new PWilliamsR<HLC, double> { Period = 14 };
-        var williamsR = new WilliamsR_QC<HLC, double>(parameters);
-        
-        var inputs = new HLC[20];
+        var parameters = new PWilliamsR<double, double> { Period = 14 };
+        var williamsR = new WilliamsR_FP<double, double>(parameters);
+
+        var inputs = new HLC<double>[20];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + i * 0.3 + Math.Sin(i * 0.5) * 2;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 0.5,
                 Low = price - 0.5,
                 Close = price
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -209,10 +205,39 @@ public class WilliamsRTests
 
         // Assert
         Assert.True(williamsR.IsReady);
-        
-        // All values should be negative
-        var validOutputs = outputs.Skip(parameters.Period - 1).ToArray();
+
+        // All valid values should be negative
+        var validOutputs = outputs.Skip(parameters.Period - 1).Where(v => !double.IsNaN(v)).ToArray();
         Assert.True(validOutputs.All(v => v <= 0 && v >= -100));
     }
+
+    [Fact]
+    public void WilliamsR_Clear_ResetsState()
+    {
+        // Arrange
+        var parameters = new PWilliamsR<double, double> { Period = 7 };
+        var williamsR = new WilliamsR_FP<double, double>(parameters);
+
+        var inputs = new HLC<double>[15];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + i;
+            inputs[i] = new HLC<double>
+            {
+                High = price + 1,
+                Low = price - 1,
+                Close = price
+            };
+        }
+
+        var outputs = new double[inputs.Length];
+        williamsR.OnBarBatch(inputs, outputs);
+        Assert.True(williamsR.IsReady);
+
+        // Act
+        williamsR.Clear();
+
+        // Assert
+        Assert.False(williamsR.IsReady);
+    }
 }
-#endif

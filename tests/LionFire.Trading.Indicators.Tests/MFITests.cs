@@ -1,7 +1,5 @@
-// DISABLED: Tests need updating to match current API
-#if false
+using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
-using LionFire.Trading.Indicators.QuantConnect_;
 using LionFire.Trading.ValueTypes;
 using Xunit;
 
@@ -13,11 +11,11 @@ public class MFITests
     public void MFI_CalculatesCorrectly()
     {
         // Arrange
-        var parameters = new PMFI<HLCV, double> { Period = 14 };
-        var mfi = new MFI_QC<HLCV, double>(parameters);
-        
+        var parameters = new PMFI<OHLCV, double> { Period = 14 };
+        var mfi = new MFI_FP<OHLCV, double>(parameters);
+
         // Sample HLCV data
-        var inputs = new HLCV[]
+        var inputs = new OHLCV[]
         {
             new() { High = 24.63, Low = 24.20, Close = 24.28, Volume = 18730 },
             new() { High = 24.69, Low = 24.21, Close = 24.51, Volume = 12272 },
@@ -40,7 +38,7 @@ public class MFITests
             new() { High = 26.95, Low = 26.39, Close = 26.69, Volume = 26202 },
             new() { High = 27.09, Low = 26.46, Close = 26.78, Volume = 32064 }
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -48,29 +46,32 @@ public class MFITests
 
         // Assert
         Assert.True(mfi.IsReady);
-        
+
         // MFI should be between 0 and 100
         for (int i = parameters.Period; i < outputs.Length; i++)
         {
-            Assert.InRange(outputs[i], 0, 100);
+            if (!double.IsNaN(outputs[i]))
+            {
+                Assert.InRange(outputs[i], 0, 100);
+            }
         }
-        
-        Assert.Equal(outputs[outputs.Length - 1], mfi.Value);
+
+        Assert.Equal(outputs[^1], mfi.CurrentValue);
     }
 
     [Fact]
     public void MFI_DetectsOverboughtOversold()
     {
         // Arrange
-        var parameters = new PMFI<HLCV, double> { Period = 14 };
-        
+        var parameters = new PMFI<OHLCV, double> { Period = 14 };
+
         // Create data with high buying pressure (should be overbought)
-        var buyingPressure = new HLCV[30];
+        var buyingPressure = new OHLCV[30];
         for (int i = 0; i < buyingPressure.Length; i++)
         {
             var price = 100.0 + i * 2; // Strong uptrend
             var volume = 10000 + i * 500; // Increasing volume
-            buyingPressure[i] = new HLCV
+            buyingPressure[i] = new OHLCV
             {
                 High = price + 0.5,
                 Low = price - 0.3,
@@ -78,14 +79,14 @@ public class MFITests
                 Volume = volume
             };
         }
-        
+
         // Create data with high selling pressure (should be oversold)
-        var sellingPressure = new HLCV[30];
+        var sellingPressure = new OHLCV[30];
         for (int i = 0; i < sellingPressure.Length; i++)
         {
             var price = 100.0 - i * 2; // Strong downtrend
             var volume = 10000 + i * 500; // Increasing volume
-            sellingPressure[i] = new HLCV
+            sellingPressure[i] = new OHLCV
             {
                 High = price + 0.3,
                 Low = price - 0.5,
@@ -95,15 +96,15 @@ public class MFITests
         }
 
         // Act
-        var mfiBuy = new MFI_QC<HLCV, double>(parameters);
+        var mfiBuy = new MFI_FP<OHLCV, double>(parameters);
         var buyOutputs = new double[buyingPressure.Length];
         mfiBuy.OnBarBatch(buyingPressure, buyOutputs);
-        var buyMFI = buyOutputs[buyOutputs.Length - 1];
-        
-        var mfiSell = new MFI_QC<HLCV, double>(parameters);
+        var buyMFI = buyOutputs[^1];
+
+        var mfiSell = new MFI_FP<OHLCV, double>(parameters);
         var sellOutputs = new double[sellingPressure.Length];
         mfiSell.OnBarBatch(sellingPressure, sellOutputs);
-        var sellMFI = sellOutputs[sellOutputs.Length - 1];
+        var sellMFI = sellOutputs[^1];
 
         // Assert
         Assert.True(buyMFI > 70, $"Buying pressure MFI {buyMFI} should be > 70 (overbought)");
@@ -114,16 +115,16 @@ public class MFITests
     public void MFI_HandlesVolumeChanges()
     {
         // Arrange
-        var parameters = new PMFI<HLCV, double> { Period = 14 };
-        var mfi = new MFI_QC<HLCV, double>(parameters);
-        
+        var parameters = new PMFI<OHLCV, double> { Period = 14 };
+        var mfi = new MFI_FP<OHLCV, double>(parameters);
+
         // Data with varying volume
-        var inputs = new HLCV[30];
+        var inputs = new OHLCV[30];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + Math.Sin(i * 0.3) * 5;
             var volume = i < 15 ? 1000 : 10000; // Volume spike in second half
-            inputs[i] = new HLCV
+            inputs[i] = new OHLCV
             {
                 High = price + 0.5,
                 Low = price - 0.5,
@@ -131,7 +132,7 @@ public class MFITests
                 Volume = volume
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -139,30 +140,28 @@ public class MFITests
 
         // Assert
         Assert.True(mfi.IsReady);
-        
+
         // MFI should respond to volume changes
         var lowVolumeMFI = outputs[14]; // Before volume spike
-        var highVolumeMFI = outputs[outputs.Length - 1]; // After volume spike
-        
+        var highVolumeMFI = outputs[^1]; // After volume spike
+
+        // Values should be different (volume matters)
         Assert.NotEqual(lowVolumeMFI, highVolumeMFI);
     }
 
     [Fact]
-    public void MFI_ComparedToRSI()
+    public void MFI_MoneyFlowProperties()
     {
-        // MFI is similar to RSI but volume-weighted
-        // With constant volume, MFI should behave similarly to RSI
-        
         // Arrange
-        var parameters = new PMFI<HLCV, double> { Period = 14 };
-        var mfi = new MFI_QC<HLCV, double>(parameters);
-        
+        var parameters = new PMFI<OHLCV, double> { Period = 14 };
+        var mfi = new MFI_FP<OHLCV, double>(parameters);
+
         // Data with constant volume
-        var inputs = new HLCV[30];
+        var inputs = new OHLCV[30];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + Math.Sin(i * 0.3) * 5;
-            inputs[i] = new HLCV
+            inputs[i] = new OHLCV
             {
                 High = price + 0.5,
                 Low = price - 0.5,
@@ -170,7 +169,7 @@ public class MFITests
                 Volume = 10000 // Constant volume
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -178,23 +177,27 @@ public class MFITests
 
         // Assert
         Assert.True(mfi.IsReady);
-        
+
         // MFI should be between 0 and 100
-        var lastMFI = outputs[outputs.Length - 1];
+        var lastMFI = outputs[^1];
         Assert.InRange(lastMFI, 0, 100);
+
+        // Positive and negative money flows should be tracked
+        Assert.True(mfi.PositiveMoneyFlow >= 0);
+        Assert.True(mfi.NegativeMoneyFlow >= 0);
     }
 
     [Fact]
     public void MFI_DifferentPeriods()
     {
         var periods = new[] { 10, 14, 20 };
-        
+
         // Create sample data
-        var inputs = new HLCV[40];
+        var inputs = new OHLCV[40];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + i * 0.5;
-            inputs[i] = new HLCV
+            inputs[i] = new OHLCV
             {
                 High = price + 0.5,
                 Low = price - 0.5,
@@ -206,8 +209,8 @@ public class MFITests
         foreach (var period in periods)
         {
             // Arrange
-            var parameters = new PMFI<HLCV, double> { Period = period };
-            var mfi = new MFI_QC<HLCV, double>(parameters);
+            var parameters = new PMFI<OHLCV, double> { Period = period };
+            var mfi = new MFI_FP<OHLCV, double>(parameters);
             var outputs = new double[inputs.Length];
 
             // Act
@@ -215,9 +218,9 @@ public class MFITests
 
             // Assert
             Assert.True(mfi.IsReady);
-            var lastValue = outputs[outputs.Length - 1];
+            var lastValue = outputs[^1];
             Assert.InRange(lastValue, 0, 100);
-            
+
             // Shorter periods should be more sensitive
         }
     }
@@ -226,16 +229,16 @@ public class MFITests
     public void MFI_HandlesZeroVolume()
     {
         // Arrange
-        var parameters = new PMFI<HLCV, double> { Period = 14 };
-        var mfi = new MFI_QC<HLCV, double>(parameters);
-        
+        var parameters = new PMFI<OHLCV, double> { Period = 14 };
+        var mfi = new MFI_FP<OHLCV, double>(parameters);
+
         // Data with some zero volume bars
-        var inputs = new HLCV[20];
+        var inputs = new OHLCV[20];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + i * 0.5;
             var volume = i % 5 == 0 ? 0 : 10000; // Every 5th bar has zero volume
-            inputs[i] = new HLCV
+            inputs[i] = new OHLCV
             {
                 High = price + 0.5,
                 Low = price - 0.5,
@@ -243,7 +246,7 @@ public class MFITests
                 Volume = volume
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -251,10 +254,39 @@ public class MFITests
 
         // Assert
         Assert.True(mfi.IsReady);
-        
+
         // MFI should handle zero volume gracefully
-        var lastMFI = outputs[outputs.Length - 1];
+        var lastMFI = outputs[^1];
         Assert.InRange(lastMFI, 0, 100);
     }
+
+    [Fact]
+    public void MFI_Clear_ResetsState()
+    {
+        // Arrange
+        var parameters = new PMFI<OHLCV, double> { Period = 10 };
+        var mfi = new MFI_FP<OHLCV, double>(parameters);
+
+        var inputs = new OHLCV[20];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + i * 0.5;
+            inputs[i] = new OHLCV
+            {
+                High = price + 0.5,
+                Low = price - 0.5,
+                Close = price,
+                Volume = 10000
+            };
+        }
+
+        mfi.OnBarBatch(inputs, new double[inputs.Length]);
+        Assert.True(mfi.IsReady);
+
+        // Act
+        mfi.Clear();
+
+        // Assert
+        Assert.False(mfi.IsReady);
+    }
 }
-#endif

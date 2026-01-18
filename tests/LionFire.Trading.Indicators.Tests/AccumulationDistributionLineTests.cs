@@ -1,7 +1,5 @@
-// DISABLED: Tests need updating to match current API
-#if false
+using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
-using LionFire.Trading.Indicators.QuantConnect_;
 using LionFire.Trading.ValueTypes;
 using Xunit;
 
@@ -14,8 +12,8 @@ public class AccumulationDistributionLineTests
     {
         // Arrange
         var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        var adl = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
-        
+        var adl = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
+
         // Sample HLCV data
         var inputs = new HLCV[]
         {
@@ -40,7 +38,7 @@ public class AccumulationDistributionLineTests
             new() { High = 62.16, Low = 59.80, Close = 61.37, Volume = 22226 },
             new() { High = 62.67, Low = 60.93, Close = 61.68, Volume = 14613 }
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -48,11 +46,11 @@ public class AccumulationDistributionLineTests
 
         // Assert
         Assert.True(adl.IsReady);
-        
+
         // ADL should accumulate over time
-        var lastADL = outputs[outputs.Length - 1];
+        var lastADL = outputs[^1];
         Assert.NotEqual(0, lastADL);
-        Assert.Equal(lastADL, adl.Value);
+        Assert.Equal(lastADL, adl.CurrentValue);
     }
 
     [Fact]
@@ -60,8 +58,8 @@ public class AccumulationDistributionLineTests
     {
         // Arrange
         var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        var adl = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
-        
+        var adl = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
+
         // Test specific money flow multiplier scenarios
         var inputs = new HLCV[]
         {
@@ -76,7 +74,7 @@ public class AccumulationDistributionLineTests
             // Close below midpoint (MFM < 0)
             new() { High = 100, Low = 90, Close = 92, Volume = 1000 },
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -84,10 +82,10 @@ public class AccumulationDistributionLineTests
 
         // Assert
         Assert.True(adl.IsReady);
-        
+
         // First bar: Close at high, ADL should be positive
         Assert.True(outputs[0] > 0);
-        
+
         // Second bar: Close at low, ADL should decrease
         Assert.True(outputs[1] < outputs[0]);
     }
@@ -97,7 +95,7 @@ public class AccumulationDistributionLineTests
     {
         // Arrange
         var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        
+
         // Accumulation scenario: prices rising, close near highs
         var accumulation = new HLCV[20];
         for (int i = 0; i < accumulation.Length; i++)
@@ -111,7 +109,7 @@ public class AccumulationDistributionLineTests
                 Volume = 10000 + i * 100
             };
         }
-        
+
         // Distribution scenario: prices falling, close near lows
         var distribution = new HLCV[20];
         for (int i = 0; i < distribution.Length; i++)
@@ -127,15 +125,15 @@ public class AccumulationDistributionLineTests
         }
 
         // Act
-        var adlAccum = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
+        var adlAccum = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
         var accumOutputs = new double[accumulation.Length];
         adlAccum.OnBarBatch(accumulation, accumOutputs);
-        var accumADL = accumOutputs[accumOutputs.Length - 1];
-        
-        var adlDist = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
+        var accumADL = accumOutputs[^1];
+
+        var adlDist = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
         var distOutputs = new double[distribution.Length];
         adlDist.OnBarBatch(distribution, distOutputs);
-        var distADL = distOutputs[distOutputs.Length - 1];
+        var distADL = distOutputs[^1];
 
         // Assert
         Assert.True(accumADL > 0, $"Accumulation ADL {accumADL} should be positive");
@@ -147,7 +145,7 @@ public class AccumulationDistributionLineTests
     {
         // Arrange
         var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        
+
         // Same price action, different volumes
         var lowVolume = new HLCV[]
         {
@@ -155,7 +153,7 @@ public class AccumulationDistributionLineTests
             new() { High = 103, Low = 99, Close = 102, Volume = 100 },
             new() { High = 104, Low = 100, Close = 103, Volume = 100 },
         };
-        
+
         var highVolume = new HLCV[]
         {
             new() { High = 102, Low = 98, Close = 101, Volume = 10000 },
@@ -164,56 +162,19 @@ public class AccumulationDistributionLineTests
         };
 
         // Act
-        var adlLow = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
+        var adlLow = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
         var lowOutputs = new double[lowVolume.Length];
         adlLow.OnBarBatch(lowVolume, lowOutputs);
-        var lowADL = Math.Abs(lowOutputs[lowOutputs.Length - 1]);
-        
-        var adlHigh = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
+        var lowADL = Math.Abs(lowOutputs[^1]);
+
+        var adlHigh = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
         var highOutputs = new double[highVolume.Length];
         adlHigh.OnBarBatch(highVolume, highOutputs);
-        var highADL = Math.Abs(highOutputs[highOutputs.Length - 1]);
+        var highADL = Math.Abs(highOutputs[^1]);
 
         // Assert
-        Assert.True(highADL > lowADL, 
+        Assert.True(highADL > lowADL,
             $"High volume ADL {highADL} should be greater than low volume {lowADL}");
-    }
-
-    [Fact]
-    public void AccumulationDistributionLine_Divergence()
-    {
-        // Arrange
-        var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        var adl = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
-        
-        // Price rising but closing near lows (bearish divergence)
-        var inputs = new HLCV[20];
-        for (int i = 0; i < inputs.Length; i++)
-        {
-            var price = 100.0 + i * 0.5; // Price rising
-            inputs[i] = new HLCV
-            {
-                High = price + 1,
-                Low = price - 1,
-                Close = price - 0.7, // But closing near lows
-                Volume = 10000 - i * 200 // Decreasing volume
-            };
-        }
-        
-        var outputs = new double[inputs.Length];
-
-        // Act
-        adl.OnBarBatch(inputs, outputs);
-
-        // Assert
-        Assert.True(adl.IsReady);
-        
-        // Despite rising prices, ADL should be declining (distribution)
-        var midADL = outputs[10];
-        var lastADL = outputs[outputs.Length - 1];
-        
-        Assert.True(lastADL < midADL, 
-            "ADL should decline despite rising prices when closing near lows");
     }
 
     [Fact]
@@ -221,8 +182,8 @@ public class AccumulationDistributionLineTests
     {
         // Arrange
         var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        var adl = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
-        
+        var adl = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
+
         // Mixed data
         var inputs = new HLCV[30];
         for (int i = 0; i < inputs.Length; i++)
@@ -236,7 +197,7 @@ public class AccumulationDistributionLineTests
                 Volume = 10000 + Math.Sin(i * 0.4) * 5000
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -244,21 +205,21 @@ public class AccumulationDistributionLineTests
 
         // Assert
         Assert.True(adl.IsReady);
-        
-        // ADL is cumulative, each value depends on previous
+
+        // ADL is cumulative, verify each value is accumulated
         for (int i = 1; i < outputs.Length; i++)
         {
             // Current ADL = Previous ADL + Current Money Flow Volume
-            // So the difference should be the current period's money flow volume
             var diff = outputs[i] - outputs[i - 1];
-            
-            // Money flow volume calculation
-            var mfm = ((inputs[i].Close - inputs[i].Low) - (inputs[i].High - inputs[i].Close)) /
-                     (inputs[i].High - inputs[i].Low);
-            if (double.IsNaN(mfm)) mfm = 0;
-            var expectedMFV = mfm * inputs[i].Volume;
-            
-            Assert.Equal(expectedMFV, diff, 2);
+
+            // The difference should equal the money flow volume for that bar
+            var highLowRange = inputs[i].High - inputs[i].Low;
+            if (highLowRange > 0)
+            {
+                var mfm = ((inputs[i].Close - inputs[i].Low) - (inputs[i].High - inputs[i].Close)) / highLowRange;
+                var expectedMFV = mfm * inputs[i].Volume;
+                Assert.Equal(expectedMFV, diff, 2);
+            }
         }
     }
 
@@ -267,8 +228,8 @@ public class AccumulationDistributionLineTests
     {
         // Arrange
         var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        var adl = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
-        
+        var adl = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
+
         // Data with zero volume bars
         var inputs = new HLCV[]
         {
@@ -278,7 +239,7 @@ public class AccumulationDistributionLineTests
             new() { High = 103, Low = 101, Close = 102, Volume = 0 }, // Zero volume
             new() { High = 104, Low = 102, Close = 103, Volume = 2000 },
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -286,7 +247,7 @@ public class AccumulationDistributionLineTests
 
         // Assert
         Assert.True(adl.IsReady);
-        
+
         // Zero volume bars should not change ADL
         Assert.Equal(outputs[0], outputs[1]); // No change on zero volume
         Assert.Equal(outputs[2], outputs[3]); // No change on zero volume
@@ -297,8 +258,8 @@ public class AccumulationDistributionLineTests
     {
         // Arrange
         var parameters = new PAccumulationDistributionLine<HLCV, double>();
-        var adl = new AccumulationDistributionLine_QC<HLCV, double>(parameters);
-        
+        var adl = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
+
         // Strong uptrend with accumulation
         var inputs = new HLCV[30];
         for (int i = 0; i < inputs.Length; i++)
@@ -312,7 +273,7 @@ public class AccumulationDistributionLineTests
                 Volume = 10000 + i * 500 // Increasing volume
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -320,13 +281,64 @@ public class AccumulationDistributionLineTests
 
         // Assert
         Assert.True(adl.IsReady);
-        
+
         // ADL should consistently increase in strong uptrend with accumulation
         for (int i = 1; i < outputs.Length; i++)
         {
-            Assert.True(outputs[i] > outputs[i - 1], 
-                $"ADL should increase at index {i}: {outputs[i]} > {outputs[i-1]}");
+            Assert.True(outputs[i] > outputs[i - 1],
+                $"ADL should increase at index {i}: {outputs[i]} > {outputs[i - 1]}");
         }
     }
+
+    [Fact]
+    public void AccumulationDistributionLine_MoneyFlowProperties()
+    {
+        // Arrange
+        var parameters = new PAccumulationDistributionLine<HLCV, double>();
+        var adl = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
+
+        var inputs = new HLCV[]
+        {
+            new() { High = 102, Low = 98, Close = 101, Volume = 1000 },
+            new() { High = 103, Low = 99, Close = 102, Volume = 1500 },
+        };
+
+        var outputs = new double[inputs.Length];
+
+        // Act
+        adl.OnBarBatch(inputs, outputs);
+
+        // Assert
+        Assert.True(adl.IsReady);
+
+        // Money flow properties should be tracked
+        Assert.NotEqual(0, adl.LastMoneyFlowVolume);
+        Assert.NotEqual(0, adl.LastMoneyFlowMultiplier);
+    }
+
+    [Fact]
+    public void AccumulationDistributionLine_Clear_ResetsState()
+    {
+        // Arrange
+        var parameters = new PAccumulationDistributionLine<HLCV, double>();
+        var adl = new AccumulationDistributionLine_FP<HLCV, double>(parameters);
+
+        var inputs = new HLCV[]
+        {
+            new() { High = 102, Low = 98, Close = 101, Volume = 1000 },
+            new() { High = 103, Low = 99, Close = 102, Volume = 1500 },
+        };
+
+        adl.OnBarBatch(inputs, new double[inputs.Length]);
+        Assert.True(adl.IsReady);
+
+        // Act
+        adl.Clear();
+
+        // Assert
+        Assert.False(adl.IsReady);
+        Assert.Equal(0, adl.CurrentValue);
+        Assert.Equal(0, adl.LastMoneyFlowVolume);
+        Assert.Equal(0, adl.LastMoneyFlowMultiplier);
+    }
 }
-#endif

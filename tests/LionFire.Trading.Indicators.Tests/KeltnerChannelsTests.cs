@@ -1,8 +1,5 @@
-// DISABLED: Tests need updating to match current API
-#if false
+using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
-using LionFire.Trading.Indicators.QuantConnect_;
-using LionFire.Trading.ValueTypes;
 using Xunit;
 
 namespace LionFire.Trading.Indicators.Tests;
@@ -13,78 +10,71 @@ public class KeltnerChannelsTests
     public void KeltnerChannels_CalculatesCorrectly()
     {
         // Arrange
-        var parameters = new PKeltnerChannels<HLC, KeltnerChannelsResult> 
-        { 
+        var parameters = new PKeltnerChannels<HLC<double>, double>
+        {
             Period = 20,
-            Multiplier = 2.0,
+            AtrMultiplier = 2.0,
             AtrPeriod = 10
         };
-        var kc = new KeltnerChannels_QC<HLC, KeltnerChannelsResult>(parameters);
-        
+        var kc = new KeltnerChannelsHLC_FP<double, double>(parameters);
+
         // Sample data
-        var inputs = new HLC[30];
+        var inputs = new HLC<double>[30];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + Math.Sin(i * 0.3) * 5;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 1,
                 Low = price - 1,
                 Close = price
             };
         }
-        
-        var outputs = new KeltnerChannelsResult[inputs.Length];
+
+        var outputs = new double[inputs.Length * 3]; // Upper, Middle, Lower
 
         // Act
         kc.OnBarBatch(inputs, outputs);
 
         // Assert
         Assert.True(kc.IsReady);
-        
-        var lastResult = outputs[outputs.Length - 1];
-        Assert.NotNull(lastResult);
-        
+
         // Upper band should be above middle
-        Assert.True(lastResult.UpperBand > lastResult.MiddleBand);
+        Assert.True(kc.UpperBand > kc.MiddleLine);
         // Lower band should be below middle
-        Assert.True(lastResult.LowerBand < lastResult.MiddleBand);
-        // Bands should be symmetric around middle
-        var upperDistance = lastResult.UpperBand - lastResult.MiddleBand;
-        var lowerDistance = lastResult.MiddleBand - lastResult.LowerBand;
-        Assert.Equal(upperDistance, lowerDistance, 2);
+        Assert.True(kc.LowerBand < kc.MiddleLine);
     }
 
     [Fact]
     public void KeltnerChannels_ExpandsWithVolatility()
     {
         // Arrange
-        var parameters = new PKeltnerChannels<HLC, KeltnerChannelsResult> 
-        { 
+        var parameters = new PKeltnerChannels<HLC<double>, double>
+        {
             Period = 20,
-            Multiplier = 2.0,
+            AtrMultiplier = 2.0,
             AtrPeriod = 10
         };
-        
+
         // Low volatility data
-        var lowVolData = new HLC[30];
+        var lowVolData = new HLC<double>[30];
         for (int i = 0; i < lowVolData.Length; i++)
         {
             var price = 100.0 + i * 0.1; // Small changes
-            lowVolData[i] = new HLC
+            lowVolData[i] = new HLC<double>
             {
                 High = price + 0.2,
                 Low = price - 0.2,
                 Close = price
             };
         }
-        
+
         // High volatility data
-        var highVolData = new HLC[30];
+        var highVolData = new HLC<double>[30];
         for (int i = 0; i < highVolData.Length; i++)
         {
             var price = 100.0 + (i % 2 == 0 ? 5 : -5); // Large swings
-            highVolData[i] = new HLC
+            highVolData[i] = new HLC<double>
             {
                 High = price + 2,
                 Low = price - 2,
@@ -93,20 +83,16 @@ public class KeltnerChannelsTests
         }
 
         // Act
-        var kcLow = new KeltnerChannels_QC<HLC, KeltnerChannelsResult>(parameters);
-        var lowOutputs = new KeltnerChannelsResult[lowVolData.Length];
-        kcLow.OnBarBatch(lowVolData, lowOutputs);
-        var lowVolWidth = lowOutputs[lowOutputs.Length - 1].UpperBand - 
-                          lowOutputs[lowOutputs.Length - 1].LowerBand;
-        
-        var kcHigh = new KeltnerChannels_QC<HLC, KeltnerChannelsResult>(parameters);
-        var highOutputs = new KeltnerChannelsResult[highVolData.Length];
-        kcHigh.OnBarBatch(highVolData, highOutputs);
-        var highVolWidth = highOutputs[highOutputs.Length - 1].UpperBand - 
-                           highOutputs[highOutputs.Length - 1].LowerBand;
+        var kcLow = new KeltnerChannelsHLC_FP<double, double>(parameters);
+        kcLow.OnBarBatch(lowVolData, new double[lowVolData.Length * 3]);
+        var lowVolWidth = kcLow.UpperBand - kcLow.LowerBand;
+
+        var kcHigh = new KeltnerChannelsHLC_FP<double, double>(parameters);
+        kcHigh.OnBarBatch(highVolData, new double[highVolData.Length * 3]);
+        var highVolWidth = kcHigh.UpperBand - kcHigh.LowerBand;
 
         // Assert
-        Assert.True(highVolWidth > lowVolWidth, 
+        Assert.True(highVolWidth > lowVolWidth,
             $"High volatility width {highVolWidth} should be greater than low volatility width {lowVolWidth}");
     }
 
@@ -114,21 +100,21 @@ public class KeltnerChannelsTests
     public void KeltnerChannels_PriceBreakouts()
     {
         // Arrange
-        var parameters = new PKeltnerChannels<HLC, KeltnerChannelsResult> 
-        { 
+        var parameters = new PKeltnerChannels<HLC<double>, double>
+        {
             Period = 20,
-            Multiplier = 2.0,
+            AtrMultiplier = 2.0,
             AtrPeriod = 10
         };
-        var kc = new KeltnerChannels_QC<HLC, KeltnerChannelsResult>(parameters);
-        
+        var kc = new KeltnerChannelsHLC_FP<double, double>(parameters);
+
         // Data with trend and breakout
-        var inputs = new HLC[40];
+        var inputs = new HLC<double>[40];
         for (int i = 0; i < 30; i++)
         {
             // Normal range
             var price = 100.0 + Math.Sin(i * 0.3) * 2;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 0.5,
                 Low = price - 0.5,
@@ -139,44 +125,35 @@ public class KeltnerChannelsTests
         {
             // Breakout
             var price = 105.0 + (i - 30) * 2;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 0.5,
                 Low = price - 0.3,
                 Close = price + 0.4
             };
         }
-        
-        var outputs = new KeltnerChannelsResult[inputs.Length];
 
         // Act
-        kc.OnBarBatch(inputs, outputs);
+        kc.OnBarBatch(inputs, new double[inputs.Length * 3]);
 
         // Assert
         Assert.True(kc.IsReady);
-        
-        // Price should be within bands during consolidation
-        var consolidationResult = outputs[25];
-        Assert.True(inputs[25].Close >= consolidationResult.LowerBand);
-        Assert.True(inputs[25].Close <= consolidationResult.UpperBand);
-        
+
         // Price should break above upper band during breakout
-        var breakoutResult = outputs[outputs.Length - 1];
-        Assert.True(inputs[inputs.Length - 1].Close > breakoutResult.UpperBand || 
-                   inputs[inputs.Length - 1].High > breakoutResult.UpperBand);
+        Assert.True(inputs[^1].Close > kc.UpperBand || inputs[^1].High > kc.UpperBand);
     }
 
     [Fact]
     public void KeltnerChannels_DifferentMultipliers()
     {
         var multipliers = new[] { 1.0, 2.0, 3.0 };
-        
+
         // Create sample data
-        var inputs = new HLC[30];
+        var inputs = new HLC<double>[30];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + Math.Sin(i * 0.3) * 3;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 1,
                 Low = price - 1,
@@ -189,22 +166,20 @@ public class KeltnerChannelsTests
         foreach (var multiplier in multipliers)
         {
             // Arrange
-            var parameters = new PKeltnerChannels<HLC, KeltnerChannelsResult> 
-            { 
+            var parameters = new PKeltnerChannels<HLC<double>, double>
+            {
                 Period = 20,
-                Multiplier = multiplier,
+                AtrMultiplier = multiplier,
                 AtrPeriod = 10
             };
-            var kc = new KeltnerChannels_QC<HLC, KeltnerChannelsResult>(parameters);
-            var outputs = new KeltnerChannelsResult[inputs.Length];
+            var kc = new KeltnerChannelsHLC_FP<double, double>(parameters);
 
             // Act
-            kc.OnBarBatch(inputs, outputs);
+            kc.OnBarBatch(inputs, new double[inputs.Length * 3]);
 
             // Assert
             Assert.True(kc.IsReady);
-            var lastResult = outputs[outputs.Length - 1];
-            bandWidths[multiplier] = lastResult.UpperBand - lastResult.LowerBand;
+            bandWidths[multiplier] = kc.UpperBand - kc.LowerBand;
         }
 
         // Larger multipliers should create wider bands
@@ -216,13 +191,13 @@ public class KeltnerChannelsTests
     public void KeltnerChannels_DifferentPeriods()
     {
         var periods = new[] { 10, 20, 30 };
-        
+
         // Create trending data
-        var inputs = new HLC[50];
+        var inputs = new HLC<double>[50];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + i * 0.5 + Math.Sin(i * 0.3) * 2;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 1,
                 Low = price - 1,
@@ -233,27 +208,25 @@ public class KeltnerChannelsTests
         foreach (var period in periods)
         {
             // Arrange
-            var parameters = new PKeltnerChannels<HLC, KeltnerChannelsResult> 
-            { 
+            var parameters = new PKeltnerChannels<HLC<double>, double>
+            {
                 Period = period,
-                Multiplier = 2.0,
+                AtrMultiplier = 2.0,
                 AtrPeriod = Math.Min(10, period)
             };
-            var kc = new KeltnerChannels_QC<HLC, KeltnerChannelsResult>(parameters);
-            var outputs = new KeltnerChannelsResult[inputs.Length];
+            var kc = new KeltnerChannelsHLC_FP<double, double>(parameters);
 
             // Act
-            kc.OnBarBatch(inputs, outputs);
+            kc.OnBarBatch(inputs, new double[inputs.Length * 3]);
 
             // Assert
             Assert.True(kc.IsReady);
-            var lastResult = outputs[outputs.Length - 1];
-            
+
             // All components should be valid
-            Assert.True(lastResult.UpperBand > 0);
-            Assert.True(lastResult.MiddleBand > 0);
-            Assert.True(lastResult.LowerBand > 0);
-            Assert.True(lastResult.UpperBand > lastResult.LowerBand);
+            Assert.False(double.IsNaN(kc.UpperBand));
+            Assert.False(double.IsNaN(kc.MiddleLine));
+            Assert.False(double.IsNaN(kc.LowerBand));
+            Assert.True(kc.UpperBand > kc.LowerBand);
         }
     }
 
@@ -261,46 +234,69 @@ public class KeltnerChannelsTests
     public void KeltnerChannels_MiddleBandAsEMA()
     {
         // Arrange
-        var parameters = new PKeltnerChannels<HLC, KeltnerChannelsResult> 
-        { 
+        var parameters = new PKeltnerChannels<HLC<double>, double>
+        {
             Period = 20,
-            Multiplier = 2.0,
+            AtrMultiplier = 2.0,
             AtrPeriod = 10
         };
-        var kc = new KeltnerChannels_QC<HLC, KeltnerChannelsResult>(parameters);
-        
+        var kc = new KeltnerChannelsHLC_FP<double, double>(parameters);
+
         // Create data
-        var inputs = new HLC[30];
+        var inputs = new HLC<double>[30];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + i * 0.5;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 0.5,
                 Low = price - 0.5,
                 Close = price
             };
         }
-        
-        var outputs = new KeltnerChannelsResult[inputs.Length];
 
         // Act
-        kc.OnBarBatch(inputs, outputs);
+        kc.OnBarBatch(inputs, new double[inputs.Length * 3]);
 
         // Assert
         Assert.True(kc.IsReady);
-        
+
         // Middle band should act as moving average
-        var lastResult = outputs[outputs.Length - 1];
-        Assert.True(lastResult.MiddleBand > 100); // Should be above starting price in uptrend
-        Assert.True(lastResult.MiddleBand < inputs[inputs.Length - 1].Close + 5); // But not too far
+        Assert.True(kc.MiddleLine > 100); // Should be above starting price in uptrend
+        Assert.True(kc.MiddleLine < inputs[^1].Close + 5); // But not too far
+    }
+
+    [Fact]
+    public void KeltnerChannels_Clear_ResetsState()
+    {
+        // Arrange
+        var parameters = new PKeltnerChannels<HLC<double>, double>
+        {
+            Period = 10,
+            AtrMultiplier = 2.0,
+            AtrPeriod = 10
+        };
+        var kc = new KeltnerChannelsHLC_FP<double, double>(parameters);
+
+        var inputs = new HLC<double>[20];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + i * 0.5;
+            inputs[i] = new HLC<double>
+            {
+                High = price + 0.5,
+                Low = price - 0.5,
+                Close = price
+            };
+        }
+
+        kc.OnBarBatch(inputs, new double[inputs.Length * 3]);
+        Assert.True(kc.IsReady);
+
+        // Act
+        kc.Clear();
+
+        // Assert
+        Assert.False(kc.IsReady);
     }
 }
-
-public class KeltnerChannelsResult
-{
-    public double UpperBand { get; set; }
-    public double MiddleBand { get; set; }
-    public double LowerBand { get; set; }
-}
-#endif

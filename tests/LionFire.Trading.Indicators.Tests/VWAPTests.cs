@@ -1,7 +1,5 @@
-// DISABLED: Tests need updating to match current API
-#if false
+using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
-using LionFire.Trading.Indicators.QuantConnect_;
 using LionFire.Trading.ValueTypes;
 using Xunit;
 
@@ -13,9 +11,9 @@ public class VWAPTests
     public void VWAP_CalculatesCorrectly()
     {
         // Arrange
-        var parameters = new PVWAP<HLCV, double> { Period = 14 };
-        var vwap = new VWAP_QC<HLCV, double>(parameters);
-        
+        var parameters = new PVWAP<HLCV, double>();
+        var vwap = new VWAP_FP<HLCV, double>(parameters);
+
         // Sample HLCV data
         var inputs = new HLCV[]
         {
@@ -35,7 +33,7 @@ public class VWAPTests
             new() { High = 125.78, Low = 125.36, Close = 125.69, Volume = 13912 },
             new() { High = 125.98, Low = 125.52, Close = 125.60, Volume = 13572 }
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -43,36 +41,36 @@ public class VWAPTests
 
         // Assert
         Assert.True(vwap.IsReady);
-        
+
         // VWAP should be positive and reasonable
         for (int i = 0; i < outputs.Length; i++)
         {
             if (outputs[i] > 0)
             {
                 // VWAP should be within the price range
-                Assert.True(outputs[i] >= 125 && outputs[i] <= 128);
+                Assert.True(outputs[i] >= 125 && outputs[i] <= 128,
+                    $"VWAP at {i} should be in price range, was {outputs[i]}");
             }
         }
-        
-        Assert.Equal(outputs[outputs.Length - 1], vwap.Value);
+
+        Assert.Equal(outputs[^1], vwap.Value);
     }
 
     [Fact]
     public void VWAP_WeightsVolumeCorrectly()
     {
         // Arrange
-        var parameters = new PVWAP<HLCV, double> { Period = 3 };
-        var vwap = new VWAP_QC<HLCV, double>(parameters);
-        
+        var parameters = new PVWAP<HLCV, double>();
+        var vwap = new VWAP_FP<HLCV, double>(parameters);
+
         // Simple test data with clear volume weighting
         var inputs = new HLCV[]
         {
-            new() { High = 101, Low = 99, Close = 100, Volume = 1000 },  // TP = 100
-            new() { High = 111, Low = 109, Close = 110, Volume = 2000 }, // TP = 110
-            new() { High = 121, Low = 119, Close = 120, Volume = 3000 }, // TP = 120
-            new() { High = 131, Low = 129, Close = 130, Volume = 1000 }, // TP = 130
+            new() { High = 101, Low = 99, Close = 100, Volume = 1000 },  // Close = 100
+            new() { High = 111, Low = 109, Close = 110, Volume = 2000 }, // Close = 110
+            new() { High = 121, Low = 119, Close = 120, Volume = 3000 }, // Close = 120
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -80,20 +78,20 @@ public class VWAPTests
 
         // Assert
         Assert.True(vwap.IsReady);
-        
+
         // VWAP calculation should weight by volume
-        // Period 3: (100*1000 + 110*2000 + 120*3000) / (1000+2000+3000) = 680000/6000 = 113.33
-        var vwapPeriod3 = outputs[2];
-        Assert.True(vwapPeriod3 > 110 && vwapPeriod3 < 120); // Should be weighted toward 120
+        // (100*1000 + 110*2000 + 120*3000) / (1000+2000+3000) = 680000/6000 = 113.33
+        var expectedVWAP = (100.0 * 1000 + 110.0 * 2000 + 120.0 * 3000) / (1000 + 2000 + 3000);
+        Assert.Equal(expectedVWAP, outputs[2], 1);
     }
 
     [Fact]
     public void VWAP_HandlesHighVolume()
     {
         // Arrange
-        var parameters = new PVWAP<HLCV, double> { Period = 14 };
-        var vwap = new VWAP_QC<HLCV, double>(parameters);
-        
+        var parameters = new PVWAP<HLCV, double>();
+        var vwap = new VWAP_FP<HLCV, double>(parameters);
+
         // Data with varying volumes
         var inputs = new HLCV[20];
         for (int i = 0; i < inputs.Length; i++)
@@ -108,7 +106,7 @@ public class VWAPTests
                 Volume = volume
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -116,47 +114,25 @@ public class VWAPTests
 
         // Assert
         Assert.True(vwap.IsReady);
-        
+
         // VWAP should be influenced more by high volume periods
-        var lastVWAP = outputs[outputs.Length - 1];
+        var lastVWAP = outputs[^1];
         Assert.True(lastVWAP > 0);
     }
 
     [Fact]
-    public void VWAP_ResetsDaily()
+    public void VWAP_CumulativeProperties()
     {
-        // Note: In real trading, VWAP typically resets daily
-        // This test verifies the rolling period behavior
-        
         // Arrange
-        var parameters = new PVWAP<HLCV, double> { Period = 5 };
-        var vwap = new VWAP_QC<HLCV, double>(parameters);
-        
-        // Data simulating two "days" of trading
-        var inputs = new HLCV[10];
-        for (int i = 0; i < 5; i++)
+        var parameters = new PVWAP<HLCV, double>();
+        var vwap = new VWAP_FP<HLCV, double>(parameters);
+
+        var inputs = new HLCV[]
         {
-            // "Day 1" - prices around 100
-            inputs[i] = new HLCV
-            {
-                High = 101,
-                Low = 99,
-                Close = 100,
-                Volume = 1000
-            };
-        }
-        for (int i = 5; i < 10; i++)
-        {
-            // "Day 2" - prices around 110
-            inputs[i] = new HLCV
-            {
-                High = 111,
-                Low = 109,
-                Close = 110,
-                Volume = 1000
-            };
-        }
-        
+            new() { High = 102, Low = 98, Close = 100, Volume = 1000 },
+            new() { High = 112, Low = 108, Close = 110, Volume = 2000 },
+        };
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -164,61 +140,18 @@ public class VWAPTests
 
         // Assert
         Assert.True(vwap.IsReady);
-        
-        // After period 5, VWAP should shift to reflect new data
-        var day1VWAP = outputs[4];
-        var day2VWAP = outputs[9];
-        
-        Assert.True(Math.Abs(day1VWAP - 100) < 2); // Should be near 100
-        Assert.True(Math.Abs(day2VWAP - 110) < 2); // Should be near 110
-    }
-
-    [Fact]
-    public void VWAP_DifferentPeriods()
-    {
-        var periods = new[] { 10, 20, 50 };
-        
-        // Create sample data
-        var inputs = new HLCV[60];
-        for (int i = 0; i < inputs.Length; i++)
-        {
-            var price = 100.0 + i * 0.1;
-            inputs[i] = new HLCV
-            {
-                High = price + 0.5,
-                Low = price - 0.5,
-                Close = price,
-                Volume = 1000 + i * 10
-            };
-        }
-
-        foreach (var period in periods)
-        {
-            // Arrange
-            var parameters = new PVWAP<HLCV, double> { Period = period };
-            var vwap = new VWAP_QC<HLCV, double>(parameters);
-            var outputs = new double[inputs.Length];
-
-            // Act
-            vwap.OnBarBatch(inputs, outputs);
-
-            // Assert
-            Assert.True(vwap.IsReady);
-            var lastValue = outputs[outputs.Length - 1];
-            Assert.True(lastValue > 100);
-            
-            // Longer periods should have different VWAP values
-            // due to including more historical data
-        }
+        Assert.True(vwap.CumulativePriceVolume > 0);
+        Assert.True(vwap.CumulativeVolume > 0);
+        Assert.Equal(3000, vwap.CumulativeVolume); // 1000 + 2000
     }
 
     [Fact]
     public void VWAP_ZeroVolume()
     {
         // Arrange
-        var parameters = new PVWAP<HLCV, double> { Period = 5 };
-        var vwap = new VWAP_QC<HLCV, double>(parameters);
-        
+        var parameters = new PVWAP<HLCV, double>();
+        var vwap = new VWAP_FP<HLCV, double>(parameters);
+
         // Data with some zero volume bars
         var inputs = new HLCV[]
         {
@@ -228,7 +161,7 @@ public class VWAPTests
             new() { High = 104, Low = 102, Close = 103, Volume = 0 }, // Zero volume
             new() { High = 105, Low = 103, Close = 104, Volume = 3000 },
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
@@ -236,10 +169,69 @@ public class VWAPTests
 
         // Assert
         Assert.True(vwap.IsReady);
-        
+
         // VWAP should handle zero volume gracefully
-        var lastVWAP = outputs[outputs.Length - 1];
+        var lastVWAP = outputs[^1];
         Assert.True(lastVWAP > 0);
     }
+
+    [Fact]
+    public void VWAP_TrendingData()
+    {
+        // Arrange
+        var parameters = new PVWAP<HLCV, double>();
+        var vwap = new VWAP_FP<HLCV, double>(parameters);
+
+        // Uptrending data
+        var inputs = new HLCV[20];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + i * 1.0;
+            inputs[i] = new HLCV
+            {
+                High = price + 0.5,
+                Low = price - 0.5,
+                Close = price,
+                Volume = 1000
+            };
+        }
+
+        var outputs = new double[inputs.Length];
+
+        // Act
+        vwap.OnBarBatch(inputs, outputs);
+
+        // Assert
+        Assert.True(vwap.IsReady);
+
+        // VWAP should lag behind the current price in an uptrend
+        var lastPrice = inputs[^1].Close;
+        Assert.True(vwap.Value < lastPrice, "VWAP should lag behind price in uptrend");
+    }
+
+    [Fact]
+    public void VWAP_Clear_ResetsState()
+    {
+        // Arrange
+        var parameters = new PVWAP<HLCV, double>();
+        var vwap = new VWAP_FP<HLCV, double>(parameters);
+
+        var inputs = new HLCV[]
+        {
+            new() { High = 102, Low = 98, Close = 100, Volume = 1000 },
+            new() { High = 112, Low = 108, Close = 110, Volume = 2000 },
+        };
+
+        vwap.OnBarBatch(inputs, new double[inputs.Length]);
+        Assert.True(vwap.IsReady);
+
+        // Act
+        vwap.Clear();
+
+        // Assert
+        Assert.False(vwap.IsReady);
+        Assert.Equal(0, vwap.Value);
+        Assert.Equal(0, vwap.CumulativePriceVolume);
+        Assert.Equal(0, vwap.CumulativeVolume);
+    }
 }
-#endif

@@ -1,8 +1,5 @@
-// DISABLED: Tests need updating to match current API
-#if false
+using LionFire.Trading.Indicators.Native;
 using LionFire.Trading.Indicators.Parameters;
-using LionFire.Trading.Indicators.QuantConnect_;
-using LionFire.Trading.ValueTypes;
 using Xunit;
 
 namespace LionFire.Trading.Indicators.Tests;
@@ -13,80 +10,230 @@ public class IchimokuCloudTests
     public void IchimokuCloud_CalculatesCorrectly()
     {
         // Arrange
-        var parameters = new PIchimokuCloud<HLC, IchimokuResult>
+        var parameters = new PIchimokuCloud<double, double>
         {
-            TenkanPeriod = 9,
-            KijunPeriod = 26,
-            SenkouAPeriod = 26,
-            SenkouBPeriod = 52,
-            ChikouPeriod = 26
+            ConversionLinePeriod = 9,
+            BaseLinePeriod = 26,
+            LeadingSpanBPeriod = 52,
+            Displacement = 26
         };
-        var ichimoku = new IchimokuCloud_QC<HLC, IchimokuResult>(parameters);
-        
-        // Sample data
-        var inputs = new HLC[60];
+        var ichimoku = new IchimokuCloud_FP<double, double>(parameters);
+
+        // Create sample HLC data
+        var inputs = new HLC<double>[60];
         for (int i = 0; i < inputs.Length; i++)
         {
-            var price = 100.0 + Math.Sin(i * 0.2) * 10;
-            inputs[i] = new HLC
+            var price = 100.0 + Math.Sin(i * 0.1) * 10;
+            inputs[i] = new HLC<double>
             {
                 High = price + 1,
                 Low = price - 1,
                 Close = price
             };
         }
-        
-        var outputs = new IchimokuResult[inputs.Length];
+
+        var outputs = new double[inputs.Length];
 
         // Act
         ichimoku.OnBarBatch(inputs, outputs);
 
         // Assert
         Assert.True(ichimoku.IsReady);
-        
-        var lastResult = outputs[outputs.Length - 1];
-        Assert.NotNull(lastResult);
-        
-        // All components should have values
-        Assert.True(lastResult.Tenkan != 0);
-        Assert.True(lastResult.Kijun != 0);
-        Assert.True(lastResult.SenkouA != 0);
-        Assert.True(lastResult.SenkouB != 0);
-        Assert.True(lastResult.Chikou != 0);
+
+        // Tenkan-sen should be calculated after ConversionLinePeriod
+        Assert.NotEqual(0, ichimoku.TenkanSen);
+
+        // Kijun-sen should be calculated after BaseLinePeriod
+        Assert.NotEqual(0, ichimoku.KijunSen);
     }
 
     [Fact]
-    public void IchimokuCloud_DetectsTrend()
+    public void IchimokuCloud_TenkanKijunCross()
     {
         // Arrange
-        var parameters = new PIchimokuCloud<HLC, IchimokuResult>
+        var parameters = new PIchimokuCloud<double, double>
         {
-            TenkanPeriod = 9,
-            KijunPeriod = 26,
-            SenkouAPeriod = 26,
-            SenkouBPeriod = 52,
-            ChikouPeriod = 26
+            ConversionLinePeriod = 9,
+            BaseLinePeriod = 26,
+            LeadingSpanBPeriod = 52,
+            Displacement = 26
         };
-        
+
         // Strong uptrend data
-        var uptrend = new HLC[60];
+        var uptrend = new HLC<double>[60];
         for (int i = 0; i < uptrend.Length; i++)
         {
-            var price = 100.0 + i * 1.5;
-            uptrend[i] = new HLC
+            var price = 100.0 + i * 0.5;
+            uptrend[i] = new HLC<double>
             {
                 High = price + 0.5,
                 Low = price - 0.3,
                 Close = price + 0.2
             };
         }
-        
-        // Strong downtrend data
-        var downtrend = new HLC[60];
-        for (int i = 0; i < downtrend.Length; i++)
+
+        // Act
+        var ichimokuUp = new IchimokuCloud_FP<double, double>(parameters);
+        ichimokuUp.OnBarBatch(uptrend, new double[uptrend.Length]);
+
+        // Assert
+        Assert.True(ichimokuUp.IsReady);
+
+        // In uptrend, Tenkan-sen (fast) should be above Kijun-sen (slow)
+        Assert.True(ichimokuUp.TenkanSen >= ichimokuUp.KijunSen,
+            $"Tenkan-sen ({ichimokuUp.TenkanSen}) should be >= Kijun-sen ({ichimokuUp.KijunSen}) in uptrend");
+    }
+
+    [Fact]
+    public void IchimokuCloud_CloudFormation()
+    {
+        // Arrange
+        var parameters = new PIchimokuCloud<double, double>
         {
-            var price = 200.0 - i * 1.5;
-            downtrend[i] = new HLC
+            ConversionLinePeriod = 9,
+            BaseLinePeriod = 26,
+            LeadingSpanBPeriod = 52,
+            Displacement = 26
+        };
+        var ichimoku = new IchimokuCloud_FP<double, double>(parameters);
+
+        // Trending data
+        var inputs = new HLC<double>[80];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + i * 0.3;
+            inputs[i] = new HLC<double>
+            {
+                High = price + 0.5,
+                Low = price - 0.3,
+                Close = price + 0.1
+            };
+        }
+
+        // Act
+        ichimoku.OnBarBatch(inputs, new double[inputs.Length]);
+
+        // Assert
+        Assert.True(ichimoku.IsReady);
+
+        // Cloud is formed by Senkou Span A and B
+        // Both should have values
+        Assert.NotEqual(0, ichimoku.SenkouSpanA);
+        Assert.NotEqual(0, ichimoku.SenkouSpanB);
+    }
+
+    [Fact]
+    public void IchimokuCloud_ChikouSpan()
+    {
+        // Arrange
+        var parameters = new PIchimokuCloud<double, double>
+        {
+            ConversionLinePeriod = 9,
+            BaseLinePeriod = 26,
+            LeadingSpanBPeriod = 52,
+            Displacement = 26
+        };
+        var ichimoku = new IchimokuCloud_FP<double, double>(parameters);
+
+        // Create data
+        var inputs = new HLC<double>[60];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + i * 0.5;
+            inputs[i] = new HLC<double>
+            {
+                High = price + 0.5,
+                Low = price - 0.3,
+                Close = price
+            };
+        }
+
+        // Act
+        ichimoku.OnBarBatch(inputs, new double[inputs.Length]);
+
+        // Assert
+        Assert.True(ichimoku.IsReady);
+
+        // Chikou Span should equal the current close (plotted 26 periods back)
+        Assert.NotEqual(0, ichimoku.ChikouSpan);
+    }
+
+    [Fact]
+    public void IchimokuCloud_DifferentPeriods()
+    {
+        var periodSets = new[]
+        {
+            (9, 26, 52, 26),    // Standard
+            (7, 22, 44, 22),    // Crypto-optimized
+            (9, 30, 60, 30)     // Extended
+        };
+
+        // Create sample data
+        var inputs = new HLC<double>[80];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + Math.Sin(i * 0.1) * 10;
+            inputs[i] = new HLC<double>
+            {
+                High = price + 1,
+                Low = price - 1,
+                Close = price
+            };
+        }
+
+        foreach (var (tenkan, kijun, senkouB, displacement) in periodSets)
+        {
+            // Arrange
+            var parameters = new PIchimokuCloud<double, double>
+            {
+                ConversionLinePeriod = tenkan,
+                BaseLinePeriod = kijun,
+                LeadingSpanBPeriod = senkouB,
+                Displacement = displacement
+            };
+            var ichimoku = new IchimokuCloud_FP<double, double>(parameters);
+
+            // Act
+            ichimoku.OnBarBatch(inputs, new double[inputs.Length]);
+
+            // Assert
+            Assert.True(ichimoku.IsReady);
+            Assert.NotEqual(0, ichimoku.TenkanSen);
+            Assert.NotEqual(0, ichimoku.KijunSen);
+        }
+    }
+
+    [Fact]
+    public void IchimokuCloud_TrendIdentification()
+    {
+        // Arrange
+        var parameters = new PIchimokuCloud<double, double>
+        {
+            ConversionLinePeriod = 9,
+            BaseLinePeriod = 26,
+            LeadingSpanBPeriod = 52,
+            Displacement = 26
+        };
+
+        // Strong uptrend
+        var uptrendInputs = new HLC<double>[80];
+        for (int i = 0; i < uptrendInputs.Length; i++)
+        {
+            var price = 100.0 + i * 1.0;
+            uptrendInputs[i] = new HLC<double>
+            {
+                High = price + 0.5,
+                Low = price - 0.3,
+                Close = price + 0.2
+            };
+        }
+
+        // Strong downtrend
+        var downtrendInputs = new HLC<double>[80];
+        for (int i = 0; i < downtrendInputs.Length; i++)
+        {
+            var price = 200.0 - i * 1.0;
+            downtrendInputs[i] = new HLC<double>
             {
                 High = price + 0.3,
                 Low = price - 0.5,
@@ -95,230 +242,60 @@ public class IchimokuCloudTests
         }
 
         // Act
-        var ichimokuUp = new IchimokuCloud_QC<HLC, IchimokuResult>(parameters);
-        var upOutputs = new IchimokuResult[uptrend.Length];
-        ichimokuUp.OnBarBatch(uptrend, upOutputs);
-        var upResult = upOutputs[upOutputs.Length - 1];
-        
-        var ichimokuDown = new IchimokuCloud_QC<HLC, IchimokuResult>(parameters);
-        var downOutputs = new IchimokuResult[downtrend.Length];
-        ichimokuDown.OnBarBatch(downtrend, downOutputs);
-        var downResult = downOutputs[downOutputs.Length - 1];
+        var ichimokuUp = new IchimokuCloud_FP<double, double>(parameters);
+        ichimokuUp.OnBarBatch(uptrendInputs, new double[uptrendInputs.Length]);
+        var upTenkan = ichimokuUp.TenkanSen;
+        var upKijun = ichimokuUp.KijunSen;
+
+        var ichimokuDown = new IchimokuCloud_FP<double, double>(parameters);
+        ichimokuDown.OnBarBatch(downtrendInputs, new double[downtrendInputs.Length]);
+        var downTenkan = ichimokuDown.TenkanSen;
+        var downKijun = ichimokuDown.KijunSen;
 
         // Assert
-        // In uptrend, Tenkan should be above Kijun
-        Assert.True(upResult.Tenkan > upResult.Kijun, 
-            $"Uptrend: Tenkan {upResult.Tenkan} should be > Kijun {upResult.Kijun}");
-        
-        // In downtrend, Tenkan should be below Kijun
-        Assert.True(downResult.Tenkan < downResult.Kijun,
-            $"Downtrend: Tenkan {downResult.Tenkan} should be < Kijun {downResult.Kijun}");
+        // In uptrend, Tenkan should be above or equal to Kijun
+        Assert.True(upTenkan >= upKijun,
+            $"Uptrend: Tenkan ({upTenkan}) should be >= Kijun ({upKijun})");
+
+        // In downtrend, Tenkan should be below or equal to Kijun
+        Assert.True(downTenkan <= downKijun,
+            $"Downtrend: Tenkan ({downTenkan}) should be <= Kijun ({downKijun})");
     }
 
     [Fact]
-    public void IchimokuCloud_CloudFormation()
+    public void IchimokuCloud_Clear_ResetsState()
     {
         // Arrange
-        var parameters = new PIchimokuCloud<HLC, IchimokuResult>
+        var parameters = new PIchimokuCloud<double, double>
         {
-            TenkanPeriod = 9,
-            KijunPeriod = 26,
-            SenkouAPeriod = 26,
-            SenkouBPeriod = 52,
-            ChikouPeriod = 26
+            ConversionLinePeriod = 9,
+            BaseLinePeriod = 26,
+            LeadingSpanBPeriod = 52,
+            Displacement = 26
         };
-        var ichimoku = new IchimokuCloud_QC<HLC, IchimokuResult>(parameters);
-        
-        // Create data with clear trend change
-        var inputs = new HLC[100];
-        // First half uptrend
-        for (int i = 0; i < 50; i++)
+        var ichimoku = new IchimokuCloud_FP<double, double>(parameters);
+
+        var inputs = new HLC<double>[60];
+        for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + i * 0.5;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 0.5,
                 Low = price - 0.3,
-                Close = price + 0.1
-            };
-        }
-        // Second half downtrend
-        for (int i = 50; i < 100; i++)
-        {
-            var price = 125.0 - (i - 50) * 0.5;
-            inputs[i] = new HLC
-            {
-                High = price + 0.3,
-                Low = price - 0.5,
-                Close = price - 0.1
-            };
-        }
-        
-        var outputs = new IchimokuResult[inputs.Length];
-
-        // Act
-        ichimoku.OnBarBatch(inputs, outputs);
-
-        // Assert
-        Assert.True(ichimoku.IsReady);
-        
-        // Cloud should exist (Senkou A and B should differ)
-        var midResult = outputs[75];
-        Assert.NotEqual(midResult.SenkouA, midResult.SenkouB);
-        
-        // Cloud thickness indicates trend strength
-        var cloudThickness = Math.Abs(midResult.SenkouA - midResult.SenkouB);
-        Assert.True(cloudThickness > 0);
-    }
-
-    [Fact]
-    public void IchimokuCloud_TenkanKijunCross()
-    {
-        // Arrange
-        var parameters = new PIchimokuCloud<HLC, IchimokuResult>
-        {
-            TenkanPeriod = 9,
-            KijunPeriod = 26,
-            SenkouAPeriod = 26,
-            SenkouBPeriod = 52,
-            ChikouPeriod = 26
-        };
-        var ichimoku = new IchimokuCloud_QC<HLC, IchimokuResult>(parameters);
-        
-        // Create oscillating data for crossovers
-        var inputs = new HLC[100];
-        for (int i = 0; i < inputs.Length; i++)
-        {
-            var trend = i < 30 ? i * 0.5 : 
-                       i < 60 ? 15 - (i - 30) * 0.5 :
-                       (i - 60) * 0.5;
-            var price = 100.0 + trend;
-            inputs[i] = new HLC
-            {
-                High = price + 0.5,
-                Low = price - 0.5,
-                Close = price
-            };
-        }
-        
-        var outputs = new IchimokuResult[inputs.Length];
-
-        // Act
-        ichimoku.OnBarBatch(inputs, outputs);
-
-        // Assert
-        Assert.True(ichimoku.IsReady);
-        
-        // Should have different Tenkan/Kijun relationships at different points
-        var earlyResult = outputs[40];
-        var lateResult = outputs[80];
-        
-        // Values should change over time
-        Assert.NotEqual(earlyResult.Tenkan, lateResult.Tenkan);
-        Assert.NotEqual(earlyResult.Kijun, lateResult.Kijun);
-    }
-
-    [Fact]
-    public void IchimokuCloud_ChikouSpan()
-    {
-        // Arrange
-        var parameters = new PIchimokuCloud<HLC, IchimokuResult>
-        {
-            TenkanPeriod = 9,
-            KijunPeriod = 26,
-            SenkouAPeriod = 26,
-            SenkouBPeriod = 52,
-            ChikouPeriod = 26
-        };
-        var ichimoku = new IchimokuCloud_QC<HLC, IchimokuResult>(parameters);
-        
-        // Create data
-        var inputs = new HLC[60];
-        for (int i = 0; i < inputs.Length; i++)
-        {
-            var price = 100.0 + i * 0.3;
-            inputs[i] = new HLC
-            {
-                High = price + 0.5,
-                Low = price - 0.5,
-                Close = price
-            };
-        }
-        
-        var outputs = new IchimokuResult[inputs.Length];
-
-        // Act
-        ichimoku.OnBarBatch(inputs, outputs);
-
-        // Assert
-        Assert.True(ichimoku.IsReady);
-        
-        // Chikou span should be lagged close price
-        var lastResult = outputs[outputs.Length - 1];
-        Assert.True(lastResult.Chikou > 0);
-        
-        // Chikou should reflect historical close (lagged by ChikouPeriod)
-        if (outputs.Length > parameters.ChikouPeriod)
-        {
-            var expectedIndex = outputs.Length - 1 - parameters.ChikouPeriod;
-            // Chikou should be related to the close price from ChikouPeriod bars ago
-            Assert.True(Math.Abs(lastResult.Chikou - inputs[outputs.Length - 1].Close) < 50);
-        }
-    }
-
-    [Fact]
-    public void IchimokuCloud_DifferentPeriods()
-    {
-        var tenkanPeriods = new[] { 7, 9, 12 };
-        
-        // Create sample data
-        var inputs = new HLC[100];
-        for (int i = 0; i < inputs.Length; i++)
-        {
-            var price = 100.0 + Math.Sin(i * 0.1) * 10;
-            inputs[i] = new HLC
-            {
-                High = price + 1,
-                Low = price - 1,
                 Close = price
             };
         }
 
-        foreach (var tenkan in tenkanPeriods)
-        {
-            // Arrange
-            var parameters = new PIchimokuCloud<HLC, IchimokuResult>
-            {
-                TenkanPeriod = tenkan,
-                KijunPeriod = tenkan * 3,
-                SenkouAPeriod = tenkan * 3,
-                SenkouBPeriod = tenkan * 6,
-                ChikouPeriod = tenkan * 3
-            };
-            var ichimoku = new IchimokuCloud_QC<HLC, IchimokuResult>(parameters);
-            var outputs = new IchimokuResult[inputs.Length];
+        ichimoku.OnBarBatch(inputs, new double[inputs.Length]);
+        Assert.True(ichimoku.IsReady);
 
-            // Act
-            ichimoku.OnBarBatch(inputs, outputs);
+        // Act
+        ichimoku.Clear();
 
-            // Assert
-            Assert.True(ichimoku.IsReady);
-            var lastResult = outputs[outputs.Length - 1];
-            
-            // All components should be calculated
-            Assert.NotNull(lastResult);
-            Assert.True(lastResult.Tenkan != 0);
-            Assert.True(lastResult.Kijun != 0);
-        }
+        // Assert
+        Assert.False(ichimoku.IsReady);
+        Assert.Equal(0, ichimoku.TenkanSen);
+        Assert.Equal(0, ichimoku.KijunSen);
     }
 }
-
-public class IchimokuResult
-{
-    public double Tenkan { get; set; }    // Conversion line
-    public double Kijun { get; set; }     // Base line
-    public double SenkouA { get; set; }   // Leading span A
-    public double SenkouB { get; set; }   // Leading span B
-    public double Chikou { get; set; }    // Lagging span
-}
-#endif

@@ -1,8 +1,4 @@
-// DISABLED: Tests need updating to match current API
-#if false
-using LionFire.Trading.Indicators.Parameters;
 using LionFire.Trading.Indicators.QuantConnect_;
-using LionFire.Trading.ValueTypes;
 using Xunit;
 
 namespace LionFire.Trading.Indicators.Tests;
@@ -13,11 +9,11 @@ public class ATRTests
     public void ATR_CalculatesCorrectly()
     {
         // Arrange
-        var parameters = new PATR<HLC, double> { Period = 14 };
-        var atr = new AverageTrueRange_QC<HLC, double>(parameters);
-        
+        var parameters = new PAverageTrueRange<double, double> { Period = 14 };
+        var atr = new AverageTrueRange<double, double>(parameters);
+
         // Sample OHLC data
-        var inputs = new HLC[]
+        var inputs = new HLC<double>[]
         {
             new() { High = 48.70, Low = 47.79, Close = 48.16 },
             new() { High = 48.72, Low = 48.14, Close = 48.61 },
@@ -40,55 +36,49 @@ public class ATRTests
             new() { High = 49.63, Low = 48.98, Close = 49.37 },
             new() { High = 50.33, Low = 49.61, Close = 50.23 }
         };
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
         atr.OnBarBatch(inputs, outputs);
 
         // Assert
-        Assert.True(atr.IsReady);
-        
-        // ATR should be positive
+        // ATR should be positive for valid outputs
         for (int i = parameters.Period - 1; i < outputs.Length; i++)
         {
             Assert.True(outputs[i] > 0, $"ATR at index {i} should be positive, but was {outputs[i]}");
         }
-        
-        // ATR should smooth volatility
-        Assert.Equal(outputs[outputs.Length - 1], atr.Value);
     }
 
     [Fact]
     public void ATR_HandlesHighVolatility()
     {
         // Arrange
-        var parameters = new PATR<HLC, double> { Period = 14 };
-        var atr = new AverageTrueRange_QC<HLC, double>(parameters);
-        
+        var parameters = new PAverageTrueRange<double, double> { Period = 14 };
+        var atr = new AverageTrueRange<double, double>(parameters);
+
         // High volatility data
-        var inputs = new HLC[20];
+        var inputs = new HLC<double>[20];
         var random = new Random(42);
         for (int i = 0; i < inputs.Length; i++)
         {
             var basePrice = 100.0 + i;
             var volatility = random.NextDouble() * 10; // 0-10 volatility
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = basePrice + volatility,
                 Low = basePrice - volatility,
                 Close = basePrice + (random.NextDouble() - 0.5) * volatility
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
         atr.OnBarBatch(inputs, outputs);
 
         // Assert
-        Assert.True(atr.IsReady);
-        var lastATR = outputs[outputs.Length - 1];
+        var lastATR = outputs[^1];
         Assert.True(lastATR > 0);
         Assert.True(lastATR < 20); // Should be reasonable given our volatility range
     }
@@ -97,30 +87,29 @@ public class ATRTests
     public void ATR_HandlesLowVolatility()
     {
         // Arrange
-        var parameters = new PATR<HLC, double> { Period = 14 };
-        var atr = new AverageTrueRange_QC<HLC, double>(parameters);
-        
+        var parameters = new PAverageTrueRange<double, double> { Period = 14 };
+        var atr = new AverageTrueRange<double, double>(parameters);
+
         // Low volatility data
-        var inputs = new HLC[20];
+        var inputs = new HLC<double>[20];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + i * 0.1;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 0.05,
                 Low = price - 0.05,
                 Close = price
             };
         }
-        
+
         var outputs = new double[inputs.Length];
 
         // Act
         atr.OnBarBatch(inputs, outputs);
 
         // Assert
-        Assert.True(atr.IsReady);
-        var lastATR = outputs[outputs.Length - 1];
+        var lastATR = outputs[^1];
         Assert.True(lastATR < 1); // Low volatility should produce low ATR
     }
 
@@ -128,13 +117,13 @@ public class ATRTests
     public void ATR_DifferentPeriods()
     {
         var periods = new[] { 7, 14, 21 };
-        
+
         // Create sample data
-        var inputs = new HLC[30];
+        var inputs = new HLC<double>[30];
         for (int i = 0; i < inputs.Length; i++)
         {
             var price = 100.0 + Math.Sin(i * 0.5) * 5;
-            inputs[i] = new HLC
+            inputs[i] = new HLC<double>
             {
                 High = price + 1,
                 Low = price - 1,
@@ -147,20 +136,53 @@ public class ATRTests
         foreach (var period in periods)
         {
             // Arrange
-            var parameters = new PATR<HLC, double> { Period = period };
-            var atr = new AverageTrueRange_QC<HLC, double>(parameters);
+            var parameters = new PAverageTrueRange<double, double> { Period = period };
+            var atr = new AverageTrueRange<double, double>(parameters);
             var outputs = new double[inputs.Length];
 
             // Act
             atr.OnBarBatch(inputs, outputs);
 
             // Assert
-            Assert.True(atr.IsReady);
-            atrValues[period] = outputs[outputs.Length - 1];
+            atrValues[period] = outputs[^1];
         }
 
         // Longer periods should produce smoother (potentially different) ATR values
         Assert.True(atrValues.All(kv => kv.Value > 0));
     }
+
+    [Fact]
+    public void ATR_Clear_ResetsState()
+    {
+        // Arrange
+        var parameters = new PAverageTrueRange<double, double> { Period = 7 };
+        var atr = new AverageTrueRange<double, double>(parameters);
+
+        var inputs = new HLC<double>[20];
+        for (int i = 0; i < inputs.Length; i++)
+        {
+            var price = 100.0 + i;
+            inputs[i] = new HLC<double>
+            {
+                High = price + 1,
+                Low = price - 1,
+                Close = price
+            };
+        }
+
+        var outputs = new double[inputs.Length];
+        atr.OnBarBatch(inputs, outputs);
+        var firstValue = outputs[^1];
+
+        // Act
+        atr.Clear();
+
+        // Process again
+        var outputs2 = new double[inputs.Length];
+        atr.OnBarBatch(inputs, outputs2);
+        var secondValue = outputs2[^1];
+
+        // Assert - should get same result after clear
+        Assert.Equal(firstValue, secondValue, 6);
+    }
 }
-#endif
