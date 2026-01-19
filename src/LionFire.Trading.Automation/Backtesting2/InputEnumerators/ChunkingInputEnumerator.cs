@@ -73,9 +73,14 @@ public sealed class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumerato
             {
                 int previousChunkRequestedIndex = PreviousChunk.Count + /* negative number */ requestedIndex;
 
-                if (PreviousChunk.Array == null || previousChunkRequestedIndex > PreviousChunk.Count)
+                if (PreviousChunk.Array == null || previousChunkRequestedIndex < 0 || previousChunkRequestedIndex >= PreviousChunk.Count)
                 {
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(index),
+                        $"Index {index} out of range. State: InputBufferCursorIndex={InputBufferCursorIndex}, " +
+                        $"InputBuffer.Count={InputBuffer.Count}, PreviousChunk.Count={PreviousChunk.Count}, " +
+                        $"PreviousChunk.Array={(PreviousChunk.Array == null ? "null" : "valid")}, " +
+                        $"requestedIndex={requestedIndex}, previousChunkRequestedIndex={previousChunkRequestedIndex}, " +
+                        $"Size={Size}, ItemsViewable={ItemsViewable}, LookbackRequired={LookbackRequired}");
                 }
                 return PreviousChunk[previousChunkRequestedIndex];
             }
@@ -95,7 +100,11 @@ public sealed class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumerato
         }
     }
     //public override bool IsFull => InputBuffer.Array != null && PreviousChunk.Array != null; // UNUSED
-    public override uint Size => (uint)InputBuffer.Count;
+
+    /// <summary>
+    /// Returns the number of items accessible via the indexer (accounts for cursor position).
+    /// </summary>
+    public override uint Size => (uint)Math.Max(0, ItemsViewable);
 
     /// <summary>
     /// Lookback guarantees a certain amount of prior items visible, but often there is more.  This property indicates how many are available.
