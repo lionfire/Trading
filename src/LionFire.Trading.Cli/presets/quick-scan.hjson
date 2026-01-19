@@ -1,0 +1,8 @@
+// quick-scan preset: Fast initial exploration with low resolution
+// Use for quick parameter sweeps to identify promising regions
+
+maxBacktests: 1000
+batchSize: 256
+
+// Suppress detailed progress for faster output
+progressInterval: 10

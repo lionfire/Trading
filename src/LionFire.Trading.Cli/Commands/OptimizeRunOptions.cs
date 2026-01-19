@@ -6,6 +6,11 @@ namespace LionFire.Trading.Cli.Commands;
 /// </summary>
 public class OptimizeRunOptions
 {
+    // Config file options
+    public string? Config { get; set; }
+    public string? Preset { get; set; }
+
+    // Core options
     public string? Bot { get; set; }
     public string Symbol { get; set; } = "BTCUSDT";
     public string Exchange { get; set; } = "Binance";
@@ -18,4 +23,10 @@ public class OptimizeRunOptions
     public bool Quiet { get; set; }
     public long MaxBacktests { get; set; } = 50000;
     public int BatchSize { get; set; } = 1024;
+
+    /// <summary>
+    /// Tracks which properties were explicitly set via command line
+    /// (as opposed to having default values)
+    /// </summary>
+    internal HashSet<string> ExplicitlySetProperties { get; } = new();
 }

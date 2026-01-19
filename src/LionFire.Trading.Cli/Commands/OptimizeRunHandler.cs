@@ -29,7 +29,15 @@ public static class OptimizeRunHandler
     {
         var cmd = builderBuilder.Command!;
 
-        var botOption = new Option<string?>("--bot", "Bot type to optimize (e.g., PAtrBot)") { IsRequired = true };
+        // Config file options
+        var configOption = new Option<string?>("--config", "Path to HJSON/JSON config file");
+        configOption.AddAlias("-c");
+        cmd.AddOption(configOption);
+
+        cmd.AddOption(new Option<string?>("--preset", "Named preset from presets directory"));
+
+        // Core options
+        var botOption = new Option<string?>("--bot", "Bot type to optimize (e.g., PAtrBot)");
         botOption.AddAlias("-b");
         cmd.AddOption(botOption);
 
@@ -93,14 +101,23 @@ public static class OptimizeRunHandler
                 var startTime = DateTimeOffset.UtcNow;
                 var stopwatch = Stopwatch.StartNew();
 
-                // Get options from context
-                var options = context.TryGetOptions<OptimizeRunOptions>();
+                // Always parse args ourselves to track which properties were explicitly set
+                // System.CommandLine binding doesn't track this for us
+                var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
+                var rawOptions = ParseArguments(args);
 
-                // If options not bound, try parsing from command line directly
-                if (options == null)
+                // Load config file and presets, merging with command line options
+                // Precedence: Command line > Config file > Preset > Defaults
+                OptimizeRunOptions options;
+                try
                 {
-                    var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
-                    options = ParseArguments(args);
+                    options = OptimizeConfigLoader.LoadAndMerge(rawOptions, rawOptions.ExplicitlySetProperties);
+                }
+                catch (FileNotFoundException ex)
+                {
+                    WriteError(rawOptions.Json, ex.Message);
+                    Environment.ExitCode = 1;
+                    return;
                 }
 
                 try
@@ -316,11 +333,29 @@ public static class OptimizeRunHandler
 
             switch (arg.ToLowerInvariant())
             {
+                case "--config":
+                case "-c":
+                    if (nextArg != null && !nextArg.StartsWith("-"))
+                    {
+                        options.Config = nextArg;
+                        i++;
+                    }
+                    break;
+
+                case "--preset":
+                    if (nextArg != null && !nextArg.StartsWith("-"))
+                    {
+                        options.Preset = nextArg;
+                        i++;
+                    }
+                    break;
+
                 case "--bot":
                 case "-b":
                     if (nextArg != null && !nextArg.StartsWith("-"))
                     {
                         options.Bot = nextArg;
+                        options.ExplicitlySetProperties.Add("Bot");
                         i++;
                     }
                     break;
@@ -330,6 +365,7 @@ public static class OptimizeRunHandler
                     if (nextArg != null && !nextArg.StartsWith("-"))
                     {
                         options.Symbol = nextArg;
+                        options.ExplicitlySetProperties.Add("Symbol");
                         i++;
                     }
                     break;
@@ -339,6 +375,7 @@ public static class OptimizeRunHandler
                     if (nextArg != null && !nextArg.StartsWith("-"))
                     {
                         options.Exchange = nextArg;
+                        options.ExplicitlySetProperties.Add("Exchange");
                         i++;
                     }
                     break;
@@ -348,6 +385,7 @@ public static class OptimizeRunHandler
                     if (nextArg != null && !nextArg.StartsWith("-"))
                     {
                         options.Area = nextArg;
+                        options.ExplicitlySetProperties.Add("Area");
                         i++;
                     }
                     break;
@@ -357,6 +395,7 @@ public static class OptimizeRunHandler
                     if (nextArg != null && !nextArg.StartsWith("-"))
                     {
                         options.Timeframe = nextArg;
+                        options.ExplicitlySetProperties.Add("Timeframe");
                         i++;
                     }
                     break;
@@ -368,6 +407,7 @@ public static class OptimizeRunHandler
                         if (DateTime.TryParse(nextArg, out var from))
                         {
                             options.From = from;
+                            options.ExplicitlySetProperties.Add("From");
                         }
                         i++;
                     }
@@ -379,6 +419,7 @@ public static class OptimizeRunHandler
                         if (DateTime.TryParse(nextArg, out var to))
                         {
                             options.To = to;
+                            options.ExplicitlySetProperties.Add("To");
                         }
                         i++;
                     }
@@ -391,6 +432,7 @@ public static class OptimizeRunHandler
                         if (int.TryParse(nextArg, out var interval))
                         {
                             options.ProgressInterval = interval;
+                            options.ExplicitlySetProperties.Add("ProgressInterval");
                         }
                         i++;
                     }
@@ -398,11 +440,13 @@ public static class OptimizeRunHandler
 
                 case "--json":
                     options.Json = true;
+                    options.ExplicitlySetProperties.Add("Json");
                     break;
 
                 case "--quiet":
                 case "-q":
                     options.Quiet = true;
+                    options.ExplicitlySetProperties.Add("Quiet");
                     break;
 
                 case "--max-backtests":
@@ -412,6 +456,7 @@ public static class OptimizeRunHandler
                         if (long.TryParse(nextArg, out var maxBacktests))
                         {
                             options.MaxBacktests = maxBacktests;
+                            options.ExplicitlySetProperties.Add("MaxBacktests");
                         }
                         i++;
                     }
@@ -423,6 +468,7 @@ public static class OptimizeRunHandler
                         if (int.TryParse(nextArg, out var batchSize))
                         {
                             options.BatchSize = batchSize;
+                            options.ExplicitlySetProperties.Add("BatchSize");
                         }
                         i++;
                     }

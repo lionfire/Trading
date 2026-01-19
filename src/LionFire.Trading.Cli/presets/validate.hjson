@@ -1,0 +1,7 @@
+// validate preset: Medium resolution for validation runs
+// Use for verifying optimization results on different date ranges
+
+maxBacktests: 25000
+batchSize: 1024
+
+progressInterval: 5

@@ -1,0 +1,12 @@
+// thorough preset: Comprehensive parameter search with high resolution
+// Use for detailed optimization after quick-scan identifies promising areas
+
+maxBacktests: 100000
+batchSize: 2048
+
+optimization:
+{
+  maxBatchSize: 2048
+}
+
+progressInterval: 5
