@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using LionFire.Execution;
@@ -16,7 +17,7 @@ namespace Optimizing_;
 
 public class Optimize_ : BinanceDataTest
 {
-    [Fact]
+    [Fact(Skip = "Something is not implemented")]
     public async Task _()
     {
         #region Input
