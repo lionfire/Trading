@@ -80,9 +80,14 @@ public partial class OptimizationDashboard : IAsyncDisposable
 
     private async Task AddWidget(OptimizationWidgetInfo info)
     {
-        // Use autoPosition - let GridStack find the best spot
-        var widget = OptimizationWidgetInstance.FromCatalog(info, 0, 0);
-        widget.AutoPosition = true;
+        // Find the next available spot using minimum size
+        var (x, y) = FindNextAvailableSpot(info.MinWidth, info.MinHeight);
+
+        var widget = OptimizationWidgetInstance.FromCatalog(info, x, y);
+        // Use minimum size for new widgets
+        widget.W = info.MinWidth;
+        widget.H = info.MinHeight;
+
         _widgets.Add(widget);
         _showWidgetPicker = false;
         _pendingWidgetId = widget.Id;
@@ -90,6 +95,58 @@ public partial class OptimizationDashboard : IAsyncDisposable
         // StateHasChanged will trigger OnAfterRenderAsync where we'll make the widget
         // SaveLayoutAsync is called after makeWidget to get the correct position
         StateHasChanged();
+    }
+
+    private (int x, int y) FindNextAvailableSpot(int width, int height)
+    {
+        const int columns = 12;
+
+        if (!_widgets.Any())
+            return (0, 0);
+
+        // Build a grid to track occupied cells
+        var maxY = _widgets.Max(w => w.Y + w.H) + height;
+        var occupied = new bool[columns, maxY + 1];
+
+        foreach (var widget in _widgets)
+        {
+            for (var wx = widget.X; wx < Math.Min(widget.X + widget.W, columns); wx++)
+            {
+                for (var wy = widget.Y; wy < widget.Y + widget.H; wy++)
+                {
+                    if (wx >= 0 && wx < columns && wy >= 0 && wy <= maxY)
+                        occupied[wx, wy] = true;
+                }
+            }
+        }
+
+        // Find first available spot that fits the widget
+        for (var y = 0; y <= maxY; y++)
+        {
+            for (var x = 0; x <= columns - width; x++)
+            {
+                if (CanFit(occupied, x, y, width, height, columns, maxY))
+                    return (x, y);
+            }
+        }
+
+        // No spot found, place at bottom
+        return (0, maxY);
+    }
+
+    private static bool CanFit(bool[,] occupied, int x, int y, int width, int height, int columns, int maxY)
+    {
+        for (var wx = x; wx < x + width; wx++)
+        {
+            for (var wy = y; wy < y + height; wy++)
+            {
+                if (wx >= columns || wy > maxY)
+                    return false;
+                if (occupied[wx, wy])
+                    return false;
+            }
+        }
+        return true;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

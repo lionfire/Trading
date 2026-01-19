@@ -17,7 +17,9 @@ public static class OptimizationWidgetCatalog
             DefaultWidth: 6,
             DefaultHeight: 5,
             Icon: Icons.Material.Filled.BarChart,
-            Description: "Distribution chart showing metric histograms with configurable bucket sizes"),
+            Description: "Distribution chart showing metric histograms with configurable bucket sizes",
+            MinWidth: 4,
+            MinHeight: 4),
 
         new OptimizationWidgetInfo(
             Id: "equity-curves",
@@ -26,7 +28,9 @@ public static class OptimizationWidgetCatalog
             DefaultWidth: 8,
             DefaultHeight: 4,
             Icon: Icons.Material.Filled.ShowChart,
-            Description: "Backtest equity curve chart showing selected results"),
+            Description: "Backtest equity curve chart showing selected results",
+            MinWidth: 4,
+            MinHeight: 3),
 
         new OptimizationWidgetInfo(
             Id: "filter",
@@ -35,7 +39,9 @@ public static class OptimizationWidgetCatalog
             DefaultWidth: 4,
             DefaultHeight: 4,
             Icon: Icons.Material.Filled.FilterList,
-            Description: "Filter controls for optimization results"),
+            Description: "Filter controls for optimization results",
+            MinWidth: 3,
+            MinHeight: 3),
 
         new OptimizationWidgetInfo(
             Id: "data-grid",
@@ -44,7 +50,9 @@ public static class OptimizationWidgetCatalog
             DefaultWidth: 12,
             DefaultHeight: 5,
             Icon: Icons.Material.Filled.TableChart,
-            Description: "Sortable and filterable results table"),
+            Description: "Sortable and filterable results table",
+            MinWidth: 6,
+            MinHeight: 3),
 
         new OptimizationWidgetInfo(
             Id: "summary",
@@ -53,7 +61,9 @@ public static class OptimizationWidgetCatalog
             DefaultWidth: 4,
             DefaultHeight: 5,
             Icon: Icons.Material.Filled.Summarize,
-            Description: "Summary statistics panel for optimization results"),
+            Description: "Summary statistics panel for optimization results",
+            MinWidth: 3,
+            MinHeight: 3),
     };
 
     /// <summary>
@@ -73,4 +83,6 @@ public record OptimizationWidgetInfo(
     int DefaultWidth,
     int DefaultHeight,
     string Icon,
-    string Description = "");
+    string Description = "",
+    int MinWidth = 3,
+    int MinHeight = 3);
