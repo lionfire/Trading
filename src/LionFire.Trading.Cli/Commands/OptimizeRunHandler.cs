@@ -109,6 +109,7 @@ public static class OptimizeRunHandler
                     if (string.IsNullOrEmpty(options.Bot))
                     {
                         WriteError(options.Json, "Bot type is required. Use --bot <type>");
+                        Environment.ExitCode = 1;
                         return;
                     }
 
@@ -126,6 +127,7 @@ public static class OptimizeRunHandler
                     {
                         var availableTypes = string.Join(", ", botTypeRegistry.PBotRegistry.Names.Keys.Take(10));
                         WriteError(options.Json, $"Bot type not found: {options.Bot}. Available: {availableTypes}...");
+                        Environment.ExitCode = 1;
                         return;
                     }
 
@@ -253,6 +255,7 @@ public static class OptimizeRunHandler
                             Elapsed = stopwatch.Elapsed.Humanize(2),
                             Message = "Optimization cancelled by user"
                         });
+                        Environment.ExitCode = 130; // Standard exit code for SIGINT
                         return;
                     }
 
@@ -280,6 +283,7 @@ public static class OptimizeRunHandler
                         Elapsed = stopwatch.Elapsed.Humanize(2),
                         Message = "Optimization cancelled"
                     });
+                    Environment.ExitCode = 130; // Standard exit code for SIGINT
                 }
                 catch (Exception ex)
                 {
@@ -296,6 +300,7 @@ public static class OptimizeRunHandler
                     {
                         AnsiConsole.WriteException(ex);
                     }
+                    Environment.ExitCode = 1;
                 }
             });
         };
