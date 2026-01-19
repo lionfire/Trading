@@ -4,6 +4,7 @@ using LightweightCharts.Blazor.Customization.Chart;
 using LightweightCharts.Blazor.Customization.Enums;
 using LightweightCharts.Blazor.Customization.Series;
 using LightweightCharts.Blazor.DataItems;
+using LightweightCharts.Blazor.Plugins;
 using LightweightCharts.Blazor.Series;
 using LionFire.Trading.HistoricalData.Retrieval;
 using Microsoft.AspNetCore.Components;
@@ -50,6 +51,18 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     [Parameter]
     public bool AutoFit { get; set; } = true;
 
+    /// <summary>
+    /// Number of empty bars to show on the right side of the chart for visual padding.
+    /// </summary>
+    [Parameter]
+    public int RightOffset { get; set; } = 5;
+
+    /// <summary>
+    /// If true, automatically scrolls to show the latest bar when new data arrives.
+    /// </summary>
+    [Parameter]
+    public bool AutoScrollToRealTime { get; set; } = true;
+
     #endregion
 
     #region State
@@ -57,6 +70,8 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     private ChartComponent? _chart;
     private ElementReference _containerRef;
     private ISeriesApi<long>? _candlestickSeries;
+    private ISeriesMarkersPluginApi<long>? _markersPlugin;
+    private List<SeriesMarkerBar<long>> _currentMarkers = new();
     private bool _isInitialized;
     private string? _previousSymbol;
     private string? _previousTimeFrame;
@@ -168,6 +183,22 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Detach markers plugin if it exists
+        if (_markersPlugin != null)
+        {
+            try
+            {
+                await _markersPlugin.Detach();
+            }
+            catch
+            {
+                // Ignore errors during disposal
+            }
+            _markersPlugin = null;
+        }
+
+        _currentMarkers.Clear();
+
         // ChartComponent handles its own disposal
         _candlestickSeries = null;
         _isInitialized = false;
@@ -206,7 +237,8 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
                 TimeScale = new TimeScaleOptions
                 {
                     BorderColor = ColorTranslator.FromHtml("#2B2B43"),
-                    TimeVisible = true
+                    TimeVisible = true,
+                    RightOffset = RightOffset
                 },
                 Crosshair = new CrosshairOptions
                 {
@@ -358,7 +390,7 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     /// Update or append a single bar to the chart.
     /// If the bar's time matches the last bar, it updates it. Otherwise, it appends a new bar.
     /// </summary>
-    public async Task UpdateBarAsync(IKline bar)
+    public async Task UpdateBarAsync(IKline bar, bool scrollToRealTime = true)
     {
         if (_candlestickSeries == null)
         {
@@ -385,6 +417,12 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
                 LastBarOpenTime = bar.OpenTime;
             }
 
+            // Auto-scroll to show latest bar if enabled
+            if (scrollToRealTime && AutoScrollToRealTime && _chart != null)
+            {
+                await ScrollToRealTimeAsync();
+            }
+
             Logger.LogTrace("Updated chart with bar at {Time}", bar.OpenTime);
         }
         catch (Exception ex)
@@ -396,11 +434,167 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     /// <summary>
     /// Update or append multiple bars to the chart.
     /// </summary>
-    public async Task UpdateBarsAsync(IEnumerable<IKline> bars)
+    public async Task UpdateBarsAsync(IEnumerable<IKline> bars, bool scrollToRealTime = true)
     {
         foreach (var bar in bars)
         {
-            await UpdateBarAsync(bar);
+            // Don't scroll on each individual bar, only after all bars are added
+            await UpdateBarAsync(bar, scrollToRealTime: false);
+        }
+
+        // Scroll once after all bars are added
+        if (scrollToRealTime && AutoScrollToRealTime && _chart != null)
+        {
+            await ScrollToRealTimeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Scroll the chart to show the latest bar (real-time position).
+    /// </summary>
+    public async Task ScrollToRealTimeAsync()
+    {
+        if (_chart != null)
+        {
+            try
+            {
+                var timeScale = await _chart.TimeScale();
+                await timeScale.ScrollToRealTime();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to scroll to real time");
+            }
+        }
+    }
+
+    #endregion
+
+    #region Markers (Deal Map)
+
+    /// <summary>
+    /// Set trade markers on the chart to visualize buy/sell entries and exits.
+    /// </summary>
+    /// <param name="trades">Collection of trade markers to display</param>
+    public async Task SetTradeMarkersAsync(IEnumerable<ChartTradeMarker> trades)
+    {
+        if (_candlestickSeries == null)
+        {
+            Logger.LogWarning("Cannot set markers: series not initialized");
+            return;
+        }
+
+        try
+        {
+            _currentMarkers.Clear();
+
+            foreach (var trade in trades.OrderBy(t => t.Time))
+            {
+                var marker = new SeriesMarkerBar<long>
+                {
+                    Time = new DateTimeOffset(trade.Time, TimeSpan.Zero).ToUnixTimeSeconds(),
+                    Position = trade.IsBuy ? SeriesMarkerBarPosition.BelowBar : SeriesMarkerBarPosition.AboveBar,
+                    Shape = trade.IsBuy ? SeriesMarkerShape.ArrowUp : SeriesMarkerShape.ArrowDown,
+                    Color = trade.Color ?? (trade.IsBuy ? Color.FromArgb(38, 166, 154) : Color.FromArgb(239, 83, 80)),
+                    Text = trade.Text ?? (trade.IsBuy ? "Buy" : "Sell"),
+                    Size = trade.Size ?? 1.0
+                };
+
+                if (!string.IsNullOrEmpty(trade.Id))
+                {
+                    marker.Id = trade.Id;
+                }
+
+                _currentMarkers.Add(marker);
+            }
+
+            if (_markersPlugin == null)
+            {
+                // Create the markers plugin for the first time
+                _markersPlugin = await _candlestickSeries.CreateSeriesMarkers(_currentMarkers);
+            }
+            else
+            {
+                // Update existing markers
+                await _markersPlugin.SetMarkers(_currentMarkers);
+            }
+
+            Logger.LogDebug("Set {Count} trade markers on chart", _currentMarkers.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to set trade markers");
+        }
+    }
+
+    /// <summary>
+    /// Add a single trade marker to the chart.
+    /// </summary>
+    public async Task AddTradeMarkerAsync(ChartTradeMarker trade)
+    {
+        if (_candlestickSeries == null)
+        {
+            Logger.LogWarning("Cannot add marker: series not initialized");
+            return;
+        }
+
+        try
+        {
+            var marker = new SeriesMarkerBar<long>
+            {
+                Time = new DateTimeOffset(trade.Time, TimeSpan.Zero).ToUnixTimeSeconds(),
+                Position = trade.IsBuy ? SeriesMarkerBarPosition.BelowBar : SeriesMarkerBarPosition.AboveBar,
+                Shape = trade.IsBuy ? SeriesMarkerShape.ArrowUp : SeriesMarkerShape.ArrowDown,
+                Color = trade.Color ?? (trade.IsBuy ? Color.FromArgb(38, 166, 154) : Color.FromArgb(239, 83, 80)),
+                Text = trade.Text ?? (trade.IsBuy ? "Buy" : "Sell"),
+                Size = trade.Size ?? 1.0
+            };
+
+            if (!string.IsNullOrEmpty(trade.Id))
+            {
+                marker.Id = trade.Id;
+            }
+
+            _currentMarkers.Add(marker);
+
+            // Re-sort by time
+            _currentMarkers = _currentMarkers.OrderBy(m => m.Time).ToList();
+
+            if (_markersPlugin == null)
+            {
+                _markersPlugin = await _candlestickSeries.CreateSeriesMarkers(_currentMarkers);
+            }
+            else
+            {
+                await _markersPlugin.SetMarkers(_currentMarkers);
+            }
+
+            Logger.LogDebug("Added trade marker at {Time}", trade.Time);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to add trade marker");
+        }
+    }
+
+    /// <summary>
+    /// Clear all trade markers from the chart.
+    /// </summary>
+    public async Task ClearMarkersAsync()
+    {
+        _currentMarkers.Clear();
+
+        if (_markersPlugin != null)
+        {
+            try
+            {
+                await _markersPlugin.SetMarkers(_currentMarkers);
+                Logger.LogDebug("Cleared all trade markers");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to clear markers");
+            }
         }
     }
 
