@@ -188,8 +188,9 @@ public class KlineFileDeserializer
 
             if (b == -1) throw new IOException("End of file reached in header.");
             if (b == 13) { hasCarriageReturn = true; }
-            else if (b == 10 && hasCarriageReturn)
+            else if (b == 10)
             {
+                // Handle both \r\n (Windows) and \n (Unix) line endings
                 string line = Encoding.UTF8.GetString(buffer.ToArray(), 0, buffer.Count);
                 buffer.Clear();
                 hasCarriageReturn = false;
@@ -206,8 +207,7 @@ public class KlineFileDeserializer
             }
             else
             {
-                if (hasCarriageReturn) { buffer.Add(13); }
-                hasCarriageReturn = false;
+                if (hasCarriageReturn) { buffer.Add(13); hasCarriageReturn = false; }
                 buffer.Add((byte)b);
             }
         }
