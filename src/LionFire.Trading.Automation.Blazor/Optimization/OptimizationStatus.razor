@@ -5,37 +5,42 @@
 @rendermode InteractiveServer
 
 <div class="py-4 LevelsOfDetail">
-    <MudGrid>
-        <MudItem sm="1">
-            <div>
-
-                <MudTextField @bind-Value="ViewModel!.POptimization.MaxBacktests" Label="Max Backtests" Dense="@true" />
-                <MudSlider T="double" @bind-Value="ViewModel.MaxBacktestsExponential"
-                           Min=6 Max=34
-                           Label="Max Backtests" Dense="@true" />
-                <div class="lf-field row">
-                    <div class="value">@((ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
-                    <div class="label">Comprehensiveness</div>
-                </div>
-                <MudProgressLinear Value="ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn" Min="0" Max="1"
-                                   Color="ComprehensivenessColor" 
-                />
+    <div class="d-flex flex-row gap-4 align-start">
+        @* Max Backtests control - fixed width *@
+        <div style="width: 200px; flex-shrink: 0;">
+            <MudTextField @bind-Value="ViewModel!.POptimization.MaxBacktests" Label="Max Backtests" Dense="@true" />
+            <MudSlider T="double" @bind-Value="ViewModel.MaxBacktestsExponential"
+                       Min=6 Max=34
+                       Label="Max Backtests" Dense="@true" />
+            <div class="lf-field row">
+                <div class="value">@((ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn).ToString("P0"))</div>
+                <div class="label">Comprehensiveness</div>
             </div>
-        </MudItem>
+            <MudProgressLinear Value="ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn" Min="0" Max="1"
+                               Color="ComprehensivenessColor" />
+        </div>
 
-        @foreach (var level in ViewModel!.POptimization.LevelsOfDetailEnumeration.WithIndex())
-        {
-            <MudItem Class="Level" sm="1">
-                <MudText Typo="Typo.h6">Level @level.item.Level</MudText>
-                <div>@level.item.TestPermutationCount tests</div>
-            </MudItem>
+        @* Level cards container *@
+        @{
+            var levels = ViewModel!.POptimization.LevelsOfDetailEnumeration.Reverse().ToList();
+            var lowestVisibleLevel = levels.LastOrDefault();
         }
+        <div class="d-flex flex-row flex-wrap gap-3" style="flex: 1; min-width: 0;">
+            @foreach (var level in levels)
+            {
+                var isLowestVisible = level == lowestVisibleLevel;
+                var testCount = level.TestPermutationCount;
+                <MudPaper Class="@($"pa-3 Level {(isLowestVisible ? "lowest-visible" : "")} clickable")"
+                          Elevation="@(isLowestVisible ? 2 : 0)"
+                          Style="@($"width: 140px; cursor: pointer; {(isLowestVisible ? "border: 2px solid var(--mud-palette-primary);" : "")}")"
+                          @onclick="@(() => OnLevelClicked(testCount))">
+                    <MudText Typo="Typo.h6">Level @level.Level</MudText>
+                    <div>@testCount.ToString("N0") tests</div>
+                </MudPaper>
+            }
+        </div>
+    </div>
 
-        @*         <div class="lf-field">
-            <div class="label">Comprehensive Scan</div>
-            <div class="value">@ViewModel.POptimization2.LevelsOfDetail.ComprehensiveScanTotal</div>
-        </div> *@
-        <MudProgressLinear Vertical=true Value="@((ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn))" />
-    </MudGrid>
+    <MudProgressLinear Class="mt-4" Value="@((ViewModel.POptimization.LevelsOfDetail.ComprehensiveScanPerUn))" />
 </div>
 

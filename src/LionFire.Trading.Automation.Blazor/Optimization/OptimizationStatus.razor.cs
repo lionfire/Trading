@@ -52,4 +52,8 @@ public partial class OptimizationStatus(ILogger<OptimizeParameters> Logger)
         _ => Color.Warning,
     };
 
+    private void OnLevelClicked(double testCount)
+    {
+        ViewModel!.POptimization.MaxBacktests = (long)testCount;
+    }
 }

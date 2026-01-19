@@ -7,7 +7,7 @@
 @implements IDisposable
 
 <div class="compact-metric-chart" style="width: @(Width)px; height: @(Height)px; position: relative;">
-    <div class="metric-caption" style="position: absolute; top: 2px; left: 4px; z-index: 10; font-size: 10px; color: #888; pointer-events: none;">
+    <div class="metric-caption" style="position: absolute; bottom: -1.5em; left: 4px; z-index: 10; font-size: 10px; color: #888; pointer-events: none;">
         @MetricLabel
     </div>
     <PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" Style="width: 100%; height: 100%;" />

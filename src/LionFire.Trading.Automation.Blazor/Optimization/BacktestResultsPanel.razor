@@ -1,0 +1,123 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using LionFire.Trading.Automation.Blazor.Optimization.Charts
+@using ReactiveUI
+
+<div class="d-flex flex-column" style="height: 100%;">
+    @* Row 1: Chart | Filter Expander - fixed height for chart *@
+    <div class="d-flex flex-row" style="flex: 0 0 auto; height: 300px; min-height: 200px; max-height: 350px;">
+        @* Chart area *@
+        <div style="flex: 1; min-width: 0; height: 100%;">
+            <BacktestEquityChart ViewModel="ViewModel" />
+        </div>
+
+        @* Filter expander on the right *@
+        <MudExpansionPanels Class="ml-2" Style="width: 350px; align-self: flex-start;">
+            <MudExpansionPanel Text="Result Filters" Icon="@Icons.Material.Filled.FilterList" @bind-Expanded="_filtersExpanded">
+                <ResultsFilter ViewModel="ViewModel" />
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    </div>
+
+    @* Row 2: Data Grid - takes remaining space *@
+    <div style="flex: 1 1 auto; min-height: 200px; overflow: auto;">
+        @if (ViewModel!.Backtests?.Items != null)
+        {
+            <MudDataGrid T="BacktestBatchJournalEntry"
+                         Items="ViewModel.GetFilteredBacktests()"
+                         Virtualize="true"
+                         FixedHeader="true"
+                         Height="100%"
+                         Dense="true"
+                         Hover="true"
+                         SelectedItem="_selectedItem"
+                         SelectedItemChanged="OnSelectedItemChanged"
+                         RowClassFunc="@GetRowClass"
+                         RowStyleFunc="@GetRowStyle">
+                <Columns>
+                    @* Visibility checkbox column *@
+                    <TemplateColumn Title="Show" Sortable="false" Filterable="false">
+                        <CellTemplate>
+                            <MudCheckBox T="bool"
+                                         Value="@(!ViewModel.HiddenFromChart.Contains(context.Item.StringId))"
+                                         ValueChanged="@((bool v) => ViewModel.SetChartVisibility(context.Item, v))"
+                                         Size="Size.Small"
+                                         Dense="true"
+                                         Color="Color.Primary" />
+                        </CellTemplate>
+                    </TemplateColumn>
+
+                    <PropertyColumn Property="x => x.AD" Format="N2" Title="AD" CellClass="text-align-right" />
+                    <PropertyColumn Property="x => x.Fitness" Format="N1" Title="Fitness" Hideable="true" />
+                    <PropertyColumn Property="x => x.TotalTrades" Title="Trades" Hideable="true" />
+                    <PropertyColumn Property="x => x.WinRate" Format="P1" Title="Win%" Hideable="true" />
+                    <PropertyColumn Property="x => x.AMWT" Format="N0" Title="AMWT" Hideable="true" />
+                    <PropertyColumn Property="x => x.MaxBalanceDrawdownPerunum" Format="P1" Title="MaxDD" Hideable="true" />
+
+                    <TemplateColumn Title="Flags" Sortable="false">
+                        <CellTemplate>
+                            @if (context.Item.IsAborted)
+                            {
+                                <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.CancelPresentation"
+                                         Color="@Color.Error" Style="opacity: 0.7;" />
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+
+                    <PropertyColumn Property="x => x.StringId" Title="ID" Hideable="true" Hidden="true" />
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+                No backtest results yet. Run an optimization to see results here.
+            </MudAlert>
+        }
+    </div>
+</div>
+
+@code {
+    private bool _filtersExpanded = false;
+    private BacktestBatchJournalEntry? _selectedItem;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        // Subscribe to ViewModel selection changes
+        if (ViewModel != null)
+        {
+            ViewModel.WhenAnyValue(x => x.SelectedBacktest)
+                .Subscribe(selected =>
+                {
+                    _selectedItem = selected;
+                    InvokeAsync(StateHasChanged);
+                });
+        }
+    }
+
+    private void OnSelectedItemChanged(BacktestBatchJournalEntry? item)
+    {
+        _selectedItem = item;
+        if (ViewModel != null)
+        {
+            ViewModel.SelectedBacktest = item;
+        }
+    }
+
+    private string GetRowClass(BacktestBatchJournalEntry item, int index)
+    {
+        if (item == _selectedItem)
+            return "selected-row";
+        return string.Empty;
+    }
+
+    private string GetRowStyle(BacktestBatchJournalEntry item, int index)
+    {
+        if (item == _selectedItem)
+            return "background-color: rgba(var(--mud-palette-primary-rgb), 0.2);";
+        if (item.IsAborted)
+            return "opacity: 0.6;";
+        return string.Empty;
+    }
+}
