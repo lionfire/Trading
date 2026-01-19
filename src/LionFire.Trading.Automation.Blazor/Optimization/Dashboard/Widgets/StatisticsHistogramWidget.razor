@@ -1,0 +1,15 @@
+@inherits OptimizationWidgetBase
+@using LionFire.Trading.Automation.Blazor.Optimization.Charts
+
+<div style="height: 100%; width: 100%;">
+    @if (ViewModel != null)
+    {
+        <StatisticsHistogram ViewModel="ViewModel" />
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+            No optimization data available.
+        </MudAlert>
+    }
+</div>

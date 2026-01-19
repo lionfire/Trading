@@ -1,0 +1,149 @@
+@using BlazorGridStack
+@using BlazorGridStack.Models
+@using LionFire.Trading.Workbench
+@using LionFire.Trading.Workbench.Blazor.Services
+@using MudBlazor
+@namespace LionFire.Trading.Automation.Blazor.Optimization.Dashboard
+@implements IAsyncDisposable
+
+<CascadingValue Value="@ViewModel">
+    <div class="optimization-dashboard">
+        <div class="dashboard-toolbar">
+            <MudIconButton Icon="@Icons.Material.Filled.Add"
+                           Title="Add Widget"
+                           Size="Size.Small"
+                           OnClick="@ShowWidgetPicker" />
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           Title="Refresh"
+                           Size="Size.Small"
+                           OnClick="@RefreshAsync" />
+        </div>
+
+        <div class="dashboard-content">
+            <BlazorGridStackBody @ref="_grid"
+                                 GridStackOptions="@_gridOptions"
+                                 OnChange="OnLayoutChanged">
+                @foreach (var widget in _widgets)
+                {
+                    <BlazorGridStackWidget WidgetOptions="@(new()
+                    {
+                        Id = widget.Id,
+                        X = widget.X,
+                        Y = widget.Y,
+                        W = widget.W,
+                        H = widget.H,
+                        MinW = widget.MinW,
+                        MinH = widget.MinH
+                    })">
+                        <div class="widget-container">
+                            <div class="widget-header">
+                                <span class="widget-title">@widget.Title</span>
+                                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                               Size="Size.Small"
+                                               OnClick="@(() => RemoveWidget(widget.Id))" />
+                            </div>
+                            <div class="widget-body">
+                                <ErrorBoundary @ref="widget.ErrorBoundary">
+                                    <ChildContent>
+                                        <DynamicComponent Type="@widget.ComponentType"
+                                                         Parameters="@GetWidgetParameters(widget)" />
+                                    </ChildContent>
+                                    <ErrorContent Context="ex">
+                                        <MudAlert Severity="Severity.Error">
+                                            Widget error: @ex.Message
+                                        </MudAlert>
+                                    </ErrorContent>
+                                </ErrorBoundary>
+                            </div>
+                        </div>
+                    </BlazorGridStackWidget>
+                }
+            </BlazorGridStackBody>
+        </div>
+    </div>
+</CascadingValue>
+
+<MudDialog @bind-Visible="_showWidgetPicker">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Add Widget</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudList T="OptimizationWidgetInfo" Dense="true">
+            @foreach (var widgetInfo in OptimizationWidgetCatalog.Widgets)
+            {
+                <MudListItem T="OptimizationWidgetInfo" OnClick="@(() => AddWidget(widgetInfo))">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@widgetInfo.Icon" Class="mr-2" />
+                        <div>
+                            <MudText>@widgetInfo.DisplayName</MudText>
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@widgetInfo.Description</MudText>
+                        </div>
+                    </div>
+                </MudListItem>
+            }
+        </MudList>
+    </DialogContent>
+</MudDialog>
+
+<style>
+    .optimization-dashboard {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        min-height: 500px;
+    }
+
+    .dashboard-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        padding: 4px 8px;
+        background-color: var(--mud-palette-surface);
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .dashboard-content {
+        flex: 1;
+        width: 100%;
+        min-height: 400px;
+        overflow: auto;
+        padding: 8px;
+    }
+
+    /* Ensure GridStack takes full width */
+    .dashboard-content .grid-stack {
+        width: 100% !important;
+    }
+
+    .widget-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        background-color: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .widget-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 4px 8px;
+        background-color: var(--mud-palette-background-gray);
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+        cursor: move;
+    }
+
+    .widget-title {
+        font-weight: 500;
+        font-size: 0.875rem;
+        flex: 1;
+    }
+
+    .widget-body {
+        flex: 1;
+        overflow: auto;
+        padding: 8px;
+    }
+</style>

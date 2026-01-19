@@ -38,6 +38,8 @@
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Hosting\LionFire.Hosting.csproj" />
 		<ProjectReference Include="..\..\..\core\src\LionFire.Orleans.Hosting\LionFire.Orleans.Hosting.csproj" />
 		<ProjectReference Include="..\..\..\Trading.Proprietary\src\FireLynx.Blazor.Public\FireLynx.Blazor.Public.csproj" />
+		<ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Workbench.Abstractions\LionFire.Trading.Workbench.Abstractions.csproj" />
+		<ProjectReference Include="..\..\..\Trading.Proprietary\src\LionFire.Trading.Workbench.Blazor\LionFire.Trading.Workbench.Blazor.csproj" />
 		<ProjectReference Include="..\..\..\Trading\src\LionFire.Trading.Blazor\LionFire.Trading.Blazor.csproj" />
 
 		<ProjectReference Include="..\..\..\Core\src\LionFire.Applications.Extensions\LionFire.Applications.Extensions.csproj" />

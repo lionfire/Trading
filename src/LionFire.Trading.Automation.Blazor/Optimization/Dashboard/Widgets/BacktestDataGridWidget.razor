@@ -1,0 +1,109 @@
+@inherits OptimizationWidgetBase
+@using System.Reactive.Linq
+@using ReactiveUI
+@implements IDisposable
+
+<div style="height: 100%; width: 100%;">
+@if (ViewModel?.Backtests?.Items != null)
+{
+    <MudDataGrid T="BacktestBatchJournalEntry"
+                 Items="ViewModel.GetFilteredBacktests()"
+                 Virtualize="true"
+                 FixedHeader="true"
+                 Height="100%"
+                 Dense="true"
+                 Hover="true"
+                 SelectedItem="_selectedItem"
+                 SelectedItemChanged="OnSelectedItemChanged"
+                 RowClassFunc="@GetRowClass"
+                 RowStyleFunc="@GetRowStyle">
+        <Columns>
+            <TemplateColumn Title="Show" Sortable="false" Filterable="false">
+                <CellTemplate>
+                    <MudCheckBox T="bool"
+                                 Value="@(!ViewModel.HiddenFromChart.Contains(context.Item.StringId))"
+                                 ValueChanged="@((bool v) => ViewModel.SetChartVisibility(context.Item, v))"
+                                 Size="Size.Small"
+                                 Dense="true"
+                                 Color="Color.Primary" />
+                </CellTemplate>
+            </TemplateColumn>
+
+            <PropertyColumn Property="x => x.AD" Format="N2" Title="AD" CellClass="text-align-right" />
+            <PropertyColumn Property="x => x.Fitness" Format="N1" Title="Fitness" Hideable="true" />
+            <PropertyColumn Property="x => x.TotalTrades" Title="Trades" Hideable="true" />
+            <PropertyColumn Property="x => x.WinRate" Format="P1" Title="Win%" Hideable="true" />
+            <PropertyColumn Property="x => x.AMWT" Format="N0" Title="AMWT" Hideable="true" />
+            <PropertyColumn Property="x => x.MaxBalanceDrawdownPerunum" Format="P1" Title="MaxDD" Hideable="true" />
+
+            <TemplateColumn Title="Flags" Sortable="false">
+                <CellTemplate>
+                    @if (context.Item.IsAborted)
+                    {
+                        <MudIcon Size="Size.Small" Icon="@Icons.Material.Filled.CancelPresentation"
+                                 Color="@Color.Error" Style="opacity: 0.7;" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+
+            <PropertyColumn Property="x => x.StringId" Title="ID" Hideable="true" Hidden="true" />
+        </Columns>
+    </MudDataGrid>
+}
+else
+{
+    <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+        No backtest results yet. Run an optimization to see results here.
+    </MudAlert>
+}
+</div>
+
+@code {
+    private BacktestBatchJournalEntry? _selectedItem;
+    private IDisposable? _subscription;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        if (ViewModel != null)
+        {
+            _subscription = ViewModel.WhenAnyValue(x => x.SelectedBacktest)
+                .Subscribe(selected =>
+                {
+                    _selectedItem = selected;
+                    InvokeAsync(StateHasChanged);
+                });
+        }
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+    }
+
+    private void OnSelectedItemChanged(BacktestBatchJournalEntry? item)
+    {
+        _selectedItem = item;
+        if (ViewModel != null)
+        {
+            ViewModel.SelectedBacktest = item;
+        }
+    }
+
+    private string GetRowClass(BacktestBatchJournalEntry item, int index)
+    {
+        if (item == _selectedItem)
+            return "selected-row";
+        return string.Empty;
+    }
+
+    private string GetRowStyle(BacktestBatchJournalEntry item, int index)
+    {
+        if (item == _selectedItem)
+            return "background-color: rgba(var(--mud-palette-primary-rgb), 0.2);";
+        if (item.IsAborted)
+            return "opacity: 0.6;";
+        return string.Empty;
+    }
+}
