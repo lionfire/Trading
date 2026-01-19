@@ -1,0 +1,207 @@
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using Plotly.Blazor
+@using Plotly.Blazor.LayoutLib
+@using Plotly.Blazor.Traces
+@using Plotly.Blazor.Traces.ScatterLib
+@using Plotly.Blazor.LayoutLib.XAxisLib
+@using System.Reactive.Linq
+@using ReactiveUI
+@inject IJSRuntime JS
+
+<div style="display: flex; flex-direction: column; height: 100%;">
+    <div class="d-flex flex-row align-center gap-2 mb-2">
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="@Refresh" Size="Size.Small" />
+        <MudText Typo="Typo.body2" Class="mud-text-secondary">
+            @VisibleCount visible of @FilteredCount filtered (@TotalCount total)
+        </MudText>
+    </div>
+
+    <div id="@_containerId" style="flex: 1; min-height: 150px;">
+        <PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" Style="height: 100%; width: 100%;" />
+    </div>
+</div>
+
+@code {
+    private PlotlyChart? chart;
+    private Config? config;
+    private Layout? layout;
+    private IList<ITrace>? data;
+    private IDisposable? _subscription;
+    private readonly string _containerId = $"equity-{Guid.NewGuid():N}";
+    private bool _resizeObserverInitialized;
+
+    private int VisibleCount => ViewModel?.GetChartVisibleBacktests().Count() ?? 0;
+    private int FilteredCount => ViewModel?.FilteredCount ?? 0;
+    private int TotalCount => ViewModel?.TotalCount ?? 0;
+
+    public void Refresh()
+    {
+        data = GenerateChartData();
+        chart?.React();
+        StateHasChanged();
+    }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        config = new Config { Responsive = true };
+
+        layout = new Layout
+        {
+            XAxis = new List<XAxis>
+            {
+                new XAxis
+                {
+                    AutoRange = AutoRangeEnum.True,
+                    RangeSlider = new Plotly.Blazor.LayoutLib.XAxisLib.RangeSlider { AutoRange = true },
+                    Type = Plotly.Blazor.LayoutLib.XAxisLib.TypeEnum.Date
+                }
+            },
+            YAxis = new List<YAxis>
+            {
+                new YAxis
+                {
+                    Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = "Balance" }
+                }
+            },
+            Title = new Plotly.Blazor.LayoutLib.Title { Text = "Equity Curves" },
+            PaperBgColor = "#1A1A27",
+            PlotBgColor = "#1A1A27",
+            Font = new Plotly.Blazor.LayoutLib.Font { Color = "#FFFFFF" },
+            ShowLegend = false
+        };
+
+        data = GenerateChartData();
+
+        // Subscribe to visibility, selection, and data changes
+        if (ViewModel != null)
+        {
+            _subscription = ViewModel.ChartVisibilityChanged
+                .Merge(ViewModel.WhenAnyValue(x => x.SelectedBacktest).Select(_ => System.Reactive.Unit.Default))
+                .Merge(ViewModel.DebouncedChanges)
+                .Throttle(TimeSpan.FromMilliseconds(250))
+                .Subscribe(_ => InvokeAsync(Refresh));
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_resizeObserverInitialized)
+        {
+            _resizeObserverInitialized = true;
+            try
+            {
+                await JS.InvokeVoidAsync("chartResizeObserver.observe", _containerId, null);
+            }
+            catch
+            {
+                // JS interop may fail during prerender
+            }
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        _subscription?.Dispose();
+        if (_resizeObserverInitialized)
+        {
+            try
+            {
+                _ = JS.InvokeVoidAsync("chartResizeObserver.unobserve", _containerId);
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
+        base.Dispose(disposing);
+    }
+
+    private IList<ITrace> GenerateChartData()
+    {
+        var traces = new List<ITrace>();
+        if (ViewModel?.Backtests == null) return traces;
+
+        var selected = ViewModel.SelectedBacktest;
+
+        foreach (var result in ViewModel.GetChartVisibleBacktests())
+        {
+            var isSelected = result == selected;
+            var trace = CreateTrace(result, isSelected);
+            if (trace != null)
+            {
+                traces.Add(trace);
+            }
+        }
+
+        // Add selected trace last so it renders on top
+        if (selected != null && ViewModel.IsVisibleInChart(selected))
+        {
+            // Remove the selected trace from its current position and add it at the end
+            var selectedTrace = traces.FirstOrDefault(t => t is Scatter s && s.Name == selected.StringId);
+            if (selectedTrace != null)
+            {
+                traces.Remove(selectedTrace);
+                traces.Add(selectedTrace);
+            }
+        }
+
+        return traces;
+    }
+
+    private Scatter? CreateTrace(BacktestBatchJournalEntry result, bool isSelected)
+    {
+        if (result.JournalEntries == null) return null;
+
+        var x = new List<object>();
+        var y = new List<object>();
+        float balance = 0f;
+
+        foreach (var j in result.JournalEntries.Cast<JournalEntry>())
+        {
+            if (!j.RealizedGrossProfitDeltaFloat.HasValue || j.RealizedGrossProfitDeltaFloat.Value == 0f) continue;
+            x.Add(j.Time.DateTime.ToString("o")); // ISO 8601 format for Plotly date axis
+            balance += j.RealizedGrossProfitDeltaFloat.Value;
+            y.Add(balance);
+        }
+
+        if (x.Count == 0) return null;
+
+        return new Scatter
+        {
+            Name = result.StringId,
+            Mode = ModeFlag.Lines,
+            X = x,
+            Y = y,
+            Line = new Line
+            {
+                Width = isSelected ? 3.0m : 1.0m,
+                Color = GetLineColor(result, isSelected)
+            }
+        };
+    }
+
+    private string GetLineColor(BacktestBatchJournalEntry result, bool isSelected)
+    {
+        if (isSelected)
+        {
+            return "#FFD700"; // Gold/bright yellow for selected
+        }
+
+        if (result.IsAborted)
+        {
+            return "#404040"; // Dark gray for aborted
+        }
+
+        // Color based on AD value
+        if (result.AD > 3.0) return "#4040FF";
+        if (result.AD > 2.0) return "#10F010";
+        if (result.AD > 0.5) return "#30b030";
+        if (result.AD > 0.0) return "#004000";
+        if (result.AD > -0.5) return "#400000";
+        if (result.AD > -1.5) return "#800000";
+        return "#a00000";
+    }
+}

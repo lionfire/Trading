@@ -4,9 +4,10 @@
 @using Plotly.Blazor.Traces
 @using Plotly.Blazor.Traces.BarLib
 @using System.Reactive.Linq
-@implements IDisposable
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-<MudPaper Class="pa-4" Elevation="1">
+<MudPaper Class="pa-4 d-flex flex-column" Elevation="1" Style="height: 100%;">
     <div class="d-flex justify-space-between align-center mb-3">
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.BarChart" Class="mr-2" />
@@ -41,7 +42,9 @@
         </div>
     </div>
 
-    <PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" Style="height: 400px;" />
+    <div id="@_containerId" style="flex: 1; min-height: 200px;">
+        <PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" Style="height: 100%; width: 100%;" />
+    </div>
 </MudPaper>
 
 @code {
@@ -50,6 +53,8 @@
     private Layout? layout;
     private IList<ITrace>? data;
     private IDisposable? _subscription;
+    private readonly string _containerId = $"histogram-{Guid.NewGuid():N}";
+    private bool _resizeObserverInitialized;
 
     private string _selectedMetric = "AD";
     private string SelectedMetric
@@ -144,9 +149,37 @@
         await base.OnInitializedAsync();
     }
 
-    public void Dispose()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_resizeObserverInitialized)
+        {
+            _resizeObserverInitialized = true;
+            try
+            {
+                await JS.InvokeVoidAsync("chartResizeObserver.observe", _containerId, null);
+            }
+            catch
+            {
+                // JS interop may fail during prerender
+            }
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+
+    public async ValueTask DisposeAsync()
     {
         _subscription?.Dispose();
+        if (_resizeObserverInitialized)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("chartResizeObserver.unobserve", _containerId);
+            }
+            catch
+            {
+                // Ignore disposal errors
+            }
+        }
     }
 
     private string GetAxisTitle() => SelectedMetric switch

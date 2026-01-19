@@ -1,0 +1,164 @@
+@using LionFire.Trading.Automation.Blazor.Optimization
+@using System.Reactive.Linq
+@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@implements IDisposable
+
+<MudPaper Class="pa-4" Elevation="1">
+    <MudText Typo="Typo.h6" Class="mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.Summarize" Class="mr-2" />
+        Results Summary
+    </MudText>
+
+    @* Batch Directory *@
+    @if (BatchDirectory != null)
+    {
+        <MudCard Class="mb-4" Elevation="0" Outlined="true">
+            <MudCardContent Class="pa-3">
+                <div class="d-flex align-center gap-2 mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Folder" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle2">Batch Directory</MudText>
+                </div>
+                <MudLink Href="@($"file:///{BatchDirectory}")" Target="_blank" Typo="Typo.body2" Class="mud-text-secondary">
+                    @BatchDirectory
+                </MudLink>
+            </MudCardContent>
+        </MudCard>
+    }
+
+    @* Statistics Summary *@
+    <MudCard Class="mb-4" Elevation="0" Outlined="true">
+        <MudCardContent Class="pa-3">
+            <div class="d-flex align-center gap-2 mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Analytics" Size="Size.Small" />
+                <MudText Typo="Typo.subtitle2">Statistics</MudText>
+            </div>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="4">
+                    <div class="text-center">
+                        <MudText Typo="Typo.h5" Color="Color.Primary">@TotalCount</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Total Tests</MudText>
+                    </div>
+                </MudItem>
+                <MudItem xs="4">
+                    <div class="text-center">
+                        <MudText Typo="Typo.h5" Color="Color.Success">@CompletedCount</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Completed</MudText>
+                    </div>
+                </MudItem>
+                <MudItem xs="4">
+                    <div class="text-center">
+                        <MudText Typo="Typo.h5" Color="Color.Warning">@AbortedCount</MudText>
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Aborted</MudText>
+                    </div>
+                </MudItem>
+            </MudGrid>
+
+            @if (TotalCount > 0)
+            {
+                <div class="mt-3">
+                    <MudProgressLinear Value="@CompletionPercent" Color="Color.Success" Size="Size.Medium" Rounded="true" />
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">
+                        @CompletionPercent.ToString("F1")% completion rate
+                    </MudText>
+                </div>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    @* Best Results *@
+    @if (TotalCount > 0)
+    {
+        <MudCard Elevation="0" Outlined="true">
+            <MudCardContent Class="pa-3">
+                <div class="d-flex align-center gap-2 mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.EmojiEvents" Size="Size.Small" Color="Color.Warning" />
+                    <MudText Typo="Typo.subtitle2">Best Results</MudText>
+                </div>
+
+                <MudSimpleTable Dense="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>Value</th>
+                            <th>Test ID</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (BestByAD != null)
+                        {
+                            <tr>
+                                <td><MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Class="mr-1" />Best AD</td>
+                                <td><strong>@BestByAD.AD.ToString("F2")</strong></td>
+                                <td>@BestByAD.StringId</td>
+                            </tr>
+                        }
+                        @if (BestByFitness != null)
+                        {
+                            <tr>
+                                <td><MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Small" Class="mr-1" />Best Fitness</td>
+                                <td><strong>@BestByFitness.Fitness.ToString("F2")</strong></td>
+                                <td>@BestByFitness.StringId</td>
+                            </tr>
+                        }
+                        @if (BestByWinRate != null)
+                        {
+                            <tr>
+                                <td><MudIcon Icon="@Icons.Material.Filled.Percent" Size="Size.Small" Class="mr-1" />Best Win Rate</td>
+                                <td><strong>@BestByWinRate.WinRate.ToString("P1")</strong></td>
+                                <td>@BestByWinRate.StringId</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudCardContent>
+        </MudCard>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Text" Dense="true">
+            No results yet. Run an optimization to see results here.
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    private IDisposable? _subscription;
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        // Subscribe to data changes
+        if (ViewModel != null)
+        {
+            _subscription = ViewModel.DebouncedChanges
+                .Throttle(TimeSpan.FromMilliseconds(300))
+                .Subscribe(_ => InvokeAsync(StateHasChanged));
+        }
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+    }
+
+    private string? BatchDirectory => ViewModel?.MultiSimContext?.Journal?.BatchDirectory;
+
+    private int TotalCount => ViewModel?.Backtests?.Count ?? 0;
+
+    private int CompletedCount => ViewModel?.Backtests?.Items.Count(x => !x.IsAborted) ?? 0;
+
+    private int AbortedCount => ViewModel?.Backtests?.Items.Count(x => x.IsAborted) ?? 0;
+
+    private double CompletionPercent => TotalCount > 0 ? (CompletedCount * 100.0 / TotalCount) : 0;
+
+    private BacktestBatchJournalEntry? BestByAD =>
+        ViewModel?.Backtests?.Items.Where(x => !x.IsAborted).OrderByDescending(x => x.AD).FirstOrDefault();
+
+    private BacktestBatchJournalEntry? BestByFitness =>
+        ViewModel?.Backtests?.Items.Where(x => !x.IsAborted).OrderByDescending(x => x.Fitness).FirstOrDefault();
+
+    private BacktestBatchJournalEntry? BestByWinRate =>
+        ViewModel?.Backtests?.Items.Where(x => !x.IsAborted && x.TotalTrades > 0).OrderByDescending(x => x.WinRate).FirstOrDefault();
+}
