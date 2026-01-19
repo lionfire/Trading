@@ -28,7 +28,7 @@ public partial class OneShotOptimize
     bool ShowBacktests { get; set; } = false;
     bool ShowLog { get; set; } = true;
 
-    public string GeneralParametersSummary => $"{ViewModel!.PBotType.Name} — {ViewModel!.Symbol} {ViewModel!.TimeFrame} — {ViewModel!.TimeFrame.GetExpectedBarCount(ViewModel!.PMultiSim.Start, ViewModel!.PMultiSim.EndExclusive)} bars";
+    public string GeneralParametersSummary => $"{ViewModel!.PBotType.Name} ï¿½ {ViewModel!.Symbol} {ViewModel!.TimeFrame} ï¿½ {ViewModel!.TimeFrame.GetExpectedBarCount(ViewModel!.PMultiSim.Start, ViewModel!.PMultiSim.EndExclusive)} bars";
 
 
     void OnChange()
@@ -75,6 +75,13 @@ public partial class OneShotOptimize
     };
 
     int _activeTabIndex { get; set; }
+
+    // Nested tabs layout - category tabs (Parameters/Results)
+    int _categoryTabIndex { get; set; } = 0;
+    // Sub-tabs within Parameters category
+    int _parameterSubTabIndex { get; set; } = 0;
+    // Sub-tabs within Results category
+    int _resultsSubTabIndex { get; set; } = 0;
 
 }
 

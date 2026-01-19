@@ -9,6 +9,7 @@
 @using MudBlazor.Components
 @using Humanizer
 @using LionFire.Trading.Optimization.Queue
+@using LionFire.Trading.Automation.Blazor.Optimization.Dashboard
 
 @* This page is a quick UI for optimizing right from a Worker process' UI.  The long-term approach favors a FireLynx workbench that supports Optimize documents which can be saved/loaded.  *@
 
@@ -279,6 +280,16 @@
                         </MudTabPanel>
                         <MudTabPanel Text="Statistics" Icon="@Icons.Material.Filled.BarChart">
                             <LionFire.Trading.Automation.Blazor.Optimization.Charts.StatisticsHistogram ViewModel="ViewModel" />
+                        </MudTabPanel>
+                        <MudTabPanel Text="Dashboard 1" Icon="@Icons.Material.Filled.Dashboard" Style="width: 100%; height: 100%;">
+                            <div style="width: 100%; height: 100%; min-height: 500px;">
+                                <OptimizationDashboard ViewModel="ViewModel" DashboardName="dashboard1" />
+                            </div>
+                        </MudTabPanel>
+                        <MudTabPanel Text="Dashboard 2" Icon="@Icons.Material.Filled.Dashboard" Style="width: 100%; height: 100%;">
+                            <div style="width: 100%; height: 100%; min-height: 500px;">
+                                <OptimizationDashboard ViewModel="ViewModel" DashboardName="dashboard2" />
+                            </div>
                         </MudTabPanel>
                     </MudTabs>
                 </MudTabPanel>

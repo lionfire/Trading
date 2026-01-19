@@ -12,6 +12,7 @@ using LionFire.Trading.Optimization;
 using LionFire.Trading.Automation.Portfolios;
 using LionFire.Trading.Journal;
 using LionFire.Trading.Grains.Optimization;
+using LionFire.Trading.Grains.User;
 using LionFire.Trading.Optimization.Queue;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -72,24 +73,74 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         //    LinesVM.Append(logEntry.Message ?? "", logEntry.LogLevel, logEntry.Category ?? "");
         //});
 
-        this.WhenAnyValue(x => x.MultiSimContext!.Journal!.ObservableCache).Subscribe(oc =>
-        {
-            Backtests = oc;
-        });
-        this.WhenAnyValue(x => x.MultiSimContext!.Journal!).Subscribe(oc =>
-        {
-            Debug.WriteLine("WhenAnyValue OMBJ");
-        });
-        this.WhenAnyValue(x => x.MultiSimContext!).Subscribe(oc =>
-        {
-            Debug.WriteLine("WhenAnyValue OptimizationTask");
-        });
+        // Subscribe through OptimizationTask (reactive property) to get notified when it changes
+        this.WhenAnyValue(x => x.OptimizationTask)
+            .Where(ot => ot?.MultiSimContext?.Journal?.ObservableCache != null)
+            .Subscribe(ot =>
+            {
+                Debug.WriteLine($"OptimizationTask changed, setting Backtests from Journal.ObservableCache");
+                Backtests = ot!.MultiSimContext!.Journal!.ObservableCache;
+                changesToDebounce.OnNext(Unit.Default); // Notify components
+            });
         debouncedChanges = changesToDebounce.Throttle(TimeSpan.FromMilliseconds(500));
         disposables.Add(this.WhenAnyValue(x => x.IsRunning).Subscribe(v => OnIsRunningValue(v)));
 
         //Sim.POptimization.ParametersChanged.Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
 
         this.WhenAnyValue(x => x.POptimization.Parameters).Subscribe(_ => OnParametersChanged()).DisposeWith(disposables);
+
+        // Subscribe to filter state changes to trigger UI updates
+        FilterState.WhenAnyValue(
+            x => x.MinAD,
+            x => x.MinAMWT,
+            x => x.MinFitness,
+            x => x.MinTrades,
+            x => x.MinWinRate,
+            x => x.MaxDrawdownPercent,
+            x => x.IncludeAborted)
+            .Throttle(TimeSpan.FromMilliseconds(100))
+            .Subscribe(_ => OnFilterStateChanged())
+            .DisposeWith(disposables);
+
+        // Load preferences when bot type changes
+        this.WhenAnyValue(x => x.PBotType)
+            .Where(t => t != null)
+            .Subscribe(async t => await LoadBotPreferencesAsync(t))
+            .DisposeWith(disposables);
+
+        // Save preferences when relevant properties change (debounced)
+        this.WhenAnyValue(
+            x => x.Exchange,
+            x => x.ExchangeArea,
+            x => x.Symbol,
+            x => x.TimeFrameString)
+            .Throttle(TimeSpan.FromMilliseconds(1000))
+            .Skip(1) // Skip initial value
+            .Subscribe(async _ => await SaveBotPreferencesAsync())
+            .DisposeWith(disposables);
+
+        // Save preferences when MaxBacktests changes (debounced)
+        this.WhenAnyValue(x => x.POptimization.MaxBacktests)
+            .Throttle(TimeSpan.FromMilliseconds(1000))
+            .Skip(1) // Skip initial value
+            .Subscribe(async _ => await SaveBotPreferencesAsync())
+            .DisposeWith(disposables);
+
+        // Save preferences when MinParameterPriority changes (debounced)
+        this.WhenAnyValue(x => x.POptimization.MinParameterPriority)
+            .Throttle(TimeSpan.FromMilliseconds(1000))
+            .Skip(1) // Skip initial value
+            .Subscribe(async _ => await SaveBotPreferencesAsync())
+            .DisposeWith(disposables);
+
+        // Save preferences when date range changes (debounced)
+        this.WhenAnyValue(
+            x => x.PMultiSim.Start,
+            x => x.PMultiSim.EndExclusive)
+            .Throttle(TimeSpan.FromMilliseconds(1000))
+            .Skip(1) // Skip initial value
+            .Subscribe(async _ => await SaveBotPreferencesAsync())
+            .DisposeWith(disposables);
 
         #endregion
 
@@ -106,6 +157,17 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         this.RaisePropertyChanged(nameof(MinParameterPriority));
         this.RaisePropertyChanged(nameof(MaxParameterPriority));
     }
+
+    void OnFilterStateChanged()
+    {
+        Debug.WriteLine($"Filter state changed: AD>={FilterState.MinAD}, IncludeAborted={FilterState.IncludeAborted}");
+        this.RaisePropertyChanged(nameof(FilteredCount));
+        this.RaisePropertyChanged(nameof(TotalCount));
+        _chartVisibilityChanged.OnNext(Unit.Default);
+        changesToDebounce.OnNext(Unit.Default);
+    }
+
+    private Subject<Unit> _chartVisibilityChanged = new();
 
     #endregion
 
@@ -195,6 +257,113 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     //private B _nestedViewModel;
 
     public IObservableCache<BacktestBatchJournalEntry, (int, long)>? Backtests { get; set; }
+
+    #region Results Filtering
+
+    /// <summary>
+    /// Filter state for optimization results
+    /// </summary>
+    public ResultsFilterState FilterState { get; } = new();
+
+    /// <summary>
+    /// Check if a backtest entry matches the current filter criteria
+    /// </summary>
+    public bool MatchesFilter(BacktestBatchJournalEntry entry)
+    {
+        if (!FilterState.IncludeAborted && entry.IsAborted) return false;
+        if (FilterState.MinAD.HasValue && entry.AD < FilterState.MinAD.Value) return false;
+        if (FilterState.MinAMWT.HasValue && entry.AMWT < FilterState.MinAMWT.Value) return false;
+        if (FilterState.MinFitness.HasValue && entry.Fitness < FilterState.MinFitness.Value) return false;
+        if (FilterState.MinTrades.HasValue && entry.TotalTrades < FilterState.MinTrades.Value) return false;
+        if (FilterState.MinWinRate.HasValue && entry.WinRate < FilterState.MinWinRate.Value) return false;
+        if (FilterState.MaxDrawdownPercent.HasValue && (entry.MaxBalanceDrawdownPerunum * 100) > FilterState.MaxDrawdownPercent.Value) return false;
+        return true;
+    }
+
+    /// <summary>
+    /// Get filtered backtest results based on current filter state
+    /// </summary>
+    public IEnumerable<BacktestBatchJournalEntry> GetFilteredBacktests()
+    {
+        if (Backtests == null) return Enumerable.Empty<BacktestBatchJournalEntry>();
+        return Backtests.Items.Where(MatchesFilter);
+    }
+
+    /// <summary>
+    /// Count of results matching current filter
+    /// </summary>
+    public int FilteredCount => Backtests?.Items.Count(MatchesFilter) ?? 0;
+
+    /// <summary>
+    /// Total count of all results (unfiltered)
+    /// </summary>
+    public int TotalCount => Backtests?.Count ?? 0;
+
+    #endregion
+
+    #region Chart Visibility and Selection
+
+    /// <summary>
+    /// Set of backtest IDs that are hidden from the chart
+    /// </summary>
+    public HashSet<string> HiddenFromChart { get; } = new();
+
+    /// <summary>
+    /// Currently selected backtest entry (highlighted in chart)
+    /// </summary>
+    [Reactive]
+    private BacktestBatchJournalEntry? _selectedBacktest;
+
+    /// <summary>
+    /// Check if a backtest should be visible in the chart
+    /// </summary>
+    public bool IsVisibleInChart(BacktestBatchJournalEntry entry)
+    {
+        return MatchesFilter(entry) && !HiddenFromChart.Contains(entry.StringId);
+    }
+
+    /// <summary>
+    /// Toggle visibility of a backtest in the chart
+    /// </summary>
+    public void ToggleChartVisibility(BacktestBatchJournalEntry entry)
+    {
+        if (HiddenFromChart.Contains(entry.StringId))
+            HiddenFromChart.Remove(entry.StringId);
+        else
+            HiddenFromChart.Add(entry.StringId);
+        OnChartVisibilityChanged();
+    }
+
+    /// <summary>
+    /// Set visibility of a backtest in the chart
+    /// </summary>
+    public void SetChartVisibility(BacktestBatchJournalEntry entry, bool visible)
+    {
+        if (visible)
+            HiddenFromChart.Remove(entry.StringId);
+        else
+            HiddenFromChart.Add(entry.StringId);
+        OnChartVisibilityChanged();
+    }
+
+    /// <summary>
+    /// Get backtests visible in chart (filtered and not hidden)
+    /// </summary>
+    public IEnumerable<BacktestBatchJournalEntry> GetChartVisibleBacktests()
+    {
+        if (Backtests == null) return Enumerable.Empty<BacktestBatchJournalEntry>();
+        return Backtests.Items.Where(IsVisibleInChart);
+    }
+
+    public IObservable<Unit> ChartVisibilityChanged => _chartVisibilityChanged.AsObservable();
+
+    private void OnChartVisibilityChanged()
+    {
+        _chartVisibilityChanged.OnNext(Unit.Default);
+        changesToDebounce.OnNext(Unit.Default);
+    }
+
+    #endregion
 
     #region Input Binding
 
@@ -367,6 +536,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
                         Progress = OptimizationTask.OptimizationStrategy?.Progress;
                     }
                     changes.OnNext(Unit.Default);
+                    changesToDebounce.OnNext(Unit.Default); // Notify components subscribed to DebouncedChanges
                     await timer.WaitForNextTickAsync();
                 }
             });
@@ -437,6 +607,15 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             {
                 ConsoleLog.LogInformation("Waiting for optimization to complete...");
                 await startTask;
+
+                // Journal is now created after StartAsync completes - connect to ObservableCache
+                if (OptimizationTask?.MultiSimContext?.Journal?.ObservableCache != null)
+                {
+                    Debug.WriteLine("Setting Backtests from Journal.ObservableCache after StartAsync");
+                    Backtests = OptimizationTask.MultiSimContext.Journal.ObservableCache;
+                    changesToDebounce.OnNext(Unit.Default);
+                }
+
                 await OptimizationTask.RunTask!;
                 ConsoleLog.LogInformation("Waiting for optimization to complete...done.");
                 IsRunning = false;
@@ -683,4 +862,105 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
 
     #endregion
 
+    #region Bot Optimization Preferences
+
+    private const string UserId = "Anonymous"; // TODO: Replace with actual user ID from authentication
+    private bool _isLoadingPreferences = false;
+
+    /// <summary>
+    /// Load optimization preferences for the specified bot type
+    /// </summary>
+    private async Task LoadBotPreferencesAsync(Type botType)
+    {
+        if (botType == null) return;
+
+        try
+        {
+            _isLoadingPreferences = true;
+
+            var botTypeKey = botType.FullName ?? botType.Name;
+            var preferencesGrain = GrainFactory.GetGrain<IUserPreferencesG>(UserId);
+            var preferences = await preferencesGrain.GetBotOptimizationPreferences(botTypeKey);
+
+            if (preferences != null)
+            {
+                Debug.WriteLine($"Loading preferences for bot type: {botTypeKey}");
+
+                // Apply preferences to ViewModel properties
+                if (!string.IsNullOrEmpty(preferences.Exchange))
+                    Exchange = preferences.Exchange;
+
+                if (!string.IsNullOrEmpty(preferences.ExchangeArea))
+                    ExchangeArea = preferences.ExchangeArea;
+
+                if (!string.IsNullOrEmpty(preferences.Symbol))
+                    Symbol = preferences.Symbol;
+
+                if (!string.IsNullOrEmpty(preferences.TimeFrame))
+                    TimeFrameString = preferences.TimeFrame;
+
+                if (preferences.Start.HasValue && preferences.End.HasValue)
+                {
+                    PMultiSim.Start = new DateTimeOffset(preferences.Start.Value.Year, preferences.Start.Value.Month, preferences.Start.Value.Day, 0, 0, 0, TimeSpan.Zero);
+                    PMultiSim.EndExclusive = new DateTimeOffset(preferences.End.Value.Year, preferences.End.Value.Month, preferences.End.Value.Day, 0, 0, 0, TimeSpan.Zero);
+                }
+
+                if (preferences.MaxBacktests.HasValue)
+                    POptimization.MaxBacktests = preferences.MaxBacktests.Value;
+
+                if (preferences.MinParameterPriority.HasValue)
+                    POptimization.MinParameterPriority = preferences.MinParameterPriority.Value;
+
+                Debug.WriteLine($"Preferences loaded: Exchange={preferences.Exchange}, Symbol={preferences.Symbol}, MaxBacktests={preferences.MaxBacktests}, MinParameterPriority={preferences.MinParameterPriority}");
+            }
+            else
+            {
+                Debug.WriteLine($"No preferences found for bot type: {botTypeKey}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to load bot preferences: {ex.Message}");
+        }
+        finally
+        {
+            _isLoadingPreferences = false;
+        }
+    }
+
+    /// <summary>
+    /// Save current optimization preferences for the current bot type
+    /// </summary>
+    private async Task SaveBotPreferencesAsync()
+    {
+        if (_isLoadingPreferences) return; // Don't save while loading
+        if (PBotType == null) return;
+
+        try
+        {
+            var botTypeKey = PBotType.FullName ?? PBotType.Name;
+            var preferences = new BotOptimizationPreferences
+            {
+                Exchange = Exchange,
+                ExchangeArea = ExchangeArea,
+                Symbol = Symbol,
+                TimeFrame = TimeFrameString,
+                Start = PMultiSim?.Start != null ? DateOnly.FromDateTime(PMultiSim.Start.DateTime) : null,
+                End = PMultiSim?.EndExclusive != null ? DateOnly.FromDateTime(PMultiSim.EndExclusive.DateTime) : null,
+                MaxBacktests = POptimization?.MaxBacktests,
+                MinParameterPriority = POptimization?.MinParameterPriority
+            };
+
+            var preferencesGrain = GrainFactory.GetGrain<IUserPreferencesG>(UserId);
+            await preferencesGrain.SetBotOptimizationPreferences(botTypeKey, preferences);
+
+            Debug.WriteLine($"Preferences saved for bot type: {botTypeKey}");
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Failed to save bot preferences: {ex.Message}");
+        }
+    }
+
+    #endregion
 }
