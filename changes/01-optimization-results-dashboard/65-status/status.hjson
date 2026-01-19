@@ -1,0 +1,19 @@
+// Status tracking for project epics
+// Each epic should only appear in one list
+
+// Epics currently being worked on (greenlit but not done)
+greenlit: []
+
+// Completed epics
+done: [
+  02-001
+  02-002
+  02-003
+]
+
+// Epics ready for final review before marking done
+readyForReview: []
+
+// Epics that need attention (blocked, issues, etc.)
+needsAttention: []
+
