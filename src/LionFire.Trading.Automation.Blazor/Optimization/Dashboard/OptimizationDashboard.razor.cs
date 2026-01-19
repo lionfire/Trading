@@ -67,22 +67,45 @@ public partial class OptimizationDashboard : IAsyncDisposable
         _showWidgetPicker = true;
     }
 
-    private void AddWidget(OptimizationWidgetInfo info)
+    private async Task AddWidget(OptimizationWidgetInfo info)
     {
         var maxY = _widgets.Any() ? _widgets.Max(w => w.Y + w.H) : 0;
         var widget = OptimizationWidgetInstance.FromCatalog(info, 0, maxY);
         _widgets.Add(widget);
         _showWidgetPicker = false;
-        _ = SaveLayoutAsync();
+
+        // Notify GridStack about the new widget
+        if (_grid != null)
+        {
+            await _grid.AddWidget(new BlazorGridStackWidgetOptions
+            {
+                Id = widget.Id,
+                X = widget.X,
+                Y = widget.Y,
+                W = widget.W,
+                H = widget.H,
+                MinW = widget.MinW,
+                MinH = widget.MinH
+            });
+        }
+
+        await SaveLayoutAsync();
     }
 
-    private void RemoveWidget(string widgetId)
+    private async Task RemoveWidget(string widgetId)
     {
         var widget = _widgets.FirstOrDefault(w => w.Id == widgetId);
         if (widget != null)
         {
             _widgets.Remove(widget);
-            _ = SaveLayoutAsync();
+
+            // Notify GridStack about the removed widget
+            if (_grid != null)
+            {
+                await _grid.RemoveWidget(widgetId);
+            }
+
+            await SaveLayoutAsync();
         }
     }
 

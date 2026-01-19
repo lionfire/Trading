@@ -40,7 +40,7 @@
                                 <span class="widget-title">@widget.Title</span>
                                 <MudIconButton Icon="@Icons.Material.Filled.Close"
                                                Size="Size.Small"
-                                               OnClick="@(() => RemoveWidget(widget.Id))" />
+                                               OnClick="@(async () => await RemoveWidget(widget.Id))" />
                             </div>
                             <div class="widget-body">
                                 <ErrorBoundary @ref="widget.ErrorBoundary">
@@ -71,7 +71,7 @@
         <MudList T="OptimizationWidgetInfo" Dense="true">
             @foreach (var widgetInfo in OptimizationWidgetCatalog.Widgets)
             {
-                <MudListItem T="OptimizationWidgetInfo" OnClick="@(() => AddWidget(widgetInfo))">
+                <MudListItem T="OptimizationWidgetInfo" OnClick="@(async () => await AddWidget(widgetInfo))">
                     <div class="d-flex align-center">
                         <MudIcon Icon="@widgetInfo.Icon" Class="mr-2" />
                         <div>
