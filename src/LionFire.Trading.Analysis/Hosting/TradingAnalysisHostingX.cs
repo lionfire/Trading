@@ -13,7 +13,10 @@ public static class TradingAnalysisHostingX
 
         #region Analysis
 
-            .Configure<OptimizationAnalysisOptions>(context.Configuration.GetSection("LionFire.Trading.OptimizationRunAnalysis"))
+            .Configure<OptimizationAnalysisOptions>(context.Configuration.GetSection(OptimizationAnalysisOptions.ConfigurationLocation)
+                .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"))
+            .Configure<IngestOptions>(context.Configuration.GetSection(IngestOptions.ConfigurationLocation)
+                .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"))
             .AddSingleton<OptimizationRunAnalysisService>()
             .AddHostedService<OptimizationRunAnalysisService>()
 

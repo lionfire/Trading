@@ -13,7 +13,8 @@ public static class BacktestingHostingX
 {
     public static ILionFireHostBuilder BacktestingModel(this ILionFireHostBuilder builder)
         => builder.ForIHostApplicationBuilder(b => b.ConfigureServices(services => services
-             .Configure<BacktestOptions>(b.Configuration.GetSection(BacktestOptions.ConfigurationLocation))
+             .Configure<BacktestOptions>(b.Configuration.GetSection(BacktestOptions.ConfigurationLocation)
+                .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"))
             )
         );
 }

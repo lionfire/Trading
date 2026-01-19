@@ -1,22 +1,25 @@
 ﻿public class IngestOptions
 {
+    public const string ConfigurationLocation = "Trading:Ingest";
+
     /// <summary>
     /// Set this to true on the injestion host.
-    /// Affects: 
+    /// Affects:
     ///  - BacktestFileMover
     /// </summary>
     public bool Enabled { get; set; }
 
+    /// <summary>
+    /// Legacy backtest results root (OLD: symbol/bot/tf structure).
+    /// Configured via Trading:Ingest:Windows:BacktestsRoot_Old or Trading:Ingest:Unix:BacktestsRoot_Old in appsettings.json.
+    /// </summary>
+    public string? BacktestsRoot_Old { get; set; }
 
-    // OLD: symbol/bot/tf
-    public string BacktestsRoot_Old { get; set; } = @"F:\st\Investing-Output\.local\Results"; // HARDCODE HARDPATH
+    /// <summary>
+    /// Directories containing results from multiple machines.
+    /// Configured via Trading:Ingest:Windows:MultiMachineResultDirs or Trading:Ingest:Unix:MultiMachineResultDirs in appsettings.json.
+    /// </summary>
+    public List<string> MultiMachineResultDirs { get; set; } = [];
 
-    public List<string> MultiMachineResultDirs { get; set; } = new List<string>()
-    {
-        @"F:\st\Investing-Output\Results", // HARDCODE HARDPATH
-        @"F:\st\Investing-Output\.local\Machines", // HARDCODE HARDPATH
-    };
-    //public List<string> MarketsResultDirs { get; set; } = new List<string>()
-    //{
-    //};
+    //public List<string> MarketsResultDirs { get; set; } = [];
 }

@@ -13,13 +13,15 @@ public static class ServiceProviderProvider
     {
         var Configuration = new ConfigurationManager();
 
-        // Defaults
+        // Defaults - using Windows/Unix bifurcation pattern
+        // These can be overridden via environment variables: DOTNET__Trading__Backtesting__Windows__Dir
         Configuration.AddInMemoryCollection([
-            new ("LionFire:Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\"), // HARDCODE HARDPATH
-            new ("LionFire:Trading:Backtesting:Dir", @"z:\Trading\Backtesting") // HARDCODE HARDPATH
+            new ("Trading:HistoricalData:Windows:BaseDir", @"F:\st\Investing-HistoricalData\"),
+            new ("Trading:HistoricalData:Unix:BaseDir", @"/st/Investing-HistoricalData/"),
+            new ("Trading:Backtesting:Windows:Dir", @"F:\st\Investing-Output\.local\Backtests\"),
+            new ("Trading:Backtesting:Unix:Dir", @"/st/Investing-Output/.local/Backtests/"),
         ]);
-        // DOTNET__LionFire__Trading__HistoricalData__Windows__BaseDir
-        Configuration.AddEnvironmentVariables("DOTNET__"); // TODO: Change prefix to LIONFIRE__ or LF__
+        Configuration.AddEnvironmentVariables("DOTNET__");
 
         IServiceCollection services = new ServiceCollection();
         services

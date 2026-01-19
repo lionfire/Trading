@@ -22,7 +22,7 @@ public static class HistoricalBarsHostingX
             .AddSingleton<BarsFileSource>()
 
             .AddSingleton<DateChunker>()
-            .Configure<BarFilesPaths>(configuration.GetSection("LionFire:Trading:HistoricalData")
+            .Configure<BarFilesPaths>(configuration.GetSection("Trading:HistoricalData")
                 .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"))
         ;
         return services;

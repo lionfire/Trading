@@ -25,7 +25,8 @@ public static class AutomationHostingX
     public static IServiceCollection BacktestingModel(this IServiceCollection services, IConfiguration configuration)
     {
         return services
-            .Configure<BacktestOptions>(configuration.GetSection(BacktestOptions.ConfigurationLocation)); // REFACTOR: Static interface to do this?
+            .Configure<BacktestOptions>(configuration.GetSection(BacktestOptions.ConfigurationLocation)
+                .GetSection(OperatingSystem.IsWindows() ? "Windows" : "Unix"));
     }
 
 
