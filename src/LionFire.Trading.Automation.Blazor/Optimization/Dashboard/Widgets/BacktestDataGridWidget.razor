@@ -1,6 +1,9 @@
 @inherits OptimizationWidgetBase
 @using System.Reactive.Linq
 @using ReactiveUI
+@using LionFire.Trading.Automation
+@using LionFire.Reactive.Persistence
+@using Microsoft.Extensions.DependencyInjection
 @implements IDisposable
 
 <div style="height: 100%; width: 100%;">
@@ -46,6 +49,16 @@
                 </CellTemplate>
             </TemplateColumn>
 
+            <TemplateColumn Title="Actions" Sortable="false">
+                <CellTemplate>
+                    <MudIconButton Icon="@Icons.Material.Filled.AddCircle"
+                                   Size="Size.Small"
+                                   Color="Color.Primary"
+                                   Title="Add to workspace as bot"
+                                   OnClick="@(() => OnExportToBot(context.Item))" />
+                </CellTemplate>
+            </TemplateColumn>
+
             <PropertyColumn Property="x => x.StringId" Title="ID" Hideable="true" Hidden="true" />
         </Columns>
     </MudDataGrid>
@@ -61,10 +74,17 @@ else
 @code {
     private BacktestBatchJournalEntry? _selectedItem;
     private IDisposable? _subscription;
+    private IObservableReaderWriter<string, BotEntity>? _workspaceBots;
+
+    [CascadingParameter]
+    public IServiceProvider? WorkspaceServices { get; set; }
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
+
+        // Get bots writer from workspace services
+        _workspaceBots = WorkspaceServices?.GetService<IObservableReaderWriter<string, BotEntity>>();
 
         if (ViewModel != null)
         {
@@ -89,6 +109,11 @@ else
         {
             ViewModel.SelectedBacktest = item;
         }
+    }
+
+    private void OnExportToBot(BacktestBatchJournalEntry item)
+    {
+        ViewModel?.OnExportToBot(item, _workspaceBots);
     }
 
     private string GetRowClass(BacktestBatchJournalEntry item, int index)
