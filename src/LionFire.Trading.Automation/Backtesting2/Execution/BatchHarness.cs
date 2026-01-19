@@ -676,7 +676,7 @@ public sealed partial class BatchHarness<TPrecision>
                 {
                     BatchId = BatchId,
                     Id = b.BotContext.Id,
-                    AD = h?.AnnualizedBalanceRoiVsDrawdownPercent ?? double.NaN, // REVIEW - wired up correctly?
+                    AD = h?.AnnualizedEquityRoiVsDrawdownPercent ?? double.NaN,
                     AMWT = b.BotContext.BotJournal.JournalStats.AverageMinutesPerWinningTrade,
                     Wins = b.BotContext.BotJournal.JournalStats.WinningTrades,
                     Losses = b.BotContext.BotJournal.JournalStats.LosingTrades,
