@@ -59,6 +59,11 @@ public class OptimizationWidgetInstance
     public int MinH { get; set; } = 2;
 
     /// <summary>
+    /// Whether GridStack should auto-position this widget.
+    /// </summary>
+    public bool AutoPosition { get; set; }
+
+    /// <summary>
     /// Widget-specific settings.
     /// </summary>
     public Dictionary<string, object>? Settings { get; set; }

@@ -9,6 +9,15 @@ using Microsoft.JSInterop;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization.Dashboard;
 
+public class MakeWidgetResult
+{
+    public bool Success { get; set; }
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int W { get; set; }
+    public int H { get; set; }
+}
+
 public partial class OptimizationDashboard : IAsyncDisposable
 {
     [Parameter]
@@ -67,29 +76,56 @@ public partial class OptimizationDashboard : IAsyncDisposable
         _showWidgetPicker = true;
     }
 
+    private string? _pendingWidgetId;
+
     private async Task AddWidget(OptimizationWidgetInfo info)
     {
-        var maxY = _widgets.Any() ? _widgets.Max(w => w.Y + w.H) : 0;
-        var widget = OptimizationWidgetInstance.FromCatalog(info, 0, maxY);
+        // Use autoPosition - let GridStack find the best spot
+        var widget = OptimizationWidgetInstance.FromCatalog(info, 0, 0);
+        widget.AutoPosition = true;
         _widgets.Add(widget);
         _showWidgetPicker = false;
+        _pendingWidgetId = widget.Id;
 
-        // Notify GridStack about the new widget
-        if (_grid != null)
+        // StateHasChanged will trigger OnAfterRenderAsync where we'll make the widget
+        // SaveLayoutAsync is called after makeWidget to get the correct position
+        StateHasChanged();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        // If we have a pending widget, tell GridStack to make it interactive
+        if (_pendingWidgetId != null)
         {
-            await _grid.AddWidget(new BlazorGridStackWidgetOptions
-            {
-                Id = widget.Id,
-                X = widget.X,
-                Y = widget.Y,
-                W = widget.W,
-                H = widget.H,
-                MinW = widget.MinW,
-                MinH = widget.MinH
-            });
-        }
+            var widgetId = _pendingWidgetId;
+            _pendingWidgetId = null;
 
-        await SaveLayoutAsync();
+            // Small delay to ensure DOM is updated
+            await Task.Delay(100);
+
+            try
+            {
+                var result = await JS.InvokeAsync<MakeWidgetResult>("chartResizeObserver.makeWidget", widgetId);
+
+                // Update widget with actual position GridStack assigned
+                var widget = _widgets.FirstOrDefault(w => w.Id == widgetId);
+                if (widget != null && result?.Success == true)
+                {
+                    widget.X = result.X;
+                    widget.Y = result.Y;
+                    widget.W = result.W;
+                    widget.H = result.H;
+                    widget.AutoPosition = false; // Clear flag after placement
+                    await SaveLayoutAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to make widget interactive: {WidgetId}", widgetId);
+            }
+        }
     }
 
     private async Task RemoveWidget(string widgetId)
@@ -97,14 +133,17 @@ public partial class OptimizationDashboard : IAsyncDisposable
         var widget = _widgets.FirstOrDefault(w => w.Id == widgetId);
         if (widget != null)
         {
-            _widgets.Remove(widget);
-
-            // Notify GridStack about the removed widget
-            if (_grid != null)
+            // Remove from GridStack first
+            try
             {
-                await _grid.RemoveWidget(widgetId);
+                await JS.InvokeVoidAsync("chartResizeObserver.removeWidget", widgetId);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Failed to remove widget from grid: {WidgetId}", widgetId);
             }
 
+            _widgets.Remove(widget);
             await SaveLayoutAsync();
         }
     }

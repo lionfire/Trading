@@ -114,6 +114,102 @@ window.chartResizeObserver = {
         window.addEventListener('resize', debouncedResize);
 
         console.log('chartResizeObserver: GridStack observer initialized');
+    },
+
+    // Make a newly added widget interactive
+    makeWidget: function(widgetId) {
+        const gridEl = document.querySelector('.grid-stack');
+        if (!gridEl) {
+            console.warn('chartResizeObserver.makeWidget: No grid-stack element found');
+            return false;
+        }
+
+        // Get the grid instance - try different ways
+        let grid = gridEl.gridstack;
+        if (!grid && window.GridStack) {
+            // Try to get existing grid
+            const grids = window.GridStack.getAll ? window.GridStack.getAll() : [];
+            if (grids.length > 0) {
+                grid = grids[0];
+            }
+        }
+
+        if (!grid) {
+            console.warn('chartResizeObserver.makeWidget: Could not get GridStack instance');
+            return false;
+        }
+
+        // Find the widget element - try different selectors
+        let widgetEl = document.querySelector(`[gs-id="${widgetId}"]`);
+        if (!widgetEl) {
+            // Try finding by data attribute or class
+            widgetEl = document.querySelector(`.grid-stack-item[data-gs-id="${widgetId}"]`);
+        }
+        if (!widgetEl) {
+            // Try finding any new widget without a gridstackNode
+            const allWidgets = gridEl.querySelectorAll('.grid-stack-item');
+            for (const w of allWidgets) {
+                if (!w.gridstackNode) {
+                    widgetEl = w;
+                    console.log('chartResizeObserver.makeWidget: Found uninitialized widget', w);
+                    break;
+                }
+            }
+        }
+
+        if (!widgetEl) {
+            console.warn('chartResizeObserver.makeWidget: Widget element not found:', widgetId);
+            return false;
+        }
+
+        if (widgetEl.gridstackNode) {
+            console.log('chartResizeObserver.makeWidget: Widget already initialized:', widgetId);
+            return true;
+        }
+
+        try {
+            grid.makeWidget(widgetEl);
+            console.log('chartResizeObserver.makeWidget: Successfully made widget:', widgetId);
+
+            // Return the actual position after GridStack placement
+            return {
+                success: true,
+                x: parseInt(widgetEl.getAttribute('gs-x') || '0'),
+                y: parseInt(widgetEl.getAttribute('gs-y') || '0'),
+                w: parseInt(widgetEl.getAttribute('gs-w') || '4'),
+                h: parseInt(widgetEl.getAttribute('gs-h') || '3')
+            };
+        } catch (e) {
+            console.error('chartResizeObserver.makeWidget: Error making widget:', e);
+            return { success: false };
+        }
+    },
+
+    // Remove a widget from the grid
+    removeWidget: function(widgetId) {
+        const gridEl = document.querySelector('.grid-stack');
+        if (!gridEl) return false;
+
+        let grid = gridEl.gridstack;
+        if (!grid && window.GridStack) {
+            const grids = window.GridStack.getAll ? window.GridStack.getAll() : [];
+            if (grids.length > 0) grid = grids[0];
+        }
+        if (!grid) return false;
+
+        let widgetEl = document.querySelector(`[gs-id="${widgetId}"]`);
+        if (!widgetEl) {
+            widgetEl = document.querySelector(`.grid-stack-item[data-gs-id="${widgetId}"]`);
+        }
+        if (!widgetEl) return false;
+
+        try {
+            grid.removeWidget(widgetEl, false);
+            return true;
+        } catch (e) {
+            console.error('chartResizeObserver.removeWidget: Error:', e);
+            return false;
+        }
     }
 };
 
