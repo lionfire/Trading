@@ -109,8 +109,21 @@ public sealed class ChunkingInputEnumerator<TValue, TPrecision> : InputEnumerato
     /// <summary>
     /// Lookback guarantees a certain amount of prior items visible, but often there is more.  This property indicates how many are available.
     /// </summary>
+    /// <remarks>
+    /// Returns the number of items accessible via indexer [0], [1], ..., [Size-1].
+    /// [0] accesses the current position (InputBufferCursorIndex), [1] accesses the previous, etc.
+    /// If cursor is past the buffer bounds, returns 0 since [0] would be invalid.
+    /// </remarks>
     /// <seealso cref="UnprocessedInputCount"/>
-    public int ItemsViewable => InputBufferCursorIndex + Math.Min(1, InputBuffer.Count) + PreviousChunk.Count;
+    public int ItemsViewable
+    {
+        get
+        {
+            if (InputBufferCursorIndex < 0) return PreviousChunk.Count; // No current position yet
+            if (InputBufferCursorIndex >= InputBuffer.Count) return 0; // Cursor past buffer end
+            return InputBufferCursorIndex + 1 + PreviousChunk.Count;
+        }
+    }
 
     #endregion
 
