@@ -103,6 +103,19 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
         // TOTELEMETRY - invocation, to help assess percentages of key events
 
+        #region Snap endExclusive to bar boundary (exclude incomplete bars)
+
+        // For backtesting, we only want complete bars. Snap endExclusive to the start of its bar period.
+        // This ensures we don't include partial/incomplete bars in the calculation.
+        // Only snap if it results in a valid (non-empty) range.
+        var snappedEndExclusive = TimeFrame.GetPeriodStart(endExclusive);
+        if (snappedEndExclusive != endExclusive && snappedEndExclusive > start)
+        {
+            endExclusive = snappedEndExclusive;
+        }
+
+        #endregion
+
         #region Output Buffer
 
         var outputCount = GetOutputCount(start, endExclusive);
@@ -148,6 +161,40 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
 
             #endregion
 
+            #region Validate input/output count alignment
+
+            var expectedInputCount = outputCount + lookbackAmount;
+            var actualInputCount = inputData.Count;
+            var effectiveOutputCount = outputCount; // May be adjusted if mismatch detected
+
+            if (actualInputCount != expectedInputCount)
+            {
+                // Log the mismatch for diagnostics (using stderr so it's visible in console)
+                Console.Error.WriteLine($"[HistoricalIndicatorHarness] Bar count mismatch for {Indicator.GetType().Name}: " +
+                    $"Expected {expectedInputCount} input bars (outputCount={outputCount} + lookback={lookbackAmount}), " +
+                    $"but got {actualInputCount}. Range: {inputStart:yyyy-MM-dd HH:mm} to {endExclusive:yyyy-MM-dd HH:mm}, " +
+                    $"MaxLookback={Indicator.MaxLookback}, reuseState={reuseIndicatorState}");
+
+                // Calculate actual output count based on input data
+                var actualOutputCount = Math.Max(0, actualInputCount - lookbackAmount);
+                if (actualOutputCount > outputCount)
+                {
+                    // More outputs than buffer can hold - this was causing the overflow
+                    // The bounds check in OnNext_PopulateOutput will discard extras
+                    Console.Error.WriteLine($"[HistoricalIndicatorHarness] WARNING: Would produce {actualOutputCount} outputs but buffer only has {outputCount} slots. " +
+                        $"Extra outputs will be discarded. This may indicate a bug in bar count calculation or data retrieval.");
+                }
+                else if (actualOutputCount < outputCount)
+                {
+                    // Fewer outputs than expected - adjust the segment size we return
+                    Console.Error.WriteLine($"[HistoricalIndicatorHarness] WARNING: Will produce {actualOutputCount} outputs but expected {outputCount}. " +
+                        $"This may indicate missing data or a calculation error.");
+                    effectiveOutputCount = (uint)actualOutputCount;
+                }
+            }
+
+            #endregion
+
             //// OPTIMIZE: Avoid subscription, and return TOutput from OnNextFromArray
             //var lookbackAmountRemaining = lookbackAmount;
             //int outputIndex = 0;
@@ -184,7 +231,7 @@ public class HistoricalIndicatorHarness<TIndicator, TParameters, TInput, TOutput
             #region Finalize, and results
 
             nextExpectedStart = endExclusive;
-            var outputArraySegment = new ArraySegment<TOutput>(outputBufferCopy, 0, (int)outputCount);
+            var outputArraySegment = new ArraySegment<TOutput>(outputBufferCopy, 0, (int)effectiveOutputCount);
             //return new ArraySegmentValueResult<TOutput>(outputArraySegment); // OLD
             return new HistoricalDataResult<TOutput>(outputArraySegment);
 
