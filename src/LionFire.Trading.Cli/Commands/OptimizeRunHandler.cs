@@ -160,12 +160,22 @@ public static class OptimizeRunHandler
                     var timeFrame = TimeFrame.Parse(options.Timeframe);
                     var exchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(options.Exchange, options.Area, options.Symbol, timeFrame);
 
+                    // Snap dates to bar boundaries to exclude incomplete bars
+                    // Start: snap forward to next bar boundary (include only complete bars)
+                    // EndExclusive: snap backward to previous bar boundary (exclude incomplete current bar)
+                    var snappedStart = timeFrame.GetPeriodStart(options.From);
+                    if (snappedStart < options.From)
+                    {
+                        snappedStart = timeFrame.AddBars(snappedStart, 1); // Move to next bar start
+                    }
+                    var snappedEnd = timeFrame.GetPeriodStart(options.To);
+
                     var pMultiSim = new PMultiSim
                     {
                         PBotType = pBotType,
                         ExchangeSymbolTimeFrame = exchangeSymbolTimeFrame,
-                        Start = options.From,
-                        EndExclusive = options.To,
+                        Start = snappedStart,
+                        EndExclusive = snappedEnd,
                     };
 
                     pMultiSim.POptimization = new POptimization(pMultiSim)
