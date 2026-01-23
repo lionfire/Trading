@@ -21,16 +21,16 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
 
     #region Type Info
 
-    //public override IReadOnlyList<InputSlot> InputSlots => [
-    //    //InputSlot.BarMultiAspect<TOutput>( DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close)
-    //    ];
     public static IReadOnlyList<InputSlot> GetInputSlots()
       => [new InputSlot() {
                     Name = "Source",
-                    ValueType = typeof(IKline<TOutput>),
+                    ValueType = typeof(HLC<TPrice>),
                     Aspects = DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close,
                     DefaultSource = 0,
                 }];
+
+    [JsonIgnore]
+    public override IReadOnlyList<InputSlot> InputSlots => GetInputSlots();
 
     #endregion
 
@@ -276,7 +276,16 @@ public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<Av
     private static void OnNext_PopulateOutput(TOutput value, TOutput[]? outputBuffer, ref int outputIndex, ref int outputSkip)
     {
         if (outputSkip > 0) { outputSkip--; }
-        else if (outputBuffer != null) outputBuffer[outputIndex++] = value;
+        else if (outputBuffer != null)
+        {
+            if (outputIndex >= outputBuffer.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Output buffer overflow: attempted to write at index {outputIndex} but buffer length is {outputBuffer.Length}. " +
+                    "This indicates a mismatch between expected and actual bar counts.");
+            }
+            outputBuffer[outputIndex++] = value;
+        }
     }
 
     #endregion
