@@ -31,7 +31,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// This bot uses ExitLong as the trend line: above = long, below = short.
     /// </summary>
     [PSignal]
-    public PChandelierExit<double, TValue>? ChandelierExit { get; set; }
+    public PChandelierExit<double, TValue>? ChandelierExitLong { get; set; }
 
     /// <summary>
     /// Optional separate ATR indicator for position sizing and take profit calculations.
@@ -48,7 +48,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// If true, use the previous bar's close for comparison (avoids same-bar whipsaws).
     /// Default is false (use current bar's close).
     /// </summary>
-    [TradingParameter(DefaultValue = false)]
+    [TradingParameter(OptimizePriority = -10, DefaultValue = false)]
     public bool UsePreviousBar { get; set; } = false;
 
     /// <summary>
@@ -57,6 +57,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// 0 = no minimum distance required.
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -10,
         HardValueMin = 0.0,
         DefaultMin = 0.0,
         DefaultMax = 1.0,
@@ -73,7 +74,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// Whether to use the Chandelier Exit as a trailing stop loss.
     /// When enabled, stop losses are set at the exit line level.
     /// </summary>
-    [TradingParameter(DefaultValue = true)]
+    [TradingParameter(OptimizePriority = -15, DefaultValue = true)]
     public bool UseAsTrailingStop { get; set; } = true;
 
     /// <summary>
@@ -82,6 +83,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// 0 = stop exactly at exit line.
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -16,
         HardValueMin = 0.0,
         DefaultMin = 0.0,
         DefaultMax = 1.0,
@@ -97,7 +99,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// <summary>
     /// Whether to use ATR-based take profit levels.
     /// </summary>
-    [TradingParameter(DefaultValue = false)]
+    [TradingParameter(OptimizePriority = -20, DefaultValue = false)]
     public bool UseTakeProfit { get; set; } = false;
 
     /// <summary>
@@ -105,6 +107,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// Take Profit = Entry ± (ATR × TakeProfitAtrMultiplier)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -21,
         HardValueMin = 0.5,
         DefaultMin = 1.0,
         DefaultMax = 5.0,
@@ -117,7 +120,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// Whether to trail the take profit as the position moves in our favor.
     /// When enabled, take profit is recalculated on each bar based on current price.
     /// </summary>
-    [TradingParameter(DefaultValue = false)]
+    [TradingParameter(OptimizePriority = -22, DefaultValue = false)]
     public bool TrailTakeProfit { get; set; } = false;
 
     #endregion
@@ -128,7 +131,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// Whether to use ATR-based position sizing.
     /// When enabled, position size is calculated based on risk percentage and ATR.
     /// </summary>
-    [TradingParameter(DefaultValue = false)]
+    [TradingParameter(OptimizePriority = -30, DefaultValue = false)]
     public bool UseAtrPositionSizing { get; set; } = false;
 
     /// <summary>
@@ -137,6 +140,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// Position Size = (Balance × RiskPercentage) / (ATR × ChandelierMultiplier)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -31,
         HardValueMin = 0.001,
         DefaultMin = 0.005,
         DefaultMax = 0.05,
@@ -150,6 +154,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// Prevents oversized positions when volatility is very low.
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -32,
         HardValueMin = 1.0,
         DefaultMin = 1.0,
         DefaultMax = 10.0,
@@ -163,6 +168,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     /// Prevents tiny positions when volatility is very high.
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -32,
         HardValueMin = 0.1,
         DefaultMin = 0.1,
         DefaultMax = 1.0,
@@ -187,7 +193,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     public PChandelierExitBot(ExchangeSymbolTimeFrame exchangeSymbolTimeFrame, int period = 22, double atrMultiplier = 3.0)
         : base(exchangeSymbolTimeFrame)
     {
-        ChandelierExit = new PChandelierExit<double, TValue>
+        ChandelierExitLong = new PChandelierExit<double, TValue>
         {
             Period = period,
             AtrMultiplier = TValue.CreateChecked(atrMultiplier),
@@ -208,13 +214,13 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
     {
         var lookbacks = new List<int>
         {
-            0,       // Bars - no extra lookback needed beyond what's required for comparison
-            Lookback // Chandelier Exit - need current and previous values
+            Lookback, // Bars - need [0] and [1] when UsePreviousBar is true
+            Lookback  // Chandelier Exit - need [0] for current value
         };
 
-        if (ChandelierExit != null)
+        if (ChandelierExitLong != null)
         {
-            ChandelierExit.Lookback = Lookback;
+            ChandelierExitLong.Lookback = Lookback;
         }
 
         // Add ATR lookback if ATR is configured
@@ -235,7 +241,7 @@ public class PChandelierExitBot<TValue> : PStandardBot2<PChandelierExitBot<TValu
 
     public void ThrowIfInvalid()
     {
-        ArgumentNullException.ThrowIfNull(ChandelierExit, nameof(ChandelierExit));
+        ArgumentNullException.ThrowIfNull(ChandelierExitLong, nameof(ChandelierExitLong));
     }
 
     #endregion
@@ -451,7 +457,7 @@ public class ChandelierExitBot<TValue> : StandardBot2<PChandelierExitBot<TValue>
 
         // Stop distance = ATR × Chandelier Multiplier (distance to stop loss)
         var atrDouble = Convert.ToDouble(currentAtr);
-        var chandelierMultiplier = Convert.ToDouble(typedParams.ChandelierExit?.AtrMultiplier ?? TValue.CreateChecked(3.0));
+        var chandelierMultiplier = Convert.ToDouble(typedParams.ChandelierExitLong?.AtrMultiplier ?? TValue.CreateChecked(3.0));
         var stopDistance = atrDouble * chandelierMultiplier;
 
         // Add buffer if configured
