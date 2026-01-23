@@ -1,6 +1,7 @@
 using LionFire.Structures;
 using LionFire.Trading;
 using LionFire.Trading.DataFlow.Indicators;
+using LionFire.Trading.Indicators.Native;
 using System.Numerics;
 using System.Text.Json.Serialization;
 
@@ -9,7 +10,7 @@ namespace LionFire.Trading.Indicators.Parameters;
 /// <summary>
 /// Shared parameters for all Chandelier Exit implementations
 /// </summary>
-public class PChandelierExit<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>, TOutput>
+public class PChandelierExit<TPrice, TOutput> : IndicatorParameters<ChandelierExit_FP<TPrice, TOutput>, HLC<TPrice>, TOutput>
     where TPrice : struct
     where TOutput : struct, INumber<TOutput>
 {
@@ -81,6 +82,9 @@ public class PChandelierExit<TPrice, TOutput> : IndicatorParameters<HLC<TPrice>,
             Aspects = DataPointAspect.High | DataPointAspect.Low | DataPointAspect.Close,
             DefaultSource = 0,
         }];
+
+    [JsonIgnore]
+    public override IReadOnlyList<InputSlot> InputSlots => GetInputSlots();
 
     #endregion
 
