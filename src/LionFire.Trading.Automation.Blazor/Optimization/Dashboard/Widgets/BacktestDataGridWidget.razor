@@ -79,15 +79,20 @@ else
     private IDisposable? _subscription;
     private IObservableReaderWriter<string, BotEntity>? _workspaceBots;
 
+    [CascadingParameter(Name = "UserServices")]
+    public IServiceProvider? UserServices { get; set; }
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
-        // Get bots writer from service provider
-        _workspaceBots = ServiceProvider.GetService<IObservableReaderWriter<string, BotEntity>>();
+        // Get bots writer from UserServices (user-level) or fall back to root ServiceProvider
+        var effectiveServices = UserServices ?? ServiceProvider;
+        _workspaceBots = effectiveServices.GetService<IObservableReaderWriter<string, BotEntity>>();
         if (_workspaceBots == null)
         {
-            Logger.LogWarning("IObservableReaderWriter<string, BotEntity> service not available - Export to Bot will not work");
+            Logger.LogWarning("IObservableReaderWriter<string, BotEntity> service not available from {ServiceSource} - Export to Bot will not work",
+                UserServices != null ? "UserServices" : "ServiceProvider (fallback)");
         }
 
         if (ViewModel != null)
