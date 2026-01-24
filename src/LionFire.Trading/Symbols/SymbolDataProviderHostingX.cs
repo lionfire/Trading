@@ -162,4 +162,50 @@ public static class SymbolDataProviderHostingX
         // CoinGecko excluded by default due to rate limits - add manually if needed
         return services;
     }
+
+    /// <summary>
+    /// Adds the SymbolCollectionService for managing symbol collections.
+    /// This requires at least one ISymbolDataProvider to be registered.
+    /// </summary>
+    public static IServiceCollection AddSymbolCollectionService(this IServiceCollection services)
+    {
+        // Repository is optional - pass null if not needed for persistence
+        services.TryAddSingleton<ISymbolCollectionRepository?>(sp => null);
+        services.TryAddSingleton<SymbolCollectionService>();
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the StalenessDetector for detecting when collections are out of date.
+    /// </summary>
+    public static IServiceCollection AddStalenessDetector(
+        this IServiceCollection services,
+        Action<StalenessDetectorOptions>? configureOptions = null)
+    {
+        services.AddMemoryCache();
+
+        if (configureOptions != null)
+        {
+            services.Configure(configureOptions);
+        }
+        else
+        {
+            services.Configure<StalenessDetectorOptions>(_ => { });
+        }
+
+        services.TryAddSingleton<StalenessDetector>();
+        return services;
+    }
+
+    /// <summary>
+    /// Adds symbol collection services with all default providers.
+    /// Includes: Providers (CoinLore, Binance) + SymbolCollectionService + StalenessDetector.
+    /// </summary>
+    public static IServiceCollection AddSymbolCollections(this IServiceCollection services)
+    {
+        services.AddAllSymbolDataProviders();
+        services.AddSymbolCollectionService();
+        services.AddStalenessDetector();
+        return services;
+    }
 }

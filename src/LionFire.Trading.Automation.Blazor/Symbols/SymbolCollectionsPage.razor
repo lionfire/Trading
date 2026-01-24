@@ -1,0 +1,276 @@
+@page "/symbols/collections"
+@using LionFire.Trading.Symbols
+@implements IDisposable
+@inject SymbolCollectionService CollectionService
+@inject StalenessDetector StalenessDetector
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" Class="mb-4">Symbol Collections</MudText>
+
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+        <MudTabPanel Text="Collections" Icon="@Icons.Material.Filled.List">
+            @if (Collections.Count == 0 && !IsLoadingCollections)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4">
+                    No collections yet. Create your first collection using the form below.
+                </MudAlert>
+            }
+            else
+            {
+                <MudGrid>
+                    @foreach (var collection in Collections)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <SymbolCollectionCard Snapshot="@collection"
+                                                  Diff="@GetDiff(collection)"
+                                                  IsLoading="@IsLoadingCollection(collection.Id)"
+                                                  OnEdit="OnEditCollection"
+                                                  OnRefresh="OnRefreshCollection"
+                                                  OnDelete="OnDeleteCollection" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            }
+
+            <MudDivider Class="my-6" />
+
+            <MudExpansionPanels>
+                <MudExpansionPanel Text="Create New Collection" Icon="@Icons.Material.Filled.Add">
+                    <SymbolCollectionEditor OnCollectionCreated="OnCollectionCreated" />
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        </MudTabPanel>
+
+        <MudTabPanel Text="Manage Symbols" Icon="@Icons.Material.Filled.Settings" Disabled="@(SelectedCollection == null)">
+            @if (SelectedCollection != null)
+            {
+                <MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">@SelectedCollection.Name</MudText>
+                    <MudSpacer />
+                    <SymbolCollectionStatus Snapshot="@SelectedCollection"
+                                            Diff="@GetDiff(SelectedCollection)"
+                                            IsLoading="@IsLoadingCollection(SelectedCollection.Id)"
+                                            OnCheckForUpdates="() => CheckStalenessAsync(SelectedCollection)"
+                                            OnApplyChanges="() => ApplyChangesAsync(SelectedCollection)" />
+                </MudStack>
+
+                <SymbolStateManager Snapshot="@SelectedCollection"
+                                    OnSymbolStateChanged="OnSymbolStateChanged" />
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">
+                    Select a collection from the Collections tab to manage its symbols.
+                </MudAlert>
+            }
+        </MudTabPanel>
+    </MudTabs>
+</MudContainer>
+
+@code {
+    private List<SymbolCollectionSnapshot> Collections { get; set; } = new();
+    private Dictionary<string, CollectionDiff> CollectionDiffs { get; set; } = new();
+    private HashSet<string> LoadingCollections { get; set; } = new();
+    private bool IsLoadingCollections { get; set; }
+    private SymbolCollectionSnapshot? SelectedCollection { get; set; }
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCollectionsAsync();
+    }
+
+    private async Task LoadCollectionsAsync()
+    {
+        IsLoadingCollections = true;
+        StateHasChanged();
+
+        try
+        {
+            var collections = await CollectionService.ListSnapshotsAsync();
+            Collections = collections.ToList();
+
+            // Check staleness for each collection
+            foreach (var collection in Collections)
+            {
+                _ = CheckStalenessAsync(collection, suppressErrors: true);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // Repository not configured - collections won't persist
+            Collections = new List<SymbolCollectionSnapshot>();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load collections: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoadingCollections = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnCollectionCreated(SymbolCollectionSnapshot snapshot)
+    {
+        Collections.Add(snapshot);
+        SelectedCollection = snapshot;
+        await CheckStalenessAsync(snapshot);
+        StateHasChanged();
+    }
+
+    private async Task OnEditCollection(SymbolCollectionSnapshot? snapshot)
+    {
+        if (snapshot == null) return;
+        SelectedCollection = snapshot;
+        StateHasChanged();
+    }
+
+    private async Task OnRefreshCollection(SymbolCollectionSnapshot? snapshot)
+    {
+        if (snapshot == null) return;
+
+        SetCollectionLoading(snapshot.Id, true);
+
+        try
+        {
+            var refreshed = await CollectionService.RefreshSnapshotAsync(snapshot);
+
+            // Update in list
+            var index = Collections.FindIndex(c => c.Id == snapshot.Id);
+            if (index >= 0)
+            {
+                Collections[index] = refreshed;
+            }
+
+            if (SelectedCollection?.Id == snapshot.Id)
+            {
+                SelectedCollection = refreshed;
+            }
+
+            // Clear cached diff
+            CollectionDiffs.Remove(snapshot.Id);
+            await CheckStalenessAsync(refreshed);
+
+            Snackbar.Add($"Refreshed {refreshed.Name}: {refreshed.ActiveCount} active, {refreshed.PendingCount} pending", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to refresh: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            SetCollectionLoading(snapshot.Id, false);
+        }
+    }
+
+    private async Task OnDeleteCollection(SymbolCollectionSnapshot? snapshot)
+    {
+        if (snapshot == null) return;
+
+        // For simplicity, delete directly with a confirmation snackbar after
+        // In a real app, you might use a MudDialog for confirmation
+        try
+        {
+            await CollectionService.DeleteSnapshotAsync(snapshot.Id);
+            Collections.RemoveAll(c => c.Id == snapshot.Id);
+            CollectionDiffs.Remove(snapshot.Id);
+
+            if (SelectedCollection?.Id == snapshot.Id)
+            {
+                SelectedCollection = null;
+            }
+
+            Snackbar.Add($"Deleted {snapshot.Name}", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to delete: {ex.Message}", Severity.Error);
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task CheckStalenessAsync(SymbolCollectionSnapshot snapshot, bool suppressErrors = false)
+    {
+        SetCollectionLoading(snapshot.Id, true);
+
+        try
+        {
+            var diff = await StalenessDetector.DetectStalenessAsync(snapshot);
+            CollectionDiffs[snapshot.Id] = diff;
+        }
+        catch (Exception ex)
+        {
+            if (!suppressErrors)
+            {
+                Snackbar.Add($"Failed to check staleness: {ex.Message}", Severity.Warning);
+            }
+        }
+        finally
+        {
+            SetCollectionLoading(snapshot.Id, false);
+        }
+    }
+
+    private async Task ApplyChangesAsync(SymbolCollectionSnapshot snapshot)
+    {
+        // Refresh the collection to apply detected changes
+        await OnRefreshCollection(snapshot);
+    }
+
+    private async Task OnSymbolStateChanged((string Symbol, SymbolState NewState, string? Reason) change)
+    {
+        if (SelectedCollection == null) return;
+
+        try
+        {
+            var updated = change.NewState switch
+            {
+                SymbolState.Active => await CollectionService.ActivateSymbolAsync(SelectedCollection, change.Symbol),
+                SymbolState.Excluded => await CollectionService.ExcludeSymbolAsync(SelectedCollection, change.Symbol, change.Reason),
+                SymbolState.Hidden => await CollectionService.HideSymbolAsync(SelectedCollection, change.Symbol),
+                SymbolState.Delisted => await CollectionService.MarkDelistedAsync(SelectedCollection, change.Symbol),
+                _ => SelectedCollection
+            };
+
+            // Update in list
+            var index = Collections.FindIndex(c => c.Id == SelectedCollection.Id);
+            if (index >= 0)
+            {
+                Collections[index] = updated;
+            }
+
+            SelectedCollection = updated;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to update symbol state: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private CollectionDiff? GetDiff(SymbolCollectionSnapshot snapshot)
+    {
+        return CollectionDiffs.TryGetValue(snapshot.Id, out var diff) ? diff : null;
+    }
+
+    private bool IsLoadingCollection(string id) => LoadingCollections.Contains(id);
+
+    private void SetCollectionLoading(string id, bool loading)
+    {
+        if (loading)
+            LoadingCollections.Add(id);
+        else
+            LoadingCollections.Remove(id);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
+    }
+}

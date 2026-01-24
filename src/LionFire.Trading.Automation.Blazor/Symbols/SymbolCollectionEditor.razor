@@ -1,5 +1,8 @@
 @using LionFire.Trading.Symbols
 @using SymbolSortDirection = LionFire.Trading.Symbols.SortDirection
+@implements IDisposable
+@inject SymbolCollectionService CollectionService
+@inject ISnackbar Snackbar
 
 <MudCard Elevation="2" Class="pa-4">
     <MudCardHeader>
@@ -13,12 +16,14 @@
                 <MudTextField @bind-Value="CollectionName"
                               Label="Collection Name"
                               Placeholder="e.g., Top 50 USDT Futures"
-                              Variant="Variant.Outlined" />
+                              Variant="Variant.Outlined"
+                              Disabled="@IsLoading" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudSelect @bind-Value="Exchange"
                            Label="Exchange"
-                           Variant="Variant.Outlined">
+                           Variant="Variant.Outlined"
+                           Disabled="@IsLoading">
                     <MudSelectItem Value="@("Binance")">Binance</MudSelectItem>
                     <MudSelectItem Value="@("Bybit")">Bybit</MudSelectItem>
                     <MudSelectItem Value="@("OKX")">OKX</MudSelectItem>
@@ -27,7 +32,8 @@
             <MudItem xs="12" sm="6">
                 <MudSelect @bind-Value="Area"
                            Label="Trading Area"
-                           Variant="Variant.Outlined">
+                           Variant="Variant.Outlined"
+                           Disabled="@IsLoading">
                     <MudSelectItem Value="@("futures")">Futures</MudSelectItem>
                     <MudSelectItem Value="@("spot")">Spot</MudSelectItem>
                 </MudSelect>
@@ -35,7 +41,8 @@
             <MudItem xs="12" sm="6">
                 <MudSelect @bind-Value="QuoteCurrency"
                            Label="Quote Currency"
-                           Variant="Variant.Outlined">
+                           Variant="Variant.Outlined"
+                           Disabled="@IsLoading">
                     <MudSelectItem Value="@("USDT")">USDT</MudSelectItem>
                     <MudSelectItem Value="@("USD")">USD</MudSelectItem>
                     <MudSelectItem Value="@("BTC")">BTC</MudSelectItem>
@@ -45,7 +52,8 @@
             <MudItem xs="12" sm="6">
                 <MudSelect @bind-Value="SortBy"
                            Label="Sort By"
-                           Variant="Variant.Outlined">
+                           Variant="Variant.Outlined"
+                           Disabled="@IsLoading">
                     <MudSelectItem Value="@("volume24h")">24h Volume</MudSelectItem>
                     <MudSelectItem Value="@("marketCap")">Market Cap</MudSelectItem>
                 </MudSelect>
@@ -53,7 +61,8 @@
             <MudItem xs="12" sm="6">
                 <MudSelect @bind-Value="Direction"
                            Label="Sort Direction"
-                           Variant="Variant.Outlined">
+                           Variant="Variant.Outlined"
+                           Disabled="@IsLoading">
                     <MudSelectItem Value="@SymbolSortDirection.Descending">Descending (Highest First)</MudSelectItem>
                     <MudSelectItem Value="@SymbolSortDirection.Ascending">Ascending (Lowest First)</MudSelectItem>
                 </MudSelect>
@@ -63,7 +72,8 @@
                                  Label="Limit"
                                  Min="1"
                                  Max="500"
-                                 Variant="Variant.Outlined" />
+                                 Variant="Variant.Outlined"
+                                 Disabled="@IsLoading" />
             </MudItem>
             <MudItem xs="12" sm="6">
                 <MudNumericField @bind-Value="MinVolume"
@@ -71,6 +81,7 @@
                                  Min="0"
                                  Format="N0"
                                  Variant="Variant.Outlined"
+                                 Disabled="@IsLoading"
                                  HelperText="Optional filter" />
             </MudItem>
             <MudItem xs="12" sm="6">
@@ -79,6 +90,7 @@
                                  Min="0"
                                  Format="N0"
                                  Variant="Variant.Outlined"
+                                 Disabled="@IsLoading"
                                  HelperText="Optional filter" />
             </MudItem>
         </MudGrid>
@@ -92,6 +104,13 @@
                         <li>@error</li>
                     }
                 </ul>
+            </MudAlert>
+        }
+
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4" ShowCloseIcon="true" CloseIconClicked="() => ErrorMessage = null">
+                @ErrorMessage
             </MudAlert>
         }
 
@@ -148,6 +167,8 @@
     private List<SymbolMarketData> PreviewSymbols { get; set; } = new();
     private bool ShowPreview { get; set; }
     private bool IsLoading { get; set; }
+    private string? ErrorMessage { get; set; }
+    private CancellationTokenSource? _cts;
 
     private bool IsValid => !ValidationErrors.Any();
 
@@ -176,15 +197,28 @@
         Validate();
         if (!IsValid) return;
 
+        // Cancel any previous operation
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+
         IsLoading = true;
         ShowPreview = false;
+        ErrorMessage = null;
 
         try
         {
-            // TODO: Inject SymbolCollectionService and fetch preview
-            // For now, just show validation passed
+            var query = BuildQuery();
+            var snapshot = await CollectionService.CreateSnapshotAsync(query, null, _cts.Token);
+            PreviewSymbols = snapshot.Symbols.Select(s => s.MarketData!).ToList();
             ShowPreview = true;
-            PreviewSymbols = new List<SymbolMarketData>();
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to fetch preview: {ex.Message}";
         }
         finally
         {
@@ -198,23 +232,50 @@
         Validate();
         if (!IsValid) return;
 
+        if (string.IsNullOrWhiteSpace(CollectionName))
+        {
+            ErrorMessage = "Collection name is required";
+            return;
+        }
+
+        // Cancel any previous operation
+        _cts?.Cancel();
+        _cts = new CancellationTokenSource();
+
         IsLoading = true;
+        ErrorMessage = null;
 
         try
         {
-            // TODO: Inject SymbolCollectionService and create snapshot
-            var snapshot = new SymbolCollectionSnapshot
-            {
-                Name = CollectionName,
-                Query = BuildQuery()
-            };
+            var query = BuildQuery();
+            var snapshot = await CollectionService.CreateSnapshotAsync(query, CollectionName, _cts.Token);
 
+            Snackbar.Add($"Collection '{CollectionName}' created with {snapshot.Symbols.Count} symbols", Severity.Success);
             await OnCollectionCreated.InvokeAsync(snapshot);
+
+            // Reset form after successful creation
+            CollectionName = "";
+            ShowPreview = false;
+            PreviewSymbols.Clear();
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellation
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to create collection: {ex.Message}";
         }
         finally
         {
             IsLoading = false;
             StateHasChanged();
         }
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _cts?.Dispose();
     }
 }
