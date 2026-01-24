@@ -1,0 +1,200 @@
+@page "/optimization/plans"
+@namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Automation.Blazor.Components.Optimization
+
+<PageTitle>Optimization Plans</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
+    <div class="page-header">
+        <MudText Typo="Typo.h4">Optimization Plans</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/optimization/plans/new">
+            New Plan
+        </MudButton>
+    </div>
+
+    <MudPaper Class="pa-4 mt-4">
+        <div class="filter-bar">
+            <MudTextField @bind-Value="_searchText"
+                          Placeholder="Search plans..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          Class="search-field" />
+
+            <MudSelect T="string" @bind-Value="_selectedBot"
+                       Label="Bot Type" Clearable="true" Class="filter-select">
+                @foreach (var bot in _botTypes)
+                {
+                    <MudSelectItem Value="@bot">@bot</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="string" @bind-Value="_selectedTag"
+                       Label="Tag" Clearable="true" Class="filter-select">
+                @foreach (var tag in _allTags)
+                {
+                    <MudSelectItem Value="@tag">@tag</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudSelect T="string" @bind-Value="_sortBy" Label="Sort By" Class="filter-select">
+                <MudSelectItem Value="@("name")">Name</MudSelectItem>
+                <MudSelectItem Value="@("modified")">Last Modified</MudSelectItem>
+                <MudSelectItem Value="@("created")">Created</MudSelectItem>
+            </MudSelect>
+        </div>
+    </MudPaper>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mt-4" />
+    }
+    else if (_filteredPlans.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            @if (_plans.Count == 0)
+            {
+                <span>No optimization plans yet. <MudLink Href="/optimization/plans/new">Create your first plan</MudLink>.</span>
+            }
+            else
+            {
+                <span>No plans match your filters.</span>
+            }
+        </MudAlert>
+    }
+    else
+    {
+        <div class="plans-grid mt-4">
+            @foreach (var plan in _filteredPlans)
+            {
+                <OptimizationPlanCard Plan="@plan"
+                                      OnEdit="EditPlan"
+                                      OnDuplicate="DuplicatePlan"
+                                      OnDelete="ConfirmDeletePlan" />
+            }
+        </div>
+    }
+</MudContainer>
+
+<MudDialog @bind-Visible="_deleteDialogVisible">
+    <TitleContent>Delete Plan</TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete "<strong>@_planToDelete?.Name</strong>"?</MudText>
+        <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+            This action cannot be undone.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _deleteDialogVisible = false)">Cancel</MudButton>
+        <MudButton Color="Color.Error" OnClick="DeletePlan">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .filter-bar {
+        display: flex;
+        gap: 16px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .search-field {
+        min-width: 250px;
+        flex: 1;
+    }
+
+    .filter-select {
+        min-width: 150px;
+    }
+
+    .plans-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 16px;
+    }
+</style>
+
+@code {
+    private List<OptimizationPlan> _plans = [];
+    private bool _loading = true;
+    private string _searchText = "";
+    private string? _selectedBot;
+    private string? _selectedTag;
+    private string _sortBy = "modified";
+    private bool _deleteDialogVisible;
+    private OptimizationPlan? _planToDelete;
+
+    private IReadOnlyList<string> _botTypes = [];
+    private IReadOnlyList<string> _allTags = [];
+
+    [Inject] private IOptimizationPlanRepository Repository { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private List<OptimizationPlan> _filteredPlans => _plans
+        .Where(p => string.IsNullOrWhiteSpace(_searchText) ||
+                    p.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
+                    (p.Description?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false))
+        .Where(p => string.IsNullOrWhiteSpace(_selectedBot) || p.Bot == _selectedBot)
+        .Where(p => string.IsNullOrWhiteSpace(_selectedTag) || p.Tags.Contains(_selectedTag))
+        .OrderBy(p => _sortBy switch
+        {
+            "name" => (object)p.Name,
+            "modified" => p.Modified,
+            "created" => p.Created,
+            _ => p.Modified
+        })
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlans();
+    }
+
+    private async Task LoadPlans()
+    {
+        _loading = true;
+        _plans = (await Repository.ListAsync()).ToList();
+        _botTypes = _plans.Select(p => p.Bot).Distinct().OrderBy(b => b).ToList();
+        _allTags = _plans.SelectMany(p => p.Tags).Distinct().OrderBy(t => t).ToList();
+        _loading = false;
+    }
+
+    private void EditPlan(OptimizationPlan plan)
+    {
+        Navigation.NavigateTo($"/optimization/plans/{plan.Id}");
+    }
+
+    private void DuplicatePlan(OptimizationPlan plan)
+    {
+        Navigation.NavigateTo($"/optimization/plans/new?from={plan.Id}");
+    }
+
+    private void ConfirmDeletePlan(OptimizationPlan plan)
+    {
+        _planToDelete = plan;
+        _deleteDialogVisible = true;
+    }
+
+    private async Task DeletePlan()
+    {
+        if (_planToDelete != null)
+        {
+            await Repository.DeleteAsync(_planToDelete.Id);
+            _plans.Remove(_planToDelete);
+            Snackbar.Add($"Deleted plan '{_planToDelete.Name}'", Severity.Success);
+            _planToDelete = null;
+            _deleteDialogVisible = false;
+        }
+    }
+}

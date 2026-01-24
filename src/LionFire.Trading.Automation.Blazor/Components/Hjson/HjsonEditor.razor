@@ -1,0 +1,135 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Hjson
+@using Hjson
+
+<div class="hjson-editor" style="height: @Options.Height">
+    <div class="editor-toolbar">
+        <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+            <MudButton OnClick="FormatAsync" StartIcon="@Icons.Material.Filled.FormatAlignLeft"
+                       Disabled="@Options.ReadOnly">
+                Format
+            </MudButton>
+            <MudButton OnClick="ValidateSyntax" StartIcon="@Icons.Material.Filled.Check">
+                Validate
+            </MudButton>
+        </MudButtonGroup>
+
+        @if (_syntaxValid.HasValue)
+        {
+            <MudChip T="string"
+                     Color="@(_syntaxValid.Value ? Color.Success : Color.Error)"
+                     Size="Size.Small"
+                     Class="ml-2">
+                @(_syntaxValid.Value ? "Valid HJSON" : "Invalid")
+            </MudChip>
+        }
+    </div>
+
+    <MudTextField @bind-Value="Value"
+                  Variant="Variant.Outlined"
+                  Lines="@Options.Rows"
+                  FullWidth="true"
+                  Immediate="true"
+                  ReadOnly="@Options.ReadOnly"
+                  Placeholder="@Options.Placeholder"
+                  Class="hjson-textarea"
+                  Style="font-family: 'Consolas', 'Monaco', monospace; font-size: 13px;" />
+
+    @if (!string.IsNullOrEmpty(_syntaxError))
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">
+            @_syntaxError
+        </MudAlert>
+    }
+</div>
+
+<style>
+    .hjson-editor {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .editor-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .hjson-textarea .mud-input-slot {
+        font-family: 'Consolas', 'Monaco', monospace !important;
+    }
+</style>
+
+@code {
+    private bool? _syntaxValid;
+    private string? _syntaxError;
+
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public HjsonEditorOptions Options { get; set; } = new();
+    [Parameter] public EventCallback<bool> OnValidationChanged { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        // Clear validation state when value changes externally
+        _syntaxValid = null;
+        _syntaxError = null;
+    }
+
+    private async Task FormatAsync()
+    {
+        if (string.IsNullOrWhiteSpace(Value)) return;
+
+        try
+        {
+            // Parse HJSON and re-serialize with formatting
+            var parsed = global::Hjson.HjsonValue.Parse(Value);
+            var formatted = parsed.ToString(global::Hjson.Stringify.Hjson);
+            Value = formatted;
+            await ValueChanged.InvokeAsync(formatted);
+            _syntaxValid = true;
+            _syntaxError = null;
+        }
+        catch (Exception ex)
+        {
+            _syntaxValid = false;
+            _syntaxError = $"Format failed: {ex.Message}";
+        }
+
+        await OnValidationChanged.InvokeAsync(_syntaxValid ?? false);
+    }
+
+    private async Task ValidateSyntax()
+    {
+        if (string.IsNullOrWhiteSpace(Value))
+        {
+            _syntaxValid = null;
+            _syntaxError = null;
+            return;
+        }
+
+        try
+        {
+            global::Hjson.HjsonValue.Parse(Value);
+            _syntaxValid = true;
+            _syntaxError = null;
+        }
+        catch (Exception ex)
+        {
+            _syntaxValid = false;
+            _syntaxError = ex.Message;
+        }
+
+        await OnValidationChanged.InvokeAsync(_syntaxValid ?? false);
+    }
+
+    /// <summary>
+    /// Gets whether the current content is valid HJSON.
+    /// </summary>
+    public bool IsValid => _syntaxValid ?? false;
+
+    /// <summary>
+    /// Gets the current syntax error message, if any.
+    /// </summary>
+    public string? SyntaxError => _syntaxError;
+}

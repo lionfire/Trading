@@ -17,6 +17,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="BlazorGridStack" />
+		<PackageReference Include="Hjson" />
 		<PackageReference Include="Humanizer.Core" />
 		<PackageReference Include="Microsoft.AspNetCore.Components.Web" />
 		<PackageReference Include="Microsoft.Orleans.Client" />

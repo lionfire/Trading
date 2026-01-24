@@ -1,0 +1,188 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Automation.Blazor.Components.Hjson
+@using LionFire.Trading.Optimization.Plans
+@using Hjson
+@using System.Text.Json
+@implements IDisposable
+
+<div class="optimization-plan-editor">
+    <HjsonEditor @ref="_editor"
+                 @bind-Value="Value"
+                 Options="@_editorOptions"
+                 OnValidationChanged="OnHjsonValidationChanged" />
+
+    @if (_validationResult != null && !_validationResult.IsValid)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">
+            <MudText Typo="Typo.subtitle2">Schema Validation Errors:</MudText>
+            <ul class="validation-errors">
+                @foreach (var error in _validationResult.Errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </MudAlert>
+    }
+
+    @if (_validationResult != null && _validationResult.Warnings.Count > 0)
+    {
+        <MudAlert Severity="Severity.Warning" Class="mt-2" Dense="true">
+            <MudText Typo="Typo.subtitle2">Warnings:</MudText>
+            <ul class="validation-warnings">
+                @foreach (var warning in _validationResult.Warnings)
+                {
+                    <li>@warning</li>
+                }
+            </ul>
+        </MudAlert>
+    }
+
+    @if (_parseError != null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-2" Dense="true">
+            <MudText Typo="Typo.subtitle2">Parse Error:</MudText>
+            <MudText Typo="Typo.body2">@_parseError</MudText>
+        </MudAlert>
+    }
+</div>
+
+<style>
+    .optimization-plan-editor {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .validation-errors,
+    .validation-warnings {
+        margin: 4px 0 0 0;
+        padding-left: 20px;
+    }
+
+    .validation-errors li,
+    .validation-warnings li {
+        margin: 2px 0;
+    }
+</style>
+
+@code {
+    private HjsonEditor? _editor;
+    private ValidationResult? _validationResult;
+    private string? _parseError;
+    private System.Timers.Timer? _debounceTimer;
+
+    private readonly HjsonEditorOptions _editorOptions = new()
+    {
+        Height = "500px",
+        Rows = 25,
+        Placeholder = "Enter optimization plan in HJSON format..."
+    };
+
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback<OptimizationPlan?> OnPlanParsed { get; set; }
+    [Parameter] public bool ValidateOnChange { get; set; } = true;
+    [Parameter] public int DebounceMs { get; set; } = 500;
+    [Parameter] public string? Height { get; set; }
+
+    [Inject] private OptimizationPlanValidator Validator { get; set; } = default!;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(Height))
+        {
+            _editorOptions.Height = Height;
+        }
+
+        if (ValidateOnChange)
+        {
+            _debounceTimer = new System.Timers.Timer(DebounceMs);
+            _debounceTimer.Elapsed += async (_, _) =>
+            {
+                _debounceTimer!.Stop();
+                await InvokeAsync(ValidateAsync);
+            };
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (ValidateOnChange && !string.IsNullOrWhiteSpace(Value))
+        {
+            _debounceTimer?.Stop();
+            _debounceTimer?.Start();
+        }
+    }
+
+    private void OnHjsonValidationChanged(bool isValid)
+    {
+        if (!isValid)
+        {
+            _validationResult = null;
+            _parseError = null;
+        }
+    }
+
+    private async Task ValidateAsync()
+    {
+        _parseError = null;
+        _validationResult = null;
+
+        if (string.IsNullOrWhiteSpace(Value))
+        {
+            return;
+        }
+
+        try
+        {
+            // Try to parse the HJSON
+            var plan = ParsePlan(Value);
+            if (plan != null)
+            {
+                _validationResult = Validator.Validate(plan);
+                await OnPlanParsed.InvokeAsync(plan);
+            }
+        }
+        catch (Exception ex)
+        {
+            _parseError = ex.Message;
+            await OnPlanParsed.InvokeAsync(null);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private OptimizationPlan? ParsePlan(string hjson)
+    {
+        var json = global::Hjson.HjsonValue.Parse(hjson).ToString();
+        return JsonSerializer.Deserialize<OptimizationPlan>(json,
+            new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+    }
+
+    /// <summary>
+    /// Gets the current validation result.
+    /// </summary>
+    public ValidationResult? GetValidationResult() => _validationResult;
+
+    /// <summary>
+    /// Checks if the current content is valid.
+    /// </summary>
+    public bool IsValid => (_editor?.IsValid ?? false) && (_validationResult?.IsValid ?? true);
+
+    /// <summary>
+    /// Triggers validation immediately.
+    /// </summary>
+    public async Task ValidateNowAsync()
+    {
+        _debounceTimer?.Stop();
+        await ValidateAsync();
+    }
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+    }
+}

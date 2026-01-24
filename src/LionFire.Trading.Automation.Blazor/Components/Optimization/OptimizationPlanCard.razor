@@ -1,0 +1,121 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Plans
+
+<MudCard Class="plan-card" Elevation="2">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@Plan.Name</MudText>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                @Plan.Bot
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudMenu Icon="@Icons.Material.Filled.MoreVert" AnchorOrigin="Origin.BottomRight">
+                <MudMenuItem OnClick="@(() => OnEdit.InvokeAsync(Plan))">
+                    <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-2" />
+                    Edit
+                </MudMenuItem>
+                <MudMenuItem OnClick="@(() => OnDuplicate.InvokeAsync(Plan))">
+                    <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" Class="mr-2" />
+                    Duplicate
+                </MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="@(() => OnDelete.InvokeAsync(Plan))" Class="mud-error-text">
+                    <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="mr-2" />
+                    Delete
+                </MudMenuItem>
+            </MudMenu>
+        </CardHeaderActions>
+    </MudCardHeader>
+
+    <MudCardContent>
+        @if (!string.IsNullOrWhiteSpace(Plan.Description))
+        {
+            <MudText Typo="Typo.body2" Class="mb-2">@Plan.Description</MudText>
+        }
+
+        <div class="plan-details">
+            <div class="detail-row">
+                <MudIcon Icon="@Icons.Material.Filled.CurrencyBitcoin" Size="Size.Small" />
+                <MudText Typo="Typo.body2">
+                    @Plan.Symbols.Snapshot.Count symbols
+                    @if (Plan.Symbols.IsDynamic)
+                    {
+                        <span class="mud-text-secondary ml-1">(dynamic)</span>
+                    }
+                </MudText>
+            </div>
+
+            <div class="detail-row">
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" />
+                <MudChipSet T="string" ReadOnly="true">
+                    @foreach (var tf in Plan.Timeframes.Take(4))
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@tf</MudChip>
+                    }
+                    @if (Plan.Timeframes.Count > 4)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                            +@(Plan.Timeframes.Count - 4)
+                        </MudChip>
+                    }
+                </MudChipSet>
+            </div>
+
+            <div class="detail-row">
+                <MudIcon Icon="@Icons.Material.Filled.DateRange" Size="Size.Small" />
+                <MudText Typo="Typo.body2">@Plan.DateRanges.Count date ranges</MudText>
+            </div>
+
+            <div class="detail-row">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Size="Size.Small" />
+                <MudText Typo="Typo.body2">
+                    Max @Plan.Resolution.MaxBacktests backtests
+                </MudText>
+            </div>
+        </div>
+
+        @if (Plan.Tags.Count > 0)
+        {
+            <MudChipSet T="string" ReadOnly="true" Class="mt-2">
+                @foreach (var tag in Plan.Tags)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                        @tag
+                    </MudChip>
+                }
+            </MudChipSet>
+        }
+    </MudCardContent>
+
+    <MudCardActions>
+        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+            v@(Plan.Version) · Modified @Plan.Modified.ToString("MMM d, yyyy")
+        </MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Text" Color="Color.Primary"
+                   OnClick="@(() => OnEdit.InvokeAsync(Plan))">
+            Edit
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+<style>
+    .plan-card .detail-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .plan-card .plan-details {
+        margin-top: 8px;
+    }
+</style>
+
+@code {
+    [Parameter, EditorRequired] public OptimizationPlan Plan { get; set; } = default!;
+    [Parameter] public EventCallback<OptimizationPlan> OnEdit { get; set; }
+    [Parameter] public EventCallback<OptimizationPlan> OnDuplicate { get; set; }
+    [Parameter] public EventCallback<OptimizationPlan> OnDelete { get; set; }
+}

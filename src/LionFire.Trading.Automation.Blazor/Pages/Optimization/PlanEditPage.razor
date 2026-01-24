@@ -1,0 +1,268 @@
+@page "/optimization/plans/new"
+@page "/optimization/plans/{PlanId}"
+@namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Automation.Blazor.Components.Optimization
+@using Hjson
+@using System.Text.Json
+
+<PageTitle>@(_isNew ? "New Plan" : $"Edit {_plan?.Name}")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-4">
+    <div class="page-header">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                       Href="/optimization/plans" />
+        <MudText Typo="Typo.h5">@(_isNew ? "New Optimization Plan" : $"Edit: {_plan?.Name}")</MudText>
+        <MudSpacer />
+        @if (!_isNew)
+        {
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">
+                v@(_plan?.Version)
+            </MudChip>
+        }
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mt-4" />
+    }
+    else
+    {
+        <MudPaper Class="pa-4 mt-4">
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Plan Configuration (HJSON)</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4 mud-text-secondary">
+                Edit the plan configuration in HJSON format. Use the Format button to auto-format, and Validate to check for errors.
+            </MudText>
+
+            <OptimizationPlanEditor @ref="_editor"
+                                    @bind-Value="_hjsonContent"
+                                    OnPlanParsed="OnPlanParsed"
+                                    Height="600px" />
+        </MudPaper>
+
+        <div class="action-bar mt-4">
+            <MudButton Variant="Variant.Outlined" Href="/optimization/plans">
+                Cancel
+            </MudButton>
+            <MudSpacer />
+            @if (!_isNew)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                           OnClick="SaveAsNew" Class="mr-2">
+                    Save As New
+                </MudButton>
+            }
+            <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                       OnClick="Save" Disabled="@(!_canSave)">
+                @(_isNew ? "Create Plan" : "Save Changes")
+            </MudButton>
+        </div>
+    }
+</MudContainer>
+
+<MudDialog @bind-Visible="_saveAsDialogVisible">
+    <TitleContent>Save As New Plan</TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_newPlanId" Label="New Plan ID"
+                      HelperText="Lowercase with hyphens (e.g., my-new-plan)"
+                      Immediate="true" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _saveAsDialogVisible = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="DoSaveAsNew"
+                   Disabled="@string.IsNullOrWhiteSpace(_newPlanId)">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .action-bar {
+        display: flex;
+        gap: 16px;
+    }
+</style>
+
+@code {
+    [Parameter] public string? PlanId { get; set; }
+    [SupplyParameterFromQuery] public string? From { get; set; }
+
+    private bool _isNew => string.IsNullOrWhiteSpace(PlanId);
+    private bool _loading = true;
+    private OptimizationPlanEditor? _editor;
+    private string _hjsonContent = "";
+    private OptimizationPlan? _plan;
+    private bool _canSave;
+    private bool _saveAsDialogVisible;
+    private string _newPlanId = "";
+
+    [Inject] private IOptimizationPlanRepository Repository { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!_isNew)
+        {
+            var plan = await Repository.GetAsync(PlanId!);
+            if (plan != null)
+            {
+                _plan = plan;
+                _hjsonContent = SerializePlan(plan);
+            }
+            else
+            {
+                Snackbar.Add($"Plan '{PlanId}' not found", Severity.Error);
+                Navigation.NavigateTo("/optimization/plans");
+                return;
+            }
+        }
+        else if (!string.IsNullOrWhiteSpace(From))
+        {
+            // Duplicating from existing plan
+            var sourcePlan = await Repository.GetAsync(From);
+            if (sourcePlan != null)
+            {
+                _plan = sourcePlan with
+                {
+                    Id = "",
+                    Name = $"{sourcePlan.Name} (copy)",
+                    Version = 1
+                };
+                _hjsonContent = SerializePlan(_plan);
+            }
+        }
+        else
+        {
+            // New plan with template
+            _hjsonContent = GetNewPlanTemplate();
+        }
+
+        _loading = false;
+    }
+
+    private void OnPlanParsed(OptimizationPlan? plan)
+    {
+        _plan = plan;
+        _canSave = plan != null && _editor?.IsValid == true;
+    }
+
+    private async Task Save()
+    {
+        if (_plan == null)
+        {
+            Snackbar.Add("Cannot save: invalid plan configuration", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            var savedPlan = await Repository.SaveAsync(_plan);
+            Snackbar.Add($"Saved plan '{savedPlan.Name}' (v{savedPlan.Version})", Severity.Success);
+            Navigation.NavigateTo($"/optimization/plans/{savedPlan.Id}");
+        }
+        catch (PlanValidationException ex)
+        {
+            foreach (var error in ex.Errors)
+            {
+                Snackbar.Add(error, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void SaveAsNew()
+    {
+        _newPlanId = _plan?.Id ?? "";
+        _saveAsDialogVisible = true;
+    }
+
+    private async Task DoSaveAsNew()
+    {
+        if (_plan == null || string.IsNullOrWhiteSpace(_newPlanId))
+        {
+            return;
+        }
+
+        // Check if new ID already exists
+        if (await Repository.ExistsAsync(_newPlanId))
+        {
+            Snackbar.Add($"Plan '{_newPlanId}' already exists", Severity.Error);
+            return;
+        }
+
+        var newPlan = _plan with { Id = _newPlanId, Version = 1 };
+
+        try
+        {
+            var savedPlan = await Repository.SaveAsync(newPlan);
+            Snackbar.Add($"Created new plan '{savedPlan.Name}'", Severity.Success);
+            _saveAsDialogVisible = false;
+            Navigation.NavigateTo($"/optimization/plans/{savedPlan.Id}");
+        }
+        catch (PlanValidationException ex)
+        {
+            foreach (var error in ex.Errors)
+            {
+                Snackbar.Add(error, Severity.Error);
+            }
+        }
+    }
+
+    private static string SerializePlan(OptimizationPlan plan)
+    {
+        var json = JsonSerializer.Serialize(plan, JsonOptions);
+        return JsonValue.Parse(json).ToString(Stringify.Hjson);
+    }
+
+    private static string GetNewPlanTemplate() => """
+        // Optimization Plan
+        // Edit the values below to configure your optimization run.
+
+        id: "my-plan"
+        name: "My Optimization Plan"
+        description: "Description of what this plan tests"
+
+        bot: "PAtrBot"
+
+        symbols: {
+          type: "static"
+          snapshot: [
+            "BTCUSDT"
+            "ETHUSDT"
+          ]
+          excludedSymbols: []
+        }
+
+        timeframes: [
+          "m5"
+          "m15"
+          "h1"
+        ]
+
+        dateRanges: [
+          { name: "1mo", start: "-1M", end: "now" }
+          { name: "3mo", start: "-3M", end: "now" }
+        ]
+
+        resolution: {
+          maxBacktests: 1000
+          minParameterPriority: 0
+        }
+
+        tags: []
+        """;
+}
