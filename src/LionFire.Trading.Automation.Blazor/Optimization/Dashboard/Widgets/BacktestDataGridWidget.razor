@@ -54,11 +54,23 @@
 
             <TemplateColumn Title="Actions" Sortable="false">
                 <CellTemplate>
-                    <MudIconButton Icon="@Icons.Material.Filled.AddCircle"
+                    @{
+                        var botId = GetBotId(context.Item);
+                        var botExists = IsBotOnDisk(botId);
+                        var inPortfolio = IsBotInPortfolio(botId);
+                    }
+                    <MudIconButton Icon="@(botExists ? Icons.Material.Filled.AddCircle : Icons.Material.Outlined.AddCircle)"
                                    Size="Size.Small"
-                                   Color="Color.Primary"
-                                   Title="Add to workspace as bot"
+                                   Color="@(botExists ? Color.Success : Color.Primary)"
+                                   Title="@(botExists ? "Bot already exists on disk" : "Create bot on disk")"
                                    OnClick="@(() => OnExportToBot(context.Item))" />
+                    <MudTooltip Text="@(Portfolio == null ? "Select a portfolio first" : (inPortfolio ? "Bot is in portfolio" : "Add bot to portfolio"))">
+                        <MudIconButton Icon="@(inPortfolio ? Icons.Material.Filled.Folder : Icons.Material.Outlined.FolderOpen)"
+                                       Size="Size.Small"
+                                       Color="@(inPortfolio ? Color.Success : Color.Primary)"
+                                       Disabled="@(Portfolio == null)"
+                                       OnClick="@(() => OnAddToPortfolio(context.Item))" />
+                    </MudTooltip>
                 </CellTemplate>
             </TemplateColumn>
 
@@ -81,6 +93,9 @@ else
 
     [CascadingParameter(Name = "UserServices")]
     public IServiceProvider? UserServices { get; set; }
+
+    [CascadingParameter(Name = "Portfolio")]
+    public Portfolio2? Portfolio { get; set; }
 
     protected override void OnInitialized()
     {
@@ -120,6 +135,23 @@ else
         }
     }
 
+    private string GetBotId(BacktestBatchJournalEntry item)
+    {
+        return $"{ViewModel?.OptimizationRunInfo.Guid};{item.BatchId}-{item.Id}";
+    }
+
+    private bool IsBotOnDisk(string botId)
+    {
+        if (_workspaceBots == null) return false;
+        return _workspaceBots.ObservableCache.Lookup(botId).HasValue;
+    }
+
+    private bool IsBotInPortfolio(string botId)
+    {
+        if (Portfolio?.BotIds == null) return false;
+        return Portfolio.BotIds.Contains(botId);
+    }
+
     private void OnExportToBot(BacktestBatchJournalEntry item)
     {
         if (_workspaceBots == null)
@@ -129,6 +161,44 @@ else
         }
         Logger.LogInformation("Exporting backtest {BatchId}-{Id} to bot", item.BatchId, item.Id);
         ViewModel?.OnExportToBot(item, _workspaceBots);
+        StateHasChanged(); // Refresh to update button state
+    }
+
+    private void OnAddToPortfolio(BacktestBatchJournalEntry item)
+    {
+        if (Portfolio == null)
+        {
+            Logger.LogWarning("Cannot add to portfolio: No portfolio selected");
+            return;
+        }
+
+        var botId = GetBotId(item);
+
+        // First ensure the bot exists on disk
+        if (!IsBotOnDisk(botId))
+        {
+            if (_workspaceBots == null)
+            {
+                Logger.LogError("Cannot create bot: IObservableReaderWriter<string, BotEntity> service not available");
+                return;
+            }
+            Logger.LogInformation("Creating bot {BotId} before adding to portfolio", botId);
+            ViewModel?.OnExportToBot(item, _workspaceBots);
+        }
+
+        // Add to portfolio if not already there
+        if (!IsBotInPortfolio(botId))
+        {
+            Portfolio.BotIds ??= new List<string>();
+            Portfolio.BotIds.Add(botId);
+            Logger.LogInformation("Added bot {BotId} to portfolio {PortfolioName}", botId, Portfolio.Name);
+        }
+        else
+        {
+            Logger.LogInformation("Bot {BotId} already in portfolio {PortfolioName}", botId, Portfolio.Name);
+        }
+
+        StateHasChanged(); // Refresh to update button state
     }
 
     private string GetRowClass(BacktestBatchJournalEntry item, int index)
