@@ -1,3 +1,4 @@
+using Hjson;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -15,8 +16,10 @@ using LionFire.Hosting.CommandLine;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Automation.Optimization;
+using LionFire.Trading.Automation.Optimization.Scoring;
 using LionFire.Trading.Optimization;
 using LionFire.Trading.HistoricalData;
+using LionFire.Trading.Journal;
 
 namespace LionFire.Trading.Cli.Commands;
 
@@ -78,6 +81,13 @@ public static class OptimizeRunHandler
         cmd.AddOption(maxBacktestsOption);
 
         cmd.AddOption(new Option<int>("--batch-size", () => 1024, "Batch size for execution"));
+
+        // Trade journal options
+        var journalsOption = new Option<bool?>("--journals", "Enable trade journals (saves detailed trade data for top results)");
+        journalsOption.AddAlias("-j");
+        cmd.AddOption(journalsOption);
+
+        cmd.AddOption(new Option<int?>("--keep-journals", "Number of top results to keep trade journals for (default: 5)"));
     }
 
     public static Action<HostingBuilderBuilderContext, HostApplicationBuilder> Run =>
@@ -182,6 +192,11 @@ public static class OptimizeRunHandler
                     {
                         MaxBacktests = options.MaxBacktests,
                         MaxBatchSize = options.BatchSize,
+                        TradeJournalOptions = new TradeJournalOptions
+                        {
+                            Enabled = options.Journals ?? false,
+                            KeepTradeJournalsForTopNResults = options.KeepJournals ?? 5,
+                        },
                     };
 
                     // Write starting status
@@ -289,6 +304,40 @@ public static class OptimizeRunHandler
                     var finalProgress = optimizationTask.Progress ?? new OptimizationProgress();
                     var outputDir = optimizationTask.OptimizationDirectory;
 
+                    // Calculate optimization score
+                    OptimizationScore? score = null;
+                    if (!string.IsNullOrEmpty(outputDir))
+                    {
+                        try
+                        {
+                            var backtestResults = BacktestResultsReader.ReadFromDirectory(outputDir);
+                            if (backtestResults.Count > 0)
+                            {
+                                var scorer = new OptimizationScorer(backtestResults);
+                                score = scorer.Calculate();
+
+                                // Write score to file
+                                var scoreFilePath = Path.Combine(outputDir, "OptimizationScore.hjson");
+                                var scoreJson = JsonSerializer.Serialize(score, new JsonSerializerOptions
+                                {
+                                    WriteIndented = true,
+                                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+                                });
+                                var hjson = Hjson.JsonValue.Parse(scoreJson).ToString(new Hjson.HjsonOptions { EmitRootBraces = false });
+                                await File.WriteAllTextAsync(scoreFilePath, hjson);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            // Don't fail the completion if scoring fails
+                            if (!options.Quiet)
+                            {
+                                AnsiConsole.MarkupLine($"[yellow]Warning: Failed to calculate score: {ex.Message}[/]");
+                            }
+                        }
+                    }
+
                     WriteProgress(options.Json, options.Quiet, new ProgressInfo
                     {
                         Status = "completed",
@@ -298,6 +347,7 @@ public static class OptimizeRunHandler
                         Total = finalProgress.Queued > 0 ? finalProgress.Queued : finalProgress.Completed,
                         Elapsed = stopwatch.Elapsed.Humanize(2),
                         OutputDirectory = outputDir,
+                        Score = score,
                         Message = $"Optimization completed. Results in: {outputDir}"
                     });
                 }
@@ -483,6 +533,33 @@ public static class OptimizeRunHandler
                         i++;
                     }
                     break;
+
+                case "--journals":
+                case "-j":
+                    // Check if next arg is a bool value or just the flag
+                    if (nextArg != null && !nextArg.StartsWith("-") && bool.TryParse(nextArg, out var journalsValue))
+                    {
+                        options.Journals = journalsValue;
+                        i++;
+                    }
+                    else
+                    {
+                        options.Journals = true;
+                    }
+                    options.ExplicitlySetProperties.Add("Journals");
+                    break;
+
+                case "--keep-journals":
+                    if (nextArg != null && !nextArg.StartsWith("-"))
+                    {
+                        if (int.TryParse(nextArg, out var keepJournals))
+                        {
+                            options.KeepJournals = keepJournals;
+                            options.ExplicitlySetProperties.Add("KeepJournals");
+                        }
+                        i++;
+                    }
+                    break;
             }
         }
 
@@ -536,6 +613,51 @@ public static class OptimizeRunHandler
                     {
                         AnsiConsole.MarkupLine($"         Results: [link]{progress.OutputDirectory}[/]");
                     }
+
+                    // Display score summary
+                    if (progress.Score != null)
+                    {
+                        AnsiConsole.WriteLine();
+                        AnsiConsole.MarkupLine("[bold cyan]         Score Summary[/]");
+                        AnsiConsole.MarkupLine("         " + new string('-', 43));
+                        AnsiConsole.MarkupLine($"         Formula: [yellow]{progress.Score.Formula}[/]");
+
+                        var summary = progress.Score.Summary;
+                        if (summary != null)
+                        {
+                            var passColor = summary.PassingPercent >= 10 ? "green" : summary.PassingPercent >= 5 ? "yellow" : "red";
+                            AnsiConsole.MarkupLine($"         Score: [{passColor}]{progress.Score.Value:F0}[/] ({summary.PassingPercent:F1}% of backtests)");
+                            AnsiConsole.MarkupLine($"         AD Stats: Max [green]{summary.MaxAd:F2}[/] | Avg [yellow]{summary.AvgAd:F2}[/] | Median {summary.MedianAd:F2}");
+                            AnsiConsole.MarkupLine($"         Distribution: [green]{summary.GoodCount}[/] good (≥2) | [cyan]{summary.StrongCount}[/] strong (≥3) | [magenta]{summary.ExceptionalCount}[/] exceptional (≥5)");
+                        }
+
+                        // Display histogram
+                        var histogram = progress.Score.AdHistogram;
+                        if (histogram?.Buckets?.Count > 0)
+                        {
+                            AnsiConsole.WriteLine();
+                            AnsiConsole.MarkupLine("[bold cyan]         AD Distribution[/]");
+                            var textHistogram = HistogramGenerator.GenerateTextHistogram(histogram, 25);
+                            foreach (var line in textHistogram.Split(Environment.NewLine))
+                            {
+                                // Color buckets based on AD value
+                                var colored = line;
+                                if (line.Contains("< 0") || line.Contains("-∞"))
+                                {
+                                    colored = $"[red]{line}[/]";
+                                }
+                                else if (line.Contains("0.0-") || line.Contains("0.5-"))
+                                {
+                                    colored = $"[yellow]{line}[/]";
+                                }
+                                else if (line.Contains("1.0-") || line.Contains("2.0-") || line.Contains("3.0-") || line.Contains("5.0"))
+                                {
+                                    colored = $"[green]{line}[/]";
+                                }
+                                AnsiConsole.MarkupLine($"       {colored}");
+                            }
+                        }
+                    }
                     break;
 
                 case "cancelled":
@@ -579,5 +701,6 @@ public static class OptimizeRunHandler
         public string? OutputDirectory { get; set; }
         public string? Message { get; set; }
         public string? Error { get; set; }
+        public OptimizationScore? Score { get; set; }
     }
 }
