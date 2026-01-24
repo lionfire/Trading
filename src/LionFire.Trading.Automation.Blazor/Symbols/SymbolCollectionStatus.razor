@@ -18,10 +18,29 @@
     }
     else
     {
-        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
-        <MudTooltip Text="@GetTooltipText()">
-            <MudText Typo="Typo.body2" Color="Color.Warning">@Diff.Summary</MudText>
-        </MudTooltip>
+        <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+            @if (Diff.NewSymbols.Count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
+                    +@Diff.NewSymbols.Count
+                </MudChip>
+            }
+            @if (Diff.RemovedSymbols.Count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Warning" Variant="Variant.Filled">
+                    -@Diff.RemovedSymbols.Count
+                </MudChip>
+            }
+            @if (Diff.DelistedSymbols.Count > 0)
+            {
+                <MudChip T="string" Size="Size.Small" Color="Color.Error" Variant="Variant.Filled">
+                    @Diff.DelistedSymbols.Count delisted
+                </MudChip>
+            }
+            <MudTooltip Text="@GetTooltipText()">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+            </MudTooltip>
+        </MudStack>
     }
 
     @if (Snapshot != null)

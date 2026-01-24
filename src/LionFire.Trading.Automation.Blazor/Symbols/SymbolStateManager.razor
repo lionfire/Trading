@@ -9,6 +9,10 @@
             <MudChip T="string" Value="@("active")" Color="Color.Success" Size="Size.Small">Active (@ActiveCount)</MudChip>
             <MudChip T="string" Value="@("pending")" Color="Color.Info" Size="Size.Small">Pending (@PendingCount)</MudChip>
             <MudChip T="string" Value="@("excluded")" Color="Color.Warning" Size="Size.Small">Excluded (@ExcludedCount)</MudChip>
+            @if (DelistedCount > 0)
+            {
+                <MudChip T="string" Value="@("delisted")" Color="Color.Error" Size="Size.Small">Delisted (@DelistedCount)</MudChip>
+            }
         </MudChipSet>
         @if (!HideExcluded)
         {
@@ -28,7 +32,19 @@
         }
     </MudStack>
 
-    @if (SelectedSymbols.Any())
+    @if (IsBulkProcessing)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudStack Row AlignItems="AlignItems.Center">
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <MudText>Processing @BulkProgress of @BulkTotal symbols...</MudText>
+                <MudSpacer />
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="CancelBulkOperation">Cancel</MudButton>
+            </MudStack>
+            <MudProgressLinear Value="@BulkProgressPercent" Class="mt-2" />
+        </MudAlert>
+    }
+    else if (SelectedSymbols.Any())
     {
         <MudAlert Severity="Severity.Info" Class="mb-4">
             <MudStack Row AlignItems="AlignItems.Center">
@@ -69,11 +85,34 @@
             <PropertyColumn Property="x => x.Symbol" Title="Symbol" />
             <TemplateColumn Title="State">
                 <CellTemplate>
-                    <MudChip T="string" Size="Size.Small"
-                             Color="@GetStateColor(context.Item.State)"
-                             Variant="Variant.Filled">
-                        @context.Item.State
-                    </MudChip>
+                    @if (context.Item.State == SymbolState.Delisted && context.Item.DelistedAt.HasValue)
+                    {
+                        <MudTooltip Text="@($"Delisted on {context.Item.DelistedAt.Value:yyyy-MM-dd}")">
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="Color.Error"
+                                     Variant="Variant.Filled">
+                                Delisted
+                            </MudChip>
+                        </MudTooltip>
+                    }
+                    else if (context.Item.State == SymbolState.Excluded && !string.IsNullOrEmpty(context.Item.ExclusionReason))
+                    {
+                        <MudTooltip Text="@context.Item.ExclusionReason">
+                            <MudChip T="string" Size="Size.Small"
+                                     Color="Color.Warning"
+                                     Variant="Variant.Filled">
+                                Excluded
+                            </MudChip>
+                        </MudTooltip>
+                    }
+                    else
+                    {
+                        <MudChip T="string" Size="Size.Small"
+                                 Color="@GetStateColor(context.Item.State)"
+                                 Variant="Variant.Filled">
+                            @context.Item.State
+                        </MudChip>
+                    }
                 </CellTemplate>
             </TemplateColumn>
             <TemplateColumn Title="Volume 24h">
@@ -120,6 +159,27 @@
                     }
                     @if (context.Item.State == SymbolState.Excluded)
                     {
+                        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                       Size="Size.Small"
+                                       Color="Color.Success"
+                                       OnClick="@(() => ActivateSymbolAsync(context.Item))"
+                                       Title="Re-enable (add back to collection)" />
+                        <MudIconButton Icon="@Icons.Material.Filled.VisibilityOff"
+                                       Size="Size.Small"
+                                       Color="Color.Default"
+                                       OnClick="@(() => HideSymbolAsync(context.Item))"
+                                       Title="Hide from view" />
+                    }
+                    @if (context.Item.State == SymbolState.Hidden)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Restore"
+                                       Size="Size.Small"
+                                       Color="Color.Success"
+                                       OnClick="@(() => ActivateSymbolAsync(context.Item))"
+                                       Title="Re-enable (add back to collection)" />
+                    }
+                    @if (context.Item.State == SymbolState.Delisted)
+                    {
                         <MudIconButton Icon="@Icons.Material.Filled.VisibilityOff"
                                        Size="Size.Small"
                                        Color="Color.Default"
@@ -135,6 +195,8 @@
     </MudDataGrid>
 </MudPaper>
 
+@implements IDisposable
+
 @code {
     [Parameter] public SymbolCollectionSnapshot? Snapshot { get; set; }
     [Parameter] public EventCallback<(string Symbol, SymbolState NewState, string? Reason)> OnSymbolStateChanged { get; set; }
@@ -143,11 +205,19 @@
     private bool HideExcluded { get; set; }
     private HashSet<SymbolEntry> SelectedSymbols { get; set; } = new();
 
+    // Bulk operation state
+    private bool IsBulkProcessing { get; set; }
+    private int BulkProgress { get; set; }
+    private int BulkTotal { get; set; }
+    private double BulkProgressPercent => BulkTotal > 0 ? (double)BulkProgress / BulkTotal * 100 : 0;
+    private CancellationTokenSource? _bulkCts;
+
     private IEnumerable<SymbolEntry> AllSymbols => Snapshot?.Symbols ?? Enumerable.Empty<SymbolEntry>();
     private int TotalCount => AllSymbols.Count(s => !HideExcluded || s.State != SymbolState.Hidden);
     private int ActiveCount => AllSymbols.Count(s => s.State == SymbolState.Active);
     private int PendingCount => AllSymbols.Count(s => s.State == SymbolState.Pending);
     private int ExcludedCount => AllSymbols.Count(s => s.State == SymbolState.Excluded);
+    private int DelistedCount => AllSymbols.Count(s => s.State == SymbolState.Delisted);
 
     private bool CanActivateSelected => SelectedSymbols.Any(s => s.State == SymbolState.Pending);
 
@@ -165,6 +235,7 @@
                 "active" => symbols.Where(s => s.State == SymbolState.Active),
                 "pending" => symbols.Where(s => s.State == SymbolState.Pending),
                 "excluded" => symbols.Where(s => s.State == SymbolState.Excluded || s.State == SymbolState.Hidden),
+                "delisted" => symbols.Where(s => s.State == SymbolState.Delisted),
                 _ => symbols
             };
         }
@@ -202,20 +273,58 @@
 
     private async Task ActivateSelectedAsync()
     {
-        foreach (var entry in SelectedSymbols.Where(s => s.State == SymbolState.Pending))
-        {
-            await OnSymbolStateChanged.InvokeAsync((entry.Symbol, SymbolState.Active, null));
-        }
-        ClearSelection();
+        var toActivate = SelectedSymbols.Where(s => s.State == SymbolState.Pending || s.State == SymbolState.Excluded || s.State == SymbolState.Hidden).ToList();
+        await ProcessBulkOperationAsync(toActivate, SymbolState.Active);
     }
 
     private async Task ExcludeSelectedAsync()
     {
-        foreach (var entry in SelectedSymbols)
+        var toExclude = SelectedSymbols.ToList();
+        await ProcessBulkOperationAsync(toExclude, SymbolState.Excluded);
+    }
+
+    private async Task ProcessBulkOperationAsync(List<SymbolEntry> entries, SymbolState newState)
+    {
+        if (entries.Count == 0) return;
+
+        _bulkCts?.Cancel();
+        _bulkCts = new CancellationTokenSource();
+
+        IsBulkProcessing = true;
+        BulkProgress = 0;
+        BulkTotal = entries.Count;
+        StateHasChanged();
+
+        var successCount = 0;
+        try
         {
-            await OnSymbolStateChanged.InvokeAsync((entry.Symbol, SymbolState.Excluded, null));
+            foreach (var entry in entries)
+            {
+                if (_bulkCts.Token.IsCancellationRequested) break;
+
+                await OnSymbolStateChanged.InvokeAsync((entry.Symbol, newState, null));
+                BulkProgress++;
+                successCount++;
+                StateHasChanged();
+            }
         }
-        ClearSelection();
+        finally
+        {
+            IsBulkProcessing = false;
+            ClearSelection();
+            StateHasChanged();
+        }
+    }
+
+    private void CancelBulkOperation()
+    {
+        _bulkCts?.Cancel();
+    }
+
+    public void Dispose()
+    {
+        _bulkCts?.Cancel();
+        _bulkCts?.Dispose();
     }
 
     private Color GetStateColor(SymbolState state) => state switch

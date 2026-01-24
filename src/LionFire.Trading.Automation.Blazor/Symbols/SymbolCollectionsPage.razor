@@ -201,6 +201,12 @@
         {
             var diff = await StalenessDetector.DetectStalenessAsync(snapshot);
             CollectionDiffs[snapshot.Id] = diff;
+
+            // Auto-mark delisted symbols if any detected
+            if (diff.DelistedSymbols.Count > 0)
+            {
+                await AutoMarkDelistedAsync(snapshot, diff.DelistedSymbols);
+            }
         }
         catch (Exception ex)
         {
@@ -212,6 +218,46 @@
         finally
         {
             SetCollectionLoading(snapshot.Id, false);
+        }
+    }
+
+    private async Task AutoMarkDelistedAsync(SymbolCollectionSnapshot snapshot, IReadOnlyList<SymbolEntry> delistedSymbols)
+    {
+        var currentSnapshot = snapshot;
+        var markedCount = 0;
+
+        foreach (var entry in delistedSymbols)
+        {
+            try
+            {
+                currentSnapshot = await CollectionService.MarkDelistedAsync(currentSnapshot, entry.Symbol);
+                markedCount++;
+            }
+            catch
+            {
+                // Continue with other symbols if one fails
+            }
+        }
+
+        if (markedCount > 0)
+        {
+            // Update in list
+            var index = Collections.FindIndex(c => c.Id == snapshot.Id);
+            if (index >= 0)
+            {
+                Collections[index] = currentSnapshot;
+            }
+
+            if (SelectedCollection?.Id == snapshot.Id)
+            {
+                SelectedCollection = currentSnapshot;
+            }
+
+            Snackbar.Add(
+                $"{markedCount} delisted symbol{(markedCount > 1 ? "s" : "")} auto-marked in {snapshot.Name}",
+                Severity.Warning);
+
+            StateHasChanged();
         }
     }
 
