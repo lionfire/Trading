@@ -70,6 +70,16 @@ return await new HostApplicationBuilderProgram()
     .Command<OptimizeRunOptions>("optimize run", OptimizeRunHandler.Run,
         builderBuilder: OptimizeRunHandler.ConfigureCommand)
 
+    // Backtest commands
+    .Command<BacktestRunOptions>("backtest run", BacktestRunHandler.Run,
+        builderBuilder: BacktestRunHandler.ConfigureCommand)
+
+    // Crypto market data commands
+    .Command<CryptoMcapOptions>("crypto mcap", CryptoHandlers.Mcap,
+        builderBuilder: CryptoHandlers.ConfigureMcapCommand)
+    .Command<CryptoVolOptions>("crypto vol", CryptoHandlers.Vol,
+        builderBuilder: CryptoHandlers.ConfigureVolCommand)
+
     .RunAsync(args)
 //.RunOaktonCommands(args);
 ;
