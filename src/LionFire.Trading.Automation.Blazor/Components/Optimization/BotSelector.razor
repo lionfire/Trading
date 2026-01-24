@@ -1,0 +1,24 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+
+<MudSelect T="string" Label="Filter by Bot" Value="@SelectedBot" ValueChanged="OnValueChanged"
+           Variant="Variant.Outlined" Dense="true" Clearable="true"
+           Placeholder="All Bots" Class="bot-selector">
+    @foreach (var bot in AvailableBots)
+    {
+        <MudSelectItem Value="@bot">@bot</MudSelectItem>
+    }
+</MudSelect>
+
+@code {
+    [Parameter] public string? SelectedBot { get; set; }
+    [Parameter] public EventCallback<string?> SelectedBotChanged { get; set; }
+    [Parameter] public IReadOnlyList<string> AvailableBots { get; set; } = [];
+    [Parameter] public EventCallback<string?> OnBotChanged { get; set; }
+
+    private async Task OnValueChanged(string? value)
+    {
+        SelectedBot = value;
+        await SelectedBotChanged.InvokeAsync(value);
+        await OnBotChanged.InvokeAsync(value);
+    }
+}

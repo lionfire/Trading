@@ -1,0 +1,340 @@
+@page "/optimization/execute"
+@page "/optimization/execute/{PlanId}"
+@namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Optimization.Execution
+@using LionFire.Trading.Automation.Blazor.Components.Optimization
+
+<PageTitle>Plan Execution</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4 plan-execution-page">
+    <div class="page-header mb-4">
+        <MudText Typo="Typo.h4">Plan Execution</MudText>
+        <MudSpacer />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/optimization/plans/new">
+            New Plan
+        </MudButton>
+    </div>
+
+    <div class="master-detail-layout">
+        @* Left Panel: Bot Selector + Plan List *@
+        <div class="left-panel">
+            <MudPaper Class="pa-3 mb-2" Elevation="1">
+                <BotSelector @bind-SelectedBot="_selectedBot"
+                             AvailableBots="_availableBots"
+                             OnBotChanged="OnBotChanged" />
+            </MudPaper>
+
+            <MudPaper Class="plan-list-container" Elevation="1">
+                <PlanListNav BotFilter="_selectedBot"
+                             SelectedPlanId="_selectedPlanId"
+                             Plans="_filteredPlans"
+                             ExecutionStates="_executionStates"
+                             OnPlanSelected="OnPlanSelected" />
+            </MudPaper>
+        </div>
+
+        @* Right Panel: Detail Tabs *@
+        <div class="right-panel">
+            @if (_selectedPlan != null)
+            {
+                <PlanDetailTabs Plan="_selectedPlan"
+                                ExecutionState="_currentExecutionState"
+                                OnStartExecution="StartExecution"
+                                OnStopExecution="StopExecution"
+                                OnPauseExecution="PauseExecution"
+                                OnResumeExecution="ResumeExecution"
+                                OnRetryFailed="RetryFailedJobs" />
+            }
+            else
+            {
+                <MudPaper Class="pa-8 text-center placeholder" Elevation="1">
+                    <MudIcon Icon="@Icons.Material.Filled.Timeline" Size="Size.Large"
+                             Class="mud-text-secondary mb-4" />
+                    <MudText Typo="Typo.h6" Class="mud-text-secondary">
+                        Select a plan to view details
+                    </MudText>
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
+                        Choose a plan from the list on the left, or
+                        <MudLink Href="/optimization/plans/new">create a new plan</MudLink>.
+                    </MudText>
+                </MudPaper>
+            }
+        </div>
+    </div>
+</MudContainer>
+
+<style>
+    .plan-execution-page {
+        height: calc(100vh - 64px - 32px); /* viewport - header - padding */
+        display: flex;
+        flex-direction: column;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+    }
+
+    .master-detail-layout {
+        display: flex;
+        gap: 16px;
+        flex: 1;
+        min-height: 0; /* Allow flex children to shrink */
+    }
+
+    .left-panel {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .plan-list-container {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .right-panel {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .placeholder {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Responsive: stack on small screens */
+    @@media (max-width: 900px) {
+        .master-detail-layout {
+            flex-direction: column;
+        }
+
+        .left-panel {
+            width: 100%;
+            max-height: 300px;
+        }
+
+        .right-panel {
+            flex: 1;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public string? PlanId { get; set; }
+
+    private List<OptimizationPlan> _plans = [];
+    private List<string> _availableBots = [];
+    private string? _selectedBot;
+    private string? _selectedPlanId;
+    private OptimizationPlan? _selectedPlan;
+    private Dictionary<string, PlanExecutionState> _executionStates = new();
+    private PlanExecutionState? _currentExecutionState;
+    private System.Timers.Timer? _pollTimer;
+    private bool _loading = true;
+
+    [Inject] private IOptimizationPlanRepository PlanRepository { get; set; } = default!;
+    [Inject] private IPlanExecutionService ExecutionService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+
+    private IReadOnlyList<OptimizationPlan> _filteredPlans =>
+        string.IsNullOrEmpty(_selectedBot)
+            ? _plans
+            : _plans.Where(p => p.Bot == _selectedBot).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlans();
+        await LoadExecutionStates();
+
+        // Set initial selection from URL parameter
+        if (!string.IsNullOrEmpty(PlanId))
+        {
+            _selectedPlanId = PlanId;
+            _selectedPlan = _plans.FirstOrDefault(p => p.Id == PlanId);
+            _selectedBot = _selectedPlan?.Bot;
+            await LoadCurrentExecutionState();
+        }
+
+        // Start polling for updates
+        StartPolling();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PlanId != _selectedPlanId && !string.IsNullOrEmpty(PlanId))
+        {
+            _selectedPlanId = PlanId;
+            _selectedPlan = _plans.FirstOrDefault(p => p.Id == PlanId);
+            await LoadCurrentExecutionState();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPlans()
+    {
+        _loading = true;
+        _plans = (await PlanRepository.ListAsync()).ToList();
+        _availableBots = _plans.Select(p => p.Bot).Distinct().OrderBy(b => b).ToList();
+        _loading = false;
+    }
+
+    private async Task LoadExecutionStates()
+    {
+        var activeStates = await ExecutionService.GetAllActiveAsync();
+        _executionStates = activeStates.ToDictionary(s => s.PlanId);
+    }
+
+    private async Task LoadCurrentExecutionState()
+    {
+        if (_selectedPlanId != null)
+        {
+            _currentExecutionState = await ExecutionService.GetStatusAsync(_selectedPlanId);
+        }
+        else
+        {
+            _currentExecutionState = null;
+        }
+    }
+
+    private void OnBotChanged(string? bot)
+    {
+        _selectedBot = bot;
+        // If current selection is not in filtered list, clear it
+        if (_selectedPlan != null && !_filteredPlans.Contains(_selectedPlan))
+        {
+            _selectedPlanId = null;
+            _selectedPlan = null;
+            _currentExecutionState = null;
+            Navigation.NavigateTo("/optimization/execute");
+        }
+    }
+
+    private async Task OnPlanSelected(string planId)
+    {
+        _selectedPlanId = planId;
+        _selectedPlan = _plans.FirstOrDefault(p => p.Id == planId);
+        await LoadCurrentExecutionState();
+        Navigation.NavigateTo($"/optimization/execute/{planId}");
+    }
+
+    private async Task StartExecution(int parallelWorkers)
+    {
+        if (_selectedPlanId == null) return;
+
+        try
+        {
+            var options = new PlanExecutionOptions { ParallelWorkers = parallelWorkers };
+            _currentExecutionState = await ExecutionService.StartAsync(_selectedPlanId, options);
+            _executionStates[_selectedPlanId] = _currentExecutionState;
+            Snackbar.Add("Execution started", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to start: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task StopExecution()
+    {
+        if (_selectedPlanId == null) return;
+
+        try
+        {
+            await ExecutionService.StopAsync(_selectedPlanId);
+            _executionStates.Remove(_selectedPlanId);
+            _currentExecutionState = null;
+            Snackbar.Add("Execution stopped", Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to stop: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PauseExecution()
+    {
+        if (_selectedPlanId == null) return;
+
+        try
+        {
+            await ExecutionService.PauseAsync(_selectedPlanId);
+            await LoadCurrentExecutionState();
+            Snackbar.Add("Execution paused", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to pause: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ResumeExecution()
+    {
+        if (_selectedPlanId == null) return;
+
+        try
+        {
+            await ExecutionService.ResumeAsync(_selectedPlanId);
+            await LoadCurrentExecutionState();
+            Snackbar.Add("Execution resumed", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to resume: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RetryFailedJobs()
+    {
+        if (_selectedPlanId == null) return;
+
+        try
+        {
+            await ExecutionService.RetryFailedAsync(_selectedPlanId);
+            await LoadCurrentExecutionState();
+            Snackbar.Add("Failed jobs re-queued", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to retry: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void StartPolling()
+    {
+        _pollTimer = new System.Timers.Timer(5000);
+        _pollTimer.Elapsed += async (s, e) => await PollForUpdates();
+        _pollTimer.Start();
+    }
+
+    private async Task PollForUpdates()
+    {
+        try
+        {
+            await LoadExecutionStates();
+            await LoadCurrentExecutionState();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Ignore polling errors
+        }
+    }
+
+    public void Dispose()
+    {
+        _pollTimer?.Stop();
+        _pollTimer?.Dispose();
+    }
+}

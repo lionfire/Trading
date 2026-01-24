@@ -1,0 +1,99 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Plans
+
+<div class="plan-settings-tab">
+    <MudCard Elevation="0" Outlined="true">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Plan Configuration</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            @* Basic Info *@
+            <MudText Typo="Typo.subtitle2" Class="mb-2">General</MudText>
+            <MudGrid Class="mb-4">
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Value="@Plan.Id" Label="Plan ID" ReadOnly="true"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Value="@Plan.Name" Label="Name" ReadOnly="true"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Value="@Plan.Bot" Label="Bot Type" ReadOnly="true"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="string" Value="@Plan.Created.ToString("g")" Label="Created" ReadOnly="true"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+
+            @* Matrix Configuration *@
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Optimization Matrix</MudText>
+
+            <MudText Typo="Typo.body2" Class="mb-1"><strong>Symbols:</strong></MudText>
+            <MudChipSet T="string" Class="mb-3">
+                @foreach (var symbol in Plan.Symbols.EffectiveSymbols)
+                {
+                    <MudChip T="string" Size="Size.Small">@symbol</MudChip>
+                }
+            </MudChipSet>
+
+            <MudText Typo="Typo.body2" Class="mb-1"><strong>Timeframes:</strong></MudText>
+            <MudChipSet T="string" Class="mb-3">
+                @foreach (var tf in Plan.Timeframes)
+                {
+                    <MudChip T="string" Size="Size.Small">@tf</MudChip>
+                }
+            </MudChipSet>
+
+            <MudText Typo="Typo.body2" Class="mb-1"><strong>Date Ranges:</strong></MudText>
+            <MudSimpleTable Dense="true" Hover="true" Class="mb-3">
+                <thead>
+                    <tr>
+                        <th>Start</th>
+                        <th>End</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var range in Plan.DateRanges)
+                    {
+                        <tr>
+                            <td>@range.Start</td>
+                            <td>@range.End</td>
+                        </tr>
+                    }
+                </tbody>
+            </MudSimpleTable>
+
+            @* Resolution Settings *@
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Resolution Settings</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="int" Value="@Plan.Resolution.MaxBacktests" Label="Max Backtests" ReadOnly="true"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField T="int" Value="@Plan.Resolution.MinParameterPriority" Label="Min Parameter Priority" ReadOnly="true"
+                                  Variant="Variant.Outlined" />
+                </MudItem>
+            </MudGrid>
+
+            @* Description *@
+            @if (!string.IsNullOrEmpty(Plan.Description))
+            {
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Description</MudText>
+                <MudText Typo="Typo.body2">@Plan.Description</MudText>
+            }
+        </MudCardContent>
+    </MudCard>
+</div>
+
+@code {
+    [Parameter] public OptimizationPlan Plan { get; set; } = default!;
+}

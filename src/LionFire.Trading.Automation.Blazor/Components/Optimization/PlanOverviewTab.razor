@@ -1,0 +1,230 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Optimization.Execution
+
+<div class="plan-overview">
+    @* Plan Info Section *@
+    <MudCard Class="mb-4" Elevation="0" Outlined="true">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">@Plan.Name</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Bot</MudText>
+                    <MudText Typo="Typo.body1">@Plan.Bot</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Created</MudText>
+                    <MudText Typo="Typo.body1">@Plan.Created.ToString("g")</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Symbols</MudText>
+                    <MudText Typo="Typo.body1">@Plan.Symbols.EffectiveSymbols.Count() symbols</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Timeframes</MudText>
+                    <MudText Typo="Typo.body1">@Plan.Timeframes.Count timeframes</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Date Ranges</MudText>
+                    <MudText Typo="Typo.body1">@Plan.DateRanges.Count ranges</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Total Jobs</MudText>
+                    <MudText Typo="Typo.body1">@CalculateTotalJobs() jobs</MudText>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+
+    @* Execution Controls *@
+    <MudCard Class="mb-4" Elevation="0" Outlined="true">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6">Execution</MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            @if (ExecutionState == null || ExecutionState.Status == PlanExecutionStatus.Completed)
+            {
+                @* Not running - show start controls *@
+                <div class="execution-controls">
+                    <MudNumericField T="int" @bind-Value="_parallelWorkers" Label="Parallel Workers"
+                                     Min="1" Max="32" Variant="Variant.Outlined" Class="worker-input" />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                               OnClick="HandleStart" Class="ml-2">
+                        Start Execution
+                    </MudButton>
+                </div>
+            }
+            else
+            {
+                @* Running or paused - show status and controls *@
+                <div class="execution-status mb-4">
+                    <MudChip T="string" Color="@GetStatusColor(ExecutionState.Status)" Size="Size.Medium">
+                        @GetStatusText(ExecutionState.Status)
+                    </MudChip>
+                    <MudText Typo="Typo.body1" Class="ml-2">
+                        @ExecutionState.CompletedJobs / @ExecutionState.TotalJobs jobs complete
+                    </MudText>
+                </div>
+
+                <MudProgressLinear Value="@GetProgressPercent()" Color="@GetStatusColor(ExecutionState.Status)"
+                                   Size="Size.Large" Rounded="true" Class="mb-4" />
+
+                @if (ExecutionState.Status == PlanExecutionStatus.Running)
+                {
+                    <div class="execution-controls">
+                        <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                                   StartIcon="@Icons.Material.Filled.Pause"
+                                   OnClick="@(() => OnPauseExecution.InvokeAsync())">
+                            Pause
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Stop"
+                                   OnClick="@(() => OnStopExecution.InvokeAsync())" Class="ml-2">
+                            Stop
+                        </MudButton>
+                    </div>
+                }
+                else if (ExecutionState.Status == PlanExecutionStatus.Paused)
+                {
+                    <div class="execution-controls">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.PlayArrow"
+                                   OnClick="@(() => OnResumeExecution.InvokeAsync())">
+                            Resume
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Stop"
+                                   OnClick="@(() => OnStopExecution.InvokeAsync())" Class="ml-2">
+                            Stop
+                        </MudButton>
+                    </div>
+                }
+
+                @* Stats *@
+                @if (ExecutionState.StartedAt.HasValue)
+                {
+                    <MudDivider Class="my-4" />
+                    <MudGrid>
+                        <MudItem xs="6" sm="3">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">Started</MudText>
+                            <MudText Typo="Typo.body2">@ExecutionState.StartedAt.Value.ToString("g")</MudText>
+                        </MudItem>
+                        @if (ExecutionState.FailedJobs > 0)
+                        {
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Failed</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Error">@ExecutionState.FailedJobs jobs</MudText>
+                            </MudItem>
+                        }
+                        @if (ExecutionState.CompletedJobs > 0 && ExecutionState.StartedAt.HasValue)
+                        {
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Avg Time/Job</MudText>
+                                <MudText Typo="Typo.body2">@GetAverageJobTime()</MudText>
+                            </MudItem>
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Est. Remaining</MudText>
+                                <MudText Typo="Typo.body2">@GetEstimatedRemaining()</MudText>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+            }
+        </MudCardContent>
+    </MudCard>
+</div>
+
+<style>
+    .plan-overview {
+        max-width: 800px;
+    }
+
+    .execution-controls {
+        display: flex;
+        align-items: center;
+    }
+
+    .execution-status {
+        display: flex;
+        align-items: center;
+    }
+
+    .worker-input {
+        width: 150px;
+    }
+</style>
+
+@code {
+    [Parameter] public OptimizationPlan Plan { get; set; } = default!;
+    [Parameter] public PlanExecutionState? ExecutionState { get; set; }
+    [Parameter] public EventCallback<int> OnStartExecution { get; set; }
+    [Parameter] public EventCallback OnStopExecution { get; set; }
+    [Parameter] public EventCallback OnPauseExecution { get; set; }
+    [Parameter] public EventCallback OnResumeExecution { get; set; }
+
+    private int _parallelWorkers = 4;
+
+    private int CalculateTotalJobs() =>
+        Plan.Symbols.EffectiveSymbols.Count() * Plan.Timeframes.Count * Plan.DateRanges.Count;
+
+    private async Task HandleStart() =>
+        await OnStartExecution.InvokeAsync(_parallelWorkers);
+
+    private double GetProgressPercent() =>
+        ExecutionState?.TotalJobs > 0
+            ? (double)ExecutionState.CompletedJobs / ExecutionState.TotalJobs * 100
+            : 0;
+
+    private Color GetStatusColor(PlanExecutionStatus status) => status switch
+    {
+        PlanExecutionStatus.Running => Color.Primary,
+        PlanExecutionStatus.Paused => Color.Warning,
+        PlanExecutionStatus.Completed => Color.Success,
+        PlanExecutionStatus.Failed => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(PlanExecutionStatus status) => status switch
+    {
+        PlanExecutionStatus.NotStarted => "Pending",
+        PlanExecutionStatus.Running => "Running",
+        PlanExecutionStatus.Paused => "Paused",
+        PlanExecutionStatus.Completed => "Completed",
+        PlanExecutionStatus.Failed => "Failed",
+        _ => "Unknown"
+    };
+
+    private string GetAverageJobTime()
+    {
+        if (ExecutionState?.CompletedJobs > 0 && ExecutionState.StartedAt.HasValue)
+        {
+            var elapsed = DateTimeOffset.UtcNow - ExecutionState.StartedAt.Value;
+            var avgSeconds = elapsed.TotalSeconds / ExecutionState.CompletedJobs;
+            return avgSeconds < 60 ? $"{avgSeconds:F1}s" : $"{avgSeconds / 60:F1}m";
+        }
+        return "-";
+    }
+
+    private string GetEstimatedRemaining()
+    {
+        if (ExecutionState?.CompletedJobs > 0 && ExecutionState.StartedAt.HasValue)
+        {
+            var elapsed = DateTimeOffset.UtcNow - ExecutionState.StartedAt.Value;
+            var avgSecondsPerJob = elapsed.TotalSeconds / ExecutionState.CompletedJobs;
+            var remainingJobs = ExecutionState.TotalJobs - ExecutionState.CompletedJobs;
+            var remainingSeconds = avgSecondsPerJob * remainingJobs;
+
+            if (remainingSeconds < 60) return $"{remainingSeconds:F0}s";
+            if (remainingSeconds < 3600) return $"{remainingSeconds / 60:F0}m";
+            return $"{remainingSeconds / 3600:F1}h";
+        }
+        return "-";
+    }
+}

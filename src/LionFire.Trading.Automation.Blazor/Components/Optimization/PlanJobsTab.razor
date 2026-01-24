@@ -1,0 +1,175 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Execution
+
+<div class="plan-jobs-tab">
+    @if (ExecutionState == null)
+    {
+        <MudText Typo="Typo.body1" Class="mud-text-secondary text-center pa-8">
+            Start execution to see job details
+        </MudText>
+    }
+    else
+    {
+        @* Summary Cards *@
+        <div class="job-summary mb-4">
+            <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h4" Color="Color.Primary">@ExecutionState.TotalJobs</MudText>
+                <MudText Typo="Typo.caption">Total Jobs</MudText>
+            </MudPaper>
+            <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h4" Color="Color.Success">@ExecutionState.CompletedJobs</MudText>
+                <MudText Typo="Typo.caption">Completed</MudText>
+            </MudPaper>
+            <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h4" Color="Color.Warning">@(ExecutionState.TotalJobs - ExecutionState.CompletedJobs - ExecutionState.FailedJobs)</MudText>
+                <MudText Typo="Typo.caption">Pending</MudText>
+            </MudPaper>
+            <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.h4" Color="Color.Error">@ExecutionState.FailedJobs</MudText>
+                <MudText Typo="Typo.caption">Failed</MudText>
+            </MudPaper>
+        </div>
+
+        @* Failed Jobs Section *@
+        @if (ExecutionState.FailedJobs > 0)
+        {
+            <MudCard Class="mb-4" Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6" Color="Color.Error">Failed Jobs</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                   Size="Size.Small" StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="@(() => OnRetryFailed.InvokeAsync())">
+                            Retry All Failed
+                        </MudButton>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>Date Range</th>
+                                <th>Error</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var job in GetFailedJobs().Take(20))
+                            {
+                                <tr>
+                                    <td>@job.Symbol</td>
+                                    <td>@job.Timeframe</td>
+                                    <td>@job.StartDate.ToString("yyyy-MM-dd") - @job.EndDate.ToString("yyyy-MM-dd")</td>
+                                    <td class="error-text">@(job.Error ?? "Unknown error")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                    @if (ExecutionState.FailedJobs > 20)
+                    {
+                        <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                            Showing 20 of @ExecutionState.FailedJobs failed jobs
+                        </MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+
+        @* Completed Jobs Table *@
+        <MudCard Elevation="0" Outlined="true">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">Completed Jobs</MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent Class="pa-0">
+                <MudSimpleTable Dense="true" Hover="true" FixedHeader="true" Style="max-height: 400px; overflow-y: auto;">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Timeframe</th>
+                            <th>Date Range</th>
+                            <th style="text-align: right;">Score</th>
+                            <th style="text-align: right;">Best AD</th>
+                            <th style="text-align: right;">Backtests</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var job in GetCompletedJobs().Take(100))
+                        {
+                            <tr>
+                                <td>@job.Symbol</td>
+                                <td>@job.Timeframe</td>
+                                <td>@job.StartDate.ToString("yyyy-MM-dd") - @job.EndDate.ToString("yyyy-MM-dd")</td>
+                                <td style="text-align: right;">
+                                    @if (job.Score.HasValue)
+                                    {
+                                        <MudText Color="@GetScoreColor(job.Score.Value)">@job.Score.Value.ToString("F2")</MudText>
+                                    }
+                                    else
+                                    {
+                                        <span>-</span>
+                                    }
+                                </td>
+                                <td style="text-align: right;">@(job.BestAD?.ToString("F2") ?? "-")</td>
+                                <td style="text-align: right;">@(job.TotalBacktests?.ToString("N0") ?? "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+                @if (ExecutionState.CompletedJobs > 100)
+                {
+                    <MudText Typo="Typo.caption" Class="pa-2 mud-text-secondary">
+                        Showing 100 of @ExecutionState.CompletedJobs completed jobs
+                    </MudText>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+</div>
+
+<style>
+    .job-summary {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .summary-card {
+        padding: 16px;
+        text-align: center;
+        min-width: 120px;
+        flex: 1;
+    }
+
+    .error-text {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: var(--mud-palette-error);
+    }
+</style>
+
+@code {
+    [Parameter] public PlanExecutionState? ExecutionState { get; set; }
+    [Parameter] public EventCallback OnRetryFailed { get; set; }
+
+    private IEnumerable<OptimizationJob> GetCompletedJobs() =>
+        ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Completed).OrderByDescending(j => j.CompletedAt)
+            ?? Enumerable.Empty<OptimizationJob>();
+
+    private IEnumerable<OptimizationJob> GetFailedJobs() =>
+        ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Failed)
+            ?? Enumerable.Empty<OptimizationJob>();
+
+    private Color GetScoreColor(double score)
+    {
+        if (score >= 80) return Color.Success;
+        if (score >= 60) return Color.Warning;
+        return Color.Error;
+    }
+}

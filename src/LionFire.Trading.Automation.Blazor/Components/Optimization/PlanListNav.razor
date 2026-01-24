@@ -1,0 +1,135 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Optimization.Execution
+
+<MudList T="string" Dense="true" Class="plan-list-nav" SelectedValue="@SelectedPlanId"
+         SelectedValueChanged="OnSelectionChanged">
+    @if (Plans.Count == 0)
+    {
+        <MudListItem T="string" Class="text-center pa-4">
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                No plans found
+            </MudText>
+        </MudListItem>
+    }
+    else
+    {
+        @foreach (var plan in Plans)
+        {
+            var state = GetExecutionState(plan.Id);
+            var isSelected = plan.Id == SelectedPlanId;
+
+            <MudListItem T="string" Value="@plan.Id" Class="@GetItemClass(isSelected)">
+                <div class="plan-item">
+                    <div class="plan-item-header">
+                        <MudText Typo="Typo.body2" Class="plan-name">@plan.Name</MudText>
+                        @if (state != null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(state.Status)"
+                                     Class="status-chip">
+                                @GetStatusText(state.Status)
+                            </MudChip>
+                        }
+                    </div>
+                    <div class="plan-item-details">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                            @plan.Bot
+                        </MudText>
+                        @if (state != null)
+                        {
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                                @state.CompletedJobs / @state.TotalJobs jobs
+                            </MudText>
+                        }
+                    </div>
+                    @if (state != null && state.TotalJobs > 0)
+                    {
+                        <MudProgressLinear Value="@GetProgressPercent(state)" Size="Size.Small"
+                                           Color="@GetStatusColor(state.Status)" Class="mt-1" />
+                    }
+                </div>
+            </MudListItem>
+        }
+    }
+</MudList>
+
+<style>
+    .plan-list-nav {
+        padding: 0;
+    }
+
+    .plan-item {
+        width: 100%;
+        padding: 4px 0;
+    }
+
+    .plan-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .plan-name {
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex: 1;
+    }
+
+    .status-chip {
+        height: 20px;
+        font-size: 0.7rem;
+    }
+
+    .plan-item-details {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 2px;
+    }
+</style>
+
+@code {
+    [Parameter] public string? BotFilter { get; set; }
+    [Parameter] public string? SelectedPlanId { get; set; }
+    [Parameter] public IReadOnlyList<OptimizationPlan> Plans { get; set; } = [];
+    [Parameter] public Dictionary<string, PlanExecutionState> ExecutionStates { get; set; } = new();
+    [Parameter] public EventCallback<string> OnPlanSelected { get; set; }
+
+    private PlanExecutionState? GetExecutionState(string planId) =>
+        ExecutionStates.TryGetValue(planId, out var state) ? state : null;
+
+    private string GetItemClass(bool isSelected) =>
+        isSelected ? "selected-plan" : "";
+
+    private async Task OnSelectionChanged(string? planId)
+    {
+        if (!string.IsNullOrEmpty(planId))
+        {
+            await OnPlanSelected.InvokeAsync(planId);
+        }
+    }
+
+    private Color GetStatusColor(PlanExecutionStatus status) => status switch
+    {
+        PlanExecutionStatus.Running => Color.Primary,
+        PlanExecutionStatus.Paused => Color.Warning,
+        PlanExecutionStatus.Completed => Color.Success,
+        PlanExecutionStatus.Failed => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetStatusText(PlanExecutionStatus status) => status switch
+    {
+        PlanExecutionStatus.NotStarted => "Pending",
+        PlanExecutionStatus.Running => "Running",
+        PlanExecutionStatus.Paused => "Paused",
+        PlanExecutionStatus.Completed => "Done",
+        PlanExecutionStatus.Failed => "Failed",
+        _ => "Unknown"
+    };
+
+    private double GetProgressPercent(PlanExecutionState state) =>
+        state.TotalJobs > 0 ? (double)state.CompletedJobs / state.TotalJobs * 100 : 0;
+}
