@@ -4,6 +4,7 @@
 @using Plotly.Blazor.Traces
 @using Plotly.Blazor.Traces.BarLib
 @using System.Reactive.Linq
+@using ReactiveUI
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -85,8 +86,8 @@
         }
     }
 
-    private int CompletedCount => ViewModel?.Backtests?.Items.Count(x => !x.IsAborted) ?? 0;
-    private int AbortedCount => ViewModel?.Backtests?.Items.Count(x => x.IsAborted) ?? 0;
+    private int CompletedCount => ViewModel?.GetFilteredBacktests().Count(x => !x.IsAborted) ?? 0;
+    private int AbortedCount => ViewModel?.GetFilteredBacktests().Count(x => x.IsAborted) ?? 0;
 
     private IEnumerable<double> GetBucketSizes() => SelectedMetric switch
     {
@@ -138,11 +139,20 @@
 
         data = GenerateHistogramData();
 
-        // Subscribe to data changes
+        // Subscribe to data changes and filter state changes
         if (ViewModel != null)
         {
-            _subscription = ViewModel.DebouncedChanges
-                .Throttle(TimeSpan.FromMilliseconds(500))
+            var dataChanges = ViewModel.DebouncedChanges
+                .Throttle(TimeSpan.FromMilliseconds(500));
+
+            var filterChanges = ViewModel.FilterState.WhenAnyValue(
+                f => f.MinAD, f => f.MinAMWT, f => f.MinFitness,
+                f => f.MinTrades, f => f.MinWinRate, f => f.MaxDrawdownPercent,
+                f => f.IncludeAborted)
+                .Throttle(TimeSpan.FromMilliseconds(200));
+
+            _subscription = dataChanges
+                .Merge(filterChanges.Select(_ => System.Reactive.Unit.Default))
                 .Subscribe(_ => InvokeAsync(Refresh));
         }
 
@@ -217,14 +227,15 @@
     {
         var traces = new List<ITrace>();
 
-        if (ViewModel?.Backtests == null || ViewModel.Backtests.Count == 0)
+        var filteredItems = ViewModel?.GetFilteredBacktests().ToList();
+        if (filteredItems == null || filteredItems.Count == 0)
             return traces;
 
-        var completed = ViewModel.Backtests.Items.Where(x => !x.IsAborted).ToList();
-        var aborted = ViewModel.Backtests.Items.Where(x => x.IsAborted).ToList();
+        var completed = filteredItems.Where(x => !x.IsAborted).ToList();
+        var aborted = filteredItems.Where(x => x.IsAborted).ToList();
 
         // Calculate histogram buckets
-        var allValues = ViewModel.Backtests.Items.Select(GetMetricValue).Where(v => !double.IsNaN(v) && !double.IsInfinity(v)).ToList();
+        var allValues = filteredItems.Select(GetMetricValue).Where(v => !double.IsNaN(v) && !double.IsInfinity(v)).ToList();
         if (allValues.Count == 0) return traces;
 
         var minVal = Math.Floor(allValues.Min() / BucketSize) * BucketSize;
