@@ -4,6 +4,9 @@
 @using LionFire.Trading.Automation
 @using LionFire.Reactive.Persistence
 @using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Logging
+@inject IServiceProvider ServiceProvider
+@inject ILogger<BacktestDataGridWidget> Logger
 @implements IDisposable
 
 <div style="height: 100%; width: 100%;">
@@ -76,15 +79,16 @@ else
     private IDisposable? _subscription;
     private IObservableReaderWriter<string, BotEntity>? _workspaceBots;
 
-    [CascadingParameter]
-    public IServiceProvider? WorkspaceServices { get; set; }
-
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
-        // Get bots writer from workspace services
-        _workspaceBots = WorkspaceServices?.GetService<IObservableReaderWriter<string, BotEntity>>();
+        // Get bots writer from service provider
+        _workspaceBots = ServiceProvider.GetService<IObservableReaderWriter<string, BotEntity>>();
+        if (_workspaceBots == null)
+        {
+            Logger.LogWarning("IObservableReaderWriter<string, BotEntity> service not available - Export to Bot will not work");
+        }
 
         if (ViewModel != null)
         {
@@ -113,6 +117,12 @@ else
 
     private void OnExportToBot(BacktestBatchJournalEntry item)
     {
+        if (_workspaceBots == null)
+        {
+            Logger.LogError("Cannot export to bot: IObservableReaderWriter<string, BotEntity> service not available");
+            return;
+        }
+        Logger.LogInformation("Exporting backtest {BatchId}-{Id} to bot", item.BatchId, item.Id);
         ViewModel?.OnExportToBot(item, _workspaceBots);
     }
 

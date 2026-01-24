@@ -555,6 +555,12 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     }
     public async void OnExportToBot(BacktestBatchJournalEntry item, IObservableReaderWriter<string, BotEntity>? bots)
     {
+        if (bots == null)
+        {
+            ConsoleLog.LogError("Cannot export to bot: bots service is null");
+            return;
+        }
+
         var bot = new BotEntity
         {
             //Name = $"{OptimizationRunInfo.OptimizationExecutionDate.ToShortDateString()}",
@@ -563,7 +569,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
             ExchangeSymbolTimeFrame = OptimizationRunInfo.ExchangeSymbolTimeFrame,
             BotTypeName = OptimizationRunInfo.BotTypeName,
 
-            // TODO: Pick one 
+            // TODO: Pick one
             //ParametersDictionary = item.PMultiSim?.ToParametersDictionary(),
             Parameters = item.Parameters,
         };
@@ -571,8 +577,12 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
         try
         {
             await bots.Write(bot.Name, bot);
+            ConsoleLog.LogInformation("Exported bot: {BotName}", bot.Name);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            ConsoleLog.LogError(ex, "Failed to export bot: {BotName}", bot.Name);
+        }
     }
 
     public async Task OnOptimize()
