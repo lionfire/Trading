@@ -67,7 +67,14 @@ public class CoinGeckoSymbolProvider : ISymbolDataProvider
         _options = options?.Value ?? new CoinGeckoProviderOptions();
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
-        _httpClient.Timeout = _options.RequestTimeout;
+        try
+        {
+            _httpClient.Timeout = _options.RequestTimeout;
+        }
+        catch (InvalidOperationException)
+        {
+            // HttpClient already started - timeout cannot be changed
+        }
     }
 
     /// <inheritdoc/>

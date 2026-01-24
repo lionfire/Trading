@@ -10,16 +10,16 @@ namespace LionFire.Trading.Symbols;
 public class SymbolCollectionService
 {
     private readonly IEnumerable<ISymbolDataProvider> _providers;
-    private readonly ISymbolCollectionRepository _repository;
+    private readonly ISymbolCollectionRepository? _repository;
     private readonly ILogger<SymbolCollectionService> _logger;
 
     public SymbolCollectionService(
         IEnumerable<ISymbolDataProvider> providers,
-        ISymbolCollectionRepository repository,
+        ISymbolCollectionRepository? repository,
         ILogger<SymbolCollectionService> logger)
     {
         _providers = providers ?? throw new ArgumentNullException(nameof(providers));
-        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _repository = repository; // Optional - required only for persistence operations
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -59,7 +59,10 @@ public class SymbolCollectionService
             RefreshedAt = DateTimeOffset.UtcNow
         };
 
-        await _repository.SaveAsync(snapshot, cancellationToken);
+        if (_repository != null)
+        {
+            await _repository.SaveAsync(snapshot, cancellationToken);
+        }
 
         _logger.LogInformation("Created snapshot {Id} with {Count} symbols",
             snapshot.Id, symbols.Count);
@@ -136,7 +139,10 @@ public class SymbolCollectionService
             ProviderUsed = provider.Name
         };
 
-        await _repository.SaveAsync(refreshedSnapshot, cancellationToken);
+        if (_repository != null)
+        {
+            await _repository.SaveAsync(refreshedSnapshot, cancellationToken);
+        }
 
         _logger.LogInformation("Refreshed snapshot {Id}: {Active} active, {Pending} pending",
             refreshedSnapshot.Id, refreshedSnapshot.ActiveCount, refreshedSnapshot.PendingCount);
@@ -203,7 +209,10 @@ public class SymbolCollectionService
             .ToList();
 
         var updatedSnapshot = snapshot with { Symbols = updatedSymbols };
-        await _repository.SaveAsync(updatedSnapshot, cancellationToken);
+        if (_repository != null)
+        {
+            await _repository.SaveAsync(updatedSnapshot, cancellationToken);
+        }
 
         _logger.LogInformation("Marked symbol {Symbol} as delisted in snapshot {Id}", symbol, snapshot.Id);
 
@@ -211,27 +220,38 @@ public class SymbolCollectionService
     }
 
     /// <summary>
-    /// Gets a snapshot by ID.
+    /// Gets a snapshot by ID. Requires repository to be configured.
     /// </summary>
     public Task<SymbolCollectionSnapshot?> GetSnapshotAsync(string id, CancellationToken cancellationToken = default)
     {
-        return _repository.LoadAsync(id, cancellationToken);
+        RequireRepository();
+        return _repository!.LoadAsync(id, cancellationToken);
     }
 
     /// <summary>
-    /// Lists all snapshots.
+    /// Lists all snapshots. Requires repository to be configured.
     /// </summary>
     public Task<IReadOnlyList<SymbolCollectionSnapshot>> ListSnapshotsAsync(CancellationToken cancellationToken = default)
     {
-        return _repository.ListAsync(cancellationToken);
+        RequireRepository();
+        return _repository!.ListAsync(cancellationToken);
     }
 
     /// <summary>
-    /// Deletes a snapshot.
+    /// Deletes a snapshot. Requires repository to be configured.
     /// </summary>
     public Task<bool> DeleteSnapshotAsync(string id, CancellationToken cancellationToken = default)
     {
-        return _repository.DeleteAsync(id, cancellationToken);
+        RequireRepository();
+        return _repository!.DeleteAsync(id, cancellationToken);
+    }
+
+    private void RequireRepository()
+    {
+        if (_repository == null)
+        {
+            throw new InvalidOperationException("Repository is required for this operation but was not configured.");
+        }
     }
 
     private async Task<SymbolCollectionSnapshot> UpdateSymbolStateAsync(
@@ -268,7 +288,10 @@ public class SymbolCollectionService
             .ToList();
 
         var updatedSnapshot = snapshot with { Symbols = updatedSymbols };
-        await _repository.SaveAsync(updatedSnapshot, cancellationToken);
+        if (_repository != null)
+        {
+            await _repository.SaveAsync(updatedSnapshot, cancellationToken);
+        }
 
         _logger.LogInformation("Updated symbol {Symbol} to state {State} in snapshot {Id}",
             symbol, newState, snapshot.Id);
