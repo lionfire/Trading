@@ -62,14 +62,21 @@
             {
                 new YAxis
                 {
-                    Title = new Plotly.Blazor.LayoutLib.YAxisLib.Title { Text = "Balance" }
+                    Title = null
                 }
             },
-            Title = new Plotly.Blazor.LayoutLib.Title { Text = "Equity Curves" },
+            Title = null,
             PaperBgColor = "#1A1A27",
             PlotBgColor = "#1A1A27",
             Font = new Plotly.Blazor.LayoutLib.Font { Color = "#FFFFFF" },
-            ShowLegend = false
+            ShowLegend = false,
+            Margin = new Plotly.Blazor.LayoutLib.Margin
+            {
+                L = 40,  // Left - minimal space for y-axis labels
+                R = 5,   // Right - minimal
+                T = 5,   // Top - minimal
+                B = 5    // Bottom - minimal below range slider
+            }
         };
 
         data = GenerateChartData();
@@ -185,23 +192,44 @@
 
     private string GetLineColor(BacktestBatchJournalEntry result, bool isSelected)
     {
-        if (isSelected)
-        {
-            return "#FFD700"; // Gold/bright yellow for selected
-        }
-
         if (result.IsAborted)
         {
-            return "#404040"; // Dark gray for aborted
+            return isSelected ? "#808080" : "#404040"; // Gray for aborted, brighter if selected
         }
 
-        // Color based on AD value
-        if (result.AD > 3.0) return "#4040FF";
-        if (result.AD > 2.0) return "#10F010";
-        if (result.AD > 0.5) return "#30b030";
-        if (result.AD > 0.0) return "#004000";
-        if (result.AD > -0.5) return "#400000";
-        if (result.AD > -1.5) return "#800000";
-        return "#a00000";
+        // Get base color from AD value
+        string baseColor;
+        if (result.AD > 3.0) baseColor = "#4040FF";
+        else if (result.AD > 2.0) baseColor = "#10F010";
+        else if (result.AD > 0.5) baseColor = "#30b030";
+        else if (result.AD > 0.0) baseColor = "#004000";
+        else if (result.AD > -0.5) baseColor = "#400000";
+        else if (result.AD > -1.5) baseColor = "#800000";
+        else baseColor = "#a00000";
+
+        if (isSelected)
+        {
+            return BrightenColor(baseColor);
+        }
+
+        return baseColor;
+    }
+
+    private static string BrightenColor(string hexColor)
+    {
+        // Parse hex color
+        var r = Convert.ToInt32(hexColor.Substring(1, 2), 16);
+        var g = Convert.ToInt32(hexColor.Substring(3, 2), 16);
+        var b = Convert.ToInt32(hexColor.Substring(5, 2), 16);
+
+        // Brighten by blending toward white (increase values, with min floor for visibility)
+        const int minBrightness = 160;
+        const double blendFactor = 0.6;
+
+        r = Math.Max(minBrightness, (int)(r + (255 - r) * blendFactor));
+        g = Math.Max(minBrightness, (int)(g + (255 - g) * blendFactor));
+        b = Math.Max(minBrightness, (int)(b + (255 - b) * blendFactor));
+
+        return $"#{r:X2}{g:X2}{b:X2}";
     }
 }
