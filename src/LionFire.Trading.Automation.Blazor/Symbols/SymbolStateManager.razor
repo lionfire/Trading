@@ -1,0 +1,241 @@
+@using LionFire.Trading.Symbols
+
+<MudPaper Elevation="1" Class="pa-4">
+    <MudStack Row AlignItems="AlignItems.Center" Class="mb-4">
+        <MudText Typo="Typo.h6">Symbol Management</MudText>
+        <MudSpacer />
+        <MudChipSet T="string" SelectedValuesChanged="OnFilterChanged" SelectionMode="SelectionMode.SingleSelection">
+            <MudChip T="string" Value="@("all")" Default="true" Size="Size.Small">All (@TotalCount)</MudChip>
+            <MudChip T="string" Value="@("active")" Color="Color.Success" Size="Size.Small">Active (@ActiveCount)</MudChip>
+            <MudChip T="string" Value="@("pending")" Color="Color.Info" Size="Size.Small">Pending (@PendingCount)</MudChip>
+            <MudChip T="string" Value="@("excluded")" Color="Color.Warning" Size="Size.Small">Excluded (@ExcludedCount)</MudChip>
+        </MudChipSet>
+        @if (!HideExcluded)
+        {
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       OnClick="@(() => HideExcluded = true)">
+                Hide Excluded
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Text"
+                       OnClick="@(() => HideExcluded = false)">
+                Show Excluded
+            </MudButton>
+        }
+    </MudStack>
+
+    @if (SelectedSymbols.Any())
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            <MudStack Row AlignItems="AlignItems.Center">
+                <MudText>@SelectedSymbols.Count symbols selected</MudText>
+                <MudSpacer />
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Outlined"
+                           Color="Color.Success"
+                           OnClick="ActivateSelectedAsync"
+                           Disabled="@(!CanActivateSelected)">
+                    Activate All
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Outlined"
+                           Color="Color.Warning"
+                           OnClick="ExcludeSelectedAsync">
+                    Exclude All
+                </MudButton>
+                <MudButton Size="Size.Small"
+                           Variant="Variant.Text"
+                           OnClick="ClearSelection">
+                    Clear
+                </MudButton>
+            </MudStack>
+        </MudAlert>
+    }
+
+    <MudDataGrid T="SymbolEntry" Items="@FilteredSymbols"
+                 Dense="true"
+                 Hover="true"
+                 Striped="true"
+                 SelectedItemsChanged="@((HashSet<SymbolEntry> items) => OnSelectedItemsChanged(items))"
+                 MultiSelection="true"
+                 SelectedItems="@SelectedSymbols"
+                 SortMode="SortMode.Single">
+        <Columns>
+            <SelectColumn T="SymbolEntry" ShowInHeader="true" ShowInFooter="false" />
+            <PropertyColumn Property="x => x.Symbol" Title="Symbol" />
+            <TemplateColumn Title="State">
+                <CellTemplate>
+                    <MudChip T="string" Size="Size.Small"
+                             Color="@GetStateColor(context.Item.State)"
+                             Variant="Variant.Filled">
+                        @context.Item.State
+                    </MudChip>
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Volume 24h">
+                <CellTemplate>
+                    @if (context.Item.MarketData != null)
+                    {
+                        <MudText>@FormatVolume(context.Item.MarketData.Volume24hUsd)</MudText>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Market Cap">
+                <CellTemplate>
+                    @if (context.Item.MarketData != null && context.Item.MarketData.MarketCapUsd > 0)
+                    {
+                        <MudText>@FormatVolume(context.Item.MarketData.MarketCapUsd)</MudText>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Rank">
+                <CellTemplate>
+                    @if (context.Item.MarketData != null && context.Item.MarketData.MarketCapRank > 0)
+                    {
+                        <MudText>#@context.Item.MarketData.MarketCapRank</MudText>
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+            <TemplateColumn Title="Actions" StickyRight="true">
+                <CellTemplate>
+                    @if (context.Item.State == SymbolState.Pending)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                       Size="Size.Small"
+                                       Color="Color.Success"
+                                       OnClick="@(() => ActivateSymbolAsync(context.Item))"
+                                       Title="Add to collection" />
+                    }
+                    @if (context.Item.State == SymbolState.Active || context.Item.State == SymbolState.Pending)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Block"
+                                       Size="Size.Small"
+                                       Color="Color.Warning"
+                                       OnClick="@(() => ExcludeSymbolAsync(context.Item))"
+                                       Title="Exclude" />
+                    }
+                    @if (context.Item.State == SymbolState.Excluded)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.VisibilityOff"
+                                       Size="Size.Small"
+                                       Color="Color.Default"
+                                       OnClick="@(() => HideSymbolAsync(context.Item))"
+                                       Title="Hide from view" />
+                    }
+                </CellTemplate>
+            </TemplateColumn>
+        </Columns>
+        <PagerContent>
+            <MudDataGridPager T="SymbolEntry" />
+        </PagerContent>
+    </MudDataGrid>
+</MudPaper>
+
+@code {
+    [Parameter] public SymbolCollectionSnapshot? Snapshot { get; set; }
+    [Parameter] public EventCallback<(string Symbol, SymbolState NewState, string? Reason)> OnSymbolStateChanged { get; set; }
+
+    private string CurrentFilter { get; set; } = "all";
+    private bool HideExcluded { get; set; }
+    private HashSet<SymbolEntry> SelectedSymbols { get; set; } = new();
+
+    private IEnumerable<SymbolEntry> AllSymbols => Snapshot?.Symbols ?? Enumerable.Empty<SymbolEntry>();
+    private int TotalCount => AllSymbols.Count(s => !HideExcluded || s.State != SymbolState.Hidden);
+    private int ActiveCount => AllSymbols.Count(s => s.State == SymbolState.Active);
+    private int PendingCount => AllSymbols.Count(s => s.State == SymbolState.Pending);
+    private int ExcludedCount => AllSymbols.Count(s => s.State == SymbolState.Excluded);
+
+    private bool CanActivateSelected => SelectedSymbols.Any(s => s.State == SymbolState.Pending);
+
+    private IEnumerable<SymbolEntry> FilteredSymbols
+    {
+        get
+        {
+            var symbols = AllSymbols;
+
+            if (HideExcluded)
+                symbols = symbols.Where(s => s.State != SymbolState.Hidden && s.State != SymbolState.Excluded);
+
+            return CurrentFilter switch
+            {
+                "active" => symbols.Where(s => s.State == SymbolState.Active),
+                "pending" => symbols.Where(s => s.State == SymbolState.Pending),
+                "excluded" => symbols.Where(s => s.State == SymbolState.Excluded || s.State == SymbolState.Hidden),
+                _ => symbols
+            };
+        }
+    }
+
+    private void OnFilterChanged(IReadOnlyCollection<string> values)
+    {
+        CurrentFilter = values.FirstOrDefault() ?? "all";
+    }
+
+    private void OnSelectedItemsChanged(HashSet<SymbolEntry> items)
+    {
+        SelectedSymbols = items;
+    }
+
+    private void ClearSelection()
+    {
+        SelectedSymbols.Clear();
+    }
+
+    private async Task ActivateSymbolAsync(SymbolEntry entry)
+    {
+        await OnSymbolStateChanged.InvokeAsync((entry.Symbol, SymbolState.Active, null));
+    }
+
+    private async Task ExcludeSymbolAsync(SymbolEntry entry)
+    {
+        await OnSymbolStateChanged.InvokeAsync((entry.Symbol, SymbolState.Excluded, null));
+    }
+
+    private async Task HideSymbolAsync(SymbolEntry entry)
+    {
+        await OnSymbolStateChanged.InvokeAsync((entry.Symbol, SymbolState.Hidden, null));
+    }
+
+    private async Task ActivateSelectedAsync()
+    {
+        foreach (var entry in SelectedSymbols.Where(s => s.State == SymbolState.Pending))
+        {
+            await OnSymbolStateChanged.InvokeAsync((entry.Symbol, SymbolState.Active, null));
+        }
+        ClearSelection();
+    }
+
+    private async Task ExcludeSelectedAsync()
+    {
+        foreach (var entry in SelectedSymbols)
+        {
+            await OnSymbolStateChanged.InvokeAsync((entry.Symbol, SymbolState.Excluded, null));
+        }
+        ClearSelection();
+    }
+
+    private Color GetStateColor(SymbolState state) => state switch
+    {
+        SymbolState.Active => Color.Success,
+        SymbolState.Pending => Color.Info,
+        SymbolState.Excluded => Color.Warning,
+        SymbolState.Delisted => Color.Error,
+        SymbolState.Hidden => Color.Default,
+        _ => Color.Default
+    };
+
+    private string FormatVolume(decimal volume)
+    {
+        if (volume >= 1_000_000_000)
+            return $"${volume / 1_000_000_000:N1}B";
+        if (volume >= 1_000_000)
+            return $"${volume / 1_000_000:N1}M";
+        if (volume >= 1_000)
+            return $"${volume / 1_000:N1}K";
+        return $"${volume:N0}";
+    }
+}

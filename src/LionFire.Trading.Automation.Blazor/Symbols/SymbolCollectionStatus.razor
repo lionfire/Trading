@@ -1,0 +1,113 @@
+@using LionFire.Trading.Symbols
+
+<MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+    @if (IsLoading)
+    {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+        <MudText Typo="Typo.body2">Checking...</MudText>
+    }
+    else if (Diff == null)
+    {
+        <MudIcon Icon="@Icons.Material.Outlined.HelpOutline" Color="Color.Default" Size="Size.Small" />
+        <MudText Typo="Typo.body2" Color="Color.Default">Unknown</MudText>
+    }
+    else if (Diff.IsUpToDate)
+    {
+        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Small" />
+        <MudText Typo="Typo.body2" Color="Color.Success">Up to date</MudText>
+    }
+    else
+    {
+        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+        <MudTooltip Text="@GetTooltipText()">
+            <MudText Typo="Typo.body2" Color="Color.Warning">@Diff.Summary</MudText>
+        </MudTooltip>
+    }
+
+    @if (Snapshot != null)
+    {
+        <MudTooltip Text="@GetLastRefreshText()">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @GetLastRefreshDisplay()
+            </MudText>
+        </MudTooltip>
+    }
+
+    @if (ShowActions)
+    {
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                       Size="Size.Small"
+                       OnClick="CheckForUpdatesAsync"
+                       Disabled="@IsLoading"
+                       Title="Check for updates" />
+
+        @if (Diff != null && Diff.IsStale)
+        {
+            <MudButton Size="Size.Small"
+                       Variant="Variant.Outlined"
+                       Color="Color.Warning"
+                       OnClick="ApplyChangesAsync"
+                       Disabled="@IsLoading">
+                Apply Changes
+            </MudButton>
+        }
+    }
+</MudStack>
+
+@code {
+    [Parameter] public SymbolCollectionSnapshot? Snapshot { get; set; }
+    [Parameter] public CollectionDiff? Diff { get; set; }
+    [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback OnCheckForUpdates { get; set; }
+    [Parameter] public EventCallback OnApplyChanges { get; set; }
+
+    private string GetTooltipText()
+    {
+        if (Diff == null) return "";
+
+        var lines = new List<string>();
+        if (Diff.NewSymbols.Count > 0)
+            lines.Add($"{Diff.NewSymbols.Count} new symbols qualify");
+        if (Diff.RemovedSymbols.Count > 0)
+            lines.Add($"{Diff.RemovedSymbols.Count} symbols no longer qualify");
+        if (Diff.DelistedSymbols.Count > 0)
+            lines.Add($"{Diff.DelistedSymbols.Count} symbols delisted");
+
+        return string.Join("\n", lines);
+    }
+
+    private string GetLastRefreshText()
+    {
+        if (Snapshot?.RefreshedAt == null)
+            return "Never refreshed";
+
+        return $"Last refreshed: {Snapshot.RefreshedAt:yyyy-MM-dd HH:mm:ss}";
+    }
+
+    private string GetLastRefreshDisplay()
+    {
+        if (Snapshot?.RefreshedAt == null)
+            return "never";
+
+        var elapsed = DateTimeOffset.UtcNow - Snapshot.RefreshedAt.Value;
+
+        if (elapsed.TotalMinutes < 1)
+            return "just now";
+        if (elapsed.TotalMinutes < 60)
+            return $"{(int)elapsed.TotalMinutes}m ago";
+        if (elapsed.TotalHours < 24)
+            return $"{(int)elapsed.TotalHours}h ago";
+        return $"{(int)elapsed.TotalDays}d ago";
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        await OnCheckForUpdates.InvokeAsync();
+    }
+
+    private async Task ApplyChangesAsync()
+    {
+        await OnApplyChanges.InvokeAsync();
+    }
+}

@@ -1,0 +1,220 @@
+@using LionFire.Trading.Symbols
+@using SymbolSortDirection = LionFire.Trading.Symbols.SortDirection
+
+<MudCard Elevation="2" Class="pa-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Create Symbol Collection</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="CollectionName"
+                              Label="Collection Name"
+                              Placeholder="e.g., Top 50 USDT Futures"
+                              Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="Exchange"
+                           Label="Exchange"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Binance")">Binance</MudSelectItem>
+                    <MudSelectItem Value="@("Bybit")">Bybit</MudSelectItem>
+                    <MudSelectItem Value="@("OKX")">OKX</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="Area"
+                           Label="Trading Area"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("futures")">Futures</MudSelectItem>
+                    <MudSelectItem Value="@("spot")">Spot</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="QuoteCurrency"
+                           Label="Quote Currency"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("USDT")">USDT</MudSelectItem>
+                    <MudSelectItem Value="@("USD")">USD</MudSelectItem>
+                    <MudSelectItem Value="@("BTC")">BTC</MudSelectItem>
+                    <MudSelectItem Value="@("ETH")">ETH</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="SortBy"
+                           Label="Sort By"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("volume24h")">24h Volume</MudSelectItem>
+                    <MudSelectItem Value="@("marketCap")">Market Cap</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="Direction"
+                           Label="Sort Direction"
+                           Variant="Variant.Outlined">
+                    <MudSelectItem Value="@SymbolSortDirection.Descending">Descending (Highest First)</MudSelectItem>
+                    <MudSelectItem Value="@SymbolSortDirection.Ascending">Ascending (Lowest First)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="Limit"
+                                 Label="Limit"
+                                 Min="1"
+                                 Max="500"
+                                 Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="MinVolume"
+                                 Label="Min 24h Volume (USD)"
+                                 Min="0"
+                                 Format="N0"
+                                 Variant="Variant.Outlined"
+                                 HelperText="Optional filter" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="MinMarketCap"
+                                 Label="Min Market Cap (USD)"
+                                 Min="0"
+                                 Format="N0"
+                                 Variant="Variant.Outlined"
+                                 HelperText="Optional filter" />
+            </MudItem>
+        </MudGrid>
+
+        @if (ValidationErrors.Any())
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-4">
+                <ul>
+                    @foreach (var error in ValidationErrors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </MudAlert>
+        }
+
+        @if (ShowPreview && PreviewSymbols.Any())
+        {
+            <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">Preview (@PreviewSymbols.Count symbols)</MudText>
+            <MudChipSet T="string" ReadOnly="true">
+                @foreach (var symbol in PreviewSymbols.Take(20))
+                {
+                    <MudChip T="string" Size="Size.Small">@symbol.Symbol</MudChip>
+                }
+                @if (PreviewSymbols.Count > 20)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">+@(PreviewSymbols.Count - 20) more</MudChip>
+                }
+            </MudChipSet>
+        }
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   OnClick="PreviewAsync"
+                   Disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Preview
+        </MudButton>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   OnClick="CreateAsync"
+                   Disabled="@(IsLoading || !IsValid)">
+            Create Collection
+        </MudButton>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter] public EventCallback<SymbolCollectionSnapshot> OnCollectionCreated { get; set; }
+
+    // Mutable backing fields for form state
+    private string CollectionName { get; set; } = "";
+    private string Exchange { get; set; } = "Binance";
+    private string Area { get; set; } = "futures";
+    private string QuoteCurrency { get; set; } = "USDT";
+    private string SortBy { get; set; } = "volume24h";
+    private SymbolSortDirection Direction { get; set; } = SymbolSortDirection.Descending;
+    private int Limit { get; set; } = 50;
+    private decimal? MinVolume { get; set; }
+    private decimal? MinMarketCap { get; set; }
+
+    private List<string> ValidationErrors { get; set; } = new();
+    private List<SymbolMarketData> PreviewSymbols { get; set; } = new();
+    private bool ShowPreview { get; set; }
+    private bool IsLoading { get; set; }
+
+    private bool IsValid => !ValidationErrors.Any();
+
+    private SymbolCollectionQuery BuildQuery()
+    {
+        return new SymbolCollectionQuery
+        {
+            Exchange = Exchange,
+            Area = Area,
+            QuoteCurrency = QuoteCurrency,
+            SortBy = SortBy,
+            Direction = Direction,
+            Limit = Limit,
+            MinVolume24h = MinVolume,
+            MinMarketCap = MinMarketCap
+        };
+    }
+
+    private void Validate()
+    {
+        ValidationErrors = BuildQuery().Validate().ToList();
+    }
+
+    private async Task PreviewAsync()
+    {
+        Validate();
+        if (!IsValid) return;
+
+        IsLoading = true;
+        ShowPreview = false;
+
+        try
+        {
+            // TODO: Inject SymbolCollectionService and fetch preview
+            // For now, just show validation passed
+            ShowPreview = true;
+            PreviewSymbols = new List<SymbolMarketData>();
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        Validate();
+        if (!IsValid) return;
+
+        IsLoading = true;
+
+        try
+        {
+            // TODO: Inject SymbolCollectionService and create snapshot
+            var snapshot = new SymbolCollectionSnapshot
+            {
+                Name = CollectionName,
+                Query = BuildQuery()
+            };
+
+            await OnCollectionCreated.InvokeAsync(snapshot);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+}

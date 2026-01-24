@@ -1,0 +1,109 @@
+@using LionFire.Trading.Symbols
+
+<MudCard Elevation="2" Class="symbol-collection-card">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">@(Snapshot?.Name ?? "Unnamed Collection")</MudText>
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @(Snapshot?.Query.GetSummary() ?? "No query")
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <SymbolCollectionStatus Snapshot="@Snapshot"
+                                    Diff="@Diff"
+                                    IsLoading="@IsLoading"
+                                    ShowActions="false" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="4">
+            <MudStack>
+                <MudText Typo="Typo.h4" Color="Color.Primary">@(Snapshot?.ActiveCount ?? 0)</MudText>
+                <MudText Typo="Typo.caption">Active</MudText>
+            </MudStack>
+            @if ((Snapshot?.PendingCount ?? 0) > 0)
+            {
+                <MudStack>
+                    <MudText Typo="Typo.h4" Color="Color.Info">@Snapshot!.PendingCount</MudText>
+                    <MudText Typo="Typo.caption">Pending</MudText>
+                </MudStack>
+            }
+            <MudSpacer />
+            @if (Snapshot?.RefreshedAt != null)
+            {
+                <MudTooltip Text="@($"Last refreshed: {Snapshot.RefreshedAt:g}")">
+                    <MudStack AlignItems="AlignItems.End">
+                        <MudIcon Icon="@Icons.Material.Outlined.Schedule" Size="Size.Small" />
+                        <MudText Typo="Typo.caption">@GetRefreshAgo()</MudText>
+                    </MudStack>
+                </MudTooltip>
+            }
+        </MudStack>
+
+        @if (Snapshot != null && ShowSymbolChips)
+        {
+            <MudDivider Class="my-3" />
+            <MudChipSet T="string" ReadOnly="true">
+                @foreach (var symbol in Snapshot.ActiveSymbols.Take(10))
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined">@symbol.Symbol</MudChip>
+                }
+                @if (Snapshot.ActiveCount > 10)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">+@(Snapshot.ActiveCount - 10) more</MudChip>
+                }
+            </MudChipSet>
+        }
+    </MudCardContent>
+    <MudCardActions>
+        <MudButton Size="Size.Small"
+                   Variant="Variant.Text"
+                   Color="Color.Primary"
+                   OnClick="@(() => OnEdit.InvokeAsync(Snapshot))">
+            Edit
+        </MudButton>
+        <MudButton Size="Size.Small"
+                   Variant="Variant.Text"
+                   Color="Color.Primary"
+                   OnClick="@(() => OnRefresh.InvokeAsync(Snapshot))"
+                   Disabled="@IsLoading">
+            @if (IsLoading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" />
+            }
+            Refresh
+        </MudButton>
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                       Size="Size.Small"
+                       Color="Color.Error"
+                       OnClick="@(() => OnDelete.InvokeAsync(Snapshot))"
+                       Title="Delete collection" />
+    </MudCardActions>
+</MudCard>
+
+@code {
+    [Parameter] public SymbolCollectionSnapshot? Snapshot { get; set; }
+    [Parameter] public CollectionDiff? Diff { get; set; }
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public bool ShowSymbolChips { get; set; } = true;
+    [Parameter] public EventCallback<SymbolCollectionSnapshot?> OnEdit { get; set; }
+    [Parameter] public EventCallback<SymbolCollectionSnapshot?> OnRefresh { get; set; }
+    [Parameter] public EventCallback<SymbolCollectionSnapshot?> OnDelete { get; set; }
+
+    private string GetRefreshAgo()
+    {
+        if (Snapshot?.RefreshedAt == null)
+            return "never";
+
+        var elapsed = DateTimeOffset.UtcNow - Snapshot.RefreshedAt.Value;
+
+        if (elapsed.TotalMinutes < 1)
+            return "just now";
+        if (elapsed.TotalMinutes < 60)
+            return $"{(int)elapsed.TotalMinutes}m";
+        if (elapsed.TotalHours < 24)
+            return $"{(int)elapsed.TotalHours}h";
+        return $"{(int)elapsed.TotalDays}d";
+    }
+}
