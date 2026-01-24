@@ -1,4 +1,6 @@
+using System.Net.Http;
 using LionFire.Trading.Symbols;
+using LionFire.Trading.Symbols.Providers;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -76,6 +78,88 @@ public static class SymbolDataProviderHostingX
     {
         // This is used to wrap a specific provider with caching
         // The actual wrapping happens at runtime via decoration
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the CoinLore symbol data provider.
+    /// CoinLore provides free market cap and volume data without API keys.
+    /// </summary>
+    public static IServiceCollection AddCoinLoreSymbolProvider(
+        this IServiceCollection services,
+        Action<CoinLoreProviderOptions>? configureOptions = null)
+    {
+        if (configureOptions != null)
+        {
+            services.Configure(configureOptions);
+        }
+        else
+        {
+            services.Configure<CoinLoreProviderOptions>(_ => { });
+        }
+
+        // Ensure HttpClient is available
+        services.TryAddSingleton<HttpClient>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ISymbolDataProvider, CoinLoreSymbolProvider>());
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the CoinGecko symbol data provider.
+    /// CoinGecko provides market cap rankings but has stricter rate limits.
+    /// </summary>
+    public static IServiceCollection AddCoinGeckoSymbolProvider(
+        this IServiceCollection services,
+        Action<CoinGeckoProviderOptions>? configureOptions = null)
+    {
+        if (configureOptions != null)
+        {
+            services.Configure(configureOptions);
+        }
+        else
+        {
+            services.Configure<CoinGeckoProviderOptions>(_ => { });
+        }
+
+        // Ensure HttpClient is available
+        services.TryAddSingleton<HttpClient>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ISymbolDataProvider, CoinGeckoSymbolProvider>());
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the Binance symbol data provider.
+    /// Binance provides accurate volume data directly from the exchange.
+    /// </summary>
+    public static IServiceCollection AddBinanceSymbolProvider(
+        this IServiceCollection services,
+        Action<BinanceProviderOptions>? configureOptions = null)
+    {
+        if (configureOptions != null)
+        {
+            services.Configure(configureOptions);
+        }
+        else
+        {
+            services.Configure<BinanceProviderOptions>(_ => { });
+        }
+
+        // Ensure HttpClient is available
+        services.TryAddSingleton<HttpClient>();
+        services.TryAddEnumerable(ServiceDescriptor.Singleton<ISymbolDataProvider, BinanceSymbolProvider>());
+        return services;
+    }
+
+    /// <summary>
+    /// Adds all available symbol data providers with default settings.
+    /// Includes: CoinLore (market cap), Binance (volume).
+    /// </summary>
+    public static IServiceCollection AddAllSymbolDataProviders(this IServiceCollection services)
+    {
+        services.TryAddSingleton<HttpClient>();
+        services.AddCoinLoreSymbolProvider();
+        services.AddBinanceSymbolProvider();
+        // CoinGecko excluded by default due to rate limits - add manually if needed
         return services;
     }
 }

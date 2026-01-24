@@ -81,7 +81,16 @@ public class BinanceSymbolProvider : ISymbolDataProvider
     /// <inheritdoc/>
     public bool CanHandle(SymbolCollectionQuery query)
     {
-        return query.Exchange.Equals("Binance", StringComparison.OrdinalIgnoreCase);
+        // Binance only provides volume data, not market cap
+        // Only handle volume-based queries for Binance exchange
+        if (!query.Exchange.Equals("Binance", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        // Don't handle market cap queries - Binance doesn't have that data
+        if (query.SortBy.Equals("marketCap", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        return true;
     }
 
     /// <inheritdoc/>
