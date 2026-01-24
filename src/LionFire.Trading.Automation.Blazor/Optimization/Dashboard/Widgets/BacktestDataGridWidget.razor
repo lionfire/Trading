@@ -97,6 +97,11 @@ else
     [CascadingParameter(Name = "Portfolio")]
     public Portfolio2? Portfolio { get; set; }
 
+    [CascadingParameter(Name = "WorkspaceServices")]
+    public IServiceProvider? WorkspaceServices { get; set; }
+
+    private IObservableReaderWriter<string, Portfolio2>? _portfolioWriter;
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
@@ -108,6 +113,13 @@ else
         {
             Logger.LogWarning("IObservableReaderWriter<string, BotEntity> service not available from {ServiceSource} - Export to Bot will not work",
                 UserServices != null ? "UserServices" : "ServiceProvider (fallback)");
+        }
+
+        // Get portfolio writer from WorkspaceServices
+        _portfolioWriter = WorkspaceServices?.GetService<IObservableReaderWriter<string, Portfolio2>>();
+        if (_portfolioWriter == null)
+        {
+            Logger.LogWarning("IObservableReaderWriter<string, Portfolio2> service not available - Add to Portfolio will not persist");
         }
 
         if (ViewModel != null)
@@ -164,7 +176,7 @@ else
         StateHasChanged(); // Refresh to update button state
     }
 
-    private void OnAddToPortfolio(BacktestBatchJournalEntry item)
+    private async Task OnAddToPortfolio(BacktestBatchJournalEntry item)
     {
         if (Portfolio == null)
         {
@@ -192,6 +204,24 @@ else
             Portfolio.BotIds ??= new List<string>();
             Portfolio.BotIds.Add(botId);
             Logger.LogInformation("Added bot {BotId} to portfolio {PortfolioName}", botId, Portfolio.Name);
+
+            // Save the portfolio
+            if (_portfolioWriter != null && Portfolio.Name != null)
+            {
+                try
+                {
+                    await _portfolioWriter.Write(Portfolio.Name, Portfolio);
+                    Logger.LogInformation("Saved portfolio {PortfolioName}", Portfolio.Name);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Failed to save portfolio {PortfolioName}", Portfolio.Name);
+                }
+            }
+            else
+            {
+                Logger.LogWarning("Cannot save portfolio: writer not available or portfolio name is null");
+            }
         }
         else
         {
