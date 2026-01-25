@@ -1,5 +1,5 @@
 @page "/optimization/plans/new"
-@page "/optimization/plans/{PlanId}"
+@page "/optimization/plans/{PlanId}/edit"
 @namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
 @using LionFire.Trading.Optimization.Plans
 @using LionFire.Trading.Automation.Blazor.Components.Optimization
@@ -149,6 +149,20 @@
         }
 
         _loading = false;
+
+        // Trigger initial validation after render
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(100); // Wait for editor to initialize
+            await InvokeAsync(async () =>
+            {
+                if (_editor != null)
+                {
+                    await _editor.ValidateNowAsync();
+                    StateHasChanged();
+                }
+            });
+        });
     }
 
     private void OnPlanParsed(OptimizationPlan? plan)

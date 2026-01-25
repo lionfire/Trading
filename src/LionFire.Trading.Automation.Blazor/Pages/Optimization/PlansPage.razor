@@ -1,14 +1,25 @@
 @page "/optimization/plans"
+@page "/optimization/plans/{PlanId}"
+@page "/optimization/plans/{PlanId}/{DetailView}"
 @namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
 @using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Optimization.Execution
 @using LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.TypeRegistration
 
 <PageTitle>Optimization Plans</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4">
-    <div class="page-header">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4 plans-page">
+    <div class="page-header mb-4">
         <MudText Typo="Typo.h4">Optimization Plans</MudText>
         <MudSpacer />
+
+        <MudToggleIconButton @bind-Toggled="_isGridView"
+                             Icon="@Icons.Material.Filled.ViewList"
+                             ToggledIcon="@Icons.Material.Filled.GridView"
+                             Title="@(_isGridView ? "Switch to List View" : "Switch to Grid View")"
+                             Size="Size.Medium" />
+
         <MudButton Variant="Variant.Filled" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
                    Href="/optimization/plans/new">
@@ -16,66 +27,162 @@
         </MudButton>
     </div>
 
-    <MudPaper Class="pa-4 mt-4">
-        <div class="filter-bar">
-            <MudTextField @bind-Value="_searchText"
-                          Placeholder="Search plans..."
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true"
-                          Class="search-field" />
-
-            <MudSelect T="string" @bind-Value="_selectedBot"
-                       Label="Bot Type" Clearable="true" Class="filter-select">
-                @foreach (var bot in _botTypes)
-                {
-                    <MudSelectItem Value="@bot">@bot</MudSelectItem>
-                }
-            </MudSelect>
-
-            <MudSelect T="string" @bind-Value="_selectedTag"
-                       Label="Tag" Clearable="true" Class="filter-select">
-                @foreach (var tag in _allTags)
-                {
-                    <MudSelectItem Value="@tag">@tag</MudSelectItem>
-                }
-            </MudSelect>
-
-            <MudSelect T="string" @bind-Value="_sortBy" Label="Sort By" Class="filter-select">
-                <MudSelectItem Value="@("name")">Name</MudSelectItem>
-                <MudSelectItem Value="@("modified")">Last Modified</MudSelectItem>
-                <MudSelectItem Value="@("created")">Created</MudSelectItem>
-            </MudSelect>
-        </div>
-    </MudPaper>
-
-    @if (_loading)
+    @if (_isGridView)
     {
-        <MudProgressLinear Indeterminate="true" Class="mt-4" />
-    }
-    else if (_filteredPlans.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info" Class="mt-4">
-            @if (_plans.Count == 0)
-            {
-                <span>No optimization plans yet. <MudLink Href="/optimization/plans/new">Create your first plan</MudLink>.</span>
-            }
-            else
-            {
-                <span>No plans match your filters.</span>
-            }
-        </MudAlert>
+        @* Grid View *@
+        <MudPaper Class="pa-4">
+            <div class="filter-bar">
+                <MudTextField @bind-Value="_searchText"
+                              Placeholder="Search plans..."
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              Class="search-field" />
+
+                <MudSelect T="string" @bind-Value="_selectedBot"
+                           Label="Bot Type" Clearable="true" Class="filter-select">
+                    @foreach (var bot in _botTypes)
+                    {
+                        <MudSelectItem Value="@bot">@bot</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="string" @bind-Value="_selectedTag"
+                           Label="Tag" Clearable="true" Class="filter-select">
+                    @foreach (var tag in _allTags)
+                    {
+                        <MudSelectItem Value="@tag">@tag</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudSelect T="string" @bind-Value="_sortBy" Label="Sort By" Class="filter-select">
+                    <MudSelectItem Value="@("name")">Name</MudSelectItem>
+                    <MudSelectItem Value="@("modified")">Last Modified</MudSelectItem>
+                    <MudSelectItem Value="@("created")">Created</MudSelectItem>
+                </MudSelect>
+            </div>
+        </MudPaper>
+
+        @if (_loading)
+        {
+            <MudProgressLinear Indeterminate="true" Class="mt-4" />
+        }
+        else if (_filteredPlans.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-4">
+                @if (_plans.Count == 0)
+                {
+                    <span>No optimization plans yet. <MudLink Href="/optimization/plans/new">Create your first plan</MudLink>.</span>
+                }
+                else
+                {
+                    <span>No plans match your filters.</span>
+                }
+            </MudAlert>
+        }
+        else
+        {
+            <div class="plans-grid mt-4">
+                @foreach (var plan in _filteredPlans)
+                {
+                    <OptimizationPlanCard Plan="@plan"
+                                          OnEdit="EditPlan"
+                                          OnDuplicate="DuplicatePlan"
+                                          OnDelete="ConfirmDeletePlan" />
+                }
+            </div>
+        }
     }
     else
     {
-        <div class="plans-grid mt-4">
-            @foreach (var plan in _filteredPlans)
-            {
-                <OptimizationPlanCard Plan="@plan"
-                                      OnEdit="EditPlan"
-                                      OnDuplicate="DuplicatePlan"
-                                      OnDelete="ConfirmDeletePlan" />
-            }
+        @* Master-Detail View *@
+        <div class="master-detail-layout">
+            @* Left Panel: Bot List + Plan List *@
+            <div class="left-panel">
+                <MudPaper Class="bot-list-container mb-2" Elevation="1">
+                    <BotListNav @bind-SelectedBot="_selectedBot"
+                                RegisteredBots="_registeredBots"
+                                PlanBots="_planBots"
+                                PlanCounts="_planCounts"
+                                OnBotChanged="OnBotFilterChanged" />
+                </MudPaper>
+
+                <MudPaper Class="plan-list-container" Elevation="1">
+                    <PlanListNav BotFilter="_selectedBot"
+                                 SelectedPlanId="@PlanId"
+                                 Plans="_filteredPlans"
+                                 ExecutionStates="_executionStates"
+                                 OnPlanSelected="OnPlanSelected" />
+                </MudPaper>
+            </div>
+
+            @* Right Panel: Detail View *@
+            <div class="right-panel">
+                @if (_selectedPlan != null)
+                {
+                    @* Detail View Tabs *@
+                    <MudPaper Elevation="1">
+                        <MudTabs @bind-ActivePanelIndex="_activeDetailTab" ApplyEffectsToContainer="true"
+                                 PanelClass="pa-4">
+                            <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Info">
+                                <PlanOverviewTab Plan="_selectedPlan"
+                                                 ExecutionState="_currentExecutionState"
+                                                 OnStart="StartExecution"
+                                                 OnStop="StopExecution"
+                                                 OnPause="PauseExecution"
+                                                 OnResume="ResumeExecution" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Jobs" Icon="@Icons.Material.Filled.List">
+                                <PlanJobsTab ExecutionState="_currentExecutionState"
+                                             OnRetryFailed="RetryFailedJobs" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Assessment">
+                                <PlanResultsTab ExecutionState="_currentExecutionState" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Settings" Icon="@Icons.Material.Filled.Settings">
+                                <PlanSettingsTab Plan="_selectedPlan" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Edit" Icon="@Icons.Material.Filled.Edit">
+                                <div class="edit-tab-content">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Edit"
+                                               Href="@($"/optimization/plans/{_selectedPlan.Id}/edit")">
+                                        Open Editor
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Outlined"
+                                               StartIcon="@Icons.Material.Filled.ContentCopy"
+                                               OnClick="@(() => DuplicatePlan(_selectedPlan))">
+                                        Duplicate
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Error"
+                                               StartIcon="@Icons.Material.Filled.Delete"
+                                               OnClick="@(() => ConfirmDeletePlan(_selectedPlan))">
+                                        Delete
+                                    </MudButton>
+                                </div>
+                            </MudTabPanel>
+                        </MudTabs>
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudPaper Class="pa-8 text-center placeholder" Elevation="1">
+                        <MudIcon Icon="@Icons.Material.Filled.Timeline" Size="Size.Large"
+                                 Class="mud-text-secondary mb-4" />
+                        <MudText Typo="Typo.h6" Class="mud-text-secondary">
+                            Select a plan to view details
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
+                            Choose a plan from the list on the left, or
+                            <MudLink Href="/optimization/plans/new">create a new plan</MudLink>.
+                        </MudText>
+                    </MudPaper>
+                }
+            </div>
         </div>
     }
 </MudContainer>
@@ -95,10 +202,17 @@
 </MudDialog>
 
 <style>
+    .plans-page {
+        height: calc(100vh - 64px - 32px);
+        display: flex;
+        flex-direction: column;
+    }
+
     .page-header {
         display: flex;
         align-items: center;
         gap: 16px;
+        flex-shrink: 0;
     }
 
     .filter-bar {
@@ -122,9 +236,79 @@
         grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
         gap: 16px;
     }
+
+    .master-detail-layout {
+        display: flex;
+        gap: 16px;
+        flex: 1;
+        min-height: 0;
+    }
+
+    .left-panel {
+        width: 280px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .bot-list-container {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
+    .plan-list-container {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
+
+    .right-panel {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .right-panel > .mud-paper {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .placeholder {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .edit-tab-content {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    @@media (max-width: 900px) {
+        .master-detail-layout {
+            flex-direction: column;
+        }
+
+        .left-panel {
+            width: 100%;
+            max-height: 300px;
+        }
+
+        .right-panel {
+            flex: 1;
+        }
+    }
 </style>
 
 @code {
+    [Parameter] public string? PlanId { get; set; }
+    [Parameter] public string? DetailView { get; set; }
+
     private List<OptimizationPlan> _plans = [];
     private bool _loading = true;
     private string _searchText = "";
@@ -133,13 +317,24 @@
     private string _sortBy = "modified";
     private bool _deleteDialogVisible;
     private OptimizationPlan? _planToDelete;
+    private bool _isGridView = false; // Default to master-detail
+    private int _activeDetailTab = 0;
 
     private IReadOnlyList<string> _botTypes = [];
     private IReadOnlyList<string> _allTags = [];
+    private List<string> _registeredBots = [];
+    private List<string> _planBots = [];
+    private Dictionary<string, int> _planCounts = new();
+    private OptimizationPlan? _selectedPlan;
+    private Dictionary<string, PlanExecutionState> _executionStates = new();
+    private PlanExecutionState? _currentExecutionState;
+    private System.Timers.Timer? _pollTimer;
 
     [Inject] private IOptimizationPlanRepository Repository { get; set; } = default!;
+    [Inject] private IPlanExecutionService ExecutionService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private BotTypeRegistry? BotTypeRegistry { get; set; }
 
     private List<OptimizationPlan> _filteredPlans => _plans
         .Where(p => string.IsNullOrWhiteSpace(_searchText) ||
@@ -159,6 +354,28 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadPlans();
+        await LoadExecutionStates();
+
+        if (!string.IsNullOrEmpty(PlanId))
+        {
+            _selectedPlan = _plans.FirstOrDefault(p => p.Id == PlanId);
+            _selectedBot = _selectedPlan?.Bot;
+            await LoadCurrentExecutionState();
+        }
+
+        StartPolling();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (PlanId != _selectedPlan?.Id)
+        {
+            _selectedPlan = !string.IsNullOrEmpty(PlanId)
+                ? _plans.FirstOrDefault(p => p.Id == PlanId)
+                : null;
+            await LoadCurrentExecutionState();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadPlans()
@@ -167,12 +384,62 @@
         _plans = (await Repository.ListAsync()).ToList();
         _botTypes = _plans.Select(p => p.Bot).Distinct().OrderBy(b => b).ToList();
         _allTags = _plans.SelectMany(p => p.Tags).Distinct().OrderBy(t => t).ToList();
+
+        // Get registered bot types from the type registry
+        _registeredBots = BotTypeRegistry?.PBotRegistry.Names.Keys
+            .Select(name => name.StartsWith("P") ? name[1..] : name)
+            .Distinct()
+            .OrderBy(b => b)
+            .ToList() ?? [];
+
+        _planBots = _plans.Select(p => p.Bot).Where(b => !string.IsNullOrEmpty(b)).Distinct().ToList();
+        _planCounts = _plans
+            .Where(p => !string.IsNullOrEmpty(p.Bot))
+            .GroupBy(p => p.Bot)
+            .ToDictionary(g => g.Key, g => g.Count());
+
         _loading = false;
+    }
+
+    private async Task LoadExecutionStates()
+    {
+        var activeStates = await ExecutionService.GetAllActiveAsync();
+        _executionStates = activeStates.ToDictionary(s => s.PlanId);
+    }
+
+    private async Task LoadCurrentExecutionState()
+    {
+        if (_selectedPlan != null)
+        {
+            _currentExecutionState = await ExecutionService.GetStatusAsync(_selectedPlan.Id);
+        }
+        else
+        {
+            _currentExecutionState = null;
+        }
+    }
+
+    private void OnBotFilterChanged(string? bot)
+    {
+        _selectedBot = bot;
+        if (_selectedPlan != null && !_filteredPlans.Contains(_selectedPlan))
+        {
+            _selectedPlan = null;
+            _currentExecutionState = null;
+            Navigation.NavigateTo("/optimization/plans");
+        }
+    }
+
+    private async Task OnPlanSelected(string planId)
+    {
+        _selectedPlan = _plans.FirstOrDefault(p => p.Id == planId);
+        await LoadCurrentExecutionState();
+        Navigation.NavigateTo($"/optimization/plans/{planId}");
     }
 
     private void EditPlan(OptimizationPlan plan)
     {
-        Navigation.NavigateTo($"/optimization/plans/{plan.Id}");
+        Navigation.NavigateTo($"/optimization/plans/{plan.Id}/edit");
     }
 
     private void DuplicatePlan(OptimizationPlan plan)
@@ -192,9 +459,124 @@
         {
             await Repository.DeleteAsync(_planToDelete.Id);
             _plans.Remove(_planToDelete);
+            if (_selectedPlan?.Id == _planToDelete.Id)
+            {
+                _selectedPlan = null;
+                _currentExecutionState = null;
+                Navigation.NavigateTo("/optimization/plans");
+            }
             Snackbar.Add($"Deleted plan '{_planToDelete.Name}'", Severity.Success);
             _planToDelete = null;
             _deleteDialogVisible = false;
         }
+    }
+
+    private async Task StartExecution(int parallelWorkers)
+    {
+        if (_selectedPlan == null) return;
+
+        try
+        {
+            var options = new PlanExecutionOptions { ParallelWorkers = parallelWorkers };
+            _currentExecutionState = await ExecutionService.StartAsync(_selectedPlan.Id, options);
+            _executionStates[_selectedPlan.Id] = _currentExecutionState;
+            Snackbar.Add("Execution started", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to start: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task StopExecution()
+    {
+        if (_selectedPlan == null) return;
+
+        try
+        {
+            await ExecutionService.StopAsync(_selectedPlan.Id);
+            _executionStates.Remove(_selectedPlan.Id);
+            _currentExecutionState = null;
+            Snackbar.Add("Execution stopped", Severity.Warning);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to stop: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task PauseExecution()
+    {
+        if (_selectedPlan == null) return;
+
+        try
+        {
+            await ExecutionService.PauseAsync(_selectedPlan.Id);
+            await LoadCurrentExecutionState();
+            Snackbar.Add("Execution paused", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to pause: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ResumeExecution()
+    {
+        if (_selectedPlan == null) return;
+
+        try
+        {
+            await ExecutionService.ResumeAsync(_selectedPlan.Id);
+            await LoadCurrentExecutionState();
+            Snackbar.Add("Execution resumed", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to resume: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RetryFailedJobs()
+    {
+        if (_selectedPlan == null) return;
+
+        try
+        {
+            await ExecutionService.RetryFailedAsync(_selectedPlan.Id);
+            await LoadCurrentExecutionState();
+            Snackbar.Add("Failed jobs re-queued", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to retry: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void StartPolling()
+    {
+        _pollTimer = new System.Timers.Timer(5000);
+        _pollTimer.Elapsed += async (s, e) => await PollForUpdates();
+        _pollTimer.Start();
+    }
+
+    private async Task PollForUpdates()
+    {
+        try
+        {
+            await LoadExecutionStates();
+            await LoadCurrentExecutionState();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch
+        {
+            // Ignore polling errors
+        }
+    }
+
+    public void Dispose()
+    {
+        _pollTimer?.Stop();
+        _pollTimer?.Dispose();
     }
 }
