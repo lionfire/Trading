@@ -96,7 +96,7 @@
     private OptimizationPlanEditor? _editor;
     private string _hjsonContent = "";
     private OptimizationPlan? _plan;
-    private bool _canSave;
+    private bool _canSave => _plan != null && (_editor?.IsValid ?? false);
     private bool _saveAsDialogVisible;
     private string _newPlanId = "";
 
@@ -163,7 +163,7 @@
     private void OnPlanParsed(OptimizationPlan? plan)
     {
         _plan = plan;
-        _canSave = plan != null && _editor?.IsValid == true;
+        StateHasChanged();
     }
 
     private async Task Save()
