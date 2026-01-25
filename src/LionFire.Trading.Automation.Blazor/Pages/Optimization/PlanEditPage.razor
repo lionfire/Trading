@@ -149,20 +149,15 @@
         }
 
         _loading = false;
+    }
 
-        // Trigger initial validation after render
-        _ = Task.Run(async () =>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _editor != null)
         {
-            await Task.Delay(100); // Wait for editor to initialize
-            await InvokeAsync(async () =>
-            {
-                if (_editor != null)
-                {
-                    await _editor.ValidateNowAsync();
-                    StateHasChanged();
-                }
-            });
-        });
+            await _editor.ValidateNowAsync();
+            StateHasChanged();
+        }
     }
 
     private void OnPlanParsed(OptimizationPlan? plan)
