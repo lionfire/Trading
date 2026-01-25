@@ -101,6 +101,14 @@
 
     private async Task ValidateSyntax()
     {
+        await ValidateSyntaxAsync();
+    }
+
+    /// <summary>
+    /// Validates the HJSON syntax programmatically.
+    /// </summary>
+    public async Task ValidateSyntaxAsync()
+    {
         if (string.IsNullOrWhiteSpace(Value))
         {
             _syntaxValid = null;

@@ -133,6 +133,12 @@
             return;
         }
 
+        // Validate HJSON syntax first
+        if (_editor != null)
+        {
+            await _editor.ValidateSyntaxAsync();
+        }
+
         try
         {
             // Try to parse the HJSON
