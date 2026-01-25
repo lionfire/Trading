@@ -208,4 +208,24 @@ public static class SymbolDataProviderHostingX
         services.AddStalenessDetector();
         return services;
     }
+
+    /// <summary>
+    /// Adds the file-based symbol collection repository.
+    /// </summary>
+    public static IServiceCollection AddFileSymbolCollectionRepository(
+        this IServiceCollection services,
+        Action<FileSymbolCollectionRepositoryOptions>? configureOptions = null)
+    {
+        if (configureOptions != null)
+        {
+            services.Configure(configureOptions);
+        }
+        else
+        {
+            services.Configure<FileSymbolCollectionRepositoryOptions>(_ => { });
+        }
+
+        services.TryAddSingleton<ISymbolCollectionRepository, FileSymbolCollectionRepository>();
+        return services;
+    }
 }
