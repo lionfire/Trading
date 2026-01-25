@@ -1,12 +1,14 @@
-﻿namespace LionFire.Trading.Automation.Optimization;
+﻿using LionFire.Structures;
+
+namespace LionFire.Trading.Automation.Optimization;
 
 public static class OptimizationRunPath
 {
-    //public static string GetRelativePath_Old(OptimizationRunId id)
-    //{
-    //    return Path.Combine(id.DefaultSymbol, id.Bot, id.DefaultTimeFrame);
-    //}
-    public static string DateFormat = "yyyy.MM.dd";
+    /// <summary>
+    /// Date format used in folder names (uses DateTimeFormatting.DateFormat)
+    /// </summary>
+    public static string DateFormat => DateTimeFormatting.DateFormat;
+
     public static string GetRelativePath(OptimizationRunId id)
     {
         return Path.Combine(id.Bot, id.Symbol, id.TimeFrame, $"{id.Start}-{id.End}");

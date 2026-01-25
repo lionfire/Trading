@@ -3,12 +3,18 @@
 public static class DateTimeFormatting
 {
     /// <summary>
-    /// Return a date range in the format "start - end"
-    /// 
+    /// Date format used in folder names (dots to avoid conflict with hyphen separator)
+    /// </summary>
+    public const string DateFormat = "yyyy.MM.dd";
+    public const string DateTimeFormat = "yyyy.MM.dd_HH-mm-ss";
+
+    /// <summary>
+    /// Return a date range in the format "start-end" (no spaces)
+    ///
     /// If start or endExclusive is null, it will be written as "UnknownDate"
-    /// 
-    /// If a date has an hour minute and second and millisecond of 0, it will be written as yyyy-MM-dd
-    /// Otherwise, it will be written as yyyy-MM-dd_HH-mm-ss
+    ///
+    /// If a date has an hour minute and second and millisecond of 0, it will be written as yyyy.MM.dd
+    /// Otherwise, it will be written as yyyy.MM.dd_HH-mm-ss
     /// </summary>
     /// <param name="start"></param>
     /// <param name="endExclusive"></param>
@@ -28,16 +34,16 @@ public static class DateTimeFormatting
             var dt = date.Value;
             if (dt.Hour == 0 && dt.Minute == 0 && dt.Second == 0 && dt.Millisecond == 0)
             {
-                return dt.ToString("yyyy-MM-dd");
+                return dt.ToString(DateFormat);
             }
-            return dt.ToString("yyyy-MM-dd_HH-mm-ss");
+            return dt.ToString(DateTimeFormat);
         }
 
         // Append start date
         sb.Append(FormatDate(start));
 
-        // Append separator
-        sb.Append(" - ");
+        // Append separator (no spaces - single hyphen)
+        sb.Append("-");
 
         // Append end date
         sb.Append(FormatDate(endExclusive));
