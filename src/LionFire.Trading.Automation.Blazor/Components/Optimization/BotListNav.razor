@@ -1,0 +1,181 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Automation
+
+<div class="bot-list-nav">
+    <div class="bot-list-header">
+        <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Bots</MudText>
+        @if (!string.IsNullOrEmpty(SelectedBot))
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
+                           OnClick="ClearSelection" Title="Show all bots" />
+        }
+    </div>
+
+    <div class="bot-list-items">
+        @foreach (var bot in AllBots)
+        {
+            var isSelected = SelectedBot == bot.Name;
+            var planCount = GetPlanCount(bot.Name);
+
+            <div class="bot-item @(isSelected ? "selected" : "") @(bot.IsAvailable ? "" : "unavailable")"
+                 @onclick="() => SelectBot(bot.Name)">
+                <div class="bot-item-content">
+                    @if (!bot.IsAvailable)
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
+                                 Color="Color.Warning" Class="bot-warning-icon"
+                                 Title="Bot type not available in current Silo" />
+                    }
+                    <span class="bot-name">@bot.Name</span>
+                    @if (planCount > 0)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                 Class="plan-count-chip">@planCount</MudChip>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (!AllBots.Any())
+        {
+            <div class="empty-state">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    No bots available
+                </MudText>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .bot-list-nav {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .bot-list-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .bot-list-items {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .bot-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+        transition: background-color 0.15s;
+    }
+
+    .bot-item:hover {
+        background-color: var(--mud-palette-action-default-hover);
+    }
+
+    .bot-item.selected {
+        background-color: var(--mud-palette-primary-lighten);
+        border-left: 3px solid var(--mud-palette-primary);
+    }
+
+    .bot-item.unavailable .bot-name {
+        color: var(--mud-palette-warning);
+    }
+
+    .bot-item-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bot-warning-icon {
+        flex-shrink: 0;
+    }
+
+    .bot-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 0.875rem;
+    }
+
+    .plan-count-chip {
+        flex-shrink: 0;
+    }
+
+    .empty-state {
+        padding: 16px;
+        text-align: center;
+    }
+</style>
+
+@code {
+    [Parameter] public string? SelectedBot { get; set; }
+    [Parameter] public EventCallback<string?> SelectedBotChanged { get; set; }
+    [Parameter] public EventCallback<string?> OnBotChanged { get; set; }
+
+    /// <summary>
+    /// Bot names from registered types (available in current Silo)
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> RegisteredBots { get; set; } = [];
+
+    /// <summary>
+    /// Bot names from existing plans (may include unavailable types)
+    /// </summary>
+    [Parameter] public IReadOnlyList<string> PlanBots { get; set; } = [];
+
+    /// <summary>
+    /// Number of plans per bot type
+    /// </summary>
+    [Parameter] public IReadOnlyDictionary<string, int> PlanCounts { get; set; } = new Dictionary<string, int>();
+
+    private record BotInfo(string Name, bool IsAvailable);
+
+    private IEnumerable<BotInfo> AllBots
+    {
+        get
+        {
+            var registered = new HashSet<string>(RegisteredBots, StringComparer.OrdinalIgnoreCase);
+            var planBotsSet = new HashSet<string>(PlanBots, StringComparer.OrdinalIgnoreCase);
+
+            // First, registered bots (available)
+            foreach (var bot in RegisteredBots.OrderBy(b => b))
+            {
+                yield return new BotInfo(bot, IsAvailable: true);
+            }
+
+            // Then, plan-only bots (unavailable) - not in registered
+            foreach (var bot in planBotsSet.Except(registered, StringComparer.OrdinalIgnoreCase).OrderBy(b => b))
+            {
+                yield return new BotInfo(bot, IsAvailable: false);
+            }
+        }
+    }
+
+    private int GetPlanCount(string botName)
+    {
+        return PlanCounts.TryGetValue(botName, out var count) ? count : 0;
+    }
+
+    private async Task SelectBot(string botName)
+    {
+        // Toggle selection if already selected
+        var newValue = SelectedBot == botName ? null : botName;
+        SelectedBot = newValue;
+        await SelectedBotChanged.InvokeAsync(newValue);
+        await OnBotChanged.InvokeAsync(newValue);
+    }
+
+    private async Task ClearSelection()
+    {
+        SelectedBot = null;
+        await SelectedBotChanged.InvokeAsync(null);
+        await OnBotChanged.InvokeAsync(null);
+    }
+}

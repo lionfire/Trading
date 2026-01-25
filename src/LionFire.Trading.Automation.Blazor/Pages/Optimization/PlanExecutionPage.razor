@@ -4,6 +4,7 @@
 @using LionFire.Trading.Optimization.Plans
 @using LionFire.Trading.Optimization.Execution
 @using LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.TypeRegistration
 
 <PageTitle>Plan Execution</PageTitle>
 
@@ -19,12 +20,14 @@
     </div>
 
     <div class="master-detail-layout">
-        @* Left Panel: Bot Selector + Plan List *@
+        @* Left Panel: Bot List + Plan List *@
         <div class="left-panel">
-            <MudPaper Class="pa-3 mb-2" Elevation="1">
-                <BotSelector @bind-SelectedBot="_selectedBot"
-                             AvailableBots="_availableBots"
-                             OnBotChanged="OnBotChanged" />
+            <MudPaper Class="bot-list-container mb-2" Elevation="1">
+                <BotListNav @bind-SelectedBot="_selectedBot"
+                            RegisteredBots="_registeredBots"
+                            PlanBots="_planBots"
+                            PlanCounts="_planCounts"
+                            OnBotChanged="OnBotChanged" />
             </MudPaper>
 
             <MudPaper Class="plan-list-container" Elevation="1">
@@ -94,6 +97,11 @@
         flex-direction: column;
     }
 
+    .bot-list-container {
+        max-height: 200px;
+        overflow-y: auto;
+    }
+
     .plan-list-container {
         flex: 1;
         overflow-y: auto;
@@ -134,7 +142,9 @@
     [Parameter] public string? PlanId { get; set; }
 
     private List<OptimizationPlan> _plans = [];
-    private List<string> _availableBots = [];
+    private List<string> _registeredBots = [];
+    private List<string> _planBots = [];
+    private Dictionary<string, int> _planCounts = new();
     private string? _selectedBot;
     private string? _selectedPlanId;
     private OptimizationPlan? _selectedPlan;
@@ -147,6 +157,7 @@
     [Inject] private IPlanExecutionService ExecutionService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private BotTypeRegistry? BotTypeRegistry { get; set; }
 
     private IReadOnlyList<OptimizationPlan> _filteredPlans =>
         string.IsNullOrEmpty(_selectedBot)
@@ -186,7 +197,23 @@
     {
         _loading = true;
         _plans = (await PlanRepository.ListAsync()).ToList();
-        _availableBots = _plans.Select(p => p.Bot).Distinct().OrderBy(b => b).ToList();
+
+        // Get registered bot types from the type registry
+        _registeredBots = BotTypeRegistry?.PBotRegistry.Names.Keys
+            .Select(name => name.StartsWith("P") ? name[1..] : name) // Remove 'P' prefix
+            .Distinct()
+            .OrderBy(b => b)
+            .ToList() ?? [];
+
+        // Get bot types from existing plans
+        _planBots = _plans.Select(p => p.Bot).Where(b => !string.IsNullOrEmpty(b)).Distinct().ToList();
+
+        // Count plans per bot type
+        _planCounts = _plans
+            .Where(p => !string.IsNullOrEmpty(p.Bot))
+            .GroupBy(p => p.Bot)
+            .ToDictionary(g => g.Key, g => g.Count());
+
         _loading = false;
     }
 
