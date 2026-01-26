@@ -3,6 +3,7 @@
 @using LionFire.Trading.Optimization.Plans
 @using Hjson
 @using System.Text.Json
+@using Microsoft.Extensions.Logging
 @implements IDisposable
 
 <div class="optimization-plan-editor">
@@ -44,6 +45,12 @@
             <MudText Typo="Typo.body2">@_parseError</MudText>
         </MudAlert>
     }
+
+    <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+        Status: HJSON=@(_editor?.IsValid.ToString() ?? "null") |
+        Schema=@(_validationResult?.IsValid.ToString() ?? "null") |
+        IsValid=@IsValid
+    </MudText>
 </div>
 
 <style>
@@ -86,6 +93,7 @@
     [Parameter] public string? Height { get; set; }
 
     [Inject] private OptimizationPlanValidator Validator { get; set; } = default!;
+    [Inject] private ILogger<OptimizationPlanEditor> Logger { get; set; } = default!;
 
     protected override void OnInitialized()
     {
@@ -125,11 +133,13 @@
 
     private async Task ValidateAsync()
     {
+        Logger.LogInformation("ValidateAsync called, Value length: {Length}", Value?.Length ?? 0);
         _parseError = null;
         _validationResult = null;
 
         if (string.IsNullOrWhiteSpace(Value))
         {
+            Logger.LogInformation("ValidateAsync: Value is empty, returning");
             return;
         }
 
@@ -137,24 +147,35 @@
         if (_editor != null)
         {
             await _editor.ValidateSyntaxAsync();
+            Logger.LogInformation("ValidateAsync: After ValidateSyntaxAsync, _editor.IsValid={IsValid}", _editor.IsValid);
+        }
+        else
+        {
+            Logger.LogWarning("ValidateAsync: _editor is null!");
         }
 
         try
         {
             // Try to parse the HJSON
             var plan = ParsePlan(Value);
+            Logger.LogInformation("ValidateAsync: Parsed plan, plan is null={IsNull}", plan == null);
             if (plan != null)
             {
                 _validationResult = Validator.Validate(plan);
+                Logger.LogInformation("ValidateAsync: Validation result IsValid={IsValid}, Errors={Errors}",
+                    _validationResult.IsValid, string.Join(", ", _validationResult.Errors));
                 await OnPlanParsed.InvokeAsync(plan);
             }
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "ValidateAsync: Parse error");
             _parseError = ex.Message;
             await OnPlanParsed.InvokeAsync(null);
         }
 
+        Logger.LogInformation("ValidateAsync complete: IsValid={IsValid}, _editor?.IsValid={EditorValid}, _validationResult?.IsValid={ValidationValid}",
+            IsValid, _editor?.IsValid, _validationResult?.IsValid);
         await InvokeAsync(StateHasChanged);
     }
 

@@ -1,5 +1,7 @@
 @namespace LionFire.Trading.Automation.Blazor.Components.Hjson
 @using Hjson
+@using Microsoft.Extensions.Logging
+@inject ILogger<HjsonEditor> Logger
 
 <div class="hjson-editor" style="height: @Options.Height">
     <div class="editor-toolbar">
@@ -63,6 +65,7 @@
 @code {
     private bool? _syntaxValid;
     private string? _syntaxError;
+    private string? _lastValidatedValue;
 
     [Parameter] public string Value { get; set; } = "";
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
@@ -71,9 +74,13 @@
 
     protected override void OnParametersSet()
     {
-        // Clear validation state when value changes externally
-        _syntaxValid = null;
-        _syntaxError = null;
+        // Only clear validation state when value actually changes
+        if (Value != _lastValidatedValue)
+        {
+            Logger.LogInformation("HjsonEditor.OnParametersSet: Value changed, clearing _syntaxValid (was {Was})", _syntaxValid);
+            _syntaxValid = null;
+            _syntaxError = null;
+        }
     }
 
     private async Task FormatAsync()
@@ -109,8 +116,10 @@
     /// </summary>
     public async Task ValidateSyntaxAsync()
     {
+        Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Starting, Value length={Length}", Value?.Length ?? 0);
         if (string.IsNullOrWhiteSpace(Value))
         {
+            Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Value is empty");
             _syntaxValid = null;
             _syntaxError = null;
             return;
@@ -121,14 +130,19 @@
             global::Hjson.HjsonValue.Parse(Value);
             _syntaxValid = true;
             _syntaxError = null;
+            _lastValidatedValue = Value;
+            Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Parse succeeded, _syntaxValid={Valid}", _syntaxValid);
         }
         catch (Exception ex)
         {
             _syntaxValid = false;
             _syntaxError = ex.Message;
+            _lastValidatedValue = Value;
+            Logger.LogWarning("HjsonEditor.ValidateSyntaxAsync: Parse failed: {Error}", ex.Message);
         }
 
         await OnValidationChanged.InvokeAsync(_syntaxValid ?? false);
+        Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Done, IsValid={IsValid}", IsValid);
     }
 
     /// <summary>

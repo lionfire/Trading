@@ -127,10 +127,10 @@
                             <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Info">
                                 <PlanOverviewTab Plan="_selectedPlan"
                                                  ExecutionState="_currentExecutionState"
-                                                 OnStart="StartExecution"
-                                                 OnStop="StopExecution"
-                                                 OnPause="PauseExecution"
-                                                 OnResume="ResumeExecution" />
+                                                 OnStartExecution="StartExecution"
+                                                 OnStopExecution="StopExecution"
+                                                 OnPauseExecution="PauseExecution"
+                                                 OnResumeExecution="ResumeExecution" />
                             </MudTabPanel>
 
                             <MudTabPanel Text="Jobs" Icon="@Icons.Material.Filled.List">
@@ -387,15 +387,20 @@
 
         // Get registered bot types from the type registry
         _registeredBots = BotTypeRegistry?.PBotRegistry.Names.Keys
-            .Select(name => name.StartsWith("P") ? name[1..] : name)
+            .Select(NormalizeBotName)
             .Distinct()
             .OrderBy(b => b)
             .ToList() ?? [];
 
-        _planBots = _plans.Select(p => p.Bot).Where(b => !string.IsNullOrEmpty(b)).Distinct().ToList();
+        _planBots = _plans
+            .Select(p => p.Bot)
+            .Where(b => !string.IsNullOrEmpty(b))
+            .Select(NormalizeBotName)
+            .Distinct()
+            .ToList();
         _planCounts = _plans
             .Where(p => !string.IsNullOrEmpty(p.Bot))
-            .GroupBy(p => p.Bot)
+            .GroupBy(p => NormalizeBotName(p.Bot))
             .ToDictionary(g => g.Key, g => g.Count());
 
         _loading = false;
@@ -572,6 +577,18 @@
         {
             // Ignore polling errors
         }
+    }
+
+    /// <summary>
+    /// Normalize bot name by stripping the "P" prefix used in parameter types.
+    /// E.g., "PAtrBot" -> "AtrBot"
+    /// </summary>
+    private static string NormalizeBotName(string botName)
+    {
+        if (string.IsNullOrEmpty(botName)) return botName;
+        return botName.StartsWith("P") && botName.Length > 1 && char.IsUpper(botName[1])
+            ? botName[1..]
+            : botName;
     }
 
     public void Dispose()

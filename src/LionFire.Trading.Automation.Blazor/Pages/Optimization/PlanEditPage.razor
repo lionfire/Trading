@@ -5,6 +5,7 @@
 @using LionFire.Trading.Automation.Blazor.Components.Optimization
 @using Hjson
 @using System.Text.Json
+@using Microsoft.Extensions.Logging
 
 <PageTitle>@(_isNew ? "New Plan" : $"Edit {_plan?.Name}")</PageTitle>
 
@@ -103,6 +104,7 @@
     [Inject] private IOptimizationPlanRepository Repository { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private ILogger<PlanEditPage> Logger { get; set; } = default!;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -153,15 +155,22 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        Logger.LogInformation("OnAfterRenderAsync: firstRender={FirstRender}, _editor is null={EditorNull}",
+            firstRender, _editor == null);
         if (firstRender && _editor != null)
         {
+            Logger.LogInformation("OnAfterRenderAsync: Calling ValidateNowAsync");
             await _editor.ValidateNowAsync();
+            Logger.LogInformation("OnAfterRenderAsync: After ValidateNowAsync, _editor.IsValid={IsValid}, _canSave={CanSave}",
+                _editor.IsValid, _canSave);
             StateHasChanged();
         }
     }
 
     private void OnPlanParsed(OptimizationPlan? plan)
     {
+        Logger.LogInformation("OnPlanParsed: plan is null={IsNull}, _editor?.IsValid={EditorValid}, _canSave={CanSave}",
+            plan == null, _editor?.IsValid, _canSave);
         _plan = plan;
         StateHasChanged();
     }
