@@ -33,7 +33,7 @@
                     </div>
                     <div class="plan-item-details">
                         <MudText Typo="Typo.caption" Class="mud-text-secondary">
-                            @plan.Bot
+                            @NormalizeBotName(plan.Bot)
                         </MudText>
                         @if (state != null)
                         {
@@ -132,4 +132,12 @@
 
     private double GetProgressPercent(PlanExecutionState state) =>
         state.TotalJobs > 0 ? (double)state.CompletedJobs / state.TotalJobs * 100 : 0;
+
+    private static string NormalizeBotName(string botName)
+    {
+        if (string.IsNullOrEmpty(botName)) return botName;
+        return botName.StartsWith("P") && botName.Length > 1 && char.IsUpper(botName[1])
+            ? botName[1..]
+            : botName;
+    }
 }

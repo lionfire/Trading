@@ -21,7 +21,7 @@
                                   Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="string" Value="@Plan.Bot" Label="Bot Type" ReadOnly="true"
+                    <MudTextField T="string" Value="@NormalizeBotName(Plan.Bot)" Label="Bot Type" ReadOnly="true"
                                   Variant="Variant.Outlined" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
@@ -96,4 +96,12 @@
 
 @code {
     [Parameter] public OptimizationPlan Plan { get; set; } = default!;
+
+    private static string NormalizeBotName(string botName)
+    {
+        if (string.IsNullOrEmpty(botName)) return botName;
+        return botName.StartsWith("P") && botName.Length > 1 && char.IsUpper(botName[1])
+            ? botName[1..]
+            : botName;
+    }
 }

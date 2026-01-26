@@ -340,7 +340,7 @@
         .Where(p => string.IsNullOrWhiteSpace(_searchText) ||
                     p.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ||
                     (p.Description?.Contains(_searchText, StringComparison.OrdinalIgnoreCase) ?? false))
-        .Where(p => string.IsNullOrWhiteSpace(_selectedBot) || p.Bot == _selectedBot)
+        .Where(p => string.IsNullOrWhiteSpace(_selectedBot) || NormalizeBotName(p.Bot) == _selectedBot)
         .Where(p => string.IsNullOrWhiteSpace(_selectedTag) || p.Tags.Contains(_selectedTag))
         .OrderBy(p => _sortBy switch
         {
@@ -382,7 +382,7 @@
     {
         _loading = true;
         _plans = (await Repository.ListAsync()).ToList();
-        _botTypes = _plans.Select(p => p.Bot).Distinct().OrderBy(b => b).ToList();
+        _botTypes = _plans.Select(p => NormalizeBotName(p.Bot)).Distinct().OrderBy(b => b).ToList();
         _allTags = _plans.SelectMany(p => p.Tags).Distinct().OrderBy(t => t).ToList();
 
         // Get registered bot types from the type registry
