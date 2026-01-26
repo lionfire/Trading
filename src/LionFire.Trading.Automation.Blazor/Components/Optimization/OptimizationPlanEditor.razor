@@ -8,7 +8,8 @@
 
 <div class="optimization-plan-editor">
     <HjsonEditor @ref="_editor"
-                 @bind-Value="Value"
+                 Value="@Value"
+                 ValueChanged="OnHjsonValueChanged"
                  Options="@_editorOptions"
                  OnValidationChanged="OnHjsonValidationChanged" />
 
@@ -122,6 +123,13 @@
         }
     }
 
+    private async Task OnHjsonValueChanged(string newValue)
+    {
+        Logger.LogInformation("OnHjsonValueChanged: length={Length}", newValue?.Length ?? 0);
+        Value = newValue;
+        await ValueChanged.InvokeAsync(newValue);
+    }
+
     private void OnHjsonValidationChanged(bool isValid)
     {
         if (!isValid)
@@ -158,7 +166,8 @@
         {
             // Try to parse the HJSON
             var plan = ParsePlan(Value);
-            Logger.LogInformation("ValidateAsync: Parsed plan, plan is null={IsNull}", plan == null);
+            Logger.LogInformation("ValidateAsync: Parsed plan, plan is null={IsNull}, Id={Id}, Name={Name}",
+                plan == null, plan?.Id, plan?.Name);
             if (plan != null)
             {
                 _validationResult = Validator.Validate(plan);
