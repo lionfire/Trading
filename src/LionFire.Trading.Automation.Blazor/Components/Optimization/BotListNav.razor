@@ -3,48 +3,55 @@
 
 <div class="bot-list-nav">
     <div class="bot-list-header">
+        @if (!string.IsNullOrEmpty(SelectedBot))
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
+                           OnClick="ClearSelection" Title="Back to bot list" />
+        }
         <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Bots</MudText>
         @if (!string.IsNullOrEmpty(SelectedBot))
         {
-            <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small"
-                           OnClick="ClearSelection" Title="Show all bots" />
+            <MudText Typo="Typo.subtitle2" Class="selected-bot-name">@SelectedBot</MudText>
         }
     </div>
 
-    <div class="bot-list-items">
-        @foreach (var bot in AllBots)
-        {
-            var isSelected = SelectedBot == bot.Name;
-            var planCount = GetPlanCount(bot.Name);
+    @if (string.IsNullOrEmpty(SelectedBot))
+    {
+        <div class="bot-list-items">
+            @foreach (var bot in AllBots)
+            {
+                var isSelected = SelectedBot == bot.Name;
+                var planCount = GetPlanCount(bot.Name);
 
-            <div class="bot-item @(isSelected ? "selected" : "") @(bot.IsAvailable ? "" : "unavailable")"
-                 @onclick="() => SelectBot(bot.Name)">
-                <div class="bot-item-content">
-                    @if (!bot.IsAvailable)
-                    {
-                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
-                                 Color="Color.Warning" Class="bot-warning-icon"
-                                 Title="Bot type not available in current Silo" />
-                    }
-                    <span class="bot-name">@bot.Name</span>
-                    @if (planCount > 0)
-                    {
-                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
-                                 Class="plan-count-chip">@planCount</MudChip>
-                    }
+                <div class="bot-item @(isSelected ? "selected" : "") @(bot.IsAvailable ? "" : "unavailable")"
+                     @onclick="() => SelectBot(bot.Name)">
+                    <div class="bot-item-content">
+                        @if (!bot.IsAvailable)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small"
+                                     Color="Color.Warning" Class="bot-warning-icon"
+                                     Title="Bot type not available in current Silo" />
+                        }
+                        <span class="bot-name">@bot.Name</span>
+                        @if (planCount > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                                     Class="plan-count-chip">@planCount</MudChip>
+                        }
+                    </div>
                 </div>
-            </div>
-        }
+            }
 
-        @if (!AllBots.Any())
-        {
-            <div class="empty-state">
-                <MudText Typo="Typo.body2" Class="mud-text-secondary">
-                    No bots available
-                </MudText>
-            </div>
-        }
-    </div>
+            @if (!AllBots.Any())
+            {
+                <div class="empty-state">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                        No bots available
+                    </MudText>
+                </div>
+            }
+        </div>
+    }
 </div>
 
 <style>
@@ -57,9 +64,15 @@
     .bot-list-header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 4px;
         padding: 8px 12px;
         border-bottom: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .selected-bot-name {
+        margin-left: auto;
+        color: var(--mud-palette-primary);
+        font-weight: 500;
     }
 
     .bot-list-items {

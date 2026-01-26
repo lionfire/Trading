@@ -99,7 +99,7 @@
         <div class="master-detail-layout">
             @* Left Panel: Bot List + Plan List *@
             <div class="left-panel">
-                <MudPaper Class="bot-list-container mb-2" Elevation="1">
+                <MudPaper Class="@($"bot-list-container {(string.IsNullOrEmpty(_selectedBot) ? "expanded" : "")}")" Elevation="1">
                     <BotListNav @bind-SelectedBot="_selectedBot"
                                 RegisteredBots="_registeredBots"
                                 PlanBots="_planBots"
@@ -107,13 +107,16 @@
                                 OnBotChanged="OnBotFilterChanged" />
                 </MudPaper>
 
-                <MudPaper Class="plan-list-container" Elevation="1">
-                    <PlanListNav BotFilter="_selectedBot"
-                                 SelectedPlanId="@PlanId"
-                                 Plans="_filteredPlans"
-                                 ExecutionStates="_executionStates"
-                                 OnPlanSelected="OnPlanSelected" />
-                </MudPaper>
+                @if (!string.IsNullOrEmpty(_selectedBot))
+                {
+                    <MudPaper Class="plan-list-container" Elevation="1">
+                        <PlanListNav BotFilter="_selectedBot"
+                                     SelectedPlanId="@PlanId"
+                                     Plans="_filteredPlans"
+                                     ExecutionStates="_executionStates"
+                                     OnPlanSelected="OnPlanSelected" />
+                    </MudPaper>
+                }
             </div>
 
             @* Right Panel: Detail View *@
@@ -252,8 +255,12 @@
     }
 
     .bot-list-container {
-        max-height: 200px;
         overflow-y: auto;
+    }
+
+    .bot-list-container.expanded {
+        flex: 1;
+        min-height: 0;
     }
 
     .plan-list-container {
