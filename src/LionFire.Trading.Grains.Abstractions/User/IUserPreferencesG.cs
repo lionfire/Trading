@@ -38,6 +38,22 @@ public interface IUserPreferencesG : IGrainWithStringKey
     /// <param name="viewId">Unique identifier for the view</param>
     ValueTask ClearColumnPreferences(string viewId);
 
+    #region Bot Autostart
+
+    /// <summary>
+    /// Gets whether bots should be automatically started on silo startup.
+    /// </summary>
+    /// <returns>True if autostart is enabled (default), false if disabled</returns>
+    ValueTask<bool> GetBotAutostartEnabled();
+
+    /// <summary>
+    /// Sets whether bots should be automatically started on silo startup.
+    /// </summary>
+    /// <param name="enabled">True to enable autostart, false to disable</param>
+    ValueTask SetBotAutostartEnabled(bool enabled);
+
+    #endregion
+
     #region Bot Optimization Preferences
 
     /// <summary>
