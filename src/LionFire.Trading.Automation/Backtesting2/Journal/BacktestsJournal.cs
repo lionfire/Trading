@@ -67,6 +67,7 @@ public class BacktestsJournal : IAsyncDisposable
         Context = context;
 
         var path = Path.Combine(Context.OutputDirectory, JournalFilename + ".csv");
+        Directory.CreateDirectory(Context.OutputDirectory);
         var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
         var writer = new StreamWriter(fs);
         csv = new CsvWriter(writer, BacktestBatchJournalCsvSerialization.CsvConfiguration);

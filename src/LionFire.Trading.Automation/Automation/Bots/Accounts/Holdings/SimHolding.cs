@@ -114,7 +114,7 @@ public sealed class SimHolding<TPrecision> : Holding<TPrecision>, ISimHolding<TP
     #region Derived
 
     public TPrecision CurrentBalanceDrawdown => HighestBalance - Balance;
-    public TPrecision CurrentEquityDrawdown => Equity - HighestEquity;
+    public TPrecision CurrentEquityDrawdown => HighestEquity - Equity;
 
     public TPrecision BalanceReturnOnInvestment => (Balance - InitialBalance) / InitialBalance;
     public double AnnualizedBalanceRoi => Convert.ToDouble(BalanceReturnOnInvestment) * ((SimContext.SimulatedCurrentDate - Start).TotalDays / 365);

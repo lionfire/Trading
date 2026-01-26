@@ -24,6 +24,10 @@ public class OptimizeRunOptions
     public long MaxBacktests { get; set; } = 50000;
     public int BatchSize { get; set; } = 1024;
 
+    // Trade journal options
+    public bool? Journals { get; set; }
+    public int? KeepJournals { get; set; }
+
     /// <summary>
     /// Tracks which properties were explicitly set via command line
     /// (as opposed to having default values)

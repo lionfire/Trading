@@ -295,6 +295,18 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     public void OnRealizedProfit(TPrecision realizedGrossProfitDelta)
     {
         Balance += realizedGrossProfitDelta;
+
+        // After balance changes, recalculate equity from open positions
+        // This ensures equity is correct even if no bar tick follows the position close
+        TPrecision totalUnrealizedPnL = TPrecision.Zero;
+        foreach (var position in positions.KeyValues.Select(kvp => kvp.Value).OfType<SimPosition<TPrecision>>())
+        {
+            totalUnrealizedPnL += position.NetProfit;
+        }
+        if (PrimaryHolding != null)
+        {
+            PrimaryHolding.Equity = PrimaryHolding.Balance + totalUnrealizedPnL;
+        }
     }
 
     private void OnSimAccountAborted(ISimAccount<TPrecision> simulatedAccount)
@@ -307,11 +319,13 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
     }
 
     /// <summary>
-    /// Updates LastPrice and P&L values for all open positions.
+    /// Updates LastPrice and P&L values for all open positions, and updates Equity on the holding.
     /// Called on each bar to ensure position values are current for UI display and potential stop-loss processing.
     /// </summary>
     private void UpdatePositionPrices()
     {
+        TPrecision totalUnrealizedPnL = TPrecision.Zero;
+
         foreach (var position in positions.KeyValues.Select(kvp => kvp.Value).OfType<SimPosition<TPrecision>>())
         {
             var currentPrice = CurrentPrice(position.Symbol);
@@ -320,6 +334,14 @@ public sealed class SimAccount<TPrecision> : ISimAccount<TPrecision>
             // Update unrealized P&L for display
             position.GrossProfit = position.ProfitAtPrice(currentPrice);
             position.NetProfit = position.GrossProfit - position.Commissions - position.Swap;
+
+            totalUnrealizedPnL += position.NetProfit;
+        }
+
+        // Update equity on the holding: Equity = Balance + Unrealized P&L
+        if (PrimaryHolding != null)
+        {
+            PrimaryHolding.Equity = PrimaryHolding.Balance + totalUnrealizedPnL;
         }
     }
 
