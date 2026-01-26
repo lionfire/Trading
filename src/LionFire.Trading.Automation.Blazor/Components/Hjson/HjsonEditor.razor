@@ -26,7 +26,8 @@
         }
     </div>
 
-    <MudTextField @bind-Value="Value"
+    <MudTextField @bind-Value="_internalValue"
+                  @bind-Value:after="OnInternalValueChanged"
                   Variant="Variant.Outlined"
                   Lines="@Options.Rows"
                   FullWidth="true"
@@ -66,6 +67,8 @@
     private bool? _syntaxValid;
     private string? _syntaxError;
     private string? _lastValidatedValue;
+    private string _internalValue = "";
+    private string? _lastExternalValue;
 
     [Parameter] public string Value { get; set; } = "";
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
@@ -74,25 +77,46 @@
 
     protected override void OnParametersSet()
     {
-        // Only clear validation state when value actually changes
-        if (Value != _lastValidatedValue)
+        // Only sync from parent when Value actually changed externally
+        if (Value != _lastExternalValue)
         {
-            Logger.LogInformation("HjsonEditor.OnParametersSet: Value changed, clearing _syntaxValid (was {Was})", _syntaxValid);
-            _syntaxValid = null;
-            _syntaxError = null;
+            Logger.LogInformation("HjsonEditor.OnParametersSet: External value changed from parent, syncing (length {OldLen} -> {NewLen})",
+                _lastExternalValue?.Length ?? 0, Value?.Length ?? 0);
+            _internalValue = Value;
+            _lastExternalValue = Value;
+
+            // Clear validation when external value changes
+            if (Value != _lastValidatedValue)
+            {
+                _syntaxValid = null;
+                _syntaxError = null;
+            }
+        }
+    }
+
+    private async Task OnInternalValueChanged()
+    {
+        // Propagate internal changes back to parent
+        if (_internalValue != Value)
+        {
+            Value = _internalValue;
+            _lastExternalValue = _internalValue;
+            await ValueChanged.InvokeAsync(_internalValue);
         }
     }
 
     private async Task FormatAsync()
     {
-        if (string.IsNullOrWhiteSpace(Value)) return;
+        if (string.IsNullOrWhiteSpace(_internalValue)) return;
 
         try
         {
             // Parse HJSON and re-serialize with formatting
-            var parsed = global::Hjson.HjsonValue.Parse(Value);
+            var parsed = global::Hjson.HjsonValue.Parse(_internalValue);
             var formatted = parsed.ToString(global::Hjson.Stringify.Hjson);
+            _internalValue = formatted;
             Value = formatted;
+            _lastExternalValue = formatted;
             await ValueChanged.InvokeAsync(formatted);
             _syntaxValid = true;
             _syntaxError = null;
@@ -116,8 +140,8 @@
     /// </summary>
     public async Task ValidateSyntaxAsync()
     {
-        Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Starting, Value length={Length}", Value?.Length ?? 0);
-        if (string.IsNullOrWhiteSpace(Value))
+        Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Starting, _internalValue length={Length}", _internalValue?.Length ?? 0);
+        if (string.IsNullOrWhiteSpace(_internalValue))
         {
             Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Value is empty");
             _syntaxValid = null;
@@ -127,17 +151,17 @@
 
         try
         {
-            global::Hjson.HjsonValue.Parse(Value);
+            global::Hjson.HjsonValue.Parse(_internalValue);
             _syntaxValid = true;
             _syntaxError = null;
-            _lastValidatedValue = Value;
+            _lastValidatedValue = _internalValue;
             Logger.LogInformation("HjsonEditor.ValidateSyntaxAsync: Parse succeeded, _syntaxValid={Valid}", _syntaxValid);
         }
         catch (Exception ex)
         {
             _syntaxValid = false;
             _syntaxError = ex.Message;
-            _lastValidatedValue = Value;
+            _lastValidatedValue = _internalValue;
             Logger.LogWarning("HjsonEditor.ValidateSyntaxAsync: Parse failed: {Error}", ex.Message);
         }
 
