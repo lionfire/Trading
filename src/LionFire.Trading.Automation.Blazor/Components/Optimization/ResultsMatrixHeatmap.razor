@@ -1,0 +1,278 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Execution
+
+<div class="results-matrix-container">
+    @if (Loading)
+    {
+        <MudProgressLinear Indeterminate="true" Class="mb-4" />
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+    }
+    else if (Jobs == null || !Jobs.Any())
+    {
+        <MudAlert Severity="Severity.Info" Class="ma-4">
+            No results available. Complete some optimization jobs to see the results matrix.
+        </MudAlert>
+    }
+    else
+    {
+        @* Color Legend *@
+        <div class="heatmap-legend mb-3">
+            <MudText Typo="Typo.caption" Class="mr-2">AD Score:</MudText>
+            <span class="legend-item" style="background-color: #FF6B6B;">&lt; 0.5</span>
+            <span class="legend-item" style="background-color: #FFE66D;">0.5-1.0</span>
+            <span class="legend-item" style="background-color: #4ECDC4;">1.0-2.0</span>
+            <span class="legend-item" style="background-color: #45B7AA;">2.0-3.0</span>
+            <span class="legend-item" style="background-color: #2ECC71;">&gt; 3.0</span>
+            <span class="legend-item" style="background-color: #E0E0E0;">No data</span>
+        </div>
+
+        @* Matrix Table *@
+        <div class="heatmap-scroll-container">
+            <table class="heatmap-table">
+                <thead>
+                    <tr>
+                        <th class="symbol-header">Symbol</th>
+                        @foreach (var tf in _timeframes)
+                        {
+                            <th class="timeframe-header">@tf</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var symbol in _symbols)
+                    {
+                        <tr>
+                            <td class="symbol-cell">@symbol</td>
+                            @foreach (var tf in _timeframes)
+                            {
+                                var cell = GetCell(symbol, tf);
+                                var color = HeatmapColorScale.GetColor(cell?.BestAD);
+                                var textColor = HeatmapColorScale.GetTextColor(cell?.BestAD);
+                                <td class="heatmap-cell @(cell != null && OnCellClick.HasDelegate ? "clickable" : "")"
+                                    style="background-color: @color; color: @textColor;"
+                                    @onclick="() => HandleCellClick(cell)">
+                                    <MudTooltip Placement="Placement.Top" Arrow="true">
+                                        <ChildContent>
+                                            <span class="cell-value">@(cell?.BestAD?.ToString("F1") ?? "-")</span>
+                                        </ChildContent>
+                                        <TooltipContent>
+                                            <div class="cell-tooltip">
+                                                <div><strong>@symbol</strong> - @tf</div>
+                                                @if (cell != null)
+                                                {
+                                                    <div>Best AD: @(cell.BestAD?.ToString("F2") ?? "N/A")</div>
+                                                    <div>Score: @(cell.Score?.ToString("F0") ?? "N/A")</div>
+                                                    <div>Date Range: @cell.DateRange.Name</div>
+                                                    @if (cell.TotalBacktests.HasValue)
+                                                    {
+                                                        <div>Backtests: @cell.TotalBacktests.Value.ToString("N0")</div>
+                                                    }
+                                                    @if (cell.GoodBacktestCount.HasValue)
+                                                    {
+                                                        <div>Good (AD≥1): @cell.GoodBacktestCount.Value</div>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <div>No data available</div>
+                                                }
+                                            </div>
+                                        </TooltipContent>
+                                    </MudTooltip>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @* Summary Stats *@
+        <div class="heatmap-summary mt-3">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                @_symbols.Count symbols × @_timeframes.Count timeframes = @(_symbols.Count * _timeframes.Count) cells |
+                @_cellLookup.Count with data |
+                @_cellLookup.Values.Count(c => c.BestAD >= 1.0) good (AD ≥ 1.0)
+            </MudText>
+        </div>
+    }
+</div>
+
+<style>
+    .results-matrix-container {
+        width: 100%;
+    }
+
+    .heatmap-legend {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .legend-item {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .heatmap-scroll-container {
+        overflow-x: auto;
+        max-width: 100%;
+    }
+
+    .heatmap-table {
+        border-collapse: collapse;
+        font-size: 0.875rem;
+        min-width: 100%;
+    }
+
+    .heatmap-table th,
+    .heatmap-table td {
+        padding: 6px 10px;
+        text-align: center;
+        border: 1px solid var(--mud-palette-lines-default);
+    }
+
+    .symbol-header {
+        position: sticky;
+        left: 0;
+        background: var(--mud-palette-surface);
+        z-index: 2;
+        font-weight: 600;
+    }
+
+    .timeframe-header {
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .symbol-cell {
+        position: sticky;
+        left: 0;
+        background: var(--mud-palette-surface);
+        z-index: 1;
+        font-weight: 500;
+        text-align: left;
+        white-space: nowrap;
+    }
+
+    .heatmap-cell {
+        min-width: 50px;
+        transition: transform 0.1s ease;
+    }
+
+    .heatmap-cell.clickable {
+        cursor: pointer;
+    }
+
+    .heatmap-cell.clickable:hover {
+        transform: scale(1.1);
+        z-index: 3;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    .cell-value {
+        font-weight: 500;
+    }
+
+    .cell-tooltip {
+        text-align: left;
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+
+    .cell-tooltip div {
+        white-space: nowrap;
+    }
+
+    .heatmap-summary {
+        text-align: right;
+    }
+</style>
+
+@code {
+    [Parameter] public IEnumerable<OptimizationJob>? Jobs { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public string? SelectedDateRange { get; set; }
+    [Parameter] public EventCallback<OptimizationJob> OnCellClick { get; set; }
+
+    private List<string> _symbols = new();
+    private List<string> _timeframes = new();
+    private Dictionary<string, OptimizationJob> _cellLookup = new();
+
+    protected override void OnParametersSet()
+    {
+        BuildMatrix();
+    }
+
+    private void BuildMatrix()
+    {
+        _symbols.Clear();
+        _timeframes.Clear();
+        _cellLookup.Clear();
+
+        if (Jobs == null) return;
+
+        var completedJobs = Jobs
+            .Where(j => j.Status == JobStatus.Completed)
+            .Where(j => string.IsNullOrEmpty(SelectedDateRange) || j.DateRange.Name == SelectedDateRange);
+
+        // Extract unique symbols and timeframes, preserving reasonable order
+        _symbols = completedJobs
+            .Select(j => j.Symbol)
+            .Distinct()
+            .OrderBy(s => s)
+            .ToList();
+
+        _timeframes = completedJobs
+            .Select(j => j.Timeframe)
+            .Distinct()
+            .OrderBy(tf => GetTimeframeSortOrder(tf))
+            .ToList();
+
+        // Build lookup for O(1) cell access
+        // For cells with multiple date ranges, keep the best result
+        foreach (var job in completedJobs)
+        {
+            var key = $"{job.Symbol}|{job.Timeframe}";
+            if (!_cellLookup.TryGetValue(key, out var existing) ||
+                (job.BestAD ?? 0) > (existing.BestAD ?? 0))
+            {
+                _cellLookup[key] = job;
+            }
+        }
+    }
+
+    private OptimizationJob? GetCell(string symbol, string timeframe)
+    {
+        var key = $"{symbol}|{timeframe}";
+        return _cellLookup.TryGetValue(key, out var job) ? job : null;
+    }
+
+    private async Task HandleCellClick(OptimizationJob? cell)
+    {
+        if (cell != null && OnCellClick.HasDelegate)
+        {
+            await OnCellClick.InvokeAsync(cell);
+        }
+    }
+
+    private static int GetTimeframeSortOrder(string tf)
+    {
+        // Sort timeframes from smallest to largest
+        return tf.ToLowerInvariant() switch
+        {
+            "m1" => 1,
+            "m5" => 5,
+            "m15" => 15,
+            "m30" => 30,
+            "h1" => 60,
+            "h4" => 240,
+            "d1" => 1440,
+            "w1" => 10080,
+            _ => 999
+        };
+    }
+}

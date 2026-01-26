@@ -1,0 +1,222 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Execution
+
+<div class="plan-history-tab">
+    @if (RunHistory == null || !RunHistory.Any())
+    {
+        <MudText Typo="Typo.body1" Class="mud-text-secondary text-center pa-8">
+            No execution history yet. Complete an optimization run to see history.
+        </MudText>
+    }
+    else
+    {
+        <MudTable Items="@RunHistory" Dense="true" Hover="true" SortLabel="Sort By"
+                  Class="history-table">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<PlanRunHistory, object>(x => x.StartedAt)">Date</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<PlanRunHistory, object>(x => x.Duration ?? TimeSpan.Zero)">Duration</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align: right;"><MudTableSortLabel SortBy="new Func<PlanRunHistory, object>(x => x.CompletedJobs)">Jobs</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align: right;"><MudTableSortLabel SortBy="new Func<PlanRunHistory, object>(x => x.BestAD ?? 0)">Best AD</MudTableSortLabel></MudTh>
+                <MudTh Style="text-align: right;"><MudTableSortLabel SortBy="new Func<PlanRunHistory, object>(x => x.GoodJobCount)">Good</MudTableSortLabel></MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Style="text-align: center;">Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Date">
+                    <MudTooltip Text="@context.StartedAt.ToString("yyyy-MM-dd HH:mm:ss")">
+                        @context.StartedAt.ToString("MMM dd, yyyy")
+                    </MudTooltip>
+                </MudTd>
+                <MudTd DataLabel="Duration">
+                    @FormatDuration(context.Duration)
+                </MudTd>
+                <MudTd DataLabel="Jobs" Style="text-align: right;">
+                    <MudTooltip Text="@($"Completed: {context.CompletedJobs}, Failed: {context.FailedJobs}, Total: {context.TotalJobs}")">
+                        @context.CompletedJobs / @context.TotalJobs
+                    </MudTooltip>
+                </MudTd>
+                <MudTd DataLabel="Best AD" Style="text-align: right;">
+                    @if (context.BestAD.HasValue)
+                    {
+                        <MudText Color="@GetADColor(context.BestAD.Value)">
+                            @context.BestAD.Value.ToString("F2")
+                        </MudText>
+                    }
+                    else
+                    {
+                        <span class="mud-text-secondary">-</span>
+                    }
+                </MudTd>
+                <MudTd DataLabel="Good" Style="text-align: right;">
+                    @context.GoodJobCount
+                </MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(context.FinalStatus)" Variant="Variant.Outlined">
+                        @context.FinalStatus
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions" Style="text-align: center;">
+                    <MudTooltip Text="Re-run this execution">
+                        <MudIconButton Icon="@Icons.Material.Filled.Replay" Size="Size.Small"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => OnRerunClick(context))" />
+                    </MudTooltip>
+                    <MudTooltip Text="Delete from history">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small"
+                                       Color="Color.Error"
+                                       OnClick="@(() => OnDeleteClick(context))" />
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[] { 10, 20, 50 }" />
+            </PagerContent>
+        </MudTable>
+
+        <div class="d-flex justify-end mt-2">
+            <MudText Typo="Typo.caption" Class="mud-text-secondary">
+                Showing @RunHistory.Count() run(s)
+            </MudText>
+        </div>
+    }
+</div>
+
+@* Confirmation Dialog *@
+<MudDialog @bind-Visible="_showDeleteDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" Color="Color.Warning" />
+            Delete Run History
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Are you sure you want to delete this run from history?</MudText>
+        @if (_runToDelete != null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+                Run from @_runToDelete.StartedAt.ToString("MMM dd, yyyy HH:mm") with @_runToDelete.CompletedJobs completed jobs
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelDelete">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ConfirmDelete">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_showRerunDialog">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Replay" Class="mr-2" Color="Color.Primary" />
+            Re-run Optimization
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText>Start a new execution run based on this previous run?</MudText>
+        @if (_runToRerun != null)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2 mud-text-secondary">
+                Original run from @_runToRerun.StartedAt.ToString("MMM dd, yyyy HH:mm")
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelRerun">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ConfirmRerun">Start Execution</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .plan-history-tab {
+        width: 100%;
+    }
+
+    .history-table {
+        width: 100%;
+    }
+</style>
+
+@code {
+    [Parameter] public IEnumerable<PlanRunHistory>? RunHistory { get; set; }
+    [Parameter] public EventCallback<PlanRunHistory> OnRerun { get; set; }
+    [Parameter] public EventCallback<PlanRunHistory> OnDelete { get; set; }
+
+    private bool _showDeleteDialog;
+    private bool _showRerunDialog;
+    private PlanRunHistory? _runToDelete;
+    private PlanRunHistory? _runToRerun;
+
+    private void OnDeleteClick(PlanRunHistory run)
+    {
+        _runToDelete = run;
+        _showDeleteDialog = true;
+    }
+
+    private void CancelDelete()
+    {
+        _showDeleteDialog = false;
+        _runToDelete = null;
+    }
+
+    private async Task ConfirmDelete()
+    {
+        if (_runToDelete != null && OnDelete.HasDelegate)
+        {
+            await OnDelete.InvokeAsync(_runToDelete);
+        }
+        _showDeleteDialog = false;
+        _runToDelete = null;
+    }
+
+    private void OnRerunClick(PlanRunHistory run)
+    {
+        _runToRerun = run;
+        _showRerunDialog = true;
+    }
+
+    private void CancelRerun()
+    {
+        _showRerunDialog = false;
+        _runToRerun = null;
+    }
+
+    private async Task ConfirmRerun()
+    {
+        if (_runToRerun != null && OnRerun.HasDelegate)
+        {
+            await OnRerun.InvokeAsync(_runToRerun);
+        }
+        _showRerunDialog = false;
+        _runToRerun = null;
+    }
+
+    private static string FormatDuration(TimeSpan? duration)
+    {
+        if (!duration.HasValue) return "-";
+
+        var d = duration.Value;
+        if (d.TotalHours >= 1)
+            return $"{(int)d.TotalHours}h {d.Minutes}m";
+        if (d.TotalMinutes >= 1)
+            return $"{(int)d.TotalMinutes}m {d.Seconds}s";
+        return $"{d.Seconds}s";
+    }
+
+    private static Color GetADColor(double ad)
+    {
+        if (ad >= 2.0) return Color.Success;
+        if (ad >= 1.0) return Color.Info;
+        if (ad >= 0.5) return Color.Warning;
+        return Color.Error;
+    }
+
+    private static Color GetStatusColor(PlanExecutionStatus status) => status switch
+    {
+        PlanExecutionStatus.Completed => Color.Success,
+        PlanExecutionStatus.Running => Color.Info,
+        PlanExecutionStatus.Paused => Color.Warning,
+        PlanExecutionStatus.Failed => Color.Error,
+        PlanExecutionStatus.NotStarted => Color.Default,
+        _ => Color.Default
+    };
+}

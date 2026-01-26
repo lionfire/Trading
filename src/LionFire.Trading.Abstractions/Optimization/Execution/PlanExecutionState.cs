@@ -86,6 +86,11 @@ public record PlanExecutionState
     public IReadOnlyList<string> Log { get; init; } = [];
 
     /// <summary>
+    /// History of past executions (most recent first, limited to 20).
+    /// </summary>
+    public IReadOnlyList<PlanRunHistory> RunHistory { get; init; } = [];
+
+    /// <summary>
     /// Completion percentage (0-100).
     /// </summary>
     public double ProgressPercent => TotalJobs > 0

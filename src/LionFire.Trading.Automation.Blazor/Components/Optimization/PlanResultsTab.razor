@@ -47,6 +47,40 @@
             </MudCardContent>
         </MudCard>
 
+        @* Results Matrix Heatmap *@
+        <MudCard Class="mb-4" Elevation="0" Outlined="true">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div class="d-flex align-center justify-space-between flex-grow-1">
+                        <MudText Typo="Typo.h6">Results Matrix</MudText>
+                        <div class="d-flex align-center gap-2">
+                            <MudSelect T="string" Value="@_selectedDateRange" ValueChanged="OnDateRangeChanged"
+                                       Label="Date Range" Dense="true" Margin="Margin.Dense" Variant="Variant.Outlined"
+                                       Style="min-width: 150px;">
+                                <MudSelectItem T="string" Value="@("")">All Ranges</MudSelectItem>
+                                @foreach (var range in GetAvailableDateRanges())
+                                {
+                                    <MudSelectItem T="string" Value="@range">@range</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudMenu Icon="@Icons.Material.Filled.Download" Size="Size.Small" Dense="true"
+                                     Title="Export" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                                <MudMenuItem OnClick="ExportCsv" Icon="@Icons.Material.Filled.TableChart">Export CSV</MudMenuItem>
+                                <MudMenuItem OnClick="ExportJson" Icon="@Icons.Material.Filled.Code">Export JSON</MudMenuItem>
+                            </MudMenu>
+                        </div>
+                    </div>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <ResultsMatrixHeatmap
+                    Jobs="@ExecutionState?.Jobs"
+                    Loading="false"
+                    SelectedDateRange="@_selectedDateRange"
+                    OnCellClick="OnHeatmapCellClick" />
+            </MudCardContent>
+        </MudCard>
+
         @* Top Results Table *@
         <MudCard Class="mb-4" Elevation="0" Outlined="true">
             <MudCardHeader>
@@ -127,8 +161,91 @@
     }
 </div>
 
+@inject IJSRuntime JSRuntime
+@inject NavigationManager Navigation
+
 @code {
     [Parameter] public PlanExecutionState? ExecutionState { get; set; }
+    [Parameter] public EventCallback<OptimizationJob> OnJobSelected { get; set; }
+
+    private string _selectedDateRange = "";
+
+    private IEnumerable<string> GetAvailableDateRanges()
+    {
+        if (ExecutionState?.Jobs == null) return Enumerable.Empty<string>();
+
+        return ExecutionState.Jobs
+            .Where(j => j.Status == JobStatus.Completed)
+            .Select(j => j.DateRange.Name)
+            .Where(n => !string.IsNullOrEmpty(n))
+            .Distinct()
+            .OrderBy(n => n);
+    }
+
+    private void OnDateRangeChanged(string value)
+    {
+        _selectedDateRange = value;
+        StateHasChanged();
+    }
+
+    private async Task OnHeatmapCellClick(OptimizationJob job)
+    {
+        if (OnJobSelected.HasDelegate)
+        {
+            await OnJobSelected.InvokeAsync(job);
+        }
+    }
+
+    private async Task ExportCsv()
+    {
+        var jobs = GetCompletedWithScore()
+            .Where(j => string.IsNullOrEmpty(_selectedDateRange) || j.DateRange.Name == _selectedDateRange);
+
+        var csv = new System.Text.StringBuilder();
+        csv.AppendLine("Symbol,Timeframe,DateRange,StartDate,EndDate,Score,BestAD,TotalBacktests,GoodBacktestCount");
+
+        foreach (var job in jobs.OrderBy(j => j.Symbol).ThenBy(j => j.Timeframe))
+        {
+            csv.AppendLine($"{job.Symbol},{job.Timeframe},{job.DateRange.Name},{job.StartDate:yyyy-MM-dd},{job.EndDate:yyyy-MM-dd},{job.Score?.ToString("F2") ?? ""},{job.BestAD?.ToString("F2") ?? ""},{job.TotalBacktests ?? 0},{job.GoodBacktestCount ?? 0}");
+        }
+
+        await DownloadFile("results-matrix.csv", csv.ToString(), "text/csv");
+    }
+
+    private async Task ExportJson()
+    {
+        var jobs = GetCompletedWithScore()
+            .Where(j => string.IsNullOrEmpty(_selectedDateRange) || j.DateRange.Name == _selectedDateRange)
+            .Select(j => new
+            {
+                j.Symbol,
+                j.Timeframe,
+                DateRange = j.DateRange.Name,
+                StartDate = j.StartDate.ToString("yyyy-MM-dd"),
+                EndDate = j.EndDate.ToString("yyyy-MM-dd"),
+                j.Score,
+                j.BestAD,
+                j.TotalBacktests,
+                j.GoodBacktestCount
+            });
+
+        var json = System.Text.Json.JsonSerializer.Serialize(jobs, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        await DownloadFile("results-matrix.json", json, "application/json");
+    }
+
+    private async Task DownloadFile(string filename, string content, string mimeType)
+    {
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        await JSRuntime.InvokeVoidAsync("eval", $@"
+            (function() {{
+                var link = document.createElement('a');
+                link.href = 'data:{mimeType};base64,{base64}';
+                link.download = '{filename}';
+                link.click();
+            }})();
+        ");
+    }
 
     private IEnumerable<OptimizationJob> GetCompletedWithScore() =>
         ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Completed && j.Score.HasValue)

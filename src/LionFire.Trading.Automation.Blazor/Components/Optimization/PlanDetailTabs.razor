@@ -21,6 +21,12 @@
             <PlanResultsTab ExecutionState="@ExecutionState" />
         </MudTabPanel>
 
+        <MudTabPanel Text="History" Icon="@Icons.Material.Filled.History" Disabled="@(!HasHistory)">
+            <PlanHistoryTab RunHistory="@ExecutionState?.RunHistory"
+                            OnRerun="@OnRerunHistory"
+                            OnDelete="@OnDeleteHistory" />
+        </MudTabPanel>
+
         <MudTabPanel Text="Settings" Icon="@Icons.Material.Filled.Settings">
             <PlanSettingsTab Plan="@Plan" />
         </MudTabPanel>
@@ -54,6 +60,9 @@
     [Parameter] public EventCallback OnPauseExecution { get; set; }
     [Parameter] public EventCallback OnResumeExecution { get; set; }
     [Parameter] public EventCallback OnRetryFailed { get; set; }
+    [Parameter] public EventCallback<PlanRunHistory> OnRerunHistory { get; set; }
+    [Parameter] public EventCallback<PlanRunHistory> OnDeleteHistory { get; set; }
 
     private bool HasResults => ExecutionState?.CompletedJobs > 0;
+    private bool HasHistory => ExecutionState?.RunHistory?.Count > 0;
 }
