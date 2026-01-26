@@ -143,7 +143,7 @@
                             </MudTabPanel>
 
                             <MudTabPanel Text="Settings" Icon="@Icons.Material.Filled.Settings">
-                                <PlanSettingsTab Plan="_selectedPlan" />
+                                <PlanSettingsTab Plan="_selectedPlan" OnSave="SavePlanSettings" />
                             </MudTabPanel>
 
                             <MudTabPanel Text="Edit" Icon="@Icons.Material.Filled.Edit">
@@ -445,6 +445,34 @@
     private void EditPlan(OptimizationPlan plan)
     {
         Navigation.NavigateTo($"/optimization/plans/{plan.Id}/edit");
+    }
+
+    private async Task SavePlanSettings(OptimizationPlan updatedPlan)
+    {
+        try
+        {
+            var savedPlan = await Repository.SaveAsync(updatedPlan);
+
+            // Update local state
+            var index = _plans.FindIndex(p => p.Id == savedPlan.Id);
+            if (index >= 0)
+            {
+                _plans[index] = savedPlan;
+            }
+            _selectedPlan = savedPlan;
+
+            Snackbar.Add($"Plan '{savedPlan.Name}' saved (version {savedPlan.Version})", Severity.Success);
+        }
+        catch (PlanValidationException ex)
+        {
+            Snackbar.Add($"Validation failed: {string.Join(", ", ex.Errors)}", Severity.Error);
+            throw; // Re-throw so the settings tab knows save failed
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save: {ex.Message}", Severity.Error);
+            throw; // Re-throw so the settings tab knows save failed
+        }
     }
 
     private void DuplicatePlan(OptimizationPlan plan)

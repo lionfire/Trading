@@ -7,6 +7,29 @@
             <CardHeaderContent>
                 <MudText Typo="Typo.h6">Plan Configuration</MudText>
             </CardHeaderContent>
+            <CardHeaderActions>
+                @if (_isEditing)
+                {
+                    <MudButton Variant="Variant.Text" Color="Color.Default"
+                               OnClick="CancelEdit" Class="mr-2">
+                        Cancel
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                               OnClick="SaveChanges" Disabled="@_isSaving">
+                        @if (_isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Save
+                    </MudButton>
+                }
+                else
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   OnClick="StartEdit"
+                                   Title="Edit settings" />
+                }
+            </CardHeaderActions>
         </MudCardHeader>
         <MudCardContent>
             @* Basic Info *@
@@ -14,15 +37,23 @@
             <MudGrid Class="mb-4">
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" Value="@Plan.Id" Label="Plan ID" ReadOnly="true"
-                                  Variant="Variant.Outlined" />
+                                  Variant="Variant.Outlined" HelperText="ID cannot be changed" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="string" Value="@Plan.Name" Label="Name" ReadOnly="true"
-                                  Variant="Variant.Outlined" />
+                    @if (_isEditing)
+                    {
+                        <MudTextField @bind-Value="_editName" Label="Name"
+                                      Variant="Variant.Outlined" />
+                    }
+                    else
+                    {
+                        <MudTextField T="string" Value="@Plan.Name" Label="Name" ReadOnly="true"
+                                      Variant="Variant.Outlined" />
+                    }
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" Value="@NormalizeBotName(Plan.Bot)" Label="Bot Type" ReadOnly="true"
-                                  Variant="Variant.Outlined" />
+                                  Variant="Variant.Outlined" HelperText="@(_isEditing ? "Bot type cannot be changed" : "")" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField T="string" Value="@Plan.Created.ToString("g")" Label="Created" ReadOnly="true"
@@ -30,72 +61,457 @@
                 </MudItem>
             </MudGrid>
 
+            @* Description *@
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Description</MudText>
+            @if (_isEditing)
+            {
+                <MudTextField @bind-Value="_editDescription" Label="Description"
+                              Variant="Variant.Outlined" Lines="3" />
+            }
+            else if (!string.IsNullOrEmpty(Plan.Description))
+            {
+                <MudText Typo="Typo.body2">@Plan.Description</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">No description</MudText>
+            }
+
             @* Matrix Configuration *@
             <MudDivider Class="my-4" />
             <MudText Typo="Typo.subtitle2" Class="mb-2">Optimization Matrix</MudText>
 
             <MudText Typo="Typo.body2" Class="mb-1"><strong>Symbols:</strong></MudText>
-            <MudChipSet T="string" Class="mb-3">
-                @foreach (var symbol in Plan.Symbols.EffectiveSymbols)
-                {
-                    <MudChip T="string" Size="Size.Small">@symbol</MudChip>
-                }
-            </MudChipSet>
+            @if (_isEditing)
+            {
+                <div class="mb-3">
+                    <MudChipSet T="string" Class="mb-2">
+                        @foreach (var symbol in _editSymbols)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                                     OnClose="@(() => RemoveSymbol(symbol))">
+                                @symbol
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                    <div class="d-flex gap-2 align-center">
+                        <MudTextField @bind-Value="_newSymbol" Label="Add symbol"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Style="max-width: 200px;"
+                                      OnKeyDown="OnSymbolKeyDown" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                       Color="Color.Primary" Size="Size.Small"
+                                       OnClick="AddSymbol" Disabled="@string.IsNullOrWhiteSpace(_newSymbol)" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <MudChipSet T="string" Class="mb-3">
+                    @foreach (var symbol in Plan.Symbols.EffectiveSymbols)
+                    {
+                        <MudChip T="string" Size="Size.Small">@symbol</MudChip>
+                    }
+                </MudChipSet>
+            }
 
             <MudText Typo="Typo.body2" Class="mb-1"><strong>Timeframes:</strong></MudText>
-            <MudChipSet T="string" Class="mb-3">
-                @foreach (var tf in Plan.Timeframes)
-                {
-                    <MudChip T="string" Size="Size.Small">@tf</MudChip>
-                }
-            </MudChipSet>
+            @if (_isEditing)
+            {
+                <div class="mb-3">
+                    <MudChipSet T="string" Class="mb-2">
+                        @foreach (var tf in _editTimeframes)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
+                                     OnClose="@(() => RemoveTimeframe(tf))">
+                                @tf
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                    <div class="d-flex gap-2 align-center">
+                        <MudSelect T="string" @bind-Value="_newTimeframe" Label="Add timeframe"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense"
+                                   Style="max-width: 200px;">
+                            @foreach (var tf in _availableTimeframes.Except(_editTimeframes))
+                            {
+                                <MudSelectItem Value="@tf">@tf</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                       Color="Color.Secondary" Size="Size.Small"
+                                       OnClick="AddTimeframe" Disabled="@string.IsNullOrWhiteSpace(_newTimeframe)" />
+                    </div>
+                </div>
+            }
+            else
+            {
+                <MudChipSet T="string" Class="mb-3">
+                    @foreach (var tf in Plan.Timeframes)
+                    {
+                        <MudChip T="string" Size="Size.Small">@tf</MudChip>
+                    }
+                </MudChipSet>
+            }
 
             <MudText Typo="Typo.body2" Class="mb-1"><strong>Date Ranges:</strong></MudText>
-            <MudSimpleTable Dense="true" Hover="true" Class="mb-3">
-                <thead>
-                    <tr>
-                        <th>Start</th>
-                        <th>End</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var range in Plan.DateRanges)
-                    {
+            @if (_isEditing)
+            {
+                <MudSimpleTable Dense="true" Hover="true" Class="mb-2">
+                    <thead>
                         <tr>
-                            <td>@range.Start</td>
-                            <td>@range.End</td>
+                            <th>Name</th>
+                            <th>Start</th>
+                            <th>End</th>
+                            <th style="width: 50px;"></th>
                         </tr>
-                    }
-                </tbody>
-            </MudSimpleTable>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < _editDateRanges.Count; i++)
+                        {
+                            var index = i;
+                            var range = _editDateRanges[i];
+                            <tr>
+                                <td>
+                                    <MudTextField T="string" Value="@range.Name"
+                                                  ValueChanged="@(v => UpdateDateRangeName(index, v))"
+                                                  Variant="Variant.Text" Margin="Margin.Dense" />
+                                </td>
+                                <td>
+                                    <MudTextField T="string" Value="@range.Start"
+                                                  ValueChanged="@(v => UpdateDateRangeStart(index, v))"
+                                                  Variant="Variant.Text" Margin="Margin.Dense" />
+                                </td>
+                                <td>
+                                    <MudTextField T="string" Value="@range.End"
+                                                  ValueChanged="@(v => UpdateDateRangeEnd(index, v))"
+                                                  Variant="Variant.Text" Margin="Margin.Dense" />
+                                </td>
+                                <td>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Size="Size.Small" Color="Color.Error"
+                                                   OnClick="@(() => RemoveDateRange(index))" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+                <MudButton Variant="Variant.Text" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="AddDateRange" Size="Size.Small">
+                    Add Date Range
+                </MudButton>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Hover="true" Class="mb-3">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Start</th>
+                            <th>End</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var range in Plan.DateRanges)
+                        {
+                            <tr>
+                                <td>@range.Name</td>
+                                <td>@range.Start</td>
+                                <td>@range.End</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
 
             @* Resolution Settings *@
             <MudDivider Class="my-4" />
             <MudText Typo="Typo.subtitle2" Class="mb-2">Resolution Settings</MudText>
             <MudGrid>
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="int" Value="@Plan.Resolution.MaxBacktests" Label="Max Backtests" ReadOnly="true"
-                                  Variant="Variant.Outlined" />
+                    @if (_isEditing)
+                    {
+                        <MudNumericField @bind-Value="_editMaxBacktests" Label="Max Backtests"
+                                         Variant="Variant.Outlined" Min="1" Max="100000"
+                                         HelperText="Maximum number of backtests to run" />
+                    }
+                    else
+                    {
+                        <MudTextField T="int" Value="@Plan.Resolution.MaxBacktests" Label="Max Backtests" ReadOnly="true"
+                                      Variant="Variant.Outlined" />
+                    }
                 </MudItem>
                 <MudItem xs="12" sm="6">
-                    <MudTextField T="int" Value="@Plan.Resolution.MinParameterPriority" Label="Min Parameter Priority" ReadOnly="true"
-                                  Variant="Variant.Outlined" />
+                    @if (_isEditing)
+                    {
+                        <MudNumericField @bind-Value="_editMinParameterPriority" Label="Min Parameter Priority"
+                                         Variant="Variant.Outlined" Min="0" Max="100"
+                                         HelperText="0 = all parameters, higher = fewer" />
+                    }
+                    else
+                    {
+                        <MudTextField T="int" Value="@Plan.Resolution.MinParameterPriority" Label="Min Parameter Priority" ReadOnly="true"
+                                      Variant="Variant.Outlined" />
+                    }
                 </MudItem>
             </MudGrid>
 
-            @* Description *@
-            @if (!string.IsNullOrEmpty(Plan.Description))
+            @* Tags *@
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Tags</MudText>
+            @if (_isEditing)
             {
-                <MudDivider Class="my-4" />
-                <MudText Typo="Typo.subtitle2" Class="mb-2">Description</MudText>
-                <MudText Typo="Typo.body2">@Plan.Description</MudText>
+                <div class="mb-3">
+                    <MudChipSet T="string" Class="mb-2">
+                        @foreach (var tag in _editTags)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info"
+                                     OnClose="@(() => RemoveTag(tag))">
+                                @tag
+                            </MudChip>
+                        }
+                    </MudChipSet>
+                    <div class="d-flex gap-2 align-center">
+                        <MudTextField @bind-Value="_newTag" Label="Add tag"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense"
+                                      Style="max-width: 200px;"
+                                      OnKeyDown="OnTagKeyDown" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                       Color="Color.Info" Size="Size.Small"
+                                       OnClick="AddTag" Disabled="@string.IsNullOrWhiteSpace(_newTag)" />
+                    </div>
+                </div>
+            }
+            else if (Plan.Tags.Count > 0)
+            {
+                <MudChipSet T="string" Class="mb-3">
+                    @foreach (var tag in Plan.Tags)
+                    {
+                        <MudChip T="string" Size="Size.Small">@tag</MudChip>
+                    }
+                </MudChipSet>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">No tags</MudText>
             }
         </MudCardContent>
     </MudCard>
 </div>
 
+<style>
+    .plan-settings-tab .gap-2 {
+        gap: 8px;
+    }
+</style>
+
 @code {
     [Parameter] public OptimizationPlan Plan { get; set; } = default!;
+    [Parameter] public EventCallback<OptimizationPlan> OnSave { get; set; }
+
+    private bool _isEditing;
+    private bool _isSaving;
+
+    // Edit state
+    private string _editName = "";
+    private string? _editDescription;
+    private List<string> _editSymbols = new();
+    private List<string> _editTimeframes = new();
+    private List<EditableDateRange> _editDateRanges = new();
+    private int _editMaxBacktests;
+    private int _editMinParameterPriority;
+    private List<string> _editTags = new();
+
+    // New item inputs
+    private string _newSymbol = "";
+    private string _newTimeframe = "";
+    private string _newTag = "";
+
+    private static readonly string[] _availableTimeframes = new[]
+    {
+        "m1", "m5", "m15", "m30", "h1", "h4", "d1", "w1", "M1"
+    };
+
+    private class EditableDateRange
+    {
+        public string Name { get; set; } = "";
+        public string Start { get; set; } = "";
+        public string End { get; set; } = "now";
+    }
+
+    private void StartEdit()
+    {
+        _editName = Plan.Name;
+        _editDescription = Plan.Description;
+        _editSymbols = Plan.Symbols.Snapshot.ToList();
+        _editTimeframes = Plan.Timeframes.ToList();
+        _editDateRanges = Plan.DateRanges.Select(r => new EditableDateRange
+        {
+            Name = r.Name,
+            Start = r.Start,
+            End = r.End
+        }).ToList();
+        _editMaxBacktests = Plan.Resolution.MaxBacktests;
+        _editMinParameterPriority = Plan.Resolution.MinParameterPriority;
+        _editTags = Plan.Tags.ToList();
+        _isEditing = true;
+    }
+
+    private void CancelEdit()
+    {
+        _isEditing = false;
+        _newSymbol = "";
+        _newTimeframe = "";
+        _newTag = "";
+    }
+
+    private async Task SaveChanges()
+    {
+        _isSaving = true;
+        try
+        {
+            var updatedPlan = Plan with
+            {
+                Name = _editName,
+                Description = _editDescription,
+                Symbols = Plan.Symbols with
+                {
+                    Snapshot = _editSymbols.ToList()
+                },
+                Timeframes = _editTimeframes.ToList(),
+                DateRanges = _editDateRanges.Select(r => new OptimizationDateRange
+                {
+                    Name = r.Name,
+                    Start = r.Start,
+                    End = r.End
+                }).ToList(),
+                Resolution = new OptimizationResolution
+                {
+                    MaxBacktests = _editMaxBacktests,
+                    MinParameterPriority = _editMinParameterPriority
+                },
+                Tags = _editTags.ToList()
+            };
+
+            await OnSave.InvokeAsync(updatedPlan);
+            _isEditing = false;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    // Symbol management
+    private void AddSymbol()
+    {
+        var symbol = _newSymbol.Trim().ToUpperInvariant();
+        if (!string.IsNullOrWhiteSpace(symbol) && !_editSymbols.Contains(symbol))
+        {
+            _editSymbols.Add(symbol);
+            _newSymbol = "";
+        }
+    }
+
+    private void RemoveSymbol(string symbol)
+    {
+        _editSymbols.Remove(symbol);
+    }
+
+    private void OnSymbolKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddSymbol();
+        }
+    }
+
+    // Timeframe management
+    private void AddTimeframe()
+    {
+        if (!string.IsNullOrWhiteSpace(_newTimeframe) && !_editTimeframes.Contains(_newTimeframe))
+        {
+            _editTimeframes.Add(_newTimeframe);
+            // Sort timeframes by duration
+            _editTimeframes = _editTimeframes
+                .OrderBy(tf => Array.IndexOf(_availableTimeframes, tf))
+                .ToList();
+            _newTimeframe = "";
+        }
+    }
+
+    private void RemoveTimeframe(string tf)
+    {
+        _editTimeframes.Remove(tf);
+    }
+
+    // Date range management
+    private void AddDateRange()
+    {
+        _editDateRanges.Add(new EditableDateRange
+        {
+            Name = $"{_editDateRanges.Count + 1}mo",
+            Start = $"-{_editDateRanges.Count + 1}M",
+            End = "now"
+        });
+    }
+
+    private void RemoveDateRange(int index)
+    {
+        if (index >= 0 && index < _editDateRanges.Count)
+        {
+            _editDateRanges.RemoveAt(index);
+        }
+    }
+
+    private void UpdateDateRangeName(int index, string value)
+    {
+        if (index >= 0 && index < _editDateRanges.Count)
+        {
+            _editDateRanges[index].Name = value;
+        }
+    }
+
+    private void UpdateDateRangeStart(int index, string value)
+    {
+        if (index >= 0 && index < _editDateRanges.Count)
+        {
+            _editDateRanges[index].Start = value;
+        }
+    }
+
+    private void UpdateDateRangeEnd(int index, string value)
+    {
+        if (index >= 0 && index < _editDateRanges.Count)
+        {
+            _editDateRanges[index].End = value;
+        }
+    }
+
+    // Tag management
+    private void AddTag()
+    {
+        var tag = _newTag.Trim();
+        if (!string.IsNullOrWhiteSpace(tag) && !_editTags.Contains(tag))
+        {
+            _editTags.Add(tag);
+            _newTag = "";
+        }
+    }
+
+    private void RemoveTag(string tag)
+    {
+        _editTags.Remove(tag);
+    }
+
+    private void OnTagKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddTag();
+        }
+    }
 
     private static string NormalizeBotName(string botName)
     {
