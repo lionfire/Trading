@@ -285,7 +285,7 @@ public abstract class BarScraperGBase : Grain, IBarScraperG
         // Deliver to all subscribers, collect any that fail
         var failedSubscribers = new List<string>();
 
-        foreach (var (subscriberKey, subscriber) in _subscribers)
+        foreach (var (subscriberKey, subscriber) in _subscribers.ToArray())
         {
             try
             {
