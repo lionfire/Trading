@@ -261,6 +261,7 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
     }
 
     public static int TotalFileDownloadedElsewhereRetries = 100;
+    public static TimeSpan OverallRetryTimeout = TimeSpan.FromMinutes(2);
     public async Task<List<IBarsResult<IKline>>?> Execute2(RetrieveHistoricalDataParameters input)
     {
         #region Parameter Validation
@@ -289,7 +290,21 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
 
         var reference = new ExchangeSymbolTimeFrame(Input.ExchangeFlag, Input.ExchangeAreaFlag, Input.Symbol, Input.TimeFrame);
         int fileDownloadedElsewhereRetries = TotalFileDownloadedElsewhereRetries;
+        var retryStopwatch = Stopwatch.StartNew();
     tryAgain:
+        if (retryStopwatch.Elapsed > OverallRetryTimeout)
+        {
+            Logger.LogError("{Reference} - Overall retry timeout of {Timeout} exceeded after {Elapsed:F1}s. Aborting.",
+                reference, OverallRetryTimeout, retryStopwatch.Elapsed.TotalSeconds);
+            throw new HistoricalDataFetchTimeoutException(
+                $"Overall retry timeout of {OverallRetryTimeout} exceeded for {reference}. Elapsed: {retryStopwatch.Elapsed}.")
+            {
+                Exchange = Input.ExchangeFlag,
+                StallDuration = retryStopwatch.Elapsed,
+                Symbol = Input.Symbol,
+                RetryAttemptsExhausted = TotalFileDownloadedElsewhereRetries - fileDownloadedElsewhereRetries
+            };
+        }
         BarsInfo? barsInfo = await BarsFileSource.LoadBarsInfo(barsRangeReference);
         var local = await BarsFileSource.List(barsRangeReference);
 
@@ -682,7 +697,7 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
                 if (Input.TimeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
                 nextStartTime = lastKline.OpenTime + Input.TimeFrame.TimeSpan;
                 //}
-            } while (lastKline != null && (nextStartTime + Input.TimeFrame.TimeSpan < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar);
+            } while (lastKline != null && nextStartTime < info.EndExclusive && (nextStartTime + Input.TimeFrame.TimeSpan < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar);
             bool ForwardCondition() => lastKline != null && (nextStartTime + Input.TimeFrame.TimeSpan < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar;
             //bool ReverseCondition() => firstKline != null && (nextStartTime >= info.Start) && !detectedStart.HasValue;
 

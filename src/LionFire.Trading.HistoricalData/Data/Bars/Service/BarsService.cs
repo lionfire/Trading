@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using LionFire.Trading.HistoricalData.Sources;
 using LionFire.Trading.Data;
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 
 namespace LionFire.Trading.HistoricalData.Retrieval;
 
@@ -69,6 +70,52 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
 
     #endregion
 
+    #region Request Coalescing
+
+    /// <summary>
+    /// Coalesces concurrent requests for the same data chunk so that only one download
+    /// is triggered per unique SymbolBarsRange. All concurrent callers await the same Task.
+    /// Uses Lazy&lt;Task&gt; to guarantee exactly one download task is created per key,
+    /// even under ConcurrentDictionary.GetOrAdd contention.
+    /// </summary>
+    private readonly ConcurrentDictionary<SymbolBarsRange, Lazy<Task<IBarsResult<IKline>?>>> _pendingRetrievals = new();
+
+    private async Task<IBarsResult<IKline>?> CoalescedRetrieveAsync(SymbolBarsRange range)
+    {
+        var lazy = _pendingRetrievals.GetOrAdd(range,
+            r => new Lazy<Task<IBarsResult<IKline>?>>(() => RetrieveFromExchangeAsync(r)));
+
+        try
+        {
+            return await lazy.Value.ConfigureAwait(false);
+        }
+        finally
+        {
+            // Only remove if the entry still points to OUR Lazy instance.
+            // Using TryRemove(KeyValuePair) prevents a late-finishing awaiter
+            // from removing a newer Lazy that was created for a retry.
+            _pendingRetrievals.TryRemove(KeyValuePair.Create(range, lazy));
+        }
+    }
+
+    private async Task<IBarsResult<IKline>?> RetrieveFromExchangeAsync(SymbolBarsRange range)
+    {
+        Logger.LogInformation("Starting coalesced retrieval for {Exchange}:{Symbol} {TimeFrame} {Start}-{End}",
+            range.Exchange, range.Symbol, range.TimeFrame, range.Start, range.EndExclusive);
+
+        var j = ActivatorUtilities.CreateInstance<RetrieveHistoricalDataJob>(ServiceProvider);
+        var resultList = await j.Execute2(new(range)).ConfigureAwait(false);
+
+        if (resultList != null)
+        {
+            if (resultList.Count != 1) throw new Exception("Expected exactly zero or one result.");
+            return resultList.Single();
+        }
+        return null;
+    }
+
+    #endregion
+
     #region IChunkedBars
 
     public async Task<IBarsResult<IKline>?> GetShortChunk(SymbolBarsRange range, bool fallbackToLongChunk = true, QueryOptions? options = null)
@@ -80,14 +127,7 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
 
         if (options.RetrieveSources.HasFlag(HistoricalDataSourceKind.Exchange))
         {
-            var j = ActivatorUtilities.CreateInstance<RetrieveHistoricalDataJob>(ServiceProvider); // TODO: Refactor, get exchange-specific service
-
-            var resultList = await j.Execute2(new(range));
-            if (resultList != null)
-            {
-                if (resultList.Count != 1) throw new Exception("Expected exactly zero or one result.");
-                chunk = resultList.Single();
-            }
+            chunk = await CoalescedRetrieveAsync(range).ConfigureAwait(false);
         }
         return chunk;
     }
@@ -109,18 +149,9 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
 
         if (options.RetrieveSources.HasFlag(HistoricalDataSourceKind.Exchange))
         {
-            var j = ActivatorUtilities.CreateInstance<RetrieveHistoricalDataJob>(ServiceProvider); // TODO: Refactor, get exchange-specific service
-
-            List<IBarsResult<IKline>>? resultList;
-            Exception exception;
             try
             {
-                resultList = await j.Execute2(new(range));
-                if (resultList != null)
-                {
-                    if (resultList.Count != 1) throw new Exception("Expected exactly zero or one result.");
-                    chunk = resultList.Single();
-                }
+                chunk = await CoalescedRetrieveAsync(range).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
