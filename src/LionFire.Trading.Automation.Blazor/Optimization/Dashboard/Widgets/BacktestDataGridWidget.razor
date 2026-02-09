@@ -1,7 +1,7 @@
 @inherits OptimizationWidgetBase
 @using System.Reactive.Linq
-@using ReactiveUI
 @using LionFire.Trading.Automation
+@using LionFire.Trading.Automation.Blazor.Optimization
 @using LionFire.Reactive.Persistence
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Logging
@@ -102,6 +102,8 @@ else
 
     private IObservableReaderWriter<string, Portfolio2>? _portfolioWriter;
 
+    private OneShotOptimizeVM? OneShotVM => ViewModel as OneShotOptimizeVM;
+
     protected override void OnInitialized()
     {
         base.OnInitialized();
@@ -124,11 +126,16 @@ else
 
         if (ViewModel != null)
         {
-            _subscription = ViewModel.WhenAnyValue(x => x.SelectedBacktest)
-                .Subscribe(selected =>
+            _subscription = ViewModel.Changes
+                .Merge(ViewModel.DebouncedChanges)
+                .Throttle(TimeSpan.FromMilliseconds(100))
+                .Subscribe(_ =>
                 {
-                    _selectedItem = selected;
-                    InvokeAsync(StateHasChanged);
+                    if (ViewModel.SelectedBacktest != _selectedItem)
+                    {
+                        _selectedItem = ViewModel.SelectedBacktest;
+                        InvokeAsync(StateHasChanged);
+                    }
                 });
         }
     }
@@ -172,7 +179,7 @@ else
             return;
         }
         Logger.LogInformation("Exporting backtest {BatchId}-{Id} to bot", item.BatchId, item.Id);
-        ViewModel?.OnExportToBot(item, _workspaceBots);
+        OneShotVM?.OnExportToBot(item, _workspaceBots);
         StateHasChanged(); // Refresh to update button state
     }
 
@@ -195,7 +202,7 @@ else
                 return;
             }
             Logger.LogInformation("Creating bot {BotId} before adding to portfolio", botId);
-            ViewModel?.OnExportToBot(item, _workspaceBots);
+            OneShotVM?.OnExportToBot(item, _workspaceBots);
         }
 
         // Add to portfolio if not already there

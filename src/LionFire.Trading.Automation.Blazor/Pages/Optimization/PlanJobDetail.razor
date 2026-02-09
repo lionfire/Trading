@@ -1,0 +1,251 @@
+@page "/optimization/plan/{PlanId}/job/{JobId}"
+@namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using LionFire.Trading.Automation.Blazor.Optimization
+@using LionFire.Trading.Automation.Blazor.Optimization.Components
+@using LionFire.Trading.Automation.Blazor.Optimization.Dashboard
+@using LionFire.Trading.Automation.Optimization
+@using LionFire.Trading.Optimization.Execution
+@using LionFire.Trading.Optimization.Plans
+@using System.Reactive.Linq
+
+@inject IJobRunner JobRunner
+@inject IPlanExecutionService ExecutionService
+@inject NavigationManager Navigation
+@implements IDisposable
+
+<div class="d-flex flex-column flex-grow-1 gap-2">
+    @* Header with navigation and job info *@
+    <MudPaper Class="pa-4">
+        <div class="d-flex align-center gap-2 mb-2">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="NavigateBack"
+                           Title="Back to Plan" />
+            <MudText Typo="Typo.h6">Job Detail</MudText>
+            <MudSpacer />
+            @if (_vm != null)
+            {
+                @if (_vm.IsRunning)
+                {
+                    <MudChip T="string" Color="Color.Info" Size="Size.Small">Running</MudChip>
+                }
+                else if (_vm.IsCompleted)
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Completed</MudChip>
+                }
+            }
+            else if (_job != null)
+            {
+                @if (_job.Status == JobStatus.Completed)
+                {
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Completed</MudChip>
+                }
+                else if (_job.Status == JobStatus.Failed)
+                {
+                    <MudChip T="string" Color="Color.Error" Size="Size.Small">Failed</MudChip>
+                }
+            }
+        </div>
+
+        @if (_job != null)
+        {
+            <div class="d-flex flex-row gap-6 flex-wrap">
+                <div class="lf-field">
+                    <div class="label">Symbol</div>
+                    <div class="value">@_job.Symbol</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Timeframe</div>
+                    <div class="value">@_job.Timeframe</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Date Range</div>
+                    <div class="value">@_job.StartDate.ToString("yyyy-MM-dd") - @_job.EndDate.ToString("yyyy-MM-dd")</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Max Backtests</div>
+                    <div class="value">@_job.Resolution.MaxBacktests.ToString("N0")</div>
+                </div>
+                @if (_job.StartedAt.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Started</div>
+                        <div class="value">@_job.StartedAt.Value.ToString("HH:mm:ss")</div>
+                    </div>
+                }
+                @if (_job.Duration.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Duration</div>
+                        <div class="value">@_job.Duration.Value.ToString(@"mm\:ss")</div>
+                    </div>
+                }
+                @if (_job.BestAD.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Best AD</div>
+                        <div class="value">@_job.BestAD.Value.ToString("F2")</div>
+                    </div>
+                }
+                @if (_job.Score.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Score</div>
+                        <div class="value">@_job.Score.Value.ToString("F2")</div>
+                    </div>
+                }
+                @if (_job.TotalBacktests.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Backtests</div>
+                        <div class="value">@_job.TotalBacktests.Value.ToString("N0")</div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="mud-text-secondary">
+                Job not found: @JobId
+            </MudText>
+        }
+    </MudPaper>
+
+    @if (_vm != null)
+    {
+        @* Progress panel *@
+        <MudPaper Class="pa-4">
+            <OptimizationProgressPanel ViewModel="_vm"
+                                       PlannedScanTotal="@(_task?.Progress?.Queued ?? 0)" />
+        </MudPaper>
+
+        @* Tabbed results dashboard *@
+        <div style="overflow-y: auto; flex-grow: 1;">
+            <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Border="true" Outlined="true" Elevation="2" Rounded="true"
+                     ApplyEffectsToContainer="true" Style="height: 100%;">
+                <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Assessment">
+                    <div class="d-flex flex-column" style="height: 100%; min-height: 500px;">
+                        <BacktestResultsPanel ViewModel="_vm" />
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="Dashboard" Icon="@Icons.Material.Filled.Dashboard" Style="width: 100%; height: 100%;">
+                    <div style="width: 100%; height: 100%; min-height: 500px;">
+                        <OptimizationDashboard ViewModel="_vm" DashboardName="plan-job" />
+                    </div>
+                </MudTabPanel>
+                <MudTabPanel Text="Summary" Icon="@Icons.Material.Filled.Summarize">
+                    <ResultsSummary ViewModel="_vm" />
+                </MudTabPanel>
+                <MudTabPanel Text="Statistics" Icon="@Icons.Material.Filled.BarChart">
+                    <LionFire.Trading.Automation.Blazor.Optimization.Charts.StatisticsHistogram ViewModel="_vm" />
+                </MudTabPanel>
+            </MudTabs>
+        </div>
+    }
+    else if (_job != null)
+    {
+        @if (_job.Status == JobStatus.Failed && _job.Error != null)
+        {
+            <MudAlert Severity="Severity.Error" Variant="Variant.Outlined" Class="mt-4">
+                <MudText Typo="Typo.body1">Job failed: @_job.Error</MudText>
+            </MudAlert>
+        }
+
+        @if (_loadError != null)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mt-4">
+                Could not load saved results: @_loadError
+            </MudAlert>
+        }
+        else if (_job.ResultPath != null)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+                No saved results found at: @_job.ResultPath
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Outlined" Class="mt-4">
+                No result path available for this job.
+            </MudAlert>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public string PlanId { get; set; } = "";
+    [Parameter] public string JobId { get; set; } = "";
+
+    private OptimizationTask? _task;
+    private IOptimizationResultsVM? _vm;
+    private OptimizationJob? _job;
+    private IDisposable? _subscription;
+    private int _activeTabIndex = 0;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Try to get the active task (still running in memory)
+        _task = JobRunner.GetActiveTask(JobId) as OptimizationTask;
+
+        if (_task != null)
+        {
+            _vm = new PlanJobResultsVM(_task);
+
+            // Subscribe to changes for UI refresh
+            _subscription = _vm.Changes
+                .Merge(_vm.DebouncedChanges)
+                .Throttle(TimeSpan.FromMilliseconds(250))
+                .Subscribe(_ => InvokeAsync(StateHasChanged));
+
+            // Get job info from the task
+            _job = new OptimizationJob
+            {
+                Id = JobId,
+                PlanId = PlanId,
+                Symbol = _task.PMultiSim.ExchangeSymbolTimeFrame?.Symbol ?? "",
+                Timeframe = _task.PMultiSim.ExchangeSymbolTimeFrame?.TimeFrame.ToString() ?? "",
+                StartDate = _task.PMultiSim.Start,
+                EndDate = _task.PMultiSim.EndExclusive,
+                Status = JobStatus.Running,
+                StartedAt = DateTimeOffset.UtcNow,
+                Resolution = new OptimizationResolution { MaxBacktests = (int)(_task.Parameters?.MaxBacktests ?? 0) }
+            };
+        }
+        else
+        {
+            // Task not active — look up from execution state (completed/persisted)
+            var executionState = await ExecutionService.GetStatusAsync(PlanId);
+            _job = executionState?.Jobs.FirstOrDefault(j => j.Id == JobId);
+
+            // Try to load saved results from disk
+            if (_job?.ResultPath != null)
+            {
+                try
+                {
+                    var savedVm = SavedResultsVM.LoadFromDirectory(_job.ResultPath);
+                    if (savedVm != null)
+                    {
+                        _vm = savedVm;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _loadError = ex.Message;
+                }
+            }
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/optimization/plans/{Uri.EscapeDataString(PlanId)}");
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
+        (_vm as IDisposable)?.Dispose();
+    }
+}

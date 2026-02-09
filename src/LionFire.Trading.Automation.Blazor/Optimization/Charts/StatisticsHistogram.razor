@@ -1,4 +1,4 @@
-@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using LionFire.Trading.Automation.Blazor.Optimization
 @using Plotly.Blazor
 @using Plotly.Blazor.LayoutLib
 @using Plotly.Blazor.Traces
@@ -49,6 +49,8 @@
 </MudPaper>
 
 @code {
+    [Parameter] public IOptimizationResultsVM? ViewModel { get; set; }
+
     private PlotlyChart? chart;
     private Config? config;
     private Layout? layout;

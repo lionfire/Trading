@@ -1,0 +1,509 @@
+@using MudBlazor
+@using LionFire.Trading.Optimization.Matrix
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Automation.Optimization.Matrix
+@namespace LionFire.Trading.Automation.Blazor.Optimization.Matrix
+
+<div class="matrix-dashboard" tabindex="0" @onkeydown="OnKeyDown" @onkeydown:preventDefault="@ShouldPreventDefault">
+    @* Toolbar *@
+    <MatrixToolbar SelectedCount="@_selectedCells.Count"
+                   OnSetPriority="@SetPriorityForSelected"
+                   OnEnableSelected="@EnableSelected"
+                   OnDisableSelected="@DisableSelected"
+                   OnResetToAutopilot="@ResetSelectedToAutopilot"
+                   OnClearSelection="@ClearSelection"
+                   GradeFilter="@_gradeFilter"
+                   GradeFilterChanged="@OnGradeFilterChanged"
+                   StatusFilter="@_statusFilter"
+                   StatusFilterChanged="@OnStatusFilterChanged"
+                   DateRanges="@EffectiveDateRanges"
+                   SelectedDateRangeIndex="@_selectedDateRangeIndex"
+                   SelectedDateRangeIndexChanged="@OnDateRangeIndexChanged" />
+
+    @if (_isLoading)
+    {
+        <div class="d-flex justify-center pa-4">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+        </div>
+    }
+
+    @if (_error is not null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-2">@_error</MudAlert>
+    }
+    else if (!_isLoading && _symbols.Count > 0 && EffectiveTimeframes.Count > 0)
+    {
+        @if (FilteredSymbols.Count == 0 || FilteredTimeframes.Count == 0)
+        {
+            <MudText Typo="Typo.body1" Class="pa-4 mud-text-secondary">
+                No cells match the current filters.
+            </MudText>
+        }
+        else
+        {
+            @* Matrix grid *@
+            <div class="matrix-container">
+                <div class="matrix-grid" style="--col-count: @(FilteredTimeframes.Count + 1);">
+                    @* Corner cell *@
+                    <div class="matrix-corner matrix-sticky-corner">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Symbol / TF</MudText>
+                        <MudIconButton Icon="@(_showResults ? Icons.Material.Filled.Assessment : Icons.Material.Filled.Tune)"
+                                       Size="Size.Small"
+                                       Class="matrix-view-toggle"
+                                       OnClick="@ToggleShowResults"
+                                       Title="@(_showResults ? "Switch to parameters view" : "Switch to results view")" />
+                    </div>
+
+                    @* Column headers (timeframes) *@
+                    @foreach (var tf in FilteredTimeframes)
+                    {
+                        var colState = GetColumnState(tf);
+                        var colProgressText = GetColumnProgressText(tf);
+                        <div class="matrix-col-header @(colState.IsEnabled ? "" : "matrix-disabled")"
+                             @onclick="@(() => SelectColumn(tf))"
+                             @oncontextmenu="@(() => RemoveTimeframe(tf))"
+                             @oncontextmenu:preventDefault="true">
+                            <span class="matrix-header-label">
+                                @tf
+                                @if (colState.IsAutopilot && colState.AutoPriority.HasValue)
+                                {
+                                    <span class="matrix-header-autopilot-badge" title="Autopilot">A</span>
+                                }
+                            </span>
+                            @if (!string.IsNullOrEmpty(colProgressText))
+                            {
+                                <span class="matrix-header-progress" title="Complete cells for this timeframe">@colProgressText</span>
+                            }
+                            @if (colState.EffectivePriority != 5)
+                            {
+                                <span class="matrix-priority-badge">@colState.EffectivePriority</span>
+                            }
+                            <div class="matrix-header-controls">
+                                <button class="matrix-ctrl-btn" @onclick="() => IncreaseColumnPriority(tf)" @onclick:stopPropagation title="Increase priority">+</button>
+                                <button class="matrix-ctrl-btn matrix-ctrl-toggle @(colState.IsEnabled ? "" : "matrix-ctrl-toggle-off")"
+                                        @onclick="() => ToggleColumnEnabled(tf)" @onclick:stopPropagation
+                                        title="@(colState.IsEnabled ? "Disable column" : "Enable column")">
+                                    @(colState.IsEnabled ? colState.EffectivePriority.ToString() : "off")
+                                </button>
+                                <button class="matrix-ctrl-btn" @onclick="() => DecreaseColumnPriority(tf)" @onclick:stopPropagation title="Decrease priority">-</button>
+                            </div>
+                        </div>
+                    }
+
+                    @* Add timeframe dropdown (right edge of header row) *@
+                    <div class="matrix-add-tf-header">
+                        <MudMenu Icon="@Icons.Material.Filled.Add" Size="Size.Small" Dense="true"
+                                 AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight"
+                                 Title="Add timeframe">
+                            @foreach (var tf in AvailableNewTimeframes)
+                            {
+                                <MudMenuItem OnClick="@(() => AddTimeframe(tf))">@tf</MudMenuItem>
+                            }
+                            @if (!AvailableNewTimeframes.Any())
+                            {
+                                <MudMenuItem Disabled="true">All timeframes added</MudMenuItem>
+                            }
+                        </MudMenu>
+                    </div>
+
+                    @* Rows (symbols) *@
+                    @foreach (var symbol in FilteredSymbols)
+                    {
+                        var rowState = GetRowState(symbol);
+                        var rowProgressText = GetRowProgressText(symbol);
+
+                        @* Row header *@
+                        <div class="matrix-row-header matrix-sticky-left @(rowState.IsEnabled ? "" : "matrix-disabled")"
+                             @onclick="@(() => SelectRow(symbol))">
+                            <span class="matrix-header-label" title="@symbol">
+                                @FormatSymbol(symbol)
+                                @if (rowState.IsAutopilot && rowState.AutoPriority.HasValue)
+                                {
+                                    <span class="matrix-header-autopilot-badge" title="Autopilot">A</span>
+                                }
+                            </span>
+                            @if (!string.IsNullOrEmpty(rowProgressText))
+                            {
+                                <span class="matrix-header-progress" title="Complete cells for this symbol">@rowProgressText</span>
+                            }
+                            @if (rowState.EffectivePriority != 5)
+                            {
+                                <span class="matrix-priority-badge">@rowState.EffectivePriority</span>
+                            }
+                            <div class="matrix-header-controls">
+                                <button class="matrix-ctrl-btn" @onclick="() => IncreaseRowPriority(symbol)" @onclick:stopPropagation title="Increase priority">+</button>
+                                <button class="matrix-ctrl-btn matrix-ctrl-toggle @(rowState.IsEnabled ? "" : "matrix-ctrl-toggle-off")"
+                                        @onclick="() => ToggleRowEnabled(symbol)" @onclick:stopPropagation
+                                        title="@(rowState.IsEnabled ? "Disable row" : "Enable row")">
+                                    @(rowState.IsEnabled ? rowState.EffectivePriority.ToString() : "off")
+                                </button>
+                                <button class="matrix-ctrl-btn" @onclick="() => DecreaseRowPriority(symbol)" @onclick:stopPropagation title="Decrease priority">-</button>
+                            </div>
+                        </div>
+
+                        @* Cells *@
+                        @foreach (var tf in FilteredTimeframes)
+                        {
+                            var cellKey = PlanMatrixState.CellKey(symbol, tf);
+                            var cellPriority = GetCellPriority(cellKey);
+                            var effectivePriority = _state?.GetEffectivePriority(symbol, tf) ?? 5;
+                            var isEnabled = _state?.IsCellEnabled(symbol, tf) ?? true;
+
+                            <MatrixCell PlanId="@EffectivePlanId"
+                                        Symbol="@symbol"
+                                        Timeframe="@tf"
+                                        CellPriority="@cellPriority"
+                                        EffectivePriority="@effectivePriority"
+                                        IsEnabled="@isEnabled"
+                                        Result="@GetCellResult(symbol, tf)"
+                                        Progress="@GetCellProgress(symbol, tf)"
+                                        VisualState="@GetCellVisualState(symbol, tf, isEnabled)"
+                                        ShowResults="@_showResults"
+                                        IsSelected="@IsCellSelected(symbol, tf)"
+                                        IsFocused="@IsCellFocused(symbol, tf)"
+                                        IsAutoUpdated="@IsCellAutoUpdated(symbol, tf)"
+                                        OnSelect="@HandleCellSelect"
+                                        OnCellDrillDown="@HandleCellDrillDown"
+                                        OnRun="@HandleCellRun"
+                                        OnReRun="@HandleCellReRun"
+                                        OnViewHistory="@HandleCellViewHistory"
+                                        OnOpenInOneShot="@HandleCellOpenInOneShot" />
+                        }
+
+                        @* Spacer cell for add-timeframe column *@
+                        <div class="matrix-row-spacer"></div>
+                    }
+                </div>
+            </div>
+        }
+
+        @* Summary *@
+        <div class="matrix-summary">
+            @if (AggregateTotalJobs > 0)
+            {
+                <div class="matrix-progress-bar">
+                    <MudProgressLinear Value="@AggregateProgressPercent"
+                                       Color="Color.Primary"
+                                       Rounded="true"
+                                       Size="Size.Small"
+                                       Class="mb-1" />
+                </div>
+                <div class="matrix-progress-stats d-flex align-center gap-2 flex-wrap">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                        @AggregateCompletedJobs/@AggregateTotalJobs jobs
+                    </MudText>
+                    @if (AggregateCompletedCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled" Class="matrix-status-chip">
+                            ✓ @AggregateCompletedCells
+                        </MudChip>
+                    }
+                    @if (AggregateRunningCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Filled" Class="matrix-status-chip">
+                            ▶ @AggregateRunningCells
+                        </MudChip>
+                    }
+                    @if (AggregateQueuedCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled" Class="matrix-status-chip">
+                            ⏳ @AggregateQueuedCells
+                        </MudChip>
+                    }
+                    @if (AggregateFailedCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled" Class="matrix-status-chip">
+                            ⚠ @AggregateFailedCells
+                        </MudChip>
+                    }
+                </div>
+            }
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                @_symbols.Count symbols x @EffectiveTimeframes.Count timeframes = @(_symbols.Count * EffectiveTimeframes.Count) cells
+                @if (_state is not null)
+                {
+                    var enabledCount = CountEnabledCells();
+                    @: (@enabledCount enabled)
+                }
+            </MudText>
+        </div>
+    }
+    else if (!_isLoading)
+    {
+        <MudText Typo="Typo.body1" Class="pa-4 mud-text-secondary">
+            No symbols or timeframes configured in this plan.
+        </MudText>
+    }
+</div>
+
+
+@code {
+    /// <summary>
+    /// Prevent default for arrow keys and space to avoid page scrolling when navigating the matrix.
+    /// </summary>
+    private bool ShouldPreventDefault => _focusedRow >= 0 || _focusedCol >= 0;
+}
+
+<style>
+    .matrix-dashboard {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+        outline: none;
+    }
+
+    .matrix-container {
+        flex: 1;
+        overflow: auto;
+        position: relative;
+    }
+
+    .matrix-grid {
+        display: grid;
+        grid-template-columns: 120px repeat(calc(var(--col-count) - 1), minmax(70px, 1fr)) 40px;
+        gap: 1px;
+        background-color: var(--mud-palette-lines-default);
+        width: fit-content;
+        min-width: 100%;
+    }
+
+    .matrix-corner {
+        background-color: var(--mud-palette-background);
+        padding: 6px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .matrix-view-toggle {
+        opacity: 0.3;
+        transition: opacity 150ms ease-in-out;
+    }
+
+    .matrix-corner:hover .matrix-view-toggle {
+        opacity: 0.8;
+    }
+
+    .matrix-view-toggle:hover {
+        opacity: 1 !important;
+    }
+
+    .matrix-sticky-corner {
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 3;
+    }
+
+    .matrix-col-header {
+        background-color: var(--mud-palette-background);
+        padding: 6px 4px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        min-height: 40px;
+        cursor: pointer;
+    }
+
+    .matrix-col-header:hover {
+        background-color: var(--mud-palette-action-default-hover);
+    }
+
+    /* Add timeframe button in header row (right edge) */
+    .matrix-add-tf-header {
+        background-color: var(--mud-palette-background);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        min-height: 40px;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 150ms ease-in-out;
+    }
+
+    .matrix-grid:hover .matrix-add-tf-header {
+        opacity: 0.5;
+    }
+
+    .matrix-add-tf-header:hover {
+        opacity: 1 !important;
+        background-color: var(--mud-palette-action-default-hover);
+    }
+
+    .matrix-add-tf-icon {
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .matrix-add-tf-header:hover .matrix-add-tf-icon {
+        color: var(--mud-palette-primary);
+    }
+
+    /* Empty spacer cell for add-tf column in data rows */
+    .matrix-row-spacer {
+        background-color: var(--mud-palette-background);
+    }
+
+    .matrix-row-header {
+        background-color: var(--mud-palette-background);
+        padding: 4px 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        min-height: 36px;
+        position: relative;
+        cursor: pointer;
+    }
+
+    .matrix-row-header:hover {
+        background-color: var(--mud-palette-action-default-hover);
+    }
+
+    .matrix-sticky-left {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+    }
+
+    .matrix-header-label {
+        font-size: 0.8rem;
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 90px;
+    }
+
+    .matrix-priority-badge {
+        font-size: 0.65rem;
+        font-weight: 600;
+        background-color: var(--mud-palette-primary);
+        color: var(--mud-palette-primary-text);
+        border-radius: 8px;
+        padding: 1px 5px;
+        min-width: 18px;
+        text-align: center;
+        line-height: 1.3;
+    }
+
+    .matrix-disabled {
+        opacity: 0.4;
+    }
+
+    .matrix-header-progress {
+        font-size: 0.6rem;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        color: var(--mud-palette-text-secondary);
+        opacity: 0.8;
+        line-height: 1.2;
+    }
+
+    .matrix-header-autopilot-badge {
+        font-size: 9px;
+        color: #78909C;
+        font-weight: 600;
+        opacity: 0.7;
+        vertical-align: super;
+        margin-left: 2px;
+    }
+
+    .matrix-summary {
+        padding: 6px 12px;
+        border-top: 1px solid var(--mud-palette-lines-default);
+        background-color: var(--mud-palette-surface);
+    }
+
+    .matrix-progress-bar {
+        padding: 4px 0 0;
+    }
+
+    .matrix-progress-stats {
+        padding: 0 0 2px;
+    }
+
+    /* Header hover controls */
+    .matrix-header-controls {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        visibility: hidden;
+    }
+
+    .matrix-col-header:hover .matrix-header-controls,
+    .matrix-row-header:hover .matrix-header-controls {
+        visibility: visible;
+    }
+
+    /* Hide the priority badge when controls are shown */
+    .matrix-col-header:hover .matrix-priority-badge,
+    .matrix-row-header:hover .matrix-priority-badge {
+        visibility: hidden;
+    }
+
+    /* Shared button styles for header controls (same as cell controls) */
+    .matrix-ctrl-btn {
+        padding: 0;
+        margin: 0;
+        min-width: 20px;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1;
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 3px;
+        background-color: var(--mud-palette-background);
+        color: var(--mud-palette-text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .matrix-ctrl-btn:hover {
+        background-color: var(--mud-palette-primary);
+        color: var(--mud-palette-primary-text);
+        border-color: var(--mud-palette-primary);
+    }
+
+    .matrix-ctrl-toggle {
+        min-width: 24px;
+        width: auto;
+        padding: 0 3px;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .matrix-ctrl-toggle-off {
+        color: var(--mud-palette-error);
+        border-color: var(--mud-palette-error);
+    }
+
+    .matrix-ctrl-toggle-off:hover {
+        background-color: var(--mud-palette-error);
+        color: var(--mud-palette-error-text);
+        border-color: var(--mud-palette-error);
+    }
+
+    /* Status chips in summary bar */
+    .matrix-status-chip {
+        height: 22px !important;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .matrix-status-chip .mud-chip-content {
+        padding: 0 6px;
+    }
+</style>

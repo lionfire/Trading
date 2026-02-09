@@ -1,13 +1,18 @@
 using Microsoft.AspNetCore.Components;
-using ReactiveUI.Blazor;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization.Dashboard;
 
 /// <summary>
-/// Base class for optimization dashboard widgets. Provides access to the shared OneShotOptimizeVM context.
+/// Base class for optimization dashboard widgets. Provides access to the shared IOptimizationResultsVM context.
 /// </summary>
-public abstract class OptimizationWidgetBase : ReactiveComponentBase<OneShotOptimizeVM>
+public abstract class OptimizationWidgetBase : ComponentBase
 {
+    /// <summary>
+    /// The optimization results view model, provided via DynamicComponent parameters from the dashboard.
+    /// </summary>
+    [Parameter]
+    public IOptimizationResultsVM? ViewModel { get; set; }
+
     /// <summary>
     /// The widget instance containing settings and layout information.
     /// </summary>

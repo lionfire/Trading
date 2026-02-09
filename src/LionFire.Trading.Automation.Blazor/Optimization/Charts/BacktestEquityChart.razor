@@ -1,12 +1,23 @@
-@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using LionFire.Trading.Automation.Blazor.Optimization
 @using Plotly.Blazor
 @using Plotly.Blazor.LayoutLib
 @using Plotly.Blazor.Traces
 @using Plotly.Blazor.Traces.ScatterLib
 @using Plotly.Blazor.LayoutLib.XAxisLib
+@using Plotly.Blazor.LayoutLib.AnnotationLib
 @using System.Reactive.Linq
-@using ReactiveUI
 @inject IJSRuntime JS
+@implements IDisposable
+
+<style>
+    .equity-chart-container .rangeslider-rangeplot {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    .equity-chart-container .rangeslider-container:hover .rangeslider-rangeplot {
+        opacity: 1;
+    }
+</style>
 
 <div style="display: flex; flex-direction: column; height: 100%;">
     <div class="d-flex flex-row align-center gap-2 mb-2">
@@ -16,12 +27,14 @@
         </MudText>
     </div>
 
-    <div id="@_containerId" style="flex: 1; min-height: 150px;">
+    <div id="@_containerId" class="equity-chart-container" style="flex: 1; min-height: 150px;">
         <PlotlyChart @bind-Config="config" @bind-Layout="layout" @bind-Data="data" @ref="chart" Style="height: 100%; width: 100%;" />
     </div>
 </div>
 
 @code {
+    [Parameter] public IOptimizationResultsVM? ViewModel { get; set; }
+
     private PlotlyChart? chart;
     private Config? config;
     private Layout? layout;
@@ -76,16 +89,35 @@
                 R = 5,   // Right - minimal
                 T = 5,   // Top - minimal
                 B = 5    // Bottom - minimal below range slider
+            },
+            Annotations = new List<Annotation>
+            {
+                new Annotation
+                {
+                    Text = "Balance",
+                    XRef = "paper",
+                    YRef = "paper",
+                    X = (object)0.01,
+                    Y = (object)0.99,
+                    XAnchor = XAnchorEnum.Left,
+                    YAnchor = YAnchorEnum.Top,
+                    ShowArrow = false,
+                    Font = new Plotly.Blazor.LayoutLib.AnnotationLib.Font
+                    {
+                        Color = "#888888",
+                        Size = 11
+                    }
+                }
             }
         };
 
         data = GenerateChartData();
 
-        // Subscribe to visibility, selection, and data changes
+        // Subscribe to visibility and data changes
         if (ViewModel != null)
         {
             _subscription = ViewModel.ChartVisibilityChanged
-                .Merge(ViewModel.WhenAnyValue(x => x.SelectedBacktest).Select(_ => System.Reactive.Unit.Default))
+                .Merge(ViewModel.Changes)
                 .Merge(ViewModel.DebouncedChanges)
                 .Throttle(TimeSpan.FromMilliseconds(250))
                 .Subscribe(_ => InvokeAsync(Refresh));
@@ -109,7 +141,7 @@
         await base.OnAfterRenderAsync(firstRender);
     }
 
-    protected override void Dispose(bool disposing)
+    public void Dispose()
     {
         _subscription?.Dispose();
         if (_resizeObserverInitialized)
@@ -123,7 +155,6 @@
                 // Ignore disposal errors
             }
         }
-        base.Dispose(disposing);
     }
 
     private IList<ITrace> GenerateChartData()
@@ -223,8 +254,8 @@
         var b = Convert.ToInt32(hexColor.Substring(5, 2), 16);
 
         // Brighten by blending toward white (increase values, with min floor for visibility)
-        const int minBrightness = 160;
-        const double blendFactor = 0.6;
+        const int minBrightness = 80;
+        const double blendFactor = 0.35;
 
         r = Math.Max(minBrightness, (int)(r + (255 - r) * blendFactor));
         g = Math.Max(minBrightness, (int)(g + (255 - g) * blendFactor));

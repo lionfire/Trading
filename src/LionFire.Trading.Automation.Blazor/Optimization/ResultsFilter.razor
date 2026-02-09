@@ -1,5 +1,4 @@
 @using LionFire.Trading.Automation.Blazor.Optimization
-@inherits ReactiveComponentBase<OneShotOptimizeVM>
 
 <MudPaper Class="pa-3 mb-3" Elevation="1">
     <div class="d-flex justify-space-between align-center mb-2">
@@ -19,98 +18,74 @@
         </div>
     </div>
 
-    <MudGrid Spacing="2">
+    <div class="d-flex flex-wrap gap-2 align-start">
         @* Min AD (AROI/DD%) *@
-        <MudItem xs="12" sm="6" md="4">
-            <div class="d-flex align-center gap-2">
-                <MudNumericField T="double?"
-                                 @bind-Value="FilterState.MinAD"
-                                 Label="Min AD"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Step="0.5"
-                                 Clearable="true"
-                                 Style="max-width: 150px;" />
-            </div>
-        </MudItem>
+        <MudNumericField T="double?"
+                         @bind-Value="FilterState.MinAD"
+                         Label="Min AD"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Step="0.5"
+                         Clearable="true"
+                         Style="min-width: 80px; max-width: 130px; flex: 1 1 auto;" />
 
         @* Min AMWT *@
-        <MudItem xs="12" sm="6" md="4">
-            <div class="d-flex align-center gap-2">
-                <MudNumericField T="double?"
-                                 @bind-Value="FilterState.MinAMWT"
-                                 Label="Min AMWT (min)"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Step="10"
-                                 Min="0"
-                                 Clearable="true"
-                                 Style="max-width: 150px;" />
-            </div>
-        </MudItem>
+        <MudNumericField T="double?"
+                         @bind-Value="FilterState.MinAMWT"
+                         Label="Min AMWT (min)"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Step="10"
+                         Min="0"
+                         Clearable="true"
+                         Style="min-width: 80px; max-width: 130px; flex: 1 1 auto;" />
 
         @* Min Fitness *@
-        <MudItem xs="12" sm="6" md="4">
-            <div class="d-flex align-center gap-2">
-                <MudNumericField T="double?"
-                                 @bind-Value="FilterState.MinFitness"
-                                 Label="Min Fitness"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Step="10"
-                                 Clearable="true"
-                                 Style="max-width: 150px;" />
-            </div>
-        </MudItem>
+        <MudNumericField T="double?"
+                         @bind-Value="FilterState.MinFitness"
+                         Label="Min Fitness"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Step="10"
+                         Clearable="true"
+                         Style="min-width: 80px; max-width: 130px; flex: 1 1 auto;" />
 
         @* Min Trades *@
-        <MudItem xs="12" sm="6" md="4">
-            <div class="d-flex align-center gap-2">
-                <MudNumericField T="int?"
-                                 @bind-Value="FilterState.MinTrades"
-                                 Label="Min Trades"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Step="5"
-                                 Min="0"
-                                 Clearable="true"
-                                 Style="max-width: 150px;" />
-            </div>
-        </MudItem>
+        <MudNumericField T="int?"
+                         @bind-Value="FilterState.MinTrades"
+                         Label="Min Trades"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Step="5"
+                         Min="0"
+                         Clearable="true"
+                         Style="min-width: 80px; max-width: 130px; flex: 1 1 auto;" />
 
         @* Min Win Rate *@
-        <MudItem xs="12" sm="6" md="4">
-            <div class="d-flex align-center gap-2">
-                <MudNumericField T="double?"
-                                 @bind-Value="FilterState.MinWinRate"
-                                 Label="Min Win Rate"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Step="0.05"
-                                 Min="0"
-                                 Max="1"
-                                 Format="P0"
-                                 Clearable="true"
-                                 Style="max-width: 150px;" />
-            </div>
-        </MudItem>
+        <MudNumericField T="double?"
+                         @bind-Value="FilterState.MinWinRate"
+                         Label="Min Win Rate"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Step="0.05"
+                         Min="0"
+                         Max="1"
+                         Format="P0"
+                         Clearable="true"
+                         Style="min-width: 80px; max-width: 130px; flex: 1 1 auto;" />
 
         @* Max Drawdown *@
-        <MudItem xs="12" sm="6" md="4">
-            <div class="d-flex align-center gap-2">
-                <MudNumericField T="double?"
-                                 @bind-Value="FilterState.MaxDrawdownPercent"
-                                 Label="Max DD %"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Step="5"
-                                 Min="0"
-                                 Max="100"
-                                 Clearable="true"
-                                 Style="max-width: 150px;" />
-            </div>
-        </MudItem>
-    </MudGrid>
+        <MudNumericField T="double?"
+                         @bind-Value="FilterState.MaxDrawdownPercent"
+                         Label="Max DD %"
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Step="5"
+                         Min="0"
+                         Max="100"
+                         Clearable="true"
+                         Style="min-width: 80px; max-width: 130px; flex: 1 1 auto;" />
+    </div>
 
     @* Include Aborted Toggle *@
     <div class="d-flex align-center mt-3">
@@ -122,6 +97,8 @@
 </MudPaper>
 
 @code {
+    [Parameter] public IOptimizationResultsVM? ViewModel { get; set; }
+
     private ResultsFilterState FilterState => ViewModel!.FilterState;
 
     private int FilteredCount => ViewModel?.FilteredCount ?? 0;

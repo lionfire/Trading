@@ -256,13 +256,17 @@
         Navigation.NavigateTo($"/optimization/execute/{planId}");
     }
 
-    private async Task StartExecution(int parallelWorkers)
+    private async Task StartExecution((int workers, bool usePrioritization) args)
     {
         if (_selectedPlanId == null) return;
 
         try
         {
-            var options = new PlanExecutionOptions { ParallelWorkers = parallelWorkers };
+            var options = new PlanExecutionOptions
+            {
+                ParallelWorkers = args.workers,
+                UsePrioritization = args.usePrioritization
+            };
             _currentExecutionState = await ExecutionService.StartAsync(_selectedPlanId, options);
             _executionStates[_selectedPlanId] = _currentExecutionState;
             Snackbar.Add("Execution started", Severity.Success);

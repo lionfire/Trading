@@ -25,6 +25,14 @@
                 }
                 else
                 {
+                    @if (!string.IsNullOrEmpty(EditRawHref))
+                    {
+                        <MudButton Variant="Variant.Text" Color="Color.Default"
+                                   StartIcon="@Icons.Material.Filled.Code"
+                                   Href="@EditRawHref" Class="mr-2">
+                            Edit raw
+                        </MudButton>
+                    }
                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                    OnClick="StartEdit"
                                    Title="Edit settings" />
@@ -309,6 +317,7 @@
 @code {
     [Parameter] public OptimizationPlan Plan { get; set; } = default!;
     [Parameter] public EventCallback<OptimizationPlan> OnSave { get; set; }
+    [Parameter] public string? EditRawHref { get; set; }
 
     private bool _isEditing;
     private bool _isSaving;

@@ -1,4 +1,5 @@
 @using MudBlazor
+@using LionFire.Trading.Automation.Blazor.Optimization
 
 <div class="compact-metric-chart-group" style="display: flex; flex-direction: column; align-items: center;">
     <div style="position: relative;">
@@ -24,7 +25,7 @@
 
 @code {
     [Parameter]
-    public OneShotOptimizeVM? ViewModel { get; set; }
+    public IOptimizationResultsVM? ViewModel { get; set; }
 
     [Parameter]
     public string[] Metrics { get; set; } = new[] { "AMWT", "WinRate" };

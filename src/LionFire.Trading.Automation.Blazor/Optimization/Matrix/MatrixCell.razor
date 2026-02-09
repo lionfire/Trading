@@ -1,0 +1,485 @@
+@using MudBlazor
+@using LionFire.Trading.Optimization.Matrix
+@using LionFire.Trading.Automation.Optimization.Matrix
+@namespace LionFire.Trading.Automation.Blazor.Optimization.Matrix
+
+<div class="matrix-cell @StateCssClass @(IsSelected ? "matrix-cell-selected" : "") @(IsFocused ? "matrix-cell-focused" : "") @(IsAutoUpdated ? "matrix-cell-auto-updated" : "") @(HasResults && ShowResults ? "matrix-cell-results-view" : "")"
+     style="@CellInlineStyle"
+     title="@TooltipText"
+     @onclick="OnCellClick"
+     @onclick:stopPropagation
+     @oncontextmenu="OnContextMenu"
+     @oncontextmenu:preventDefault
+     @oncontextmenu:stopPropagation>
+    @if (IsEnabled)
+    {
+        @if (HasResults && ShowResults)
+        {
+            @* === Results View (3-column grid) === *@
+            @* Row 1: best-ad | score-bar | stats *@
+            <span class="matrix-cell-best-ad" title="@($"Best AD: {Result!.BestAd:F2}")">@Result!.BestAd.ToString("F1")</span>
+            <div class="matrix-cell-scorebar" style="@DistributionBarStyle" title="@DistributionBarTooltip"></div>
+            <span class="matrix-cell-backtest-stats" title="@($"{Result.PassingCount} passing / {TotalAll} total backtests")">@Result.PassingCount / @TotalAll</span>
+
+            @* Row 2: score chip (wrapped in div for reliable grid placement) | abort % *@
+            <div class="matrix-cell-score-area">
+                @if (Result.Score.HasValue)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                             Style="@($"background-color: {GradeColor}; color: #fff; font-weight: 700; font-size: 0.75rem; height: 20px; margin: 0;")"
+                             title="@($"Score: {Result.Score.Value:F1} | Grade: {GradeText} - {GradeDescription}")">
+                        @Result.Score.Value.ToString("F0")
+                    </MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                             Style="@($"background-color: {GradeColor}; color: #fff; font-weight: 700; font-size: 0.7rem; height: 20px; margin: 0;")"
+                             title="@($"Grade: {GradeText} - {GradeDescription}")">
+                        @GradeText
+                    </MudChip>
+                }
+            </div>
+            @if (Result.AbortedBacktests > 0)
+            {
+                <span class="matrix-cell-abort-pct" title="@($"{Result.AbortedBacktests} aborted ({AbortPercentText})")">@(AbortPercentText)</span>
+            }
+
+            @* Row 3: grade | ad-bar | avg-ad *@
+            <span class="matrix-cell-grade-label" title="@($"Grade: {GradeText} - {GradeDescription}")">@GradeText</span>
+            <div class="matrix-cell-adbar" style="@DistributionBarStyle" title="@DistributionBarTooltip"></div>
+            <span class="matrix-cell-avg-ad" title="@($"Average AD: {Result.AverageAd:F2}")">@Result.AverageAd.ToString("F1")</span>
+        }
+        else
+        {
+            @* === Parameters View === *@
+            @if (CellPriority is { IsAutopilot: true, AutoPriority: not null })
+            {
+                <span class="matrix-cell-autopilot-badge" title="Autopilot">A</span>
+            }
+            <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined"
+                     Style="@($"font-weight: 600; font-size: 0.8rem; height: 20px; margin: 0; {PriorityChipStyle}")"
+                     title="@($"Priority: {EffectivePriority}")">
+                @EffectivePriority
+            </MudChip>
+            @if (CellPriority is { IsAutopilot: false })
+            {
+                <button class="matrix-cell-manual-indicator" @onclick="ResetToAutopilot" @onclick:stopPropagation title="Click to reset to auto mode">M</button>
+            }
+        }
+
+        @if (Progress is { TotalJobs: > 0 } && VisualState is CellVisualState.Running or CellVisualState.Queued)
+        {
+            <span class="matrix-cell-progress" title="@Progress.CompletedJobs completed of @Progress.TotalJobs jobs">@Progress.ProgressText</span>
+        }
+
+        @if (Progress is { FailedJobs: > 0 })
+        {
+            <span class="matrix-cell-failure-badge" title="@Progress.FailedJobs job(s) failed">@Progress.FailedJobs</span>
+        }
+    }
+    else
+    {
+        <MudIcon Icon="@Icons.Material.Filled.Block" Size="Size.Small" Class="mud-text-disabled" />
+    }
+
+    <div class="matrix-cell-controls">
+        <button class="matrix-ctrl-btn matrix-ctrl-play" @onclick="RunCell" @onclick:stopPropagation title="Run optimization within plan">
+            <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Size="Size.Small" Style="font-size: 14px;" />
+        </button>
+        <button class="matrix-ctrl-btn" @onclick="IncreasePriority" @onclick:stopPropagation title="Increase priority">+</button>
+        <button class="matrix-ctrl-btn matrix-ctrl-toggle @(IsEnabled ? "" : "matrix-ctrl-toggle-off")"
+                @onclick="ToggleEnabled" @onclick:stopPropagation
+                title="@(IsEnabled ? "Disable" : "Enable")">
+            @(IsEnabled ? CellLevelPriority.ToString() : "off")
+        </button>
+        <button class="matrix-ctrl-btn" @onclick="DecreasePriority" @onclick:stopPropagation title="Decrease priority">-</button>
+        <button class="matrix-ctrl-btn matrix-ctrl-drilldown" @onclick="DrillDown" @onclick:stopPropagation title="View details">
+            <MudIcon Icon="@Icons.Material.Filled.ZoomIn" Size="Size.Small" Style="font-size: 14px;" />
+        </button>
+        <button class="matrix-ctrl-btn matrix-ctrl-more" @onclick="ToggleMoreMenu" @onclick:stopPropagation title="More options">
+            <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" Style="font-size: 14px;" />
+        </button>
+    </div>
+
+    @if (_moreMenuOpen)
+    {
+        <MudOverlay Visible="true" OnClick="CloseMoreMenu" LockScroll="false" />
+        <MudPopover Open="true"
+                    AnchorOrigin="Origin.BottomRight"
+                    TransformOrigin="Origin.TopRight"
+                    Class="matrix-more-menu">
+            <MudList T="string" Dense="true" Class="py-1" Style="min-width: 160px;">
+                <MudListItem T="string" Icon="@Icons.Material.Filled.OpenInNew" OnClick="OpenInOneShot">
+                    Open in One-Shot
+                </MudListItem>
+            </MudList>
+        </MudPopover>
+    }
+</div>
+
+@if (_contextMenuOpen)
+{
+    <MudOverlay Visible="true" OnClick="CloseContextMenu" LockScroll="false" />
+    <MudPopover Open="true"
+                AnchorOrigin="Origin.BottomLeft"
+                TransformOrigin="Origin.TopLeft"
+                Class="matrix-context-menu">
+        <MudList T="string" Dense="true" Class="py-1" Style="min-width: 180px;">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Assessment" OnClick="ViewResults">
+                View Results
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Replay" OnClick="ReRunOptimization">
+                Re-run Optimization
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.RestartAlt" OnClick="ResetPriority">
+                Reset Priority
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.History" OnClick="ViewHistory">
+                View History
+            </MudListItem>
+        </MudList>
+    </MudPopover>
+}
+
+@code {
+    /// <summary>
+    /// Prevent default for arrow keys and space to avoid page scrolling when navigating the matrix.
+    /// </summary>
+    private bool ShouldPreventDefault => false;
+}
+
+<style>
+    .matrix-cell {
+        background-color: var(--mud-palette-surface);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 60px;
+        min-height: 36px;
+        position: relative;
+        cursor: pointer;
+        transition: background-color 0.3s ease, opacity 0.3s ease, border-color 0.3s ease;
+        gap: 3px;
+    }
+
+    .matrix-cell:hover {
+        filter: brightness(1.1);
+    }
+
+    /* Results view: 3-column grid with distribution bars in center column */
+    .matrix-cell-results-view {
+        display: grid;
+        grid-template-areas:
+            "best-ad   scorebar  stats"
+            "score     score     abort"
+            "grade     adbar     avg-ad";
+        grid-template-columns: auto 1fr auto;
+        grid-template-rows: auto auto auto;
+        align-items: center;
+        padding: 1px 2px;
+        gap: 0;
+        min-height: 48px;
+    }
+
+    /* Hide parameter hover controls in results view */
+    .matrix-cell-results-view .matrix-cell-controls {
+        display: none;
+    }
+
+    .matrix-cell-best-ad {
+        grid-area: best-ad;
+        font-size: 0.6rem;
+        font-weight: 500;
+        color: rgba(255,255,255,0.85);
+        justify-self: start;
+        line-height: 1.2;
+    }
+
+    .matrix-cell-backtest-stats {
+        grid-area: stats;
+        font-size: 0.55rem;
+        font-weight: 500;
+        color: rgba(255,255,255,0.7);
+        justify-self: end;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .matrix-cell-abort-pct {
+        grid-area: abort;
+        font-size: 0.5rem;
+        color: #bbb;
+        background-color: rgba(0,0,0,0.6);
+        border-radius: 2px;
+        padding: 0 2px;
+        justify-self: end;
+        line-height: 1.2;
+    }
+
+    .matrix-cell-scorebar {
+        grid-area: scorebar;
+        height: 3px;
+        border-radius: 1px;
+        margin: 0 3px;
+        min-width: 10px;
+    }
+
+    .matrix-cell-score-area {
+        grid-area: score;
+        justify-self: center;
+        display: flex;
+        justify-content: center;
+    }
+
+    .matrix-cell-grade-label {
+        grid-area: grade;
+        font-size: 0.55rem;
+        font-weight: 600;
+        color: rgba(255,255,255,0.7);
+        justify-self: start;
+        line-height: 1.2;
+    }
+
+    .matrix-cell-adbar {
+        grid-area: adbar;
+        height: 3px;
+        border-radius: 1px;
+        margin: 0 3px;
+        min-width: 10px;
+    }
+
+    .matrix-cell-avg-ad {
+        grid-area: avg-ad;
+        font-size: 0.55rem;
+        font-weight: 400;
+        color: rgba(255,255,255,0.6);
+        justify-self: end;
+        line-height: 1.2;
+    }
+
+    /* === Cell visual states === */
+
+    .matrix-cell-state-never-run {
+        background-color: #444;
+        color: #E0E0E0;
+    }
+
+    .matrix-cell-state-disabled {
+        background-color: #9E9E9E;
+        opacity: 0.5;
+    }
+
+    .matrix-cell-state-queued {
+        background-color: #263238;
+        border: 1px solid rgba(66,165,245,0.4);
+    }
+
+    .matrix-cell-state-running {
+        background-color: #42A5F5;
+        animation: matrix-pulse 1.5s ease-in-out infinite;
+    }
+
+    .matrix-cell-state-failed {
+        border: 2px solid #FF9800;
+    }
+
+    .matrix-cell-state-complete {
+        /* Background set via inline style from grade color */
+    }
+
+    @@keyframes matrix-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.6; }
+    }
+
+    /* === Priority chip styling === */
+
+    .matrix-cell-manual-indicator {
+        position: absolute;
+        top: 1px;
+        right: 2px;
+        font-size: 0.55rem;
+        font-weight: 700;
+        color: var(--mud-palette-warning);
+        opacity: 0.7;
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        line-height: 1;
+    }
+
+    .matrix-cell-manual-indicator:hover {
+        opacity: 1;
+        color: var(--mud-palette-warning-darken);
+        text-decoration: underline;
+    }
+
+    .matrix-cell-autopilot-badge {
+        position: absolute;
+        top: 1px;
+        left: 2px;
+        font-size: 9px;
+        color: #78909C;
+        font-weight: 600;
+        opacity: 0.7;
+    }
+
+    /* Brief highlight when auto-priority is updated */
+    .matrix-cell-auto-updated {
+        animation: matrix-auto-flash 2s ease-out;
+    }
+
+    @@keyframes matrix-auto-flash {
+        0% { box-shadow: inset 0 0 0 2px #FFF176; }
+        100% { box-shadow: inset 0 0 0 0 transparent; }
+    }
+
+    /* Progress text (e.g., "3/12 (25%)") shown below priority for Running/Queued cells */
+    .matrix-cell-progress {
+        position: absolute;
+        bottom: 1px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.75rem;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        opacity: 0.95;
+        white-space: nowrap;
+        line-height: 1.4;
+        z-index: 5;
+        pointer-events: none;
+    }
+
+    /* Failure badge -- positioned top-right of cell, above hover controls */
+    .matrix-cell-failure-badge {
+        position: absolute;
+        top: 1px;
+        right: 2px;
+        font-size: 0.55rem;
+        font-weight: 700;
+        color: #fff;
+        background-color: #F44336;
+        border-radius: 3px;
+        padding: 0 2px;
+        line-height: 1.4;
+        z-index: 5;
+        pointer-events: none;
+    }
+
+    /* Hover controls overlay -- fade-in transition */
+    .matrix-cell-controls {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        background-color: var(--mud-palette-surface);
+        z-index: 4;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 150ms ease-in-out;
+    }
+
+    .matrix-cell:hover .matrix-cell-controls {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    .matrix-ctrl-btn {
+        padding: 0;
+        margin: 0;
+        min-width: 20px;
+        width: 20px;
+        height: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1;
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 3px;
+        background-color: var(--mud-palette-background);
+        color: var(--mud-palette-text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .matrix-ctrl-btn:hover {
+        background-color: var(--mud-palette-primary);
+        color: var(--mud-palette-primary-text);
+        border-color: var(--mud-palette-primary);
+    }
+
+    .matrix-ctrl-play {
+        margin-right: 2px;
+    }
+
+    .matrix-ctrl-play:hover {
+        background-color: var(--mud-palette-success);
+        color: var(--mud-palette-success-text);
+        border-color: var(--mud-palette-success);
+    }
+
+    .matrix-ctrl-drilldown {
+        margin-left: 2px;
+    }
+
+    .matrix-ctrl-toggle {
+        min-width: 24px;
+        width: auto;
+        padding: 0 3px;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .matrix-ctrl-toggle-off {
+        color: var(--mud-palette-error);
+        border-color: var(--mud-palette-error);
+    }
+
+    .matrix-ctrl-toggle-off:hover {
+        background-color: var(--mud-palette-error);
+        color: var(--mud-palette-error-text);
+        border-color: var(--mud-palette-error);
+    }
+
+    /* Selection highlight */
+    .matrix-cell-selected {
+        outline: 2px solid #1976D2;
+        outline-offset: -2px;
+        z-index: 1;
+    }
+
+    /* Keyboard focus indicator */
+    .matrix-cell-focused {
+        outline: 2px dashed #FF9800;
+        outline-offset: -2px;
+        z-index: 1;
+    }
+
+    /* Both selected and focused */
+    .matrix-cell-selected.matrix-cell-focused {
+        outline: 2px solid #1976D2;
+        box-shadow: inset 0 0 0 1px #FF9800;
+    }
+
+    /* Context menu styling */
+    .matrix-context-menu {
+        z-index: 10;
+    }
+
+    .matrix-ctrl-more {
+        margin-left: 2px;
+    }
+
+    .matrix-more-menu {
+        z-index: 10;
+    }
+</style>

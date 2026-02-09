@@ -1,5 +1,11 @@
 @namespace LionFire.Trading.Automation.Blazor.Components.Optimization
 @using LionFire.Trading.Optimization.Execution
+@using LionFire.Trading.Optimization.Matrix
+@using LionFire.Trading.Automation.Optimization.Matrix
+@using LionFire.Trading.Automation.Optimization.Prioritization
+@inject IJobRunner JobRunner
+@inject IPlanMatrixService MatrixService
+@inject NavigationManager Navigation
 
 <div class="plan-jobs-tab">
     @if (ExecutionState == null)
@@ -28,7 +34,89 @@
                 <MudText Typo="Typo.h4" Color="Color.Error">@ExecutionState.FailedJobs</MudText>
                 <MudText Typo="Typo.caption">Failed</MudText>
             </MudPaper>
+            @if (ExecutionState.UsePrioritization)
+            {
+                <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h4" Color="Color.Info">@ExecutionState.PrioritizedJobsExecuted</MudText>
+                    <MudText Typo="Typo.caption">Prioritized</MudText>
+                </MudPaper>
+                @if (ExecutionState.FollowUpJobsQueued > 0)
+                {
+                    <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                        <MudText Typo="Typo.h4" Color="Color.Tertiary">@ExecutionState.FollowUpJobsQueued</MudText>
+                        <MudText Typo="Typo.caption">Follow-ups</MudText>
+                    </MudPaper>
+                }
+            }
         </div>
+
+        @* Running Jobs Section *@
+        @if (GetRunningJobs().ToList() is { Count: > 0 } runningJobs)
+        {
+            <MudCard Class="mb-4" Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6" Color="Color.Info">
+                            <MudIcon Icon="@Icons.Material.Filled.PlayCircle" Class="mr-1" />
+                            Running Jobs (@runningJobs.Count)
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent Class="pa-0">
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>Date Range</th>
+                                <th style="text-align: right;">Progress</th>
+                                <th style="text-align: right;">Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var job in runningJobs)
+                            {
+                                <tr @ondblclick="@(() => NavigateToJobDetail(job))" style="cursor: pointer;">
+                                    <td>@job.Symbol</td>
+                                    <td>@job.Timeframe</td>
+                                    <td>@job.StartDate.ToString("yyyy-MM-dd") - @job.EndDate.ToString("yyyy-MM-dd")</td>
+                                    <td style="text-align: right; min-width: 120px;">
+                                        @{
+                                            var progress = GetJobProgress(job);
+                                        }
+                                        @if (progress != null)
+                                        {
+                                            <div class="d-flex align-center gap-2">
+                                                <MudProgressLinear Value="@(progress.Value * 100)" Size="Size.Small" Color="Color.Info" Style="flex: 1;" />
+                                                <MudText Typo="Typo.caption">@progress.Value.ToString("P0")</MudText>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                        }
+                                    </td>
+                                    <td style="text-align: right;">
+                                        @if (job.StartedAt.HasValue)
+                                        {
+                                            var elapsed = DateTimeOffset.UtcNow - job.StartedAt.Value;
+                                            <MudText Typo="Typo.body2">@elapsed.ToString(@"mm\:ss")</MudText>
+                                        }
+                                    </td>
+                                    <td>
+                                        <MudIconButton Icon="@Icons.Material.Filled.OpenInNew"
+                                                       Size="Size.Small"
+                                                       Title="View Details"
+                                                       OnClick="@(() => NavigateToJobDetail(job))" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                </MudCardContent>
+            </MudCard>
+        }
 
         @* Failed Jobs Section *@
         @if (ExecutionState.FailedJobs > 0)
@@ -78,6 +166,84 @@
             </MudCard>
         }
 
+        @* Pending Jobs Table (with Promise Scores when prioritization enabled) *@
+        @if (GetPendingJobs().Any())
+        {
+            <MudCard Class="mb-4" Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">
+                            Pending Jobs
+                            @if (ExecutionState.UsePrioritization)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">Prioritized</MudChip>
+                            }
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent Class="pa-0">
+                    <MudSimpleTable Dense="true" Hover="true" FixedHeader="true" Style="max-height: 300px; overflow-y: auto;">
+                        <thead>
+                            <tr>
+                                @if (ExecutionState.UsePrioritization && RankedJobs != null)
+                                {
+                                    <th style="text-align: center;">Promise</th>
+                                }
+                                <th style="text-align: center;">Priority</th>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>Date Range</th>
+                                <th style="text-align: right;">Max Backtests</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (ExecutionState.UsePrioritization && RankedJobs != null)
+                            {
+                                @foreach (var ranked in RankedJobs.Take(50))
+                                {
+                                    <tr>
+                                        <td style="text-align: center;">
+                                            <MudTooltip Text="@ranked.Promise.Reasoning">
+                                                <MudChip T="string" Size="Size.Small"
+                                                         Color="@GetPromiseColor(ranked.Promise.Score)">
+                                                    @ranked.Promise.Score.ToString("P0")
+                                                </MudChip>
+                                            </MudTooltip>
+                                        </td>
+                                        <td style="text-align: center;">@GetJobPriority(ranked.Job)</td>
+                                        <td>@ranked.Job.Symbol</td>
+                                        <td>@ranked.Job.Timeframe</td>
+                                        <td>@ranked.Job.StartDate.ToString("yyyy-MM-dd") - @ranked.Job.EndDate.ToString("yyyy-MM-dd")</td>
+                                        <td style="text-align: right;">@ranked.Job.Resolution.MaxBacktests.ToString("N0")</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                @foreach (var job in GetPendingJobs().OrderBy(j => GetJobPriority(j)).Take(50))
+                                {
+                                    <tr>
+                                        <td style="text-align: center;">@GetJobPriority(job)</td>
+                                        <td>@job.Symbol</td>
+                                        <td>@job.Timeframe</td>
+                                        <td>@job.StartDate.ToString("yyyy-MM-dd") - @job.EndDate.ToString("yyyy-MM-dd")</td>
+                                        <td style="text-align: right;">@job.Resolution.MaxBacktests.ToString("N0")</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                    @{ var pendingCount = GetPendingJobs().Count(); }
+                    @if (pendingCount > 50)
+                    {
+                        <MudText Typo="Typo.caption" Class="pa-2 mud-text-secondary">
+                            Showing 50 of @pendingCount pending jobs
+                        </MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+
         @* Completed Jobs Table *@
         <MudCard Elevation="0" Outlined="true">
             <MudCardHeader>
@@ -95,12 +261,13 @@
                             <th style="text-align: right;">Score</th>
                             <th style="text-align: right;">Best AD</th>
                             <th style="text-align: right;">Backtests</th>
+                            <th style="text-align: right;">Duration</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var job in GetCompletedJobs().Take(100))
                         {
-                            <tr>
+                            <tr @ondblclick="@(() => NavigateToJobDetail(job))" style="cursor: pointer;">
                                 <td>@job.Symbol</td>
                                 <td>@job.Timeframe</td>
                                 <td>@job.StartDate.ToString("yyyy-MM-dd") - @job.EndDate.ToString("yyyy-MM-dd")</td>
@@ -116,6 +283,7 @@
                                 </td>
                                 <td style="text-align: right;">@(job.BestAD?.ToString("F2") ?? "-")</td>
                                 <td style="text-align: right;">@(job.TotalBacktests?.ToString("N0") ?? "-")</td>
+                                <td style="text-align: right;">@(job.Duration?.ToString(@"mm\:ss") ?? "-")</td>
                             </tr>
                         }
                     </tbody>
@@ -157,14 +325,56 @@
 @code {
     [Parameter] public PlanExecutionState? ExecutionState { get; set; }
     [Parameter] public EventCallback OnRetryFailed { get; set; }
+    [Parameter] public IReadOnlyList<RankedJob>? RankedJobs { get; set; }
+
+    private PlanMatrixState? _matrixState;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (ExecutionState?.PlanId is { Length: > 0 } planId)
+        {
+            try
+            {
+                _matrixState = await MatrixService.GetStateAsync(planId);
+            }
+            catch
+            {
+                _matrixState = null;
+            }
+        }
+    }
+
+    private int GetJobPriority(OptimizationJob job) =>
+        _matrixState?.GetEffectivePriority(job.Symbol, job.Timeframe) ?? 5;
+
+    private IEnumerable<OptimizationJob> GetRunningJobs() =>
+        ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Running).OrderBy(j => j.StartedAt)
+            ?? Enumerable.Empty<OptimizationJob>();
 
     private IEnumerable<OptimizationJob> GetCompletedJobs() =>
         ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Completed).OrderByDescending(j => j.CompletedAt)
             ?? Enumerable.Empty<OptimizationJob>();
 
+    private IEnumerable<OptimizationJob> GetPendingJobs() =>
+        ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Pending)
+            ?? Enumerable.Empty<OptimizationJob>();
+
     private IEnumerable<OptimizationJob> GetFailedJobs() =>
         ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Failed)
             ?? Enumerable.Empty<OptimizationJob>();
+
+    private double? GetJobProgress(OptimizationJob job)
+    {
+        var task = JobRunner.GetActiveTask(job.Id) as LionFire.Trading.Automation.Optimization.OptimizationTask;
+        if (task?.Progress == null) return null;
+        return task.Progress.PerUn;
+    }
+
+    private void NavigateToJobDetail(OptimizationJob job)
+    {
+        if (ExecutionState == null) return;
+        Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(ExecutionState.PlanId)}/job/{Uri.EscapeDataString(job.Id)}");
+    }
 
     private Color GetScoreColor(double score)
     {
@@ -172,4 +382,11 @@
         if (score >= 60) return Color.Warning;
         return Color.Error;
     }
+
+    private Color GetPromiseColor(double score) => score switch
+    {
+        >= 0.7 => Color.Success,
+        >= 0.4 => Color.Warning,
+        _ => Color.Default
+    };
 }

@@ -1,0 +1,61 @@
+@namespace LionFire.Trading.Automation.Blazor.Optimization.Components
+@using LionFire.Trading.Automation.Blazor.Optimization
+@using LionFire.Trading.Automation.Blazor.Optimization.Charts
+@using LionFire.Trading.Optimization
+
+@if (ViewModel != null && (ViewModel.IsRunning || ViewModel.Progress.Completed > 0))
+{
+    <div class="flex-grow" style="flex-grow: 1;">
+        <div style="flex-grow: 1; flex-basis: 250px; max-width: 340px;" class="mb-2">
+            <div style="display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-content: center; align-items: center; align-self: end;">
+                @if (ViewModel.IsRunning && PlannedScanTotal > 0)
+                {
+                    <div class="lf-field">
+                        <div class="value" title="Queued">@ViewModel.Progress.Queued</div>
+                    </div>
+                    <MudProgressLinear style="align-self: start;" Color="Color.Primary" Value="@ViewModel.Progress.Queued" Max="@PlannedScanTotal" Size="Size.Small" />
+                    <div class="lf-field" title="Planned">
+                        <div class="value">@PlannedScanTotal</div>
+                    </div>
+                }
+
+                @if (ViewModel.IsRunning)
+                {
+                    <div class="lf-field">
+                        <div class="value" title="Fractionally Completed">@ViewModel.Progress.FractionallyCompleted</div>
+                    </div>
+                    <MudProgressLinear style="align-self: start;" Color="Color.Primary" Value="@ViewModel.Progress.FractionalPercent" Size="Size.Small" />
+                    <div class="lf-field" title="Fractional Progress">
+                        <div class="value">@ViewModel.Progress.FractionalPerUn.ToString("P1")</div>
+                    </div>
+                }
+
+                <div class="lf-field" title="Completed">
+                    <div class="value">@ViewModel.Progress.Completed</div>
+                </div>
+                <MudProgressLinear style="align-self: end;" Color="Color.Primary" Value="@ViewModel.Progress.Percent" Size="Size.Large" Buffer=false BufferValue="@ViewModel.Progress.FractionalPercent" />
+                <div class="lf-field">
+                    <div class="value">@ViewModel.Progress.PerUn.ToString("P1")</div>
+                </div>
+            </div>
+        </div>
+
+        @* Compact metric charts *@
+        <div class="d-flex flex-row gap-2 align-end" style="margin-left: 16px;">
+            <CompactMetricChart ViewModel="ViewModel" Metric="Fitness" Width="100" Height="50" />
+            <CompactMetricChart ViewModel="ViewModel" Metric="AD" Width="100" Height="50" />
+            <CompactMetricChart ViewModel="ViewModel" Metric="TotalTrades" Width="100" Height="50" />
+            <CompactMetricChartGroup ViewModel="ViewModel" Metrics='@(new[] { "AMWT", "WinRate" })' Width="100" Height="50" />
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public IOptimizationResultsVM? ViewModel { get; set; }
+
+    /// <summary>
+    /// Total planned scans for the progress bar max value.
+    /// Pass from POptimization.LevelsOfDetail.PlannedScanTotal when available.
+    /// </summary>
+    [Parameter] public long PlannedScanTotal { get; set; }
+}

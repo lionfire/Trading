@@ -21,7 +21,7 @@ public class MakeWidgetResult
 public partial class OptimizationDashboard : IAsyncDisposable
 {
     [Parameter]
-    public OneShotOptimizeVM? ViewModel { get; set; }
+    public IOptimizationResultsVM? ViewModel { get; set; }
 
     [Parameter]
     public string DashboardName { get; set; } = "dashboard1";

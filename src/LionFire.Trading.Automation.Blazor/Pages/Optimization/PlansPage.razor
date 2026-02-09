@@ -5,6 +5,7 @@
 @using LionFire.Trading.Optimization.Plans
 @using LionFire.Trading.Optimization.Execution
 @using LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Automation.Blazor.Optimization.Matrix
 @using LionFire.TypeRegistration
 
 <PageTitle>Optimization Plans</PageTitle>
@@ -133,7 +134,17 @@
                                                  OnStartExecution="StartExecution"
                                                  OnStopExecution="StopExecution"
                                                  OnPauseExecution="PauseExecution"
-                                                 OnResumeExecution="ResumeExecution" />
+                                                 OnResumeExecution="ResumeExecution"
+                                                 OnDuplicate="@(() => DuplicatePlan(_selectedPlan))"
+                                                 OnDelete="@(() => ConfirmDeletePlan(_selectedPlan))"
+                                                 OnPlanChanged="OnPlanChanged" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Matrix" Icon="@Icons.Material.Filled.GridOn">
+                                <OptimizationMatrixDashboard Plan="_selectedPlan" PlanId="@_selectedPlan.Id"
+                                                             OnRunCell="RunCell"
+                                                             OnOpenCellInOneShot="OpenCellInOneShot"
+                                                             OnPlanChanged="OnPlanChanged" />
                             </MudTabPanel>
 
                             <MudTabPanel Text="Jobs" Icon="@Icons.Material.Filled.List">
@@ -146,27 +157,8 @@
                             </MudTabPanel>
 
                             <MudTabPanel Text="Settings" Icon="@Icons.Material.Filled.Settings">
-                                <PlanSettingsTab Plan="_selectedPlan" OnSave="SavePlanSettings" />
-                            </MudTabPanel>
-
-                            <MudTabPanel Text="Edit" Icon="@Icons.Material.Filled.Edit">
-                                <div class="edit-tab-content">
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary"
-                                               StartIcon="@Icons.Material.Filled.Edit"
-                                               Href="@($"/optimization/plans/{_selectedPlan.Id}/edit")">
-                                        Open Editor
-                                    </MudButton>
-                                    <MudButton Variant="Variant.Outlined"
-                                               StartIcon="@Icons.Material.Filled.ContentCopy"
-                                               OnClick="@(() => DuplicatePlan(_selectedPlan))">
-                                        Duplicate
-                                    </MudButton>
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Error"
-                                               StartIcon="@Icons.Material.Filled.Delete"
-                                               OnClick="@(() => ConfirmDeletePlan(_selectedPlan))">
-                                        Delete
-                                    </MudButton>
-                                </div>
+                                <PlanSettingsTab Plan="_selectedPlan" OnSave="SavePlanSettings"
+                                                 EditRawHref="@($"/optimization/plans/{_selectedPlan.Id}/edit")" />
                             </MudTabPanel>
                         </MudTabs>
                     </MudPaper>
@@ -290,12 +282,6 @@
         align-items: center;
     }
 
-    .edit-tab-content {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-    }
-
     @@media (max-width: 900px) {
         .master-detail-layout {
             flex-direction: column;
@@ -366,7 +352,7 @@
         if (!string.IsNullOrEmpty(PlanId))
         {
             _selectedPlan = _plans.FirstOrDefault(p => p.Id == PlanId);
-            _selectedBot = _selectedPlan?.Bot;
+            _selectedBot = _selectedPlan?.Bot is string bot ? NormalizeBotName(bot) : null;
             await LoadCurrentExecutionState();
         }
 
@@ -380,9 +366,24 @@
             _selectedPlan = !string.IsNullOrEmpty(PlanId)
                 ? _plans.FirstOrDefault(p => p.Id == PlanId)
                 : null;
+            _selectedBot = _selectedPlan?.Bot is string bot ? NormalizeBotName(bot) : null;
             await LoadCurrentExecutionState();
-            StateHasChanged();
         }
+
+        // Map DetailView route parameter to tab index
+        if (!string.IsNullOrEmpty(DetailView))
+        {
+            _activeDetailTab = DetailView.ToLowerInvariant() switch
+            {
+                "results" => 3,
+                "matrix" => 1,
+                "jobs" => 2,
+                "settings" => 4,
+                _ => _activeDetailTab
+            };
+        }
+
+        StateHasChanged();
     }
 
     private async Task LoadPlans()
@@ -454,6 +455,13 @@
         Navigation.NavigateTo($"/optimization/plans/{plan.Id}/edit");
     }
 
+    private void OnPlanChanged(OptimizationPlan updatedPlan)
+    {
+        var index = _plans.FindIndex(p => p.Id == updatedPlan.Id);
+        if (index >= 0) _plans[index] = updatedPlan;
+        _selectedPlan = updatedPlan;
+    }
+
     private async Task SavePlanSettings(OptimizationPlan updatedPlan)
     {
         try
@@ -511,13 +519,17 @@
         }
     }
 
-    private async Task StartExecution(int parallelWorkers)
+    private async Task StartExecution((int workers, bool usePrioritization) args)
     {
         if (_selectedPlan == null) return;
 
         try
         {
-            var options = new PlanExecutionOptions { ParallelWorkers = parallelWorkers };
+            var options = new PlanExecutionOptions
+            {
+                ParallelWorkers = args.workers,
+                UsePrioritization = args.usePrioritization
+            };
             _currentExecutionState = await ExecutionService.StartAsync(_selectedPlan.Id, options);
             _executionStates[_selectedPlan.Id] = _currentExecutionState;
             Snackbar.Add("Execution started", Severity.Success);
@@ -591,6 +603,49 @@
         {
             Snackbar.Add($"Failed to retry: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task RunCell((string Symbol, string Timeframe, string? DateRangeName) cell)
+    {
+        if (_selectedPlan == null) return;
+
+        try
+        {
+            var options = new PlanExecutionOptions
+            {
+                ParallelWorkers = 1,
+                UsePrioritization = false,
+                DateRangeFilter = cell.DateRangeName
+            };
+
+            _currentExecutionState = await ExecutionService.RunCellAsync(
+                _selectedPlan.Id,
+                cell.Symbol,
+                cell.Timeframe,
+                options);
+
+            if (_currentExecutionState != null)
+            {
+                _executionStates[_selectedPlan.Id] = _currentExecutionState;
+            }
+
+            var rangeInfo = !string.IsNullOrEmpty(cell.DateRangeName) ? $" ({cell.DateRangeName})" : "";
+            Snackbar.Add($"Started optimization for {cell.Symbol} / {cell.Timeframe}{rangeInfo}", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to start: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenCellInOneShot((string Symbol, string Timeframe) cell)
+    {
+        if (_selectedPlan == null) return;
+
+        // Navigate to one-shot optimization page with parameters pre-filled
+        var bot = NormalizeBotName(_selectedPlan.Bot);
+        Navigation.NavigateTo(
+            $"/optimize/one-shot?bot={Uri.EscapeDataString(bot)}&symbol={Uri.EscapeDataString(cell.Symbol)}&timeframe={Uri.EscapeDataString(cell.Timeframe)}");
     }
 
     private void StartPolling()

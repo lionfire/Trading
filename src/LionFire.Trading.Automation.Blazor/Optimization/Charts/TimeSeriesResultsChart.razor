@@ -18,7 +18,9 @@
 </div>
 
 
-<PlotlyChart @bind-Config=" config" @bind-Layout="Layout" @bind-Data="data" @ref="chart" />
+<div class="equity-chart-container">
+    <PlotlyChart @bind-Config=" config" @bind-Layout="Layout" @bind-Data="data" @ref="chart" />
+</div>
 
 @code {
     [CascadingParameter]

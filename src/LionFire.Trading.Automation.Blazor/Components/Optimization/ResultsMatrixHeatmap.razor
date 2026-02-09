@@ -65,11 +65,19 @@
                                                     <div>Date Range: @cell.DateRange.Name</div>
                                                     @if (cell.TotalBacktests.HasValue)
                                                     {
-                                                        <div>Backtests: @cell.TotalBacktests.Value.ToString("N0")</div>
+                                                        @if (cell.AbortedBacktests is > 0)
+                                                        {
+                                                            var abortPct = (double)cell.AbortedBacktests.Value / (cell.TotalBacktests.Value + cell.AbortedBacktests.Value) * 100;
+                                                            <div>Backtests: @cell.TotalBacktests.Value.ToString("N0") | @cell.AbortedBacktests.Value aborted (@abortPct.ToString("F0")%)</div>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div>Backtests: @cell.TotalBacktests.Value.ToString("N0")</div>
+                                                        }
                                                     }
                                                     @if (cell.GoodBacktestCount.HasValue)
                                                     {
-                                                        <div>Good (AD≥1): @cell.GoodBacktestCount.Value</div>
+                                                        <div>Passing (AD≥1): @cell.GoodBacktestCount.Value</div>
                                                     }
                                                 }
                                                 else
@@ -160,7 +168,7 @@
 
     .heatmap-cell {
         min-width: 50px;
-        transition: transform 0.1s ease;
+        transition: box-shadow 0.1s ease, filter 0.1s ease;
     }
 
     .heatmap-cell.clickable {
@@ -168,9 +176,8 @@
     }
 
     .heatmap-cell.clickable:hover {
-        transform: scale(1.1);
-        z-index: 3;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        box-shadow: inset 0 0 0 2px rgba(255,255,255,0.5), 0 2px 8px rgba(0,0,0,0.2);
+        filter: brightness(1.15);
     }
 
     .cell-value {

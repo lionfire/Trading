@@ -1,0 +1,90 @@
+@using MudBlazor
+@using LionFire.Trading.Optimization.Matrix
+@namespace LionFire.Trading.Automation.Blazor.Optimization.Matrix
+
+<MudToolBar Dense="true" Class="matrix-toolbar-bar">
+    @* Selection info and batch actions *@
+    @if (SelectedCount > 0)
+    {
+        <MudText Typo="Typo.body2" Class="mr-4">@SelectedCount selected</MudText>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.PriorityHigh"
+                   OnClick="@ShowSetPriorityDialog" Class="mr-1">Set Priority</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.CheckCircle"
+                   OnClick="@(() => OnEnableSelected.InvokeAsync())" Class="mr-1">Enable</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Cancel"
+                   OnClick="@(() => OnDisableSelected.InvokeAsync())" Class="mr-1">Disable</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.RestartAlt"
+                   OnClick="@(() => OnResetToAutopilot.InvokeAsync())" Class="mr-1">Reset to Auto</MudButton>
+        <MudButton Size="Size.Small" Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Close"
+                   OnClick="@(() => OnClearSelection.InvokeAsync())" Class="mr-1">Clear</MudButton>
+        <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+    }
+
+    @* Date range selector *@
+    @if (DateRanges.Count > 0)
+    {
+        <MudSelect T="int" Label="Date Range" Dense="true" Variant="Variant.Outlined"
+                   Value="@SelectedDateRangeIndex" ValueChanged="@OnDateRangeIndexChanged"
+                   Style="max-width: 160px;" Margin="Margin.Dense" Class="mr-2">
+            @for (var i = 0; i < DateRanges.Count; i++)
+            {
+                var idx = i;
+                <MudSelectItem T="int" Value="@idx">@DateRanges[idx].Name</MudSelectItem>
+            }
+        </MudSelect>
+    }
+
+    @* Filters *@
+    <MudSpacer />
+    <MudSelect T="string" Label="Grade" Dense="true" Variant="Variant.Outlined"
+               Value="@GradeFilter" ValueChanged="@OnGradeFilterChanged"
+               Style="max-width: 130px;" Margin="Margin.Dense" Class="mr-2">
+        <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+        <MudSelectItem T="string" Value="@("A")">A grades</MudSelectItem>
+        <MudSelectItem T="string" Value="@("B")">B grades</MudSelectItem>
+        <MudSelectItem T="string" Value="@("C")">C grades</MudSelectItem>
+        <MudSelectItem T="string" Value="@("DF")">D/F grades</MudSelectItem>
+    </MudSelect>
+    <MudSelect T="string" Label="Status" Dense="true" Variant="Variant.Outlined"
+               Value="@StatusFilter" ValueChanged="@OnStatusFilterChanged"
+               Style="max-width: 140px;" Margin="Margin.Dense">
+        <MudSelectItem T="string" Value="@("")">All</MudSelectItem>
+        <MudSelectItem T="string" Value="@("running")">Running</MudSelectItem>
+        <MudSelectItem T="string" Value="@("complete")">Complete</MudSelectItem>
+        <MudSelectItem T="string" Value="@("failed")">Failed</MudSelectItem>
+        <MudSelectItem T="string" Value="@("never-run")">Never Run</MudSelectItem>
+    </MudSelect>
+</MudToolBar>
+
+@if (_showPriorityDialog)
+{
+    <MudOverlay Visible="true" OnClick="@ClosePriorityDialog" DarkBackground="true" ZIndex="9999" />
+    <MudPaper Class="matrix-priority-dialog" Elevation="8">
+        <MudText Typo="Typo.subtitle1" Class="mb-2">Set Priority for @SelectedCount cells</MudText>
+        <MudSlider T="int" @bind-Value="_dialogPriority" Min="1" Max="9" Step="1" Class="mb-2">
+            Priority: @_dialogPriority
+        </MudSlider>
+        <div class="d-flex justify-end gap-2">
+            <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="@ClosePriorityDialog">Cancel</MudButton>
+            <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary" OnClick="@ApplyPriority">Apply</MudButton>
+        </div>
+    </MudPaper>
+}
+
+<style>
+    .matrix-toolbar-bar {
+        background-color: var(--mud-palette-surface);
+        border-bottom: 1px solid var(--mud-palette-lines-default);
+        min-height: 48px;
+    }
+
+    .matrix-priority-dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10000;
+        padding: 20px;
+        min-width: 320px;
+    }
+</style>

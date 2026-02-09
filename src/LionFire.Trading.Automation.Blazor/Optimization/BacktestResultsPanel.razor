@@ -1,6 +1,7 @@
-@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using LionFire.Trading.Automation.Blazor.Optimization
 @using LionFire.Trading.Automation.Blazor.Optimization.Charts
-@using ReactiveUI
+@using System.Reactive.Linq
+@implements IDisposable
 
 <div class="d-flex flex-column" style="height: 100%;">
     @* Row 1: Chart | Filter Expander - fixed height for chart *@
@@ -77,23 +78,36 @@
 </div>
 
 @code {
+    [Parameter] public IOptimizationResultsVM? ViewModel { get; set; }
+
     private bool _filtersExpanded = false;
     private BacktestBatchJournalEntry? _selectedItem;
+    private IDisposable? _subscription;
 
     protected override void OnInitialized()
     {
         base.OnInitialized();
 
-        // Subscribe to ViewModel selection changes
+        // Subscribe to ViewModel changes to pick up selection changes
         if (ViewModel != null)
         {
-            ViewModel.WhenAnyValue(x => x.SelectedBacktest)
-                .Subscribe(selected =>
+            _subscription = ViewModel.Changes
+                .Merge(ViewModel.DebouncedChanges)
+                .Throttle(TimeSpan.FromMilliseconds(100))
+                .Subscribe(_ =>
                 {
-                    _selectedItem = selected;
-                    InvokeAsync(StateHasChanged);
+                    if (ViewModel.SelectedBacktest != _selectedItem)
+                    {
+                        _selectedItem = ViewModel.SelectedBacktest;
+                        InvokeAsync(StateHasChanged);
+                    }
                 });
         }
+    }
+
+    public void Dispose()
+    {
+        _subscription?.Dispose();
     }
 
     private void OnSelectedItemChanged(BacktestBatchJournalEntry? item)

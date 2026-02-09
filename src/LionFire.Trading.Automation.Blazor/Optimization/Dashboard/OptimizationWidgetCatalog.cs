@@ -40,7 +40,7 @@ public static class OptimizationWidgetCatalog
             DefaultHeight: 4,
             Icon: Icons.Material.Filled.FilterList,
             Description: "Filter controls for optimization results",
-            MinWidth: 3,
+            MinWidth: 1,
             MinHeight: 3),
 
         new OptimizationWidgetInfo(

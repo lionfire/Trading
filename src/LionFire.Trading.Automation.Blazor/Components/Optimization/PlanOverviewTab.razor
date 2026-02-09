@@ -1,6 +1,9 @@
 @namespace LionFire.Trading.Automation.Blazor.Components.Optimization
 @using LionFire.Trading.Optimization.Plans
 @using LionFire.Trading.Optimization.Execution
+@using LionFire.Trading.Automation.Optimization.Prioritization
+@inject IOptimizationPlanRepository PlanRepository
+@inject ISnackbar Snackbar
 
 <div class="plan-overview">
     @* Plan Info Section *@
@@ -9,6 +12,14 @@
             <CardHeaderContent>
                 <MudText Typo="Typo.h6">@Plan.Name</MudText>
             </CardHeaderContent>
+            <CardHeaderActions>
+                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                               Title="Duplicate plan"
+                               OnClick="@(() => OnDuplicate.InvokeAsync())" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Title="Delete plan" Color="Color.Error"
+                               OnClick="@(() => OnDelete.InvokeAsync())" />
+            </CardHeaderActions>
         </MudCardHeader>
         <MudCardContent>
             <MudGrid>
@@ -40,6 +51,42 @@
         </MudCardContent>
     </MudCard>
 
+    @* Next Best Job Recommendation (when prioritization enabled and not running) *@
+    @if (NextBestJob != null &&
+         (ExecutionState == null || ExecutionState.Status == PlanExecutionStatus.Paused || ExecutionState.Status == PlanExecutionStatus.NotStarted))
+    {
+        <MudCard Class="mb-4" Elevation="0" Outlined="true">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" Color="Color.Warning" />
+                        Recommended Next Job
+                    </MudText>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Symbol / Timeframe</MudText>
+                        <MudText Typo="Typo.body1"><strong>@NextBestJob.Job.Symbol</strong> / @NextBestJob.Job.Timeframe</MudText>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Date Range</MudText>
+                        <MudText Typo="Typo.body1">@NextBestJob.Job.DateRange.Name</MudText>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudChip T="string" Color="@GetPromiseColor(NextBestJob.Promise.Score)" Size="Size.Small" Class="mt-2">
+                            @NextBestJob.Promise.Score.ToString("P0") promise score
+                        </MudChip>
+                        <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                            @NextBestJob.Reasoning
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    }
+
     @* Execution Controls *@
     <MudCard Class="mb-4" Elevation="0" Outlined="true">
         <MudCardHeader>
@@ -52,14 +99,24 @@
             {
                 @* Not running - show start controls *@
                 <div class="execution-controls">
-                    <MudNumericField T="int" @bind-Value="_parallelWorkers" Label="Parallel Workers"
+                    <MudNumericField T="int" Value="_parallelWorkers" Label="Parallel Workers"
+                                     ValueChanged="OnParallelWorkersChanged"
                                      Min="1" Max="32" Variant="Variant.Outlined" Class="worker-input" />
+                    <MudSwitch T="bool" @bind-Value="_usePrioritization" Label="Prioritization"
+                               Color="Color.Primary" Class="ml-4" />
                     <MudButton Variant="Variant.Filled" Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.PlayArrow"
                                OnClick="HandleStart" Class="ml-2">
                         Start Execution
                     </MudButton>
                 </div>
+                @if (_usePrioritization)
+                {
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-2">
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Class="mr-1" />
+                        Jobs will be executed based on promise scores, prioritizing combinations most likely to succeed.
+                    </MudText>
+                }
             }
             else
             {
@@ -134,6 +191,20 @@
                                 <MudText Typo="Typo.body2">@GetEstimatedRemaining()</MudText>
                             </MudItem>
                         }
+                        @if (ExecutionState.UsePrioritization)
+                        {
+                            <MudItem xs="6" sm="3">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Prioritized Jobs</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Info">@ExecutionState.PrioritizedJobsExecuted</MudText>
+                            </MudItem>
+                            @if (ExecutionState.FollowUpJobsQueued > 0)
+                            {
+                                <MudItem xs="6" sm="3">
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Follow-up Jobs Queued</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Tertiary">@ExecutionState.FollowUpJobsQueued</MudText>
+                                </MudItem>
+                            }
+                        }
                     </MudGrid>
                 }
             }
@@ -164,18 +235,50 @@
 @code {
     [Parameter] public OptimizationPlan Plan { get; set; } = default!;
     [Parameter] public PlanExecutionState? ExecutionState { get; set; }
-    [Parameter] public EventCallback<int> OnStartExecution { get; set; }
+    [Parameter] public EventCallback<(int workers, bool usePrioritization)> OnStartExecution { get; set; }
     [Parameter] public EventCallback OnStopExecution { get; set; }
     [Parameter] public EventCallback OnPauseExecution { get; set; }
     [Parameter] public EventCallback OnResumeExecution { get; set; }
+    [Parameter] public EventCallback OnDuplicate { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+    [Parameter] public NextJobRecommendation? NextBestJob { get; set; }
+    [Parameter] public EventCallback<OptimizationPlan> OnPlanChanged { get; set; }
 
-    private int _parallelWorkers = 4;
+    private int _parallelWorkers = 1;
+    private bool _usePrioritization = true;
+
+    protected override void OnParametersSet()
+    {
+        _parallelWorkers = Plan.ParallelWorkers > 0 ? Plan.ParallelWorkers : 1;
+    }
+
+    private async Task OnParallelWorkersChanged(int value)
+    {
+        _parallelWorkers = value;
+        var updatedPlan = Plan with { ParallelWorkers = value };
+        try
+        {
+            var saved = await PlanRepository.SaveAsync(updatedPlan);
+            await OnPlanChanged.InvokeAsync(saved);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save: {ex.Message}", Severity.Error);
+        }
+    }
 
     private int CalculateTotalJobs() =>
         Plan.Symbols.EffectiveSymbols.Count() * Plan.Timeframes.Count * Plan.DateRanges.Count;
 
     private async Task HandleStart() =>
-        await OnStartExecution.InvokeAsync(_parallelWorkers);
+        await OnStartExecution.InvokeAsync((_parallelWorkers, _usePrioritization));
+
+    private Color GetPromiseColor(double score) => score switch
+    {
+        >= 0.7 => Color.Success,
+        >= 0.4 => Color.Warning,
+        _ => Color.Default
+    };
 
     private double GetProgressPercent() =>
         ExecutionState?.TotalJobs > 0
