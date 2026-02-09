@@ -1,0 +1,29 @@
+// Sample backtest configuration for PAtrBot
+// Usage: lft backtest run --config samples/backtest-patrbot.hjson
+
+bot: PAtrBot
+symbol: BTCUSDT
+exchange: Binance
+area: futures
+timeframe: h1
+
+// Date range
+from: 2024-01-01
+to: 2024-12-31
+
+// Fixed parameter values for the bot
+// PAtrBot requires: ATR, Points, and Unidirectional to be configured
+parameters:
+{
+  // ATR indicator configuration
+  ATR.Period: 14
+  ATR.MovingAverageType: Wilders
+  ATR.Lookback: 1
+
+  // Points configuration for trade signals
+  Points.OpenThreshold: 3
+  Points.CloseThreshold: 1
+
+  // Unidirectional - trade direction (Long: true = long trades, false = short trades)
+  Unidirectional.Long: true
+}

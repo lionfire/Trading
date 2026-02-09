@@ -31,6 +31,8 @@
     <ProjectReference Include="..\LionFire.Trading.Automation\LionFire.Trading.Automation.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Automation.Bots\LionFire.Trading.Automation.Bots.csproj" />
     <ProjectReference Include="..\LionFire.Trading.Hosting\LionFire.Trading.Hosting.csproj" />
+    <ProjectReference Include="..\..\..\Core\src\LionFire.Orleans\LionFire.Orleans.csproj" />
+    <ProjectReference Include="..\LionFire.Trading.Automation.Orleans\LionFire.Trading.Automation.Orleans.csproj" />
   </ItemGroup>
 
   <ItemGroup>

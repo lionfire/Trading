@@ -80,6 +80,10 @@ return await new HostApplicationBuilderProgram()
     .Command<CryptoVolOptions>("crypto vol", CryptoHandlers.Vol,
         builderBuilder: CryptoHandlers.ConfigureVolCommand)
 
+    // Worker commands
+    .Command<WorkerStartOptions>("worker start", WorkerHandlers.Start,
+        builderBuilder: WorkerHandlers.ConfigureCommand)
+
     .RunAsync(args)
 //.RunOaktonCommands(args);
 ;
