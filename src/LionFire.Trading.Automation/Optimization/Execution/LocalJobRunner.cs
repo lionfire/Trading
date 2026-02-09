@@ -1,5 +1,7 @@
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
+using DynamicData;
 using LionFire.Trading.Automation.Optimization.Scoring;
 using LionFire.Trading.Journal;
 using LionFire.Trading.Optimization;
@@ -19,6 +21,11 @@ public class LocalJobRunner : IJobRunner
     private readonly BotTypeRegistry _botTypeRegistry;
     private readonly ILogger<LocalJobRunner> _logger;
 
+    /// <summary>
+    /// Currently active OptimizationTasks keyed by job ID.
+    /// </summary>
+    private readonly ConcurrentDictionary<string, OptimizationTask> _activeTasks = new();
+
     public LocalJobRunner(
         IServiceProvider serviceProvider,
         BotTypeRegistry botTypeRegistry,
@@ -28,6 +35,17 @@ public class LocalJobRunner : IJobRunner
         _botTypeRegistry = botTypeRegistry;
         _logger = logger;
     }
+
+    /// <summary>
+    /// Get the currently active OptimizationTask for a running job.
+    /// </summary>
+    public object? GetActiveTask(string jobId)
+        => _activeTasks.TryGetValue(jobId, out var task) ? task : null;
+
+    /// <summary>
+    /// Get all currently active job IDs.
+    /// </summary>
+    public IEnumerable<string> ActiveJobIds => _activeTasks.Keys;
 
     /// <summary>
     /// Run an optimization job locally.
@@ -86,6 +104,10 @@ public class LocalJobRunner : IJobRunner
                 EndExclusive = snappedEnd,
             };
 
+            _logger.LogInformation(
+                "Job {JobId} PMultiSim: Bot={BotType}, Symbol={Symbol}, TF={Timeframe}, Start={Start}, End={End}, MaxBacktests={MaxBt}",
+                job.Id, pBotType.Name, job.Symbol, job.Timeframe, snappedStart, snappedEnd, job.Resolution.MaxBacktests);
+
             // Configure optimization parameters
             pMultiSim.POptimization = new POptimization(pMultiSim)
             {
@@ -102,6 +124,9 @@ public class LocalJobRunner : IJobRunner
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             var optimizationTask = new OptimizationTask(_serviceProvider, pMultiSim);
             optimizationTask.AddCancellationToken(cts.Token);
+
+            // Track active task for live UI access
+            _activeTasks[job.Id] = optimizationTask;
 
             await optimizationTask.StartAsync(cts.Token);
 
@@ -138,19 +163,60 @@ public class LocalJobRunner : IJobRunner
 
             stopwatch.Stop();
 
-            // Calculate score
+            // Remove from active tasks on completion
+            _activeTasks.TryRemove(job.Id, out _);
+
+            // Calculate score - read from in-memory journal cache (CSV may not be flushed yet)
             var outputDir = optimizationTask.OptimizationDirectory;
             OptimizationScore? score = null;
             double? bestAD = null;
             int goodBacktestCount = 0;
             int totalBacktests = 0;
+            int abortedBacktests = 0;
 
-            if (!string.IsNullOrEmpty(outputDir))
+            var taskProgress = optimizationTask.Progress;
+            _logger.LogInformation(
+                "Job {JobId} optimization finished: OutputDir={OutputDir}, Progress.Completed={Completed}, Progress.Queued={Queued}, Progress.Skipped={Skipped}",
+                job.Id,
+                outputDir ?? "(null)",
+                taskProgress?.Completed ?? -1,
+                taskProgress?.Queued ?? -1,
+                taskProgress?.Skipped ?? -1);
+
+            try
             {
-                try
+                // Prefer in-memory journal cache (always up-to-date, unlike CSV which may not be flushed)
+                var journal = optimizationTask.Journal;
+                List<BacktestBatchJournalEntry>? backtestResults = null;
+
+                if (journal?.ObservableCache is { Count: > 0 } cache)
                 {
-                    var backtestResults = BacktestResultsReader.ReadFromDirectory(outputDir);
-                    totalBacktests = backtestResults.Count;
+                    backtestResults = cache.Items.ToList();
+                    _logger.LogInformation(
+                        "Job {JobId} read {Count} backtest results from in-memory journal",
+                        job.Id, backtestResults.Count);
+                }
+                else if (!string.IsNullOrEmpty(outputDir))
+                {
+                    // Flush journal to ensure CSV is written before reading
+                    if (journal != null)
+                    {
+                        await journal.DisposeAsync();
+                    }
+                    backtestResults = BacktestResultsReader.ReadFromDirectory(outputDir);
+                    _logger.LogInformation(
+                        "Job {JobId} read {Count} backtest results from CSV at {Dir}",
+                        job.Id, backtestResults.Count, outputDir);
+                }
+                else
+                {
+                    _logger.LogWarning("Job {JobId}: No journal and no output directory - no results to read", job.Id);
+                }
+
+                if (backtestResults != null)
+                {
+                    abortedBacktests = backtestResults.Count(r => r.IsAborted);
+                    totalBacktests = backtestResults.Count - abortedBacktests;
 
                     if (backtestResults.Count > 0)
                     {
@@ -158,13 +224,26 @@ public class LocalJobRunner : IJobRunner
                         score = scorer.Calculate();
 
                         bestAD = score.Summary?.MaxAd;
-                        goodBacktestCount = score.Summary?.GoodCount ?? 0;
+                        goodBacktestCount = score.Summary?.PassingCount ?? 0;
                     }
                 }
-                catch (Exception ex)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to calculate score for job {JobId}", job.Id);
+            }
+
+            // Ensure journal is flushed to disk for future reference
+            try
+            {
+                if (optimizationTask.Journal != null)
                 {
-                    _logger.LogWarning(ex, "Failed to calculate score for job {JobId}", job.Id);
+                    await optimizationTask.Journal.DisposeAsync();
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Error disposing journal for job {JobId} (may already be disposed)", job.Id);
             }
 
             var completedJob = runningJob with
@@ -175,12 +254,13 @@ public class LocalJobRunner : IJobRunner
                 Score = score?.Value,
                 BestAD = bestAD,
                 GoodBacktestCount = goodBacktestCount,
-                TotalBacktests = totalBacktests
+                TotalBacktests = totalBacktests,
+                AbortedBacktests = abortedBacktests
             };
 
             _logger.LogInformation(
-                "Completed job {JobId}: Score={Score}, BestAD={BestAD}, Good={GoodCount}/{Total}, Duration={Duration}ms",
-                job.Id, score?.Value, bestAD, goodBacktestCount, totalBacktests, stopwatch.ElapsedMilliseconds);
+                "Completed job {JobId}: Score={Score}, BestAD={BestAD}, Passing={PassingCount}/{Total}, Aborted={Aborted}, Duration={Duration}ms",
+                job.Id, score?.Value, bestAD, goodBacktestCount, totalBacktests, abortedBacktests, stopwatch.ElapsedMilliseconds);
 
             progress?.Report(new JobProgress
             {
@@ -197,6 +277,7 @@ public class LocalJobRunner : IJobRunner
         catch (OperationCanceledException)
         {
             stopwatch.Stop();
+            _activeTasks.TryRemove(job.Id, out _);
 
             var cancelledJob = job with
             {
@@ -219,6 +300,7 @@ public class LocalJobRunner : IJobRunner
         catch (Exception ex)
         {
             stopwatch.Stop();
+            _activeTasks.TryRemove(job.Id, out _);
 
             var failedJob = job with
             {

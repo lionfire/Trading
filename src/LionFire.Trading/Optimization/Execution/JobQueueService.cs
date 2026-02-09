@@ -49,13 +49,57 @@ public class JobQueueService : IJobQueueService
 
         lock (_dequeueLock)
         {
-            // Find first pending job (optionally filtered by plan)
+            // Find highest-priority pending job (optionally filtered by plan)
+            // Secondary sort by symbol+timeframe for deterministic ordering within same priority
             var pendingJob = _jobs.Values
                 .Where(j => j.Status == JobStatus.Pending)
                 .Where(j => planId == null || j.PlanId == planId)
+                .OrderBy(j => j.Priority)
+                .ThenBy(j => j.Symbol, StringComparer.Ordinal)
+                .ThenBy(j => j.Timeframe, StringComparer.Ordinal)
                 .FirstOrDefault();
 
             if (pendingJob == null)
+            {
+                return Task.FromResult<OptimizationJob?>(null);
+            }
+
+            // Update to running
+            var runningJob = pendingJob with
+            {
+                Status = JobStatus.Running,
+                StartedAt = DateTimeOffset.UtcNow
+            };
+
+            if (_jobs.TryUpdate(pendingJob.Id, runningJob, pendingJob))
+            {
+                RaiseJobStatusChanged(runningJob, JobStatus.Pending, JobStatus.Running);
+                return Task.FromResult<OptimizationJob?>(runningJob);
+            }
+
+            // Race condition - another thread updated it first
+            return Task.FromResult<OptimizationJob?>(null);
+        }
+    }
+
+    public Task<OptimizationJob?> DequeueByIdAsync(string jobId, string? planId = null, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        lock (_dequeueLock)
+        {
+            if (!_jobs.TryGetValue(jobId, out var pendingJob))
+            {
+                return Task.FromResult<OptimizationJob?>(null);
+            }
+
+            // Verify job is pending and matches plan filter
+            if (pendingJob.Status != JobStatus.Pending)
+            {
+                return Task.FromResult<OptimizationJob?>(null);
+            }
+
+            if (planId != null && pendingJob.PlanId != planId)
             {
                 return Task.FromResult<OptimizationJob?>(null);
             }

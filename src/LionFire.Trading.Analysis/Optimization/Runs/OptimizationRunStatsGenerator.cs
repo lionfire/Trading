@@ -1,4 +1,5 @@
 ﻿using LionFire.Structures;
+using LionFire.Trading.Automation.Optimization.Scoring;
 using LionFire.Trading.Backtesting;
 using LionFire.Trading.Structures;
 using Newtonsoft.Json;
@@ -11,12 +12,21 @@ public class OptimizationRunStatsGeneratorConfig
     public double HistogramMin = -3.5;
     public double HistogramMax = 5.5;
 
+    /// <summary>
+    /// Default scoring formula for optimization runs.
+    /// </summary>
+    public string DefaultScoringFormula = "countWhere(ad >= 1.0)";
+
+    /// <summary>
+    /// Threshold for AD-based scoring.
+    /// </summary>
+    public double ScoringThreshold = 1.0;
 }
 
 public class OptimizationRunStatsGenerator
 {
 
-    public static OptimizationRunStats Generate(OptimizationRunBacktests optimizationRunBacktests)
+    public static OptimizationRunStats Generate(OptimizationRunBacktests optimizationRunBacktests, string? scoringFormula = null)
     {
         var backtests = optimizationRunBacktests.Backtests;
         var stats = new OptimizationRunStats();
@@ -66,7 +76,40 @@ public class OptimizationRunStatsGenerator
         stats.PADHistogram = h(backtests.Select(b => b.PAD));
         stats.AADHistogram = h(backtests.Select(b => b.AAD));
 
+        // Calculate formula-based score
+        var formula = scoringFormula ?? c.DefaultScoringFormula;
+        stats.Score = CalculateFormulaScore(backtests, formula);
+
         return stats;
     }
 
+    /// <summary>
+    /// Calculates a formula-based score from BacktestResult objects by converting them to journal entries.
+    /// </summary>
+    private static double CalculateFormulaScore(IEnumerable<BacktestResult> backtests, string formula)
+    {
+        try
+        {
+            // Convert BacktestResult to BacktestBatchJournalEntry for formula evaluation
+            var entries = backtests.Select(b => new BacktestBatchJournalEntry
+            {
+                AD = b.AD,
+                Wins = b.WinningTrades,
+                Losses = b.LosingTrades,
+                Fitness = b.Fitness,
+                MaxBalanceDrawdown = b.MaxBalanceDrawdown,
+                MaxBalanceDrawdownPerunum = b.MaxBalanceDrawdownPerunum,
+                MaxEquityDrawdown = b.MaxEquityDrawdown,
+                MaxEquityDrawdownPerunum = b.MaxEquityDrawdownPercentages / 100.0,
+            }).ToList();
+
+            var parser = new ScoringFormulaParser(entries);
+            return parser.Evaluate(formula);
+        }
+        catch
+        {
+            // If formula parsing fails, fall back to simple AD count
+            return backtests.Count(b => b.AD >= 1.0);
+        }
+    }
 }

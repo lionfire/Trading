@@ -19,6 +19,21 @@ public interface IJobRunner
         OptimizationJob job,
         IProgress<JobProgress>? progress = null,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Get the currently active OptimizationTask for a running job, if any.
+    /// Returns null if the job is not currently running or has completed.
+    /// </summary>
+    /// <remarks>
+    /// The returned object is untyped to avoid a dependency on LionFire.Trading.Automation
+    /// from the abstractions layer. Callers should cast to OptimizationTask.
+    /// </remarks>
+    object? GetActiveTask(string jobId) => null;
+
+    /// <summary>
+    /// Get all currently active job IDs.
+    /// </summary>
+    IEnumerable<string> ActiveJobIds => Enumerable.Empty<string>();
 }
 
 /// <summary>

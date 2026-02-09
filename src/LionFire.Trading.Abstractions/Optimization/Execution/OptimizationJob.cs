@@ -64,6 +64,11 @@ public record OptimizationJob
     public OptimizationResolution Resolution { get; init; } = new();
 
     /// <summary>
+    /// Execution priority from the matrix state (1 = highest, 9 = lowest).
+    /// </summary>
+    public int Priority { get; init; } = 5;
+
+    /// <summary>
     /// Current status of this job.
     /// </summary>
     public JobStatus Status { get; init; } = JobStatus.Pending;
@@ -99,9 +104,14 @@ public record OptimizationJob
     public int? GoodBacktestCount { get; init; }
 
     /// <summary>
-    /// Total number of backtests run.
+    /// Total number of backtests run (non-aborted).
     /// </summary>
     public int? TotalBacktests { get; init; }
+
+    /// <summary>
+    /// Number of backtests that were aborted (e.g., due to insufficient trades or data issues).
+    /// </summary>
+    public int? AbortedBacktests { get; init; }
 
     /// <summary>
     /// Error message if the job failed.

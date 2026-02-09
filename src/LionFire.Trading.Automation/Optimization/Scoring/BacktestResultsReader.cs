@@ -1,5 +1,6 @@
 using CsvHelper;
 using System.Globalization;
+using System.IO.Compression;
 using LionFire.Trading.Automation;
 
 namespace LionFire.Trading.Automation.Optimization.Scoring;
@@ -9,6 +10,20 @@ namespace LionFire.Trading.Automation.Optimization.Scoring;
 /// </summary>
 public static class BacktestResultsReader
 {
+    /// <summary>
+    /// Reads backtest journal entries from backtests.csv inside a zip archive.
+    /// </summary>
+    /// <param name="zipPath">Path to the zip file containing backtests.csv</param>
+    /// <returns>List of backtest entries, or empty list if backtests.csv not found in zip</returns>
+    public static List<BacktestBatchJournalEntry> ReadFromZip(string zipPath)
+    {
+        using var archive = ZipFile.OpenRead(zipPath);
+        var entry = archive.GetEntry("backtests.csv");
+        if (entry == null) return new List<BacktestBatchJournalEntry>();
+
+        using var stream = entry.Open();
+        return ReadFromStream(stream);
+    }
     /// <summary>
     /// Reads backtest journal entries from a CSV file in the optimization output directory.
     /// </summary>
@@ -27,12 +42,18 @@ public static class BacktestResultsReader
     /// <returns>List of backtest entries, or empty list if file doesn't exist</returns>
     public static List<BacktestBatchJournalEntry> ReadFromCsv(string csvPath)
     {
-        var results = new List<BacktestBatchJournalEntry>();
+        if (!File.Exists(csvPath)) return new List<BacktestBatchJournalEntry>();
 
-        if (!File.Exists(csvPath))
-        {
-            return results;
-        }
+        using var stream = File.OpenRead(csvPath);
+        return ReadFromStream(stream);
+    }
+
+    /// <summary>
+    /// Reads backtest journal entries from a stream containing CSV data.
+    /// </summary>
+    public static List<BacktestBatchJournalEntry> ReadFromStream(Stream stream)
+    {
+        var results = new List<BacktestBatchJournalEntry>();
 
         var config = new CsvHelper.Configuration.CsvConfiguration(CultureInfo.InvariantCulture)
         {
@@ -40,7 +61,7 @@ public static class BacktestResultsReader
             MissingFieldFound = null, // Ignore missing fields for partial reads
         };
 
-        using var reader = new StreamReader(csvPath);
+        using var reader = new StreamReader(stream);
         using var csv = new CsvReader(reader, config);
 
         // Read header

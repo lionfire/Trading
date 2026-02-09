@@ -40,12 +40,12 @@ public class DateChunker
         {
             return date < new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
         }
-
-        switch (timeFrame.Name)
+        if (timeFrame.TimeFrameUnit == TimeFrameUnit.Day || timeFrame.TimeFrameUnit == TimeFrameUnit.Week)
         {
-            default:
-                throw new NotImplementedException();
+            return date < new DateTimeOffset(now.Year, 1, 1, 0, 0, 0, TimeSpan.Zero);
         }
+
+        throw new NotImplementedException($"IsLongRangeForDate not implemented for {timeFrame.Name}");
     }
 
     public ((DateTimeOffset start, DateTimeOffset endExclusive), bool isLong) RangeForDate(DateTimeOffset date, TimeFrame timeFrame)
@@ -65,15 +65,17 @@ public class DateChunker
 
     public (DateTimeOffset start, DateTimeOffset endExclusive) ShortRangeForDate(DateTimeOffset date, TimeFrame timeFrame)
     {
-        switch (timeFrame.Name)
+        switch (timeFrame.TimeFrameUnit)
         {
-            case "m1":
+            case TimeFrameUnit.Minute:
                 return DateRangeUtils.GetDays(date, 1);
-            case "h1":
+            case TimeFrameUnit.Hour:
                 return DateRangeUtils.GetMonths(date);
-            //return (new DateTimeOffset(date.Year, date.Month, 1, 0, 0, 0, DateTimeKind.Utc), new DateTimeOffset(date.Year, date.Month, DateTimeOffset.DaysInMonth(date.Year, date.Month), 23, 0, 0, DateTimeKind.Utc));
+            case TimeFrameUnit.Day:
+            case TimeFrameUnit.Week:
+                return DateRangeUtils.GetYear(date);
             default:
-                throw new NotImplementedException();
+                throw new NotImplementedException($"ShortRangeForDate not implemented for {timeFrame.Name}");
         }
     }
 
@@ -87,14 +89,17 @@ public class DateChunker
 
     public (DateTimeOffset start, DateTimeOffset endExclusive) LongRangeForDate(DateTimeOffset date, TimeFrame timeFrame)
     {
-        switch (timeFrame.Name)
+        switch (timeFrame.TimeFrameUnit)
         {
-            case "m1":
+            case TimeFrameUnit.Minute:
                 return DateRangeUtils.GetMonths(date);
-            case "h1":
+            case TimeFrameUnit.Hour:
+                return DateRangeUtils.GetYear(date);
+            case TimeFrameUnit.Day:
+            case TimeFrameUnit.Week:
                 return DateRangeUtils.GetYear(date);
             default:
-                throw new NotImplementedException();
+                throw new NotImplementedException($"LongRangeForDate not implemented for {timeFrame.Name}");
         }
     }
 

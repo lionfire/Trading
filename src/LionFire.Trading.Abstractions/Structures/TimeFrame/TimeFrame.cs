@@ -487,9 +487,9 @@ public class TimeFrame : ISerializableAsString
                 {
                     throw new NotImplementedException("GetPeriodStart for " + Name);
                 }
-            //case TimeFrameUnit.Day:
-
-            //    break;
+            case TimeFrameUnit.Day:
+                // For daily timeframes, snap to the start of the day (midnight UTC)
+                return new DateTimeOffset(time.Year, time.Month, time.Day, 0, 0, 0, TS.Zero);
             //case TimeFrameUnit.Week:
             //    break;
             //case TimeFrameUnit.Month:

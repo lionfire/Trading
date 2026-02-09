@@ -1,3 +1,4 @@
+using LionFire.Trading.Automation.Optimization.Prioritization;
 using LionFire.Trading.Optimization.Execution;
 using LionFire.Trading.Symbols;
 using Microsoft.Extensions.Configuration;
@@ -30,6 +31,9 @@ public static class PlanExecutionHostingX
         });
         services.AddSingleton<IPlanExecutionStateRepository, FilePlanExecutionStateRepository>();
 
+        // Job prioritization
+        services.AddJobPrioritization(configuration);
+
         // Execution engine
         services.AddSingleton<IPlanExecutionService, PlanExecutionEngine>();
 
@@ -52,6 +56,9 @@ public static class PlanExecutionHostingX
         // State persistence
         services.Configure(configureOptions);
         services.AddSingleton<IPlanExecutionStateRepository, FilePlanExecutionStateRepository>();
+
+        // Job prioritization (with default config)
+        services.AddJobPrioritization();
 
         // Execution engine
         services.AddSingleton<IPlanExecutionService, PlanExecutionEngine>();

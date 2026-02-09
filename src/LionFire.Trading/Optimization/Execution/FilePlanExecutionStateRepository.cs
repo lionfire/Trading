@@ -83,6 +83,14 @@ public class FilePlanExecutionStateRepository : IPlanExecutionStateRepository
 
             var hjsonContent = await File.ReadAllTextAsync(filePath, cancellationToken);
 
+            // Handle empty or whitespace-only files
+            if (string.IsNullOrWhiteSpace(hjsonContent))
+            {
+                _logger.LogWarning("Execution state file for plan {PlanId} is empty, deleting corrupt file: {Path}", planId, filePath);
+                TryDeleteCorruptFile(filePath);
+                return null;
+            }
+
             // Add root braces for parsing
             var json = JsonValue.Parse("{" + hjsonContent + "}").ToString(Stringify.Plain);
             var state = JsonSerializer.Deserialize<PlanExecutionState>(json, JsonOptions);
@@ -96,10 +104,41 @@ public class FilePlanExecutionStateRepository : IPlanExecutionStateRepository
 
             return state;
         }
+        catch (Exception ex) when (ex is ArgumentException or JsonException)
+        {
+            // File exists but is corrupt - delete it and return null to allow fresh start
+            _logger.LogWarning(ex, "Execution state file for plan {PlanId} is corrupt, deleting and returning null: {Path}", planId, filePath);
+            TryDeleteCorruptFile(filePath);
+            return null;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load execution state for plan {PlanId}", planId);
             throw;
+        }
+    }
+
+    private void TryDeleteCorruptFile(string filePath)
+    {
+        try
+        {
+            // Create backup before deleting
+            var backupPath = filePath + ".corrupt." + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            File.Move(filePath, backupPath);
+            _logger.LogInformation("Moved corrupt execution state file to: {BackupPath}", backupPath);
+        }
+        catch (Exception backupEx)
+        {
+            _logger.LogWarning(backupEx, "Failed to backup corrupt file, attempting direct delete");
+            try
+            {
+                File.Delete(filePath);
+                _logger.LogInformation("Deleted corrupt execution state file: {Path}", filePath);
+            }
+            catch (Exception deleteEx)
+            {
+                _logger.LogError(deleteEx, "Failed to delete corrupt execution state file: {Path}", filePath);
+            }
         }
     }
 

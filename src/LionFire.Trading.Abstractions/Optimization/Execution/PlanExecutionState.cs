@@ -115,4 +115,19 @@ public record PlanExecutionState
             return avgTimePerJob * PendingJobs;
         }
     }
+
+    /// <summary>
+    /// Whether job prioritization is enabled for this execution.
+    /// </summary>
+    public bool UsePrioritization { get; init; } = true;
+
+    /// <summary>
+    /// Number of jobs that were selected using prioritization.
+    /// </summary>
+    public int PrioritizedJobsExecuted { get; init; }
+
+    /// <summary>
+    /// Number of follow-up jobs auto-queued based on promising results.
+    /// </summary>
+    public int FollowUpJobsQueued { get; init; }
 }

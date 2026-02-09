@@ -1,4 +1,5 @@
 using System.Threading;
+using LionFire.Trading.Optimization.Matrix;
 using LionFire.Trading.Optimization.Plans;
 using LionFire.Trading.Symbols;
 
@@ -22,12 +23,19 @@ public class JobMatrixGenerator
     /// </summary>
     /// <param name="plan">The optimization plan.</param>
     /// <param name="options">Generation options.</param>
+    /// <param name="symbolFilter">Optional: only generate jobs for these symbols.</param>
+    /// <param name="timeframeFilter">Optional: only generate jobs for these timeframes.</param>
+    /// <param name="dateRangeFilter">Optional: only generate jobs for this date range (by name).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>List of optimization jobs.</returns>
     /// <exception cref="InvalidOperationException">If job count exceeds maximum.</exception>
     public async Task<IReadOnlyList<OptimizationJob>> GenerateAsync(
         OptimizationPlan plan,
         JobMatrixOptions? options = null,
+        IReadOnlyList<string>? symbolFilter = null,
+        IReadOnlyList<string>? timeframeFilter = null,
+        string? dateRangeFilter = null,
+        PlanMatrixState? matrixState = null,
         CancellationToken cancellationToken = default)
     {
         options ??= new JobMatrixOptions();
@@ -35,29 +43,55 @@ public class JobMatrixGenerator
         // Resolve symbols
         var symbols = await ResolveSymbolsAsync(plan, options, cancellationToken);
 
+        // Apply symbol filter if specified
+        if (symbolFilter is { Count: > 0 })
+        {
+            var filterSet = symbolFilter.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            symbols = symbols.Where(s => filterSet.Contains(s)).ToList();
+        }
+
         if (symbols.Count == 0)
         {
             throw new InvalidOperationException("No symbols found for optimization plan");
         }
 
-        if (plan.Timeframes.Count == 0)
+        // Get timeframes, applying filter if specified
+        var timeframes = plan.Timeframes.ToList();
+        if (timeframeFilter is { Count: > 0 })
+        {
+            var filterSet = timeframeFilter.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            timeframes = timeframes.Where(tf => filterSet.Contains(tf)).ToList();
+        }
+
+        if (timeframes.Count == 0)
         {
             throw new InvalidOperationException("No timeframes specified in optimization plan");
         }
 
-        if (plan.DateRanges.Count == 0)
+        // Get date ranges, applying filter if specified
+        var dateRanges = plan.DateRanges.ToList();
+        if (!string.IsNullOrEmpty(dateRangeFilter))
         {
-            throw new InvalidOperationException("No date ranges specified in optimization plan");
+            dateRanges = dateRanges.Where(dr =>
+                string.Equals(dr.Name, dateRangeFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
+
+        if (dateRanges.Count == 0)
+        {
+            throw new InvalidOperationException(
+                string.IsNullOrEmpty(dateRangeFilter)
+                    ? "No date ranges specified in optimization plan"
+                    : $"Date range '{dateRangeFilter}' not found in optimization plan");
         }
 
         // Calculate total job count
-        var totalJobs = symbols.Count * plan.Timeframes.Count * plan.DateRanges.Count;
+        var totalJobs = symbols.Count * timeframes.Count * dateRanges.Count;
 
         if (totalJobs > options.MaxJobs)
         {
             throw new InvalidOperationException(
                 $"Job count ({totalJobs}) exceeds maximum ({options.MaxJobs}). " +
-                $"Reduce symbols ({symbols.Count}), timeframes ({plan.Timeframes.Count}), " +
+                $"Reduce symbols ({symbols.Count}), timeframes ({timeframes.Count}), " +
                 $"or date ranges ({plan.DateRanges.Count}).");
         }
 
@@ -69,9 +103,9 @@ public class JobMatrixGenerator
 
         foreach (var symbol in symbols)
         {
-            foreach (var timeframe in plan.Timeframes)
+            foreach (var timeframe in timeframes)
             {
-                foreach (var dateRange in plan.DateRanges)
+                foreach (var dateRange in dateRanges)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
@@ -91,6 +125,7 @@ public class JobMatrixGenerator
                         StartDate = startDate,
                         EndDate = endDate,
                         Resolution = plan.Resolution,
+                        Priority = matrixState?.GetEffectivePriority(symbol, timeframe) ?? 5,
                         Status = JobStatus.Pending
                     };
 

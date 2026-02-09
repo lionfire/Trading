@@ -26,6 +26,15 @@ public interface IJobQueueService
     Task<OptimizationJob?> DequeueNextAsync(string? planId = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Dequeue a specific job by its ID and mark it as running.
+    /// </summary>
+    /// <param name="jobId">The ID of the job to dequeue.</param>
+    /// <param name="planId">Optional filter by plan ID.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The job, or null if not found or not pending.</returns>
+    Task<OptimizationJob?> DequeueByIdAsync(string jobId, string? planId = null, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get a job by its ID.
     /// </summary>
     Task<OptimizationJob?> GetByIdAsync(string jobId, CancellationToken cancellationToken = default);

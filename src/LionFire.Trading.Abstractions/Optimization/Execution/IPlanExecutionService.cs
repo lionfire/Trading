@@ -64,6 +64,23 @@ public interface IPlanExecutionService
     Task RetryFailedAsync(string planId, IEnumerable<string>? jobIds = null, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Run optimization for a specific cell (symbol/timeframe combination) within a plan.
+    /// Creates and executes jobs for just this cell, respecting plan settings.
+    /// </summary>
+    /// <param name="planId">ID of the plan.</param>
+    /// <param name="symbol">The symbol to optimize.</param>
+    /// <param name="timeframe">The timeframe to optimize.</param>
+    /// <param name="options">Execution options (parallelism, etc.).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The execution state for this cell's jobs.</returns>
+    Task<PlanExecutionState> RunCellAsync(
+        string planId,
+        string symbol,
+        string timeframe,
+        PlanExecutionOptions? options = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Event fired when execution state changes.
     /// </summary>
     event EventHandler<PlanExecutionStateChangedEventArgs>? StateChanged;
@@ -88,6 +105,23 @@ public record PlanExecutionOptions
     /// Whether to resume from a previous paused execution.
     /// </summary>
     public bool ResumeIfPaused { get; init; } = true;
+
+    /// <summary>
+    /// Whether to use job prioritization based on promise scores.
+    /// When enabled, jobs are executed in order of their promise score rather than sequentially.
+    /// </summary>
+    public bool UsePrioritization { get; init; } = true;
+
+    /// <summary>
+    /// Whether to auto-queue follow-up jobs at higher resolution for promising results.
+    /// </summary>
+    public bool AutoQueueFollowUps { get; init; } = true;
+
+    /// <summary>
+    /// Optional filter to only run jobs for a specific date range (by name).
+    /// When null, all date ranges are included.
+    /// </summary>
+    public string? DateRangeFilter { get; init; }
 }
 
 /// <summary>

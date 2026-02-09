@@ -7,6 +7,7 @@ public class OptimizationScorer
 {
     private readonly IReadOnlyList<BacktestBatchJournalEntry> _results;
     private readonly List<double> _adValues;
+    private readonly ScoringFormulaParser _formulaParser;
 
     /// <summary>
     /// Creates a new scorer for the given backtest results.
@@ -15,19 +16,39 @@ public class OptimizationScorer
     {
         _results = results.ToList();
         _adValues = AdCalculator.ExtractAdValues(_results);
+        _formulaParser = new ScoringFormulaParser(_results);
     }
 
     /// <summary>
     /// Calculates the optimization score using the specified formula.
     /// </summary>
     /// <param name="formula">Scoring formula (e.g., "countWhere(ad >= 1.0)")</param>
-    /// <param name="threshold">Default threshold for countWhere if using simple formula</param>
+    /// <param name="threshold">Default threshold for summary statistics</param>
     /// <returns>Calculated optimization score with histogram and summary</returns>
+    /// <remarks>
+    /// Supported formula features:
+    /// - Metrics: ad, winRate, tradeCount
+    /// - Functions: countWhere(metric op value), percentWhere(metric op value), avg(metric), max(metric), min(metric), sum(metric), pow(x, y), log(x), sqrt(x)
+    /// - Operators: +, -, *, /
+    /// - Parentheses for grouping
+    ///
+    /// Examples:
+    /// - countWhere(ad >= 1.0)
+    /// - countWhere(ad >= 1.0) * 0.7 + countWhere(winRate >= 0.5) * 0.3
+    /// - pow(countWhere(ad >= 2.0), 1.5) * log(avg(tradeCount) + 1)
+    /// </remarks>
     public OptimizationScore Calculate(string formula = "countWhere(ad >= 1.0)", double threshold = 1.0)
     {
-        // For now, implement basic countWhere(ad >= threshold) directly
-        // Full formula parser will be added in Phase 02
-        var scoreValue = EvaluateSimpleFormula(formula, threshold);
+        double scoreValue;
+        try
+        {
+            scoreValue = _formulaParser.Evaluate(formula);
+        }
+        catch (FormulaParseException)
+        {
+            // For backwards compatibility, fall back to simple evaluation for basic formulas
+            scoreValue = EvaluateSimpleFormula(formula, threshold);
+        }
 
         var histogram = HistogramGenerator.GenerateAdHistogram(_adValues);
         var summary = AdCalculator.CalculateSummary(_adValues, threshold);
@@ -43,7 +64,18 @@ public class OptimizationScorer
     }
 
     /// <summary>
-    /// Evaluates a simple formula without full parsing.
+    /// Evaluates a formula directly using the formula parser.
+    /// </summary>
+    /// <param name="formula">The formula to evaluate</param>
+    /// <returns>The calculated score value</returns>
+    /// <exception cref="FormulaParseException">Thrown when the formula cannot be parsed or evaluated</exception>
+    public double EvaluateFormula(string formula)
+    {
+        return _formulaParser.Evaluate(formula);
+    }
+
+    /// <summary>
+    /// Evaluates a simple formula without full parsing (legacy support).
     /// Supports: countWhere(ad >= X), percentWhere(ad >= X), avg(ad), max(ad), min(ad)
     /// </summary>
     private double EvaluateSimpleFormula(string formula, double defaultThreshold)

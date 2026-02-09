@@ -66,6 +66,17 @@ public record OptimizationPlan
     public OptimizationScoring? Scoring { get; init; }
 
     /// <summary>
+    /// Number of parallel workers to use when executing this plan.
+    /// </summary>
+    public int ParallelWorkers { get; init; } = 1;
+
+    /// <summary>
+    /// Optional prioritization configuration.
+    /// Controls job execution order and follow-up queuing.
+    /// </summary>
+    public OptimizationPlanPrioritization? Prioritization { get; init; }
+
+    /// <summary>
     /// Tags for categorization and filtering.
     /// </summary>
     public IReadOnlyList<string> Tags { get; init; } = [];
