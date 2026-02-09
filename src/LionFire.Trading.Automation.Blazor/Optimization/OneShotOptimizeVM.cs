@@ -33,7 +33,7 @@ using System.Threading.Tasks;
 
 namespace LionFire.Trading.Automation.Blazor.Optimization;
 
-public partial class OneShotOptimizeVM : DisposableBaseViewModel
+public partial class OneShotOptimizeVM : DisposableBaseViewModel, IOptimizationResultsVM
 {
     public LogVM LinesVM { get; } = new();
     public ILogger ConsoleLog => LinesVM;
@@ -468,7 +468,7 @@ public partial class OneShotOptimizeVM : DisposableBaseViewModel
     #endregion
 
     public List<string> Exchanges { get; set; } = ["Binance", "MEXC", "Phemex", "Bybit"];
-    public List<string> TimeFrames { get; set; } = ["m1", "h1"];
+    public List<string> TimeFrames { get; set; } = ["m1", "m5", "m15", "m30", "h1", "h2", "h4", "h8", "h12", "d1"];
 
     #endregion
 
