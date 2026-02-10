@@ -106,6 +106,7 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
     public KlineArrayFileProvider? KlineArrayFileProvider { get; set; }
     public ILogger<RetrieveHistoricalDataJob> Logger { get; set; }
     public IBinanceRestClient? BinanceClient { get; set; }
+    public IExchangeRateLimitTracker? RateLimitTracker { get; set; }
 
     BarsFileSource BarsFileSource { get; set; }
     DateChunker RangeProvider { get; set; }
@@ -115,13 +116,14 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
     #region Lifecycle
 
     //public RetrieveHistoricalDataJob() { }
-    public RetrieveHistoricalDataJob(IBinanceRestClient? binanceClient, ILogger<RetrieveHistoricalDataJob> logger, KlineArrayFileProvider? klineArrayFileProvider, BarsFileSource barsFileSource, DateChunker historicalDataChunkRangeProvider)
+    public RetrieveHistoricalDataJob(IBinanceRestClient? binanceClient, ILogger<RetrieveHistoricalDataJob> logger, KlineArrayFileProvider? klineArrayFileProvider, BarsFileSource barsFileSource, DateChunker historicalDataChunkRangeProvider, IExchangeRateLimitTracker? rateLimitTracker = null)
     {
         BinanceClient = binanceClient;
         Logger = logger;
         KlineArrayFileProvider = klineArrayFileProvider;
         BarsFileSource = barsFileSource;
         RangeProvider = historicalDataChunkRangeProvider;
+        RateLimitTracker = rateLimitTracker;
     }
 
     #endregion
@@ -867,43 +869,54 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
     private async Task<int?> CheckWeight_Binance(IEnumerable<KeyValuePair<string, IEnumerable<string>>>? responseHeaders)
     {
         int? result = null;
-        if (!Input.QuietFlag)
-        {
-            foreach (var h in responseHeaders ?? Enumerable.Empty<KeyValuePair<string, IEnumerable<string>>>())
-            {
-                if (h.Key.ToUpperInvariant().Contains("WEIGHT") && h.Key.ToUpperInvariant() != "X-MBX-USED-WEIGHT-1M")
-                {
-                    foreach (var v in h.Value)
-                    {
-                        //Logger.LogTrace("X-MBX-USED-WEIGHT-1M: " + maxUsedWeight);
-                        Logger.LogWarning("TODO - handle weight from server: {header} = {value}", h.Key, v);
-                    }
-                }
 
-                if (h.Key != "X-MBX-USED-WEIGHT-1M") continue;
-                foreach (var v in h.Value)
+        if (responseHeaders == null)
+        {
+            Logger.LogDebug("Binance response headers are null");
+            return result;
+        }
+
+        foreach (var h in responseHeaders)
+        {
+            var keyUpper = h.Key.ToUpperInvariant();
+
+            // Track any weight header (case-insensitive)
+            if (keyUpper.Contains("USED-WEIGHT") || keyUpper.Contains("USED_WEIGHT"))
+            {
+                var valueStr = h.Value.FirstOrDefault();
+                if (int.TryParse(valueStr, out var weight))
                 {
-                    //Console.WriteLine($"{h.Key} = {v}");
-                    Logger.LogInformation("{header} = {value}", h.Key, v);
-                    if (int.TryParse(v, out var weight))
+                    // Always report to tracker regardless of QuietFlag
+                    RateLimitTracker?.ReportWeight(Input.ExchangeFlag ?? "Binance", h.Key, weight);
+
+                    if (keyUpper == "X-MBX-USED-WEIGHT-1M")
                     {
                         result = weight;
-
-                        if (weight > EmergencyMaxWeight)
-                        {
-                            Logger.LogInformation($"API rate limiting: weight of {weight} is above local threshold of {EmergencyMaxWeight}.  Waiting.");
-                            await Task.Delay(60 * 1000);
-                        }
-
-                        if (weight > MaxWeight)
-                        {
-                            Logger.LogInformation($"API rate limiting: weight of {weight} is above local threshold of {MaxWeight}.  Waiting.");
-                            await Task.Delay(3 * 1000);
-                        }
                     }
+
+                    if (!Input.QuietFlag)
+                    {
+                        Logger.LogInformation("{header} = {value}", h.Key, valueStr);
+                    }
+
+                    if (weight > EmergencyMaxWeight)
+                    {
+                        Logger.LogInformation("API rate limiting: weight of {Weight} is above local threshold of {EmergencyMaxWeight}. Waiting.", weight, EmergencyMaxWeight);
+                        await Task.Delay(60 * 1000);
+                    }
+                    else if (weight > MaxWeight)
+                    {
+                        Logger.LogInformation("API rate limiting: weight of {Weight} is above local threshold of {MaxWeight}. Waiting.", weight, MaxWeight);
+                        await Task.Delay(3 * 1000);
+                    }
+                }
+                else if (!Input.QuietFlag)
+                {
+                    Logger.LogWarning("Could not parse weight header: {header} = {value}", h.Key, valueStr);
                 }
             }
         }
+
         return result;
     }
 
