@@ -7,11 +7,13 @@
         {
             <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Small"
                            OnClick="ClearSelection" Title="Back to bot list" />
-        }
-        <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Bots</MudText>
-        @if (!string.IsNullOrEmpty(SelectedBot))
-        {
             <MudText Typo="Typo.subtitle2" Class="selected-bot-name">@SelectedBot</MudText>
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                           Href="/optimization/plans/new" Title="New plan" />
+        }
+        else
+        {
+            <MudText Typo="Typo.subtitle2" Class="mud-text-secondary">Bots</MudText>
         }
     </div>
 
@@ -70,7 +72,8 @@
     }
 
     .selected-bot-name {
-        margin-left: auto;
+        flex: 1;
+        text-align: center;
         color: var(--mud-palette-primary);
         font-weight: 500;
     }

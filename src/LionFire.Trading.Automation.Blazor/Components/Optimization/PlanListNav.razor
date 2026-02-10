@@ -1,6 +1,8 @@
 @namespace LionFire.Trading.Automation.Blazor.Components.Optimization
 @using LionFire.Trading.Optimization.Plans
 @using LionFire.Trading.Optimization.Execution
+@using LionFire.Trading.Optimization.Matrix
+@using LionFire.Trading.Automation.Optimization.Matrix
 
 <MudList T="string" Dense="true" Class="plan-list-nav" SelectedValue="@SelectedPlanId"
          SelectedValueChanged="OnSelectionChanged">
@@ -26,6 +28,7 @@
                         @if (state != null)
                         {
                             <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(state.Status)"
+                                     Variant="@GetStatusVariant(state.Status)"
                                      Class="status-chip">
                                 @GetStatusText(state.Status)
                             </MudChip>
@@ -44,8 +47,10 @@
                     </div>
                     @if (state != null && state.TotalJobs > 0)
                     {
-                        <MudProgressLinear Value="@GetProgressPercent(state)" Size="Size.Small"
-                                           Color="@GetStatusColor(state.Status)" Class="mt-1" />
+                        var dist = GetGradeDistribution(state);
+                        <MudTooltip Text="@dist.Tooltip">
+                            <div class="grade-bar mt-1" style="@dist.Style"></div>
+                        </MudTooltip>
                     }
                 </div>
             </MudListItem>
@@ -88,6 +93,12 @@
         justify-content: space-between;
         margin-top: 2px;
     }
+
+    .grade-bar {
+        height: 4px;
+        border-radius: 2px;
+        width: 100%;
+    }
 </style>
 
 @code {
@@ -120,6 +131,12 @@
         _ => Color.Default
     };
 
+    private Variant GetStatusVariant(PlanExecutionStatus status) => status switch
+    {
+        PlanExecutionStatus.Completed => Variant.Outlined,
+        _ => Variant.Filled
+    };
+
     private string GetStatusText(PlanExecutionStatus status) => status switch
     {
         PlanExecutionStatus.NotStarted => "Pending",
@@ -130,8 +147,115 @@
         _ => "Unknown"
     };
 
-    private double GetProgressPercent(PlanExecutionState state) =>
-        state.TotalJobs > 0 ? (double)state.CompletedJobs / state.TotalJobs * 100 : 0;
+    private record GradeBarData(string Style, string Tooltip);
+
+    // Grade group colors: A=green, B=blue, C=amber, D=orange, F=red, Error=black
+    private static readonly string ColorA = "#388E3C";
+    private static readonly string ColorB = "#1976D2";
+    private static readonly string ColorC = "#FF8F00";
+    private static readonly string ColorD = "#E65100";
+    private static readonly string ColorF = "#C62828";
+    private static readonly string ColorError = "#000000";
+    private static readonly string ColorPending = "#444";
+
+    private GradeBarData GetGradeDistribution(PlanExecutionState state)
+    {
+        int a = 0, b = 0, c = 0, d = 0, f = 0, err = 0;
+        int pending = 0;
+
+        foreach (var job in state.Jobs)
+        {
+            if (job.Status == JobStatus.Failed || job.Status == JobStatus.Cancelled)
+            {
+                err++;
+            }
+            else if (job.Status == JobStatus.Completed)
+            {
+                if (job.BestAD.HasValue)
+                {
+                    var grade = OptimizationGradeComputer.ComputeGrade(job.BestAD.Value);
+                    switch (grade)
+                    {
+                        case OptimizationGrade.APlus or OptimizationGrade.A or OptimizationGrade.AMinus:
+                            a++; break;
+                        case OptimizationGrade.BPlus or OptimizationGrade.B or OptimizationGrade.BMinus:
+                            b++; break;
+                        case OptimizationGrade.CPlus or OptimizationGrade.C or OptimizationGrade.CMinus:
+                            c++; break;
+                        case OptimizationGrade.D:
+                            d++; break;
+                        case OptimizationGrade.F:
+                            f++; break;
+                        default:
+                            err++; break;
+                    }
+                }
+                else
+                {
+                    err++;
+                }
+            }
+            else
+            {
+                pending++;
+            }
+        }
+
+        // If Jobs list is empty, fall back to summary counts
+        if (state.Jobs.Count == 0)
+        {
+            var completed = state.CompletedJobs;
+            var failed = state.FailedJobs;
+            pending = state.TotalJobs - completed - failed;
+            // Without per-job grades, show completed as generic blue
+            b = completed;
+            err = failed;
+        }
+
+        var total = (double)state.TotalJobs;
+        if (total <= 0) return new("background: #444;", "No jobs");
+
+        // Build gradient stops
+        var stops = new List<(string color, double pct)>();
+        if (a > 0) stops.Add((ColorA, a / total * 100));
+        if (b > 0) stops.Add((ColorB, b / total * 100));
+        if (c > 0) stops.Add((ColorC, c / total * 100));
+        if (d > 0) stops.Add((ColorD, d / total * 100));
+        if (f > 0) stops.Add((ColorF, f / total * 100));
+        if (err > 0) stops.Add((ColorError, err / total * 100));
+        if (pending > 0) stops.Add((ColorPending, pending / total * 100));
+
+        if (stops.Count == 0) return new("background: #444;", "No data");
+
+        if (stops.Count == 1)
+            return new($"background: {stops[0].color};", BuildTooltip(a, b, c, d, f, err, pending));
+
+        var gradientParts = new List<string>();
+        double pos = 0;
+        foreach (var (color, pct) in stops)
+        {
+            var end = pos + pct;
+            gradientParts.Add($"{color} {pos:F1}%");
+            gradientParts.Add($"{color} {end:F1}%");
+            pos = end;
+        }
+
+        var style = $"background: linear-gradient(to right, {string.Join(", ", gradientParts)});";
+        return new(style, BuildTooltip(a, b, c, d, f, err, pending));
+    }
+
+    private static string BuildTooltip(int a, int b, int c, int d, int f, int err, int pending)
+    {
+        var parts = new List<string>();
+        if (a > 0) parts.Add($"A: {a}");
+        if (b > 0) parts.Add($"B: {b}");
+        if (c > 0) parts.Add($"C: {c}");
+        if (d > 0) parts.Add($"D: {d}");
+        if (f > 0) parts.Add($"F: {f}");
+        if (err > 0) parts.Add($"Error: {err}");
+        if (pending > 0) parts.Add($"Pending: {pending}");
+        return string.Join(" | ", parts);
+    }
 
     private static string NormalizeBotName(string botName)
     {

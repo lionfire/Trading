@@ -36,8 +36,9 @@ public class JobPrioritizer : IJobPrioritizer
                 var promise = _calculator.CalculatePromise(job, completedJobs, config.Weights);
                 return new RankedJob(job, promise);
             })
-            .OrderByDescending(r => r.Promise.Score)
-            .ThenByDescending(r => r.Promise.Confidence) // Prefer higher confidence as tiebreaker
+            .OrderBy(r => r.Job.Priority) // Respect cell priority first (1=highest)
+            .ThenByDescending(r => r.Promise.Score) // Within same priority, use promise score
+            .ThenByDescending(r => r.Promise.Confidence)
             .ToList();
 
         _logger?.LogDebug(

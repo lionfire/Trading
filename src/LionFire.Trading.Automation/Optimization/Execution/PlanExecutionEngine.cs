@@ -103,8 +103,17 @@ public class PlanExecutionEngine : IPlanExecutionService
         PlanMatrixState? matrixState = null;
         if (_matrixService != null)
         {
-            try { matrixState = await _matrixService.GetStateAsync(planId); }
-            catch (Exception ex) { _logger.LogDebug(ex, "Could not load matrix state for plan {PlanId}, using default priorities", planId); }
+            try
+            {
+                matrixState = await _matrixService.GetStateAsync(planId);
+                _logger.LogInformation("Loaded matrix state for plan {PlanId}: {CellCount} cell states, {RowCount} row states, {ColCount} column states",
+                    planId, matrixState.CellStates.Count, matrixState.RowStates.Count, matrixState.ColumnStates.Count);
+            }
+            catch (Exception ex) { _logger.LogWarning(ex, "Could not load matrix state for plan {PlanId}, using default priorities", planId); }
+        }
+        else
+        {
+            _logger.LogWarning("No IPlanMatrixService available — all jobs will use default priority 5");
         }
 
         // Generate job matrix
@@ -114,6 +123,12 @@ public class PlanExecutionEngine : IPlanExecutionService
         _logger.LogInformation("Generated {JobCount} jobs for plan {PlanId}. Priority distribution: {Priorities}",
             jobs.Count, planId,
             string.Join(", ", priorityGroups.Select(g => $"P{g.Key}={g.Count()}")));
+
+        // Log first few jobs to verify order
+        foreach (var job in jobs.OrderBy(j => j.Priority).ThenBy(j => j.Symbol).ThenBy(j => j.Timeframe).Take(5))
+        {
+            _logger.LogInformation("  Job P{Priority}: {Symbol} {Timeframe}", job.Priority, job.Symbol, job.Timeframe);
+        }
 
         // Create execution context
         var executionId = Guid.NewGuid().ToString("N");
@@ -554,10 +569,15 @@ public class PlanExecutionEngine : IPlanExecutionService
                     context.PauseEvent.Wait(cancellationToken);
                 }
 
+                // Acquire semaphore BEFORE dequeuing to avoid pre-fetching the next job
+                await semaphore.WaitAsync(cancellationToken);
+
                 // Try to get next job - use prioritizer if enabled
                 var job = await GetNextJobAsync(context, cancellationToken);
                 if (job == null)
                 {
+                    semaphore.Release();
+
                     // Check if all jobs are done
                     var counts = await _jobQueue.GetCountsAsync(context.State.PlanId, cancellationToken);
                     if (counts.Running == 0 && counts.Pending == 0)
@@ -570,9 +590,6 @@ public class PlanExecutionEngine : IPlanExecutionService
                     await Task.Delay(100, cancellationToken);
                     continue;
                 }
-
-                // Acquire semaphore
-                await semaphore.WaitAsync(cancellationToken);
 
                 // Fire job started event
                 var state = context.State;

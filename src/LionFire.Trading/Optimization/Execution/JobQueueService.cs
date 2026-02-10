@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace LionFire.Trading.Optimization.Execution;
 
@@ -10,6 +11,12 @@ public class JobQueueService : IJobQueueService
 {
     private readonly ConcurrentDictionary<string, OptimizationJob> _jobs = new();
     private readonly object _dequeueLock = new();
+    private readonly ILogger<JobQueueService> _logger;
+
+    public JobQueueService(ILogger<JobQueueService> logger)
+    {
+        _logger = logger;
+    }
 
     public event EventHandler<JobStatusChangedEventArgs>? JobStatusChanged;
 
@@ -73,6 +80,9 @@ public class JobQueueService : IJobQueueService
 
             if (_jobs.TryUpdate(pendingJob.Id, runningJob, pendingJob))
             {
+                var pendingCount = _jobs.Values.Count(j => j.Status == JobStatus.Pending && (planId == null || j.PlanId == planId));
+                _logger.LogInformation("Dequeued job P{Priority}: {Symbol} {Timeframe} ({PendingRemaining} pending remaining)",
+                    runningJob.Priority, runningJob.Symbol, runningJob.Timeframe, pendingCount);
                 RaiseJobStatusChanged(runningJob, JobStatus.Pending, JobStatus.Running);
                 return Task.FromResult<OptimizationJob?>(runningJob);
             }
