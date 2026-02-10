@@ -12,6 +12,7 @@ public class MatrixResultsProvider : IMatrixResultsProvider
 {
     private readonly IPlanExecutionStateRepository _executionStateRepository;
     private readonly IPlanExecutionService _executionService;
+    private readonly DiskBacktestResultsScanner? _diskScanner;
     private readonly ILogger<MatrixResultsProvider> _logger;
 
     /// <summary>
@@ -22,11 +23,13 @@ public class MatrixResultsProvider : IMatrixResultsProvider
     public MatrixResultsProvider(
         IPlanExecutionStateRepository executionStateRepository,
         IPlanExecutionService executionService,
-        ILogger<MatrixResultsProvider> logger)
+        ILogger<MatrixResultsProvider> logger,
+        DiskBacktestResultsScanner? diskScanner = null)
     {
         _executionStateRepository = executionStateRepository;
         _executionService = executionService;
         _logger = logger;
+        _diskScanner = diskScanner;
     }
 
     /// <inheritdoc />
@@ -67,24 +70,41 @@ public class MatrixResultsProvider : IMatrixResultsProvider
             }
         }
 
-        if (executionState is null || executionState.Jobs.Count == 0)
-            return results;
-
-        // Group completed jobs by symbol|timeframe
-        var completedJobs = executionState.Jobs
-            .Where(j => j.Status == JobStatus.Completed)
-            .ToList();
-
-        var grouped = completedJobs
-            .GroupBy(j => PlanMatrixState.CellKey(j.Symbol, j.Timeframe));
-
-        foreach (var group in grouped)
+        if (executionState is not null && executionState.Jobs.Count > 0)
         {
-            var jobs = group.ToList();
-            var result = AggregateJobs(jobs);
-            if (result is not null)
+            // Group completed jobs by symbol|timeframe
+            var completedJobs = executionState.Jobs
+                .Where(j => j.Status == JobStatus.Completed)
+                .ToList();
+
+            var grouped = completedJobs
+                .GroupBy(j => PlanMatrixState.CellKey(j.Symbol, j.Timeframe));
+
+            foreach (var group in grouped)
             {
-                results[group.Key] = result;
+                var jobs = group.ToList();
+                var result = AggregateJobs(jobs);
+                if (result is not null)
+                {
+                    results[group.Key] = result;
+                }
+            }
+        }
+
+        // Fall back to disk scan when no execution state results exist
+        if (results.Count == 0 && _diskScanner != null)
+        {
+            try
+            {
+                var diskResults = await _diskScanner.ScanForPlanAsync(planId);
+                foreach (var kvp in diskResults)
+                {
+                    results.TryAdd(kvp.Key, kvp.Value);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to scan disk for results for plan '{PlanId}'", planId);
             }
         }
 

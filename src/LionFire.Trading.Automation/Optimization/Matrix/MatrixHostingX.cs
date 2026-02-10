@@ -22,6 +22,7 @@ public static class MatrixHostingX
         });
         services.AddSingleton<IPlanMatrixStateRepository, FilePlanMatrixStateRepository>();
         services.AddSingleton<IPlanMatrixService, PlanMatrixService>();
+        services.AddSingleton<DiskBacktestResultsScanner>();
         services.AddSingleton<IMatrixResultsProvider, MatrixResultsProvider>();
 
         return services;
