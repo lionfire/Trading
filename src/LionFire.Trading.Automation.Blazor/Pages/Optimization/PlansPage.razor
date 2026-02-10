@@ -137,6 +137,7 @@
                             <MudTabPanel Text="Matrix" Icon="@Icons.Material.Filled.GridOn">
                                 <OptimizationMatrixDashboard Plan="_selectedPlan" PlanId="@_selectedPlan.Id"
                                                              OnRunCell="RunCell"
+                                                             OnCellDrillDown="HandleMatrixCellDrillDown"
                                                              OnOpenCellInOneShot="OpenCellInOneShot"
                                                              OnPlanChanged="OnPlanChanged" />
                             </MudTabPanel>
@@ -321,6 +322,7 @@
     [Inject] private IPlanExecutionService ExecutionService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private BotTypeRegistry? BotTypeRegistry { get; set; }
 
     private List<OptimizationPlan> _filteredPlans => _plans
@@ -612,6 +614,24 @@
                 DateRangeFilter = cell.DateRangeName
             };
 
+            // Check for already-completed jobs and prompt before re-running
+            var state = await ExecutionService.GetStatusAsync(_selectedPlan.Id);
+            var completedCount = state?.Jobs?.Count(j =>
+                j.Symbol == cell.Symbol && j.Timeframe == cell.Timeframe &&
+                (cell.DateRangeName == null || j.DateRange.Name == cell.DateRangeName) &&
+                j.Status == JobStatus.Completed) ?? 0;
+
+            if (completedCount > 0)
+            {
+                var rangeLabel = cell.DateRangeName ?? "all ranges";
+                var confirmed = await DialogService.ShowMessageBox(
+                    "Cell Already Completed",
+                    $"{cell.Symbol} / {cell.Timeframe} ({rangeLabel}) has {completedCount} completed job(s). Re-run?",
+                    yesText: "Re-run", cancelText: "Cancel");
+                if (confirmed != true) return;
+                options = options with { SkipCompleted = false };
+            }
+
             _currentExecutionState = await ExecutionService.RunCellAsync(
                 _selectedPlan.Id,
                 cell.Symbol,
@@ -640,6 +660,34 @@
         var bot = NormalizeBotName(_selectedPlan.Bot);
         Navigation.NavigateTo(
             $"/optimize/one-shot?bot={Uri.EscapeDataString(bot)}&symbol={Uri.EscapeDataString(cell.Symbol)}&timeframe={Uri.EscapeDataString(cell.Timeframe)}");
+    }
+
+    private async Task HandleMatrixCellDrillDown(MatrixCellEventArgs args)
+    {
+        if (_selectedPlan == null) return;
+
+        var state = await ExecutionService.GetStatusAsync(_selectedPlan.Id);
+
+        if (args.DateRangeName != null)
+        {
+            // Specific date range selected -> navigate to PlanJobDetail for that job
+            var job = state?.Jobs.FirstOrDefault(j =>
+                j.Symbol == args.Symbol && j.Timeframe == args.Timeframe &&
+                j.DateRange.Name == args.DateRangeName && j.Status == JobStatus.Completed);
+            if (job != null)
+            {
+                Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(_selectedPlan.Id)}/job/{Uri.EscapeDataString(job.Id)}");
+            }
+            else
+            {
+                Snackbar.Add($"No completed results for {args.Symbol}/{args.Timeframe} ({args.DateRangeName})", Severity.Info);
+            }
+        }
+        else
+        {
+            // "All Ranges" selected -> navigate to cell results page listing all date-range jobs
+            Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(_selectedPlan.Id)}/cell/{Uri.EscapeDataString(args.Symbol)}/{Uri.EscapeDataString(args.Timeframe)}");
+        }
     }
 
     private void StartPolling()

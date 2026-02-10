@@ -122,6 +122,12 @@ public record PlanExecutionOptions
     /// When null, all date ranges are included.
     /// </summary>
     public string? DateRangeFilter { get; init; }
+
+    /// <summary>
+    /// When true, jobs that match already-completed jobs (same symbol, timeframe, date range, resolution)
+    /// are skipped. Set to false to force re-running completed cells.
+    /// </summary>
+    public bool SkipCompleted { get; init; } = true;
 }
 
 /// <summary>

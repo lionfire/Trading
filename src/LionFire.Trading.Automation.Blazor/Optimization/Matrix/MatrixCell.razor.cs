@@ -383,7 +383,7 @@ public partial class MatrixCell : ComponentBase
 /// <summary>
 /// Event args for cell-level interactions (drill-down, re-run, history).
 /// </summary>
-public record MatrixCellEventArgs(string Symbol, string Timeframe);
+public record MatrixCellEventArgs(string Symbol, string Timeframe, string? DateRangeName = null);
 
 /// <summary>
 /// Event args for cell selection (Ctrl+click or Shift+Ctrl+click).

@@ -1,0 +1,177 @@
+@page "/optimization/plan/{PlanId}/cell/{Symbol}/{Timeframe}"
+@namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
+@rendermode @(new InteractiveServerRenderMode(prerender: false))
+
+@using LionFire.Trading.Optimization.Execution
+@using LionFire.Trading.Optimization.Plans
+
+@inject IPlanExecutionService ExecutionService
+@inject IOptimizationPlanRepository PlanRepository
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<div class="d-flex flex-column flex-grow-1 gap-2">
+    @* Header *@
+    <MudPaper Class="pa-4">
+        <div class="d-flex align-center gap-2 mb-2">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
+                           OnClick="NavigateBack"
+                           Title="Back to Plan" />
+            <MudText Typo="Typo.h6">@Symbol / @Timeframe</MudText>
+            <MudSpacer />
+            @if (_planName != null)
+            {
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@_planName</MudText>
+            }
+        </div>
+
+        @* Summary stats *@
+        @if (_jobs.Count > 0)
+        {
+            <div class="d-flex flex-row gap-6 flex-wrap">
+                <div class="lf-field">
+                    <div class="label">Total Jobs</div>
+                    <div class="value">@_jobs.Count</div>
+                </div>
+                <div class="lf-field">
+                    <div class="label">Completed</div>
+                    <div class="value">@_completedCount</div>
+                </div>
+                @if (_bestScore.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Best Score</div>
+                        <div class="value">@_bestScore.Value.ToString("F2")</div>
+                    </div>
+                }
+                @if (_bestAD.HasValue)
+                {
+                    <div class="lf-field">
+                        <div class="label">Best AD</div>
+                        <div class="value">@_bestAD.Value.ToString("F2")</div>
+                    </div>
+                }
+            </div>
+        }
+    </MudPaper>
+
+    @* Jobs table *@
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (_jobs.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">
+            No jobs found for @Symbol / @Timeframe in this plan.
+        </MudAlert>
+    }
+    else
+    {
+        <MudPaper>
+            <MudTable Items="@_jobs" Dense="true" Hover="true" Striped="true"
+                      OnRowClick="@OnRowClick" T="OptimizationJob" RowClass="cursor-pointer">
+                <HeaderContent>
+                    <MudTh>Date Range</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Score</MudTh>
+                    <MudTh>Best AD</MudTh>
+                    <MudTh>Backtests</MudTh>
+                    <MudTh>Duration</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Date Range">
+                        @if (!string.IsNullOrEmpty(context.DateRange.Name))
+                        {
+                            @context.DateRange.Name
+                        }
+                        else
+                        {
+                            @($"{context.StartDate:yyyy-MM-dd} - {context.EndDate:yyyy-MM-dd}")
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        @switch (context.Status)
+                        {
+                            case JobStatus.Completed:
+                                <MudChip T="string" Color="Color.Success" Size="Size.Small">Completed</MudChip>
+                                break;
+                            case JobStatus.Running:
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">Running</MudChip>
+                                break;
+                            case JobStatus.Failed:
+                                <MudChip T="string" Color="Color.Error" Size="Size.Small">Failed</MudChip>
+                                break;
+                            case JobStatus.Pending:
+                                <MudChip T="string" Color="Color.Default" Size="Size.Small">Pending</MudChip>
+                                break;
+                            default:
+                                <MudChip T="string" Color="Color.Default" Size="Size.Small">@context.Status</MudChip>
+                                break;
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="Score">@(context.Score?.ToString("F2") ?? "-")</MudTd>
+                    <MudTd DataLabel="Best AD">@(context.BestAD?.ToString("F2") ?? "-")</MudTd>
+                    <MudTd DataLabel="Backtests">@(context.TotalBacktests?.ToString("N0") ?? "-")</MudTd>
+                    <MudTd DataLabel="Duration">@(context.Duration?.ToString(@"mm\:ss") ?? "-")</MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+</div>
+
+@code {
+    [Parameter] public string PlanId { get; set; } = "";
+    [Parameter] public string Symbol { get; set; } = "";
+    [Parameter] public string Timeframe { get; set; } = "";
+
+    private List<OptimizationJob> _jobs = [];
+    private bool _loading = true;
+    private string? _planName;
+    private int _completedCount;
+    private double? _bestScore;
+    private double? _bestAD;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load plan name
+        try
+        {
+            var plan = await PlanRepository.GetAsync(PlanId);
+            _planName = plan?.Name;
+        }
+        catch { /* ignore */ }
+
+        // Load jobs for this cell
+        var state = await ExecutionService.GetStatusAsync(PlanId);
+        _jobs = state?.Jobs
+            .Where(j => j.Symbol == Symbol && j.Timeframe == Timeframe)
+            .OrderBy(j => j.StartDate)
+            .ToList() ?? [];
+
+        _completedCount = _jobs.Count(j => j.Status == JobStatus.Completed);
+        _bestScore = _jobs.Where(j => j.Score.HasValue).Select(j => j.Score!.Value).DefaultIfEmpty().Max();
+        _bestAD = _jobs.Where(j => j.BestAD.HasValue).Select(j => j.BestAD!.Value).DefaultIfEmpty().Max();
+        if (_bestScore == 0) _bestScore = null;
+        if (_bestAD == 0) _bestAD = null;
+
+        _loading = false;
+    }
+
+    private void OnRowClick(TableRowClickEventArgs<OptimizationJob> args)
+    {
+        if (args.Item.Status == JobStatus.Completed)
+        {
+            Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(PlanId)}/job/{Uri.EscapeDataString(args.Item.Id)}");
+        }
+        else if (args.Item.Status == JobStatus.Failed && args.Item.Error != null)
+        {
+            Snackbar.Add($"Job failed: {args.Item.Error}", Severity.Error);
+        }
+    }
+
+    private void NavigateBack()
+    {
+        Navigation.NavigateTo($"/optimization/plans/{Uri.EscapeDataString(PlanId)}");
+    }
+}

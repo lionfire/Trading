@@ -36,6 +36,14 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
     public EventCallback<(string Symbol, string Timeframe)> OnOpenCellInOneShot { get; set; }
 
     /// <summary>
+    /// Fired when a user drills down into a cell (click or Enter).
+    /// If this callback has a delegate, the parent handles navigation.
+    /// Otherwise, the dashboard uses its default navigation behavior.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MatrixCellEventArgs> OnCellDrillDown { get; set; }
+
+    /// <summary>
     /// Fired when the plan is modified (e.g., timeframe added/removed) so the parent can update its state.
     /// </summary>
     [Parameter]
@@ -106,7 +114,7 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
 
     // --- Date range selection ---
 
-    private int _selectedDateRangeIndex;
+    private int _selectedDateRangeIndex = -1;
 
     /// <summary>
     /// Standard timeframes available for adding to the matrix.
@@ -812,8 +820,19 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
 
     // --- Cell interaction handlers ---
 
-    private void HandleCellDrillDown(MatrixCellEventArgs args)
+    private async void HandleCellDrillDown(MatrixCellEventArgs args)
     {
+        // Enrich with date range info
+        var enrichedArgs = args with { DateRangeName = SelectedDateRange?.Name };
+
+        // If parent handles drill-down, delegate to it
+        if (OnCellDrillDown.HasDelegate)
+        {
+            await OnCellDrillDown.InvokeAsync(enrichedArgs);
+            return;
+        }
+
+        // Default behavior
         var result = GetCellResult(args.Symbol, args.Timeframe);
         if (result is not null)
         {

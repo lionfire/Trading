@@ -26,6 +26,7 @@
         <MudSelect T="int" Label="Date Range" Dense="true" Variant="Variant.Outlined"
                    Value="@SelectedDateRangeIndex" ValueChanged="@OnDateRangeIndexChanged"
                    Style="max-width: 160px;" Margin="Margin.Dense" Class="mr-2">
+            <MudSelectItem T="int" Value="@(-1)">All Ranges</MudSelectItem>
             @for (var i = 0; i < DateRanges.Count; i++)
             {
                 var idx = i;

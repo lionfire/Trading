@@ -432,6 +432,61 @@ public class PlanExecutionEngine : IPlanExecutionService
 
         _logger.LogInformation("Generated {JobCount} jobs for cell {Symbol}/{Timeframe}", jobs.Count, symbol, timeframe);
 
+        // Skip completed jobs if requested
+        if (options.SkipCompleted)
+        {
+            var prevCompletedJobs = new List<OptimizationJob>();
+            if (_completedExecutions.TryGetValue(planId, out var prevExec))
+            {
+                prevCompletedJobs.AddRange(prevExec.Jobs.Where(j => j.Status == JobStatus.Completed));
+            }
+            else if (_stateRepository != null)
+            {
+                try
+                {
+                    var prevState = await _stateRepository.LoadAsync(planId, cancellationToken);
+                    if (prevState?.Jobs != null)
+                        prevCompletedJobs.AddRange(prevState.Jobs.Where(j => j.Status == JobStatus.Completed));
+                }
+                catch { /* ignore load failures */ }
+            }
+
+            if (prevCompletedJobs.Count > 0)
+            {
+                var originalCount = jobs.Count;
+                jobs = jobs.Where(newJob => !prevCompletedJobs.Any(prev =>
+                    prev.Symbol == newJob.Symbol &&
+                    prev.Timeframe == newJob.Timeframe &&
+                    prev.DateRange.Name == newJob.DateRange.Name &&
+                    prev.Resolution.MaxBacktests == newJob.Resolution.MaxBacktests &&
+                    prev.Status == JobStatus.Completed &&
+                    prev.ResultPath != null
+                )).ToList();
+
+                var skippedCount = originalCount - jobs.Count;
+                if (skippedCount > 0)
+                {
+                    _logger.LogInformation("Skipped {SkippedCount} already-completed jobs for {Symbol}/{Timeframe}", skippedCount, symbol, timeframe);
+                }
+
+                if (jobs.Count == 0)
+                {
+                    _logger.LogInformation("All jobs for {Symbol}/{Timeframe} already completed, nothing to run", symbol, timeframe);
+                    return new PlanExecutionState
+                    {
+                        PlanId = planId,
+                        ExecutionId = Guid.NewGuid().ToString("N"),
+                        Status = PlanExecutionStatus.Completed,
+                        TotalJobs = prevCompletedJobs.Count,
+                        CompletedJobs = prevCompletedJobs.Count,
+                        Jobs = prevCompletedJobs,
+                        StartedAt = DateTimeOffset.UtcNow,
+                        CompletedAt = DateTimeOffset.UtcNow
+                    };
+                }
+            }
+        }
+
         // Check if there's an active execution context for this plan
         if (_activeExecutions.TryGetValue(planId, out var existingContext))
         {
