@@ -18,6 +18,10 @@ public static class PlanExecutionHostingX
         this IServiceCollection services,
         IConfiguration? configuration = null)
     {
+        // Job ordering helper (uses ISymbolDataProvider if available for volume-based symbol ranking)
+        services.AddSingleton<JobOrderingHelper>(sp =>
+            new JobOrderingHelper(sp.GetService<ISymbolDataProvider>()));
+
         // Job queue
         services.AddSingleton<IJobQueueService, JobQueueService>();
 
@@ -47,6 +51,10 @@ public static class PlanExecutionHostingX
         this IServiceCollection services,
         Action<FilePlanExecutionStateOptions> configureOptions)
     {
+        // Job ordering helper
+        services.AddSingleton<JobOrderingHelper>(sp =>
+            new JobOrderingHelper(sp.GetService<ISymbolDataProvider>()));
+
         // Job queue
         services.AddSingleton<IJobQueueService, JobQueueService>();
 

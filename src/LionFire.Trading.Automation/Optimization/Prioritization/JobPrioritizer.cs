@@ -1,5 +1,6 @@
 using LionFire.Trading.Optimization.Execution;
 using Microsoft.Extensions.Logging;
+using static LionFire.Trading.Optimization.Execution.JobOrderingHelper;
 
 namespace LionFire.Trading.Automation.Optimization.Prioritization;
 
@@ -9,11 +10,13 @@ namespace LionFire.Trading.Automation.Optimization.Prioritization;
 public class JobPrioritizer : IJobPrioritizer
 {
     private readonly PromiseScoreCalculator _calculator;
+    private readonly JobOrderingHelper _orderingHelper;
     private readonly ILogger<JobPrioritizer>? _logger;
 
-    public JobPrioritizer(PromiseScoreCalculator calculator, ILogger<JobPrioritizer>? logger = null)
+    public JobPrioritizer(PromiseScoreCalculator calculator, JobOrderingHelper orderingHelper, ILogger<JobPrioritizer>? logger = null)
     {
         _calculator = calculator;
+        _orderingHelper = orderingHelper;
         _logger = logger;
     }
 
@@ -37,8 +40,11 @@ public class JobPrioritizer : IJobPrioritizer
                 return new RankedJob(job, promise);
             })
             .OrderBy(r => r.Job.Priority) // Respect cell priority first (1=highest)
-            .ThenByDescending(r => r.Promise.Score) // Within same priority, use promise score
+            .ThenBy(r => GetTimeframeSortKey(r.Job.Timeframe)) // Coarser timeframes first
+            .ThenBy(r => _orderingHelper.GetSymbolSortKey(r.Job.Symbol)) // Higher volume/marketcap first
+            .ThenByDescending(r => r.Promise.Score) // Within same priority+tf+symbol, use promise score
             .ThenByDescending(r => r.Promise.Confidence)
+            .ThenBy(r => r.Job.Symbol, StringComparer.Ordinal) // Final alphabetical tiebreaker
             .ToList();
 
         _logger?.LogDebug(

@@ -12,10 +12,12 @@ public class JobQueueService : IJobQueueService
     private readonly ConcurrentDictionary<string, OptimizationJob> _jobs = new();
     private readonly object _dequeueLock = new();
     private readonly ILogger<JobQueueService> _logger;
+    private readonly JobOrderingHelper _orderingHelper;
 
-    public JobQueueService(ILogger<JobQueueService> logger)
+    public JobQueueService(ILogger<JobQueueService> logger, JobOrderingHelper orderingHelper)
     {
         _logger = logger;
+        _orderingHelper = orderingHelper;
     }
 
     public event EventHandler<JobStatusChangedEventArgs>? JobStatusChanged;
@@ -57,13 +59,14 @@ public class JobQueueService : IJobQueueService
         lock (_dequeueLock)
         {
             // Find highest-priority pending job (optionally filtered by plan)
-            // Secondary sort by symbol+timeframe for deterministic ordering within same priority
+            // Tiebreakers: coarser timeframes first, higher-volume symbols first, then alphabetical
             var pendingJob = _jobs.Values
                 .Where(j => j.Status == JobStatus.Pending)
                 .Where(j => planId == null || j.PlanId == planId)
                 .OrderBy(j => j.Priority)
+                .ThenBy(j => JobOrderingHelper.GetTimeframeSortKey(j.Timeframe))
+                .ThenBy(j => _orderingHelper.GetSymbolSortKey(j.Symbol))
                 .ThenBy(j => j.Symbol, StringComparer.Ordinal)
-                .ThenBy(j => j.Timeframe, StringComparer.Ordinal)
                 .FirstOrDefault();
 
             if (pendingJob == null)

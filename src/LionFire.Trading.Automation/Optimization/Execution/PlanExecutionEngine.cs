@@ -21,6 +21,7 @@ public class PlanExecutionEngine : IPlanExecutionService
     private readonly IJobPrioritizer? _prioritizer;
     private readonly IPlanMatrixService? _matrixService;
     private readonly JobMatrixGenerator _matrixGenerator;
+    private readonly JobOrderingHelper _orderingHelper;
     private readonly ILogger<PlanExecutionEngine> _logger;
 
     private readonly ConcurrentDictionary<string, ExecutionContext> _activeExecutions = new();
@@ -36,6 +37,7 @@ public class PlanExecutionEngine : IPlanExecutionService
         IPlanExecutionStateRepository? stateRepository,
         IJobPrioritizer? prioritizer,
         IPlanMatrixService? matrixService,
+        JobOrderingHelper orderingHelper,
         ILogger<PlanExecutionEngine> logger)
     {
         _planRepository = planRepository;
@@ -45,6 +47,7 @@ public class PlanExecutionEngine : IPlanExecutionService
         _prioritizer = prioritizer;
         _matrixService = matrixService;
         _matrixGenerator = new JobMatrixGenerator(symbolRepository);
+        _orderingHelper = orderingHelper;
         _logger = logger;
     }
 
@@ -98,6 +101,9 @@ public class PlanExecutionEngine : IPlanExecutionService
         }
 
         _logger.LogInformation("Starting execution of plan {PlanId}: {PlanName}", planId, plan.Name);
+
+        // Pre-load symbol rankings for tiebreaker ordering (volume/marketcap)
+        await _orderingHelper.EnsureSymbolRanksLoadedAsync(cancellationToken);
 
         // Load matrix state for priority assignment
         PlanMatrixState? matrixState = null;
