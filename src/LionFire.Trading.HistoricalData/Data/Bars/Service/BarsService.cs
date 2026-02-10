@@ -26,6 +26,15 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
 
     #endregion
 
+    #region Events
+
+    /// <summary>
+    /// Fired after a chunk is successfully retrieved from an exchange and saved to disk.
+    /// </summary>
+    public event Action<SymbolBarsRange>? OnChunkRetrieved;
+
+    #endregion
+
     #region Dependencies
 
     public IServiceProvider ServiceProvider { get; }
@@ -109,7 +118,9 @@ public class BarsService : IBars, IListableBarsSource, IChunkedBars
         if (resultList != null)
         {
             if (resultList.Count != 1) throw new Exception("Expected exactly zero or one result.");
-            return resultList.Single();
+            var result = resultList.Single();
+            OnChunkRetrieved?.Invoke(range);
+            return result;
         }
         return null;
     }
