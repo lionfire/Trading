@@ -52,7 +52,7 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
         // TODO: Default to Fibonacci, with base of 0 (2 3 5 8 13...)
         OptimizerHints = OptimizationDistributionKind.Period,
         SearchLogarithmExponent = 2.0)]
-    public int Period { get; set; }
+    public int Period { get; set; } = 14;
 
     [TradingParameter(OptimizePriority = -3, OptimizerHints = OptimizationDistributionKind.Category, DefaultValue = MAT.Wilders,
         HardValueMin = 0, // TEMP - shouldn't need for Enums.
@@ -171,7 +171,7 @@ public class AverageTrueRange<TPrice, TOutput> : QuantConnectIndicatorWrapper<Av
     #region Lifecycle
 
     public static AverageTrueRange<TPrice, TOutput> Create(PAverageTrueRange<TPrice, TOutput> p) => new AverageTrueRange<TPrice, TOutput>(p);
-    public AverageTrueRange(PAverageTrueRange<TPrice, TOutput> parameters) : base(new global::QuantConnect.Indicators.AverageTrueRange("ATR", parameters.Period, parameters.MovingAverageType))
+    public AverageTrueRange(PAverageTrueRange<TPrice, TOutput> parameters) : base(new global::QuantConnect.Indicators.AverageTrueRange("ATR", parameters.Period > 0 ? parameters.Period : 14, parameters.MovingAverageType))
     {
         Parameters = parameters;
     }
