@@ -36,10 +36,12 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
 
     #region Parameters
 
-    [TradingParameter(HardValueMin = 2,
-        DefaultMin = 3, 
+    [TradingParameter(
+        OptimizePriority = -3,
+        HardValueMin = 2,
+        DefaultMin = 3,
         DefaultMax = 100,
-        ValueMax = 300, 
+        ValueMax = 300,
         HardValueMax = 65_536, // Arbitrary, can increase
         DefaultExponent = 1.618,
         MinExponent = 1.0,
@@ -48,7 +50,7 @@ public class PAverageTrueRange<TPrice, TOutput> : IndicatorParameters<AverageTru
         Step = 1,
         MaxStep = 100,
         // TODO: Default to Fibonacci, with base of 0 (2 3 5 8 13...)
-        OptimizerHints = OptimizationDistributionKind.Period, 
+        OptimizerHints = OptimizationDistributionKind.Period,
         SearchLogarithmExponent = 2.0)]
     public int Period { get; set; }
 

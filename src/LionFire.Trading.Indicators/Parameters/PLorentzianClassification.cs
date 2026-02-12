@@ -27,6 +27,7 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// The number of nearest neighbors to consider in k-NN classification (default: 8)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -2,
         HardValueMin = 1,
         DefaultMin = 3,
         DefaultMax = 50,
@@ -43,6 +44,7 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// The lookback period for storing historical patterns (default: 100)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -3,
         HardValueMin = 20,
         DefaultMin = 50,
         DefaultMax = 1000,
@@ -62,6 +64,7 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// The window size for feature normalization (default: 20)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -5,
         HardValueMin = 5,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -78,6 +81,7 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// RSI period for feature extraction (default: 14)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -10,
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -94,6 +98,7 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// CCI period for feature extraction (default: 20)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -10,
         HardValueMin = 2,
         DefaultMin = 10,
         DefaultMax = 50,
@@ -110,6 +115,7 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// ADX period for feature extraction (default: 14)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -10,
         HardValueMin = 2,
         DefaultMin = 5,
         DefaultMax = 50,
@@ -126,12 +132,12 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// Minimum confidence required to generate a signal (default: 0.6)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -1,
         HardValueMin = 0.0,
         DefaultMin = 0.5,
         DefaultMax = 0.9,
         HardValueMax = 1.0,
         Step = 0.05,
-        OptimizePriority = -1,
         DefaultValue = 0.6)]
     public double MinConfidence { get; set; } = 0.6;
 
@@ -140,6 +146,7 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// This determines how many bars in the future we look to determine if the pattern was bullish/bearish
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -3,
         HardValueMin = 1,
         DefaultMin = 2,
         DefaultMax = 20,
@@ -156,19 +163,19 @@ public class PLorentzianClassification<TPrice, TOutput> : IndicatorParameters<OH
     /// Threshold for labeling patterns as bullish/bearish based on price change (default: 0.01 = 1%)
     /// </summary>
     [TradingParameter(
+        OptimizePriority = -1,
         HardValueMin = 0.0001,
         DefaultMin = 0.005,
         DefaultMax = 0.05,
         HardValueMax = 0.2,
         Step = 0.001,
-        OptimizePriority = -1,
         DefaultValue = 0.01)]
     public double LabelThreshold { get; set; } = 0.01;
 
     /// <summary>
     /// Implementation selection hint for runtime selection
     /// </summary>
-    [TradingParameter(OptimizePriority = -10)]
+    [TradingParameter(OptimizePriority = -100)]
     public ImplementationHint ImplementationHint { get; set; } = ImplementationHint.Auto;
 
     #endregion
