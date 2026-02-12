@@ -13,6 +13,7 @@ using LionFire.Hosting;
 using LionFire.Hosting.CommandLine;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Automation.Bots;
+using LionFire.Trading.Bots.LorentzianDynamic;
 using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Journal;
@@ -36,7 +37,7 @@ public static class BacktestRunHandler
         cmd.AddOption(new Option<string?>("--preset", "Named preset from presets directory"));
 
         // Core options
-        var botOption = new Option<string?>("--bot", "Bot type to run (e.g., PAtrBot)");
+        var botOption = new Option<string?>("--bot", "Bot type to run (e.g., AtrBot, LorentzianDynamicBot)");
         botOption.AddAlias("-b");
         cmd.AddOption(botOption);
 
@@ -77,8 +78,8 @@ public static class BacktestRunHandler
                 .AutomationModel(builder.Configuration)
                 .Automation(builder.Configuration)
                 .AddHistoricalBars(builder.Configuration)
-                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>))
-                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>))
+                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>), typeof(PLorentzianDynamicBot<>))
+                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>), typeof(LorentzianDynamicBot<>))
                 .AddSingleton<IBinanceRestClient>(sp => new BinanceRestClient());
 
             builder.Services.AddRunTaskAndShutdown(async (serviceProvider) =>
@@ -125,7 +126,10 @@ public static class BacktestRunHandler
 
                     if (pBotType == null)
                     {
-                        var availableTypes = string.Join(", ", botTypeRegistry.PBotRegistry.Names.Keys.Take(10));
+                        var availableTypes = string.Join(", ", botTypeRegistry.PBotRegistry.Names.Keys
+                            .Select(k => k.StartsWith("P") && k.Length > 1 && char.IsUpper(k[1]) ? k[1..] : k)
+                            .OrderBy(k => k)
+                            .Take(10));
                         WriteError(options.Json, $"Bot type not found: {options.Bot}. Available: {availableTypes}...");
                         Environment.ExitCode = 1;
                         return;
@@ -263,9 +267,13 @@ public static class BacktestRunHandler
                     var batchHarness = new BatchHarness<double>(batchContext);
                     await batchHarness.Init();
 
+                    AnsiConsole.MarkupLine($"[dim]  BatchHarness initialized. PBotType: {pBotType.Name}[/]");
+
                     // Run the single backtest
                     await batchHarness.StartAsync(cts.Token);
                     await batchHarness.RunTask;
+
+                    AnsiConsole.MarkupLine($"[dim]  Backtest complete.[/]");
 
                     stopwatch.Stop();
 
