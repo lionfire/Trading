@@ -4,6 +4,7 @@ using LightweightCharts.Blazor.Customization.Chart;
 using LightweightCharts.Blazor.Customization.Enums;
 using LightweightCharts.Blazor.Customization.Series;
 using LightweightCharts.Blazor.DataItems;
+using LightweightCharts.Blazor.Models;
 using LightweightCharts.Blazor.Plugins;
 using LightweightCharts.Blazor.Series;
 using LionFire.Trading.HistoricalData.Retrieval;
@@ -63,6 +64,24 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     [Parameter]
     public bool AutoScrollToRealTime { get; set; } = true;
 
+    /// <summary>
+    /// If true, scrolling left past loaded data will automatically fetch and prepend older bars.
+    /// </summary>
+    [Parameter]
+    public bool InfiniteScroll { get; set; } = true;
+
+    /// <summary>
+    /// Number of bars from the left edge of loaded data that triggers loading more.
+    /// </summary>
+    [Parameter]
+    public int InfiniteScrollThreshold { get; set; } = 50;
+
+    /// <summary>
+    /// Number of bars to fetch when loading more history.
+    /// </summary>
+    [Parameter]
+    public int InfiniteScrollBatchSize { get; set; } = 500;
+
     #endregion
 
     #region State
@@ -85,6 +104,12 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
     /// The open time of the last bar on the chart. Used for gap detection.
     /// </summary>
     public DateTime? LastBarOpenTime { get; private set; }
+
+    // Infinite scroll state
+    private List<CandlestickData<long>> _loadedData = new();
+    private DateTime? _earliestBarTime;
+    private bool _isLoadingMore;
+    private ITimeScaleApi<long>? _timeScaleApi;
 
     private string _selectedExchange = "binance";
     private string SelectedExchange
@@ -183,6 +208,13 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        // Unsubscribe from time scale events
+        if (_timeScaleApi != null)
+        {
+            _timeScaleApi.VisibleLogicalRangeChanged -= OnVisibleLogicalRangeChanged;
+            _timeScaleApi = null;
+        }
+
         // Detach markers plugin if it exists
         if (_markersPlugin != null)
         {
@@ -198,6 +230,7 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
         }
 
         _currentMarkers.Clear();
+        _loadedData.Clear();
 
         // ChartComponent handles its own disposal
         _candlestickSeries = null;
@@ -301,6 +334,7 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
 
         IsLoading = true;
         ErrorMessage = null;
+        _isLoadingMore = false;
         StateHasChanged();
 
         try
@@ -321,10 +355,16 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
             if (result?.Values != null && result.Values.Count > 0)
             {
                 var chartData = ConvertToChartData(result.Values);
+                _loadedData = chartData;
+                _earliestBarTime = result.Values[0].OpenTime;
                 await _candlestickSeries.SetData(chartData);
 
                 // Track the last bar time for gap detection
                 LastBarOpenTime = result.Values[^1].OpenTime;
+
+                // Set up infinite scroll subscription BEFORE FitContent,
+                // so the event from FitContent is captured
+                await SetupInfiniteScrollAsync();
 
                 if (AutoFit && _chart != null)
                 {
@@ -337,6 +377,8 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
             }
             else
             {
+                _loadedData.Clear();
+                _earliestBarTime = null;
                 Logger.LogWarning("No data returned for {Symbol} {TimeFrame}", Symbol, TimeFrameString);
                 ErrorMessage = $"No data available for {Symbol}";
             }
@@ -410,6 +452,16 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
             };
 
             await _candlestickSeries.Update(chartData);
+
+            // Keep _loadedData in sync for infinite scroll
+            if (_loadedData.Count > 0 && chartData.Time == _loadedData[^1].Time)
+            {
+                _loadedData[^1] = chartData;
+            }
+            else
+            {
+                _loadedData.Add(chartData);
+            }
 
             // Track the last bar time for gap detection
             if (LastBarOpenTime == null || bar.OpenTime > LastBarOpenTime)
@@ -595,6 +647,154 @@ public partial class TradingChart : ComponentBase, IAsyncDisposable
             {
                 Logger.LogError(ex, "Failed to clear markers");
             }
+        }
+    }
+
+    #endregion
+
+    #region Infinite Scroll
+
+    private async Task SetupInfiniteScrollAsync()
+    {
+        if (!InfiniteScroll || _chart == null) return;
+
+        // Subscribe only once. The TimeScaleApi is a singleton cached by ChartComponent,
+        // and its JS event listener persists across SetData calls.
+        // IMPORTANT: Do NOT unsubscribe and re-subscribe — EventsHelper.AddEvent/RemoveEvent
+        // are async void, causing a race condition where the JS listener gets unsubscribed
+        // but never re-subscribed (RemoveEvent's deferred _Events.Remove wipes AddEvent's handler).
+        if (_timeScaleApi != null) return;
+
+        _timeScaleApi = await _chart.TimeScale();
+        _timeScaleApi.VisibleLogicalRangeChanged += OnVisibleLogicalRangeChanged;
+    }
+
+    private void OnVisibleLogicalRangeChanged(object? sender, LogicalRange? logicalRange)
+    {
+        if (logicalRange == null || _earliestBarTime == null) return;
+
+        if (_isLoadingMore)
+        {
+            Logger.LogTrace("Infinite scroll event skipped (loading in progress): From={From:F1}", logicalRange.From);
+            return;
+        }
+
+        // When the leftmost visible bar index is near the beginning of loaded data, load more
+        if (logicalRange.From < InfiniteScrollThreshold)
+        {
+            Logger.LogDebug("Infinite scroll triggered: From={From:F1}, threshold={Threshold}",
+                logicalRange.From, InfiniteScrollThreshold);
+            _ = InvokeAsync(() => LoadOlderDataAsync());
+        }
+    }
+
+    private async Task LoadOlderDataAsync()
+    {
+        if (_isLoadingMore || _candlestickSeries == null || _earliestBarTime == null
+            || string.IsNullOrEmpty(Symbol) || BarsService == null)
+            return;
+
+        var timeFrame = TimeFrame;
+        if (timeFrame == null) return;
+
+        _isLoadingMore = true;
+
+        try
+        {
+            var endDate = _earliestBarTime.Value;
+            var barDuration = timeFrame.TimeSpan;
+            var startDate = endDate - (barDuration * InfiniteScrollBatchSize);
+
+            var exchangeSymbolTimeFrame = new ExchangeSymbolTimeFrame(Exchange, ExchangeArea, Symbol, timeFrame);
+            var range = SymbolBarsRange.FromExchangeSymbolTimeFrame(exchangeSymbolTimeFrame, startDate, endDate);
+
+            Logger.LogInformation("Loading older bars for {Symbol} {TimeFrame} from {Start} to {End}",
+                Symbol, TimeFrameString, startDate, endDate);
+
+            var result = await BarsService.Get(range);
+
+            if (result?.Values != null && result.Values.Count > 0)
+            {
+                var olderData = ConvertToChartData(result.Values);
+
+                // Remove any overlap (bars at or after _earliestBarTime already exist in _loadedData)
+                var earliestUnixTime = _loadedData.Count > 0 ? _loadedData[0].Time : long.MaxValue;
+                olderData = olderData.Where(d => d.Time < earliestUnixTime).ToList();
+
+                if (olderData.Count > 0)
+                {
+                    var prependedCount = olderData.Count;
+
+                    // Prepend older data
+                    olderData.AddRange(_loadedData);
+                    _loadedData = olderData;
+                    _earliestBarTime = result.Values[0].OpenTime;
+
+                    // SetData replaces all data; the chart preserves its visible TIME range,
+                    // which shifts the logical indices by prependedCount.
+                    await _candlestickSeries.SetData(_loadedData);
+
+                    // No need to re-subscribe: TimeScaleApi is a singleton and SetData on the
+                    // series does not invalidate it. Re-subscribing triggers a race condition
+                    // in the library's async void EventsHelper.AddEvent/RemoveEvent methods.
+
+                    Logger.LogInformation("Prepended {Count} older bars for {Symbol}, total now {Total}, earliest {Earliest}",
+                        prependedCount, Symbol, _loadedData.Count, _earliestBarTime);
+
+                    // After SetData, the visible time range is preserved but logical indices
+                    // shift right by prependedCount. Check if user's view is still near the
+                    // left edge and chain another load if needed.
+                    await CheckAndLoadMoreAsync();
+                }
+                else
+                {
+                    Logger.LogDebug("No new older bars to prepend for {Symbol}", Symbol);
+                }
+            }
+            else
+            {
+                Logger.LogDebug("No older data available for {Symbol} before {Earliest}", Symbol, _earliestBarTime);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load older chart data for {Symbol}", Symbol);
+        }
+        finally
+        {
+            _isLoadingMore = false;
+        }
+    }
+
+    /// <summary>
+    /// After prepending data, actively check if the visible range is still near the left edge
+    /// and trigger another load if needed. This handles the case where SetData shifts logical
+    /// indices but the user was already scrolled to the left edge.
+    /// </summary>
+    private async Task CheckAndLoadMoreAsync()
+    {
+        if (_timeScaleApi == null) return;
+
+        try
+        {
+            var logicalRange = await _timeScaleApi.GetVisibleLogicalRange();
+            if (logicalRange != null)
+            {
+                Logger.LogDebug("Post-prepend range check: From={From:F1}, To={To:F1}",
+                    logicalRange.From, logicalRange.To);
+
+                if (logicalRange.From < InfiniteScrollThreshold)
+                {
+                    // Still near the left edge after prepending - load more immediately.
+                    // Reset the flag so LoadOlderDataAsync can run again.
+                    _isLoadingMore = false;
+                    await LoadOlderDataAsync();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Failed to check visible range after prepend");
         }
     }
 
