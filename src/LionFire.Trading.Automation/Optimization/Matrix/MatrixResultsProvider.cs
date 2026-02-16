@@ -33,15 +33,15 @@ public class MatrixResultsProvider : IMatrixResultsProvider
     }
 
     /// <inheritdoc />
-    public async Task<MatrixCellResult?> GetCellResultAsync(string planId, string symbol, string timeframe)
+    public async Task<MatrixCellResult?> GetCellResultAsync(string planId, string symbol, string timeframe, string? dateRangeName = null)
     {
-        var allResults = await GetAllResultsAsync(planId);
+        var allResults = await GetAllResultsAsync(planId, dateRangeName);
         var key = PlanMatrixState.CellKey(symbol, timeframe);
         return allResults.GetValueOrDefault(key);
     }
 
     /// <inheritdoc />
-    public async Task<Dictionary<string, MatrixCellResult>> GetAllResultsAsync(string planId)
+    public async Task<Dictionary<string, MatrixCellResult>> GetAllResultsAsync(string planId, string? dateRangeName = null)
     {
         var results = new Dictionary<string, MatrixCellResult>();
 
@@ -72,9 +72,10 @@ public class MatrixResultsProvider : IMatrixResultsProvider
 
         if (executionState is not null && executionState.Jobs.Count > 0)
         {
-            // Group completed jobs by symbol|timeframe
+            // Group completed jobs by symbol|timeframe, optionally filtered by date range
             var completedJobs = executionState.Jobs
                 .Where(j => j.Status == JobStatus.Completed)
+                .Where(j => dateRangeName == null || j.DateRange.Name == dateRangeName)
                 .ToList();
 
             var grouped = completedJobs
@@ -112,7 +113,7 @@ public class MatrixResultsProvider : IMatrixResultsProvider
     }
 
     /// <inheritdoc />
-    public async Task<Dictionary<string, MatrixCellProgress>> GetProgressAsync(string planId)
+    public async Task<Dictionary<string, MatrixCellProgress>> GetProgressAsync(string planId, string? dateRangeName = null)
     {
         var progress = new Dictionary<string, MatrixCellProgress>();
 
@@ -144,7 +145,10 @@ public class MatrixResultsProvider : IMatrixResultsProvider
         if (executionState is null || executionState.Jobs.Count == 0)
             return progress;
 
-        var grouped = executionState.Jobs
+        var filtered = dateRangeName == null
+            ? executionState.Jobs
+            : executionState.Jobs.Where(j => j.DateRange.Name == dateRangeName);
+        var grouped = filtered
             .GroupBy(j => PlanMatrixState.CellKey(j.Symbol, j.Timeframe));
 
         foreach (var group in grouped)
@@ -173,6 +177,23 @@ public class MatrixResultsProvider : IMatrixResultsProvider
         var errorJobs = jobs.Where(j => !string.IsNullOrEmpty(j.Error) || (j.TotalBacktests ?? 0) == 0).ToList();
         var firstError = jobs.FirstOrDefault(j => !string.IsNullOrEmpty(j.Error))?.Error;
 
+        // Compute LoD aggregation: best (highest) level achieved
+        var jobsWithLod = jobs.Where(j => j.LevelOfDetail != 0 || jobs.Any(jj => jj.LevelOfDetail != 0)).ToList();
+        int? achievedLod = null;
+        long? backtestsAtLevel = null;
+        int? nextLod = null;
+
+        if (jobs.Count > 0)
+        {
+            // Use max LoD (closest to 0) as the achieved level
+            achievedLod = jobs.Max(j => j.LevelOfDetail);
+            backtestsAtLevel = jobs
+                .Where(j => j.LevelOfDetail == achievedLod)
+                .Sum(j => (long)(j.TotalBacktests ?? 0));
+            // Next level is achieved + 1, but only if not already at L0 (comprehensive)
+            nextLod = achievedLod < 0 ? achievedLod + 1 : null;
+        }
+
         var jobsWithAd = jobs.Where(j => j.BestAD.HasValue).ToList();
         if (jobsWithAd.Count == 0)
         {
@@ -190,7 +211,10 @@ public class MatrixResultsProvider : IMatrixResultsProvider
                 Grade = grade,
                 ErrorJobCount = errorJobs.Count,
                 ErrorMessage = firstError,
-                LastRunAt = jobs.Max(j => j.CompletedAt)
+                LastRunAt = jobs.Max(j => j.CompletedAt),
+                AchievedLevelOfDetail = achievedLod,
+                BacktestsAtLevel = backtestsAtLevel,
+                NextLevelOfDetail = nextLod,
             };
         }
 
@@ -214,7 +238,10 @@ public class MatrixResultsProvider : IMatrixResultsProvider
             Grade = grade2,
             ErrorJobCount = errorJobs.Count,
             ErrorMessage = firstError,
-            LastRunAt = lastRunAt
+            LastRunAt = lastRunAt,
+            AchievedLevelOfDetail = achievedLod,
+            BacktestsAtLevel = backtestsAtLevel,
+            NextLevelOfDetail = nextLod,
         };
     }
 }

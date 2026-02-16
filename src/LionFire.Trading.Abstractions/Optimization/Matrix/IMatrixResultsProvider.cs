@@ -11,23 +11,26 @@ public interface IMatrixResultsProvider
     /// <param name="planId">The plan identifier.</param>
     /// <param name="symbol">The trading symbol (e.g., "BTCUSDT").</param>
     /// <param name="timeframe">The timeframe (e.g., "h1").</param>
+    /// <param name="dateRangeName">If specified, only include jobs matching this date range name. Null returns aggregate across all ranges.</param>
     /// <returns>The aggregated cell result, or null if no results exist.</returns>
-    Task<MatrixCellResult?> GetCellResultAsync(string planId, string symbol, string timeframe);
+    Task<MatrixCellResult?> GetCellResultAsync(string planId, string symbol, string timeframe, string? dateRangeName = null);
 
     /// <summary>
     /// Gets all aggregated results for a plan, keyed by "symbol|timeframe".
     /// </summary>
     /// <param name="planId">The plan identifier.</param>
+    /// <param name="dateRangeName">If specified, only include jobs matching this date range name. Null returns aggregate across all ranges.</param>
     /// <returns>Dictionary of cell results keyed by "symbol|timeframe".</returns>
-    Task<Dictionary<string, MatrixCellResult>> GetAllResultsAsync(string planId);
+    Task<Dictionary<string, MatrixCellResult>> GetAllResultsAsync(string planId, string? dateRangeName = null);
 
     /// <summary>
     /// Gets execution progress for all cells in a plan, keyed by "symbol|timeframe".
     /// Groups jobs by symbol and timeframe, aggregating their status counts.
     /// </summary>
     /// <param name="planId">The plan identifier.</param>
+    /// <param name="dateRangeName">If specified, only include jobs matching this date range name. Null returns aggregate across all ranges.</param>
     /// <returns>Dictionary of cell progress keyed by "symbol|timeframe".</returns>
-    Task<Dictionary<string, MatrixCellProgress>> GetProgressAsync(string planId);
+    Task<Dictionary<string, MatrixCellProgress>> GetProgressAsync(string planId, string? dateRangeName = null);
 }
 
 /// <summary>
@@ -84,4 +87,25 @@ public record MatrixCellResult
     /// When the most recent job for this cell completed.
     /// </summary>
     public DateTimeOffset? LastRunAt { get; init; }
+
+    /// <summary>
+    /// Best (highest) Level of Detail achieved across completed jobs for this cell.
+    /// 0 = comprehensive, negative = coarser. Null if no jobs have LoD metadata.
+    /// </summary>
+    public int? AchievedLevelOfDetail { get; init; }
+
+    /// <summary>
+    /// Total backtests completed at the achieved LoD level.
+    /// </summary>
+    public long? BacktestsAtLevel { get; init; }
+
+    /// <summary>
+    /// Next LoD level that could be run (AchievedLevelOfDetail + 1). Null if at L0 (comprehensive).
+    /// </summary>
+    public int? NextLevelOfDetail { get; init; }
+
+    /// <summary>
+    /// Estimated backtest count for the next LoD level. Null if at L0 or not computed.
+    /// </summary>
+    public long? NextLevelBacktestCount { get; init; }
 }

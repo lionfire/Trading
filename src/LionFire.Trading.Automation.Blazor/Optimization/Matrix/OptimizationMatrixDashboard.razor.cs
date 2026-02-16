@@ -44,6 +44,18 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
     public EventCallback<MatrixCellEventArgs> OnCellDrillDown { get; set; }
 
     /// <summary>
+    /// Fired when the user clicks [+N] to queue the next LoD level for a cell.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(string Symbol, string Timeframe)> OnQueueNextLod { get; set; }
+
+    /// <summary>
+    /// Fired when the user cancels a queued/running LoD job for a cell.
+    /// </summary>
+    [Parameter]
+    public EventCallback<(string Symbol, string Timeframe)> OnCancelLod { get; set; }
+
+    /// <summary>
     /// Fired when the plan is modified (e.g., timeframe added/removed) so the parent can update its state.
     /// </summary>
     [Parameter]
@@ -101,7 +113,7 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
 
     private string _gradeFilter = "";
     private string _statusFilter = "";
-    private bool _showResults = true;
+    // _showResults removed — cells now use unified view
 
     // --- Auto-priority highlight tracking ---
 
@@ -282,7 +294,7 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
 
         try
         {
-            _cellResults = await ResultsProvider.GetAllResultsAsync(EffectivePlanId);
+            _cellResults = await ResultsProvider.GetAllResultsAsync(EffectivePlanId, SelectedDateRange?.Name);
         }
         catch (Exception ex)
         {
@@ -301,7 +313,7 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
 
         try
         {
-            _cellProgress = await ResultsProvider.GetProgressAsync(EffectivePlanId);
+            _cellProgress = await ResultsProvider.GetProgressAsync(EffectivePlanId, SelectedDateRange?.Name);
         }
         catch (Exception ex)
         {
@@ -490,15 +502,15 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
         _statusFilter = value;
     }
 
-    private void OnDateRangeIndexChanged(int value)
+    private async void OnDateRangeIndexChanged(int value)
     {
         _selectedDateRangeIndex = value;
+        await LoadResultsAsync();
+        await LoadProgressAsync();
+        await InvokeAsync(StateHasChanged);
     }
 
-    private void ToggleShowResults()
-    {
-        _showResults = !_showResults;
-    }
+    // ToggleShowResults removed — cells now use unified view
 
     // --- Cell selection ---
 
@@ -609,6 +621,53 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
             }
         }
         Snackbar.Add($"Reset {_selectedCells.Count} cells to autopilot", Severity.Success);
+    }
+
+    // --- Add Symbols dialog state ---
+
+    private bool _addSymbolsDialogVisible;
+    private string _addSymbolsText = "";
+    private static readonly DialogOptions _addSymbolsDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private void OpenAddSymbolsDialog()
+    {
+        _addSymbolsText = "";
+        _addSymbolsDialogVisible = true;
+    }
+
+    private static List<string> ParseSymbolInput(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return [];
+        return input
+            .Split(new[] { ',', '\n', '\r', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(s => s.Trim().ToUpperInvariant())
+            .Where(s => s.Length > 0)
+            .Distinct()
+            .ToList();
+    }
+
+    private async Task AddSymbolsFromDialog()
+    {
+        if (Plan == null) return;
+
+        var parsed = ParseSymbolInput(_addSymbolsText);
+        var newSymbols = parsed
+            .Where(s => !_symbols.Contains(s, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+
+        if (newSymbols.Count == 0) return;
+
+        var updatedSnapshot = Plan.Symbols.Snapshot.Concat(newSymbols).ToList();
+        var updatedPlan = Plan with
+        {
+            Symbols = Plan.Symbols with { Snapshot = updatedSnapshot }
+        };
+
+        var saved = await PlanRepository.SaveAsync(updatedPlan);
+        await OnPlanChanged.InvokeAsync(saved);
+
+        _addSymbolsDialogVisible = false;
+        Snackbar.Add($"Added {newSymbols.Count} symbol(s)", Severity.Success);
     }
 
     // --- Add / Remove Timeframe ---
@@ -898,6 +957,37 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
             NavigationManager.NavigateTo(
                 $"/optimize/one-shot?symbol={Uri.EscapeDataString(args.Symbol)}&timeframe={Uri.EscapeDataString(args.Timeframe)}");
         }
+    }
+
+    private async Task HandleCellQueueNextLod(MatrixCellEventArgs args)
+    {
+        if (OnQueueNextLod.HasDelegate)
+        {
+            await OnQueueNextLod.InvokeAsync((args.Symbol, args.Timeframe));
+        }
+        else
+        {
+            Snackbar.Add($"Queue next LoD for {args.Symbol} {args.Timeframe} - connect OnQueueNextLod to enable", Severity.Warning);
+        }
+    }
+
+    private async Task HandleCellCancelLod(MatrixCellEventArgs args)
+    {
+        if (OnCancelLod.HasDelegate)
+        {
+            await OnCancelLod.InvokeAsync((args.Symbol, args.Timeframe));
+        }
+        else
+        {
+            Snackbar.Add($"Cancel LoD for {args.Symbol} {args.Timeframe} - connect OnCancelLod to enable", Severity.Warning);
+        }
+    }
+
+    private CellLodState? GetCellLodState(string symbol, string timeframe)
+    {
+        if (_state == null) return null;
+        var key = PlanMatrixState.CellKey(symbol, timeframe);
+        return _state.CellLodStates.TryGetValue(key, out var lodState) ? lodState : null;
     }
 
     private async void OnMatrixStateChanged(object? sender, MatrixStateChangedEventArgs args)
