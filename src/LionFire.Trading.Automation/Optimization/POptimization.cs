@@ -5,6 +5,7 @@ using LionFire.Instantiating;
 using LionFire.Serialization.Csv;
 using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Journal;
+using LionFire.Trading.Optimization.Plans;
 using LionFire.Validation;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
@@ -241,8 +242,16 @@ public partial class POptimization : ReactiveObject
 
     #endregion
 
+    /// <summary>
+    /// Don't display levels with more backtests than this. Prevents showing astronomically
+    /// large numbers from high-dimensional parameter spaces that are meaningless to the user.
+    /// </summary>
+    public const long MaxDisplayableBacktests = 100_000_000_000_000; // 100 trillion
+
     public IEnumerable<int> LevelsOfDetailRange => Enumerable.Range(LevelsOfDetail.MinLevel, 0); // FUTURE: Levels above 0
-    public IEnumerable<ILevelOfDetail> LevelsOfDetailEnumeration => Enumerable.Range(LevelsOfDetail.MinLevel, 1 - LevelsOfDetail.MinLevel).Select(level => LevelsOfDetail.GetLevel(level));
+    public IEnumerable<ILevelOfDetail> LevelsOfDetailEnumeration => Enumerable.Range(LevelsOfDetail.MinLevel, 1 - LevelsOfDetail.MinLevel)
+        .Select(level => LevelsOfDetail.GetLevel(level))
+        .TakeWhile(level => level.TestPermutationCount <= MaxDisplayableBacktests);
 
     private void InitLevelsOfDetail()
     {
@@ -263,14 +272,30 @@ public partial class POptimization : ReactiveObject
             {
                 debounceLod = new Timer(_ =>
                 {
-                    Debug.WriteLine($"POptimization.OnLevelsOfDetailChanged: notifying. PMultiSim: {Parameters.Count}, Optimizable: {OptimizableParameters.Count}");
-                    InitLevelsOfDetail();
-                    ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailEnumeration));
-                    ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailRange));
-                    ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetail));
-
-                    debounceLod?.Dispose();
-                    debounceLod = null;
+                    bool retry = false;
+                    try
+                    {
+                        Debug.WriteLine($"POptimization.OnLevelsOfDetailChanged: notifying. PMultiSim: {Parameters.Count}, Optimizable: {OptimizableParameters.Count}");
+                        InitLevelsOfDetail();
+                        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailEnumeration));
+                        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetailRange));
+                        ((IReactiveObject)this).RaisePropertyChanged(nameof(LevelsOfDetail));
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // Collection was concurrently modified during snapshot; schedule retry
+                        Debug.WriteLine("POptimization.OnLevelsOfDetailChanged: collection modified during enumeration, scheduling retry");
+                        retry = true;
+                    }
+                    finally
+                    {
+                        lock (_debounceLodLock)
+                        {
+                            debounceLod?.Dispose();
+                            debounceLod = null;
+                        }
+                    }
+                    if (retry) OnLevelsOfDetailInputsChanged();
                 }, null, 300, Timeout.Infinite);
             }
         }
@@ -375,6 +400,40 @@ public partial class POptimization : ReactiveObject
 
     #endregion
     
+    #region Overrides
+
+    /// <summary>
+    /// Apply plan-level parameter overrides to the parameter cache.
+    /// Must be called after parameters are populated from bot type.
+    /// </summary>
+    public void ApplyOverrides(IReadOnlyList<PlanParameterOverride>? overrides)
+    {
+        if (overrides == null || overrides.Count == 0) return;
+
+        foreach (var ov in overrides)
+        {
+            var lookup = parameters.Lookup(ov.ParameterPath);
+            if (!lookup.HasValue)
+            {
+                Debug.WriteLine($"POptimization.ApplyOverrides: Parameter '{ov.ParameterPath}' not found in bot parameters, skipping");
+                continue;
+            }
+
+            var param = lookup.Value;
+
+            if (ov.EnableOptimization.HasValue)
+            {
+                param.EnableOptimization = ov.EnableOptimization;
+            }
+
+            param.ApplyNumericOverrides(ov.MinValue, ov.MaxValue, ov.Step, ov.Exponent);
+        }
+
+        RaiseParametersChanged();
+    }
+
+    #endregion
+
     #region Misc
 
     public override string ToString() => this.ToXamlProperties();

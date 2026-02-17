@@ -125,6 +125,7 @@ public class JobMatrixGenerator
                         StartDate = startDate,
                         EndDate = endDate,
                         Resolution = plan.Resolution,
+                        ParameterOverrides = plan.ParameterOverrides,
                         Priority = matrixState?.GetEffectivePriority(symbol, timeframe) ?? 5,
                         Status = JobStatus.Pending
                     };
@@ -151,45 +152,15 @@ public class JobMatrixGenerator
 
     /// <summary>
     /// Parse a date expression into an actual date.
-    /// Supports: "now", "-1M", "-3M", "-1Y", "-30D", or absolute dates like "2025-01-01".
+    /// Delegates to <see cref="DateRangeParser.Parse"/> for all expression types.
     /// </summary>
     private static DateTimeOffset ParseDateExpression(string expression, DateTimeOffset referenceTime)
     {
         if (string.IsNullOrWhiteSpace(expression))
-        {
             return referenceTime;
-        }
 
-        expression = expression.Trim().ToLowerInvariant();
-
-        if (expression == "now")
-        {
-            return referenceTime;
-        }
-
-        // Relative date expressions: -1M, -3M, -1Y, -30D
-        if (expression.StartsWith("-"))
-        {
-            var amount = int.Parse(expression[1..^1]);
-            var unit = char.ToUpperInvariant(expression[^1]);
-
-            return unit switch
-            {
-                'D' => referenceTime.AddDays(-amount),
-                'W' => referenceTime.AddDays(-amount * 7),
-                'M' => referenceTime.AddMonths(-amount),
-                'Y' => referenceTime.AddYears(-amount),
-                _ => throw new ArgumentException($"Unknown date unit: {unit}")
-            };
-        }
-
-        // Absolute date
-        if (DateTimeOffset.TryParse(expression, out var absoluteDate))
-        {
-            return absoluteDate;
-        }
-
-        throw new ArgumentException($"Cannot parse date expression: {expression}");
+        var resolved = DateRangeParser.Parse(expression, referenceTime.UtcDateTime);
+        return new DateTimeOffset(resolved, TimeSpan.Zero);
     }
 
     /// <summary>

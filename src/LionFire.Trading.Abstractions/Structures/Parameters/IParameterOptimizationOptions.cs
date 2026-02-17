@@ -46,6 +46,12 @@ public interface IParameterOptimizationOptions : IReactiveNotifyPropertyChanged<
 
     IParameterOptimizationOptions Clone();
 
+    /// <summary>
+    /// Apply numeric overrides from plan-level parameter configuration.
+    /// Only non-null values are applied.
+    /// </summary>
+    void ApplyNumericOverrides(double? minValue, double? maxValue, double? step, double? exponent);
+
     [JsonIgnore]
     IObservable<Unit> SomethingChanged { get; }
 }

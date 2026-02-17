@@ -7,12 +7,95 @@
 @using LionFire.Trading.Automation.Blazor.Components.Optimization
 @using LionFire.Trading.Automation.Blazor.Optimization.Matrix
 @using LionFire.TypeRegistration
+@using LionFire.Trading.Grains.User
+@using LionFire.Trading.Optimization.Matrix
+@using Orleans
 
-<PageTitle>Optimization Plans</PageTitle>
+<PageTitle>@_pageTitle</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-4 plans-page">
     <div class="page-header mb-4">
-        <MudText Typo="Typo.h4">Optimization Plans</MudText>
+        @if (!_isGridView)
+        {
+            @if (!_masterPanelVisible && !_masterPanelTemporarilyShown && _selectedPlan != null)
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.ChevronLeft"
+                               OnClick="ShowMasterPanelAndDeselect"
+                               Size="Size.Medium"
+                               Title="Back to plan list"
+                               Class="mr-1" />
+            }
+            else
+            {
+                <MudIconButton Icon="@Icons.Material.Filled.Menu"
+                               OnClick="ToggleMasterPanel"
+                               Size="Size.Medium"
+                               Title="@(_isMasterPanelEffectivelyVisible ? "Hide navigation panel" : "Show navigation panel")"
+                               Class="mr-1" />
+            }
+        }
+        <MudText Typo="Typo.h4">@_pageTitle</MudText>
+
+        @if (!_isGridView && _selectedPlan != null)
+        {
+            <MudButtonGroup OverrideStyles="false" Class="ml-4">
+                <MudTooltip Text="@($"Run {_unfinishedCellCount} unfinished cell{(_unfinishedCellCount == 1 ? "" : "s")}")">
+                    <MudIconButton Icon="@Icons.Material.Filled.PlayArrow"
+                                   Size="Size.Small"
+                                   Disabled="@(_unfinishedCellCount == 0)"
+                                   OnClick="RunUnfinishedCells" />
+                </MudTooltip>
+                <MudTooltip Text="Re-run all cells">
+                    <MudIconButton Icon="@Icons.Material.Filled.Replay"
+                                   Size="Size.Small"
+                                   OnClick="RerunAllCells" />
+                </MudTooltip>
+                <MudTooltip Text="@($"Next {_nextDepthBacktestCount} backtests")">
+                    <MudIconButton Icon="@Icons.Material.Filled.SubdirectoryArrowRight"
+                                   Size="Size.Small"
+                                   Disabled="true" />
+                </MudTooltip>
+                <MudTooltip Text="Complete search">
+                    <MudIconButton Icon="@Icons.Material.Filled.VerticalAlignBottom"
+                                   Size="Size.Small"
+                                   Disabled="true" />
+                </MudTooltip>
+            </MudButtonGroup>
+
+            @if (_progressTotalJobs > 0)
+            {
+                <div class="d-flex align-center gap-2 ml-4">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                        @_progressCompletedJobs/@_progressTotalJobs jobs
+                    </MudText>
+                    @if (_progressCompletedCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">
+                            ✓ @_progressCompletedCells
+                        </MudChip>
+                    }
+                    @if (_progressRunningCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Filled">
+                            ▶ @_progressRunningCells
+                        </MudChip>
+                    }
+                    @if (_progressQueuedCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">
+                            ⏳ @_progressQueuedCells
+                        </MudChip>
+                    }
+                    @if (_progressFailedCells > 0)
+                    {
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">
+                            ✗ @_progressFailedCells
+                        </MudChip>
+                    }
+                </div>
+            }
+        }
+
         <MudSpacer />
 
         <MudToggleIconButton @bind-Toggled="_isGridView"
@@ -67,7 +150,7 @@
             <MudAlert Severity="Severity.Info" Class="mt-4">
                 @if (_plans.Count == 0)
                 {
-                    <span>No optimization plans yet. <MudLink Href="/optimization/plans/new">Create your first plan</MudLink>.</span>
+                    <span>No optimization plans yet. <MudLink Href="@NewPlanHref">Create your first plan</MudLink>.</span>
                 }
                 else
                 {
@@ -93,7 +176,7 @@
         @* Master-Detail View *@
         <div class="master-detail-layout">
             @* Left Panel: Bot List + Plan List *@
-            <div class="left-panel">
+            <div class="left-panel" style="@(_isMasterPanelEffectivelyVisible ? "" : "display: none")">
                 <MudPaper Class="@($"bot-list-container {(string.IsNullOrEmpty(_selectedBot) ? "expanded" : "")}")" Elevation="1">
                     <BotListNav @bind-SelectedBot="_selectedBot"
                                 RegisteredBots="_registeredBots"
@@ -120,8 +203,8 @@
                 {
                     @* Detail View Tabs *@
                     <MudPaper Elevation="1">
-                        <MudTabs @bind-ActivePanelIndex="_activeDetailTab" ApplyEffectsToContainer="true"
-                                 PanelClass="pa-4">
+                        <MudTabs ActivePanelIndex="_activeDetailTab" ActivePanelIndexChanged="OnActiveTabChanged"
+                                 ApplyEffectsToContainer="true" PanelClass="pa-4">
                             <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Info">
                                 <PlanOverviewTab Plan="_selectedPlan"
                                                  ExecutionState="_currentExecutionState"
@@ -132,6 +215,14 @@
                                                  OnDuplicate="@(() => DuplicatePlan(_selectedPlan))"
                                                  OnDelete="@(() => ConfirmDeletePlan(_selectedPlan))"
                                                  OnPlanChanged="OnPlanChanged" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Date Ranges" Icon="@Icons.Material.Filled.DateRange">
+                                <PlanDateRangesTab Plan="_selectedPlan" OnSave="SavePlanSettings" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Parameters" Icon="@Icons.Material.Filled.Tune">
+                                <PlanParametersTab Plan="_selectedPlan" BotTypeRegistry="BotTypeRegistry" OnSave="OnPlanChanged" />
                             </MudTabPanel>
 
                             <MudTabPanel Text="Matrix" Icon="@Icons.Material.Filled.GridOn">
@@ -168,7 +259,7 @@
                         </MudText>
                         <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
                             Choose a plan from the list on the left, or
-                            <MudLink Href="/optimization/plans/new">create a new plan</MudLink>.
+                            <MudLink Href="@NewPlanHref">create a new plan</MudLink>.
                         </MudText>
                     </MudPaper>
                 }
@@ -307,6 +398,9 @@
     private OptimizationPlan? _planToDelete;
     private bool _isGridView = false; // Default to master-detail
     private int _activeDetailTab = 0;
+    private bool _masterPanelVisible = true;
+    private bool _masterPanelTemporarilyShown; // Transient: revealed via back arrow for plan picking
+    private int _nextDepthBacktestCount = 0; // TODO: compute from plan depth search config
 
     private IReadOnlyList<string> _botTypes = [];
     private IReadOnlyList<string> _allTags = [];
@@ -324,6 +418,33 @@
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private IDialogService DialogService { get; set; } = default!;
     [Inject] private BotTypeRegistry? BotTypeRegistry { get; set; }
+    [Inject] private IClusterClient? ClusterClient { get; set; }
+    [Inject] private IMatrixResultsProvider ResultsProvider { get; set; } = default!;
+
+    private const string MasterPanelVisibleKey = "plans-page:master-panel-visible";
+
+    private bool _isMasterPanelEffectivelyVisible => _masterPanelVisible || _masterPanelTemporarilyShown;
+
+    private string NewPlanHref => !string.IsNullOrEmpty(_selectedBot)
+        ? $"/optimization/plans/new?bot={Uri.EscapeDataString(_selectedBot)}"
+        : "/optimization/plans/new";
+
+    private string _pageTitle => _selectedPlan != null
+        ? _selectedPlan.Name
+        : !string.IsNullOrEmpty(_selectedBot)
+            ? $"Optimization Plans for {_selectedBot}"
+            : "Optimization Plans";
+
+    private int _unfinishedCellCount => _currentExecutionState?.Jobs
+        .Count(j => j.Status is not JobStatus.Completed) ?? 0;
+
+    private Dictionary<string, MatrixCellProgress> _cellProgress = new();
+    private int _progressCompletedCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Complete);
+    private int _progressRunningCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Running);
+    private int _progressQueuedCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Queued);
+    private int _progressFailedCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Failed);
+    private int _progressTotalJobs => _cellProgress.Values.Sum(p => p.TotalJobs);
+    private int _progressCompletedJobs => _cellProgress.Values.Sum(p => p.CompletedJobs);
 
     private List<OptimizationPlan> _filteredPlans => _plans
         .Where(p => string.IsNullOrWhiteSpace(_searchText) ||
@@ -342,6 +463,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadMasterPanelPreference();
         await LoadPlans();
         await LoadExecutionStates();
 
@@ -371,10 +493,13 @@
         {
             _activeDetailTab = DetailView.ToLowerInvariant() switch
             {
-                "results" => 3,
-                "matrix" => 1,
-                "jobs" => 2,
-                "settings" => 4,
+                "overview" => 0,
+                "date-ranges" => 1,
+                "parameters" => 2,
+                "matrix" => 3,
+                "jobs" => 4,
+                "results" => 5,
+                "settings" => 6,
                 _ => _activeDetailTab
             };
         }
@@ -421,10 +546,12 @@
         if (_selectedPlan != null)
         {
             _currentExecutionState = await ExecutionService.GetStatusAsync(_selectedPlan.Id);
+            _cellProgress = await ResultsProvider.GetProgressAsync(_selectedPlan.Id);
         }
         else
         {
             _currentExecutionState = null;
+            _cellProgress = new();
         }
     }
 
@@ -442,6 +569,7 @@
     private async Task OnPlanSelected(string planId)
     {
         _selectedPlan = _plans.FirstOrDefault(p => p.Id == planId);
+        _masterPanelTemporarilyShown = false; // Auto-hide if it was temporarily revealed
         await LoadCurrentExecutionState();
         Navigation.NavigateTo($"/optimization/plans/{planId}");
     }
@@ -536,6 +664,54 @@
         }
     }
 
+    private async Task RunUnfinishedCells()
+    {
+        if (_selectedPlan == null) return;
+
+        try
+        {
+            var options = new PlanExecutionOptions
+            {
+                SkipCompleted = true,
+                UsePrioritization = true
+            };
+            _currentExecutionState = await ExecutionService.StartAsync(_selectedPlan.Id, options);
+            _executionStates[_selectedPlan.Id] = _currentExecutionState;
+            Snackbar.Add($"Started {_unfinishedCellCount} unfinished cells", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to start: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RerunAllCells()
+    {
+        if (_selectedPlan == null) return;
+
+        var confirmed = await DialogService.ShowMessageBox(
+            "Re-run All Cells",
+            "This will re-run all cells including already completed ones. Continue?",
+            yesText: "Re-run All", cancelText: "Cancel");
+        if (confirmed != true) return;
+
+        try
+        {
+            var options = new PlanExecutionOptions
+            {
+                SkipCompleted = false,
+                UsePrioritization = true
+            };
+            _currentExecutionState = await ExecutionService.StartAsync(_selectedPlan.Id, options);
+            _executionStates[_selectedPlan.Id] = _currentExecutionState;
+            Snackbar.Add("Re-running all cells", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to start: {ex.Message}", Severity.Error);
+        }
+    }
+
     private async Task StopExecution()
     {
         if (_selectedPlan == null) return;
@@ -543,8 +719,7 @@
         try
         {
             await ExecutionService.StopAsync(_selectedPlan.Id);
-            _executionStates.Remove(_selectedPlan.Id);
-            _currentExecutionState = null;
+            await LoadCurrentExecutionState();
             Snackbar.Add("Execution stopped", Severity.Warning);
         }
         catch (Exception ex)
@@ -680,7 +855,8 @@
             }
             else
             {
-                Snackbar.Add($"No completed results for {args.Symbol}/{args.Timeframe} ({args.DateRangeName})", Severity.Info);
+                // No execution state job found — navigate to cell results page which will try disk scan
+                Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(_selectedPlan.Id)}/cell/{Uri.EscapeDataString(args.Symbol)}/{Uri.EscapeDataString(args.Timeframe)}");
             }
         }
         else
@@ -715,6 +891,63 @@
     /// Normalize bot name by stripping the "P" prefix used in parameter types.
     /// E.g., "PAtrBot" -> "AtrBot"
     /// </summary>
+    private static readonly string[] TabNames = ["overview", "date-ranges", "parameters", "matrix", "jobs", "results", "settings"];
+
+    private void OnActiveTabChanged(int index)
+    {
+        if (index == _activeDetailTab) return;
+        _activeDetailTab = index;
+
+        if (_selectedPlan != null)
+        {
+            var tabName = index >= 0 && index < TabNames.Length ? TabNames[index] : null;
+            var url = tabName is "overview" or null
+                ? $"/optimization/plans/{_selectedPlan.Id}"
+                : $"/optimization/plans/{_selectedPlan.Id}/{tabName}";
+            Navigation.NavigateTo(url, replace: true);
+        }
+    }
+
+    private async Task LoadMasterPanelPreference()
+    {
+        try
+        {
+            if (ClusterClient != null)
+            {
+                var grain = ClusterClient.GetGrain<IUserPreferencesG>("Anonymous");
+                var value = await grain.GetViewSetting(MasterPanelVisibleKey);
+                if (value != null)
+                {
+                    _masterPanelVisible = value != "false";
+                }
+            }
+        }
+        catch { /* Use default */ }
+    }
+
+    private async Task ToggleMasterPanel()
+    {
+        _masterPanelVisible = !_masterPanelVisible;
+        _masterPanelTemporarilyShown = false; // Clear transient state when user explicitly toggles
+        try
+        {
+            if (ClusterClient != null)
+            {
+                var grain = ClusterClient.GetGrain<IUserPreferencesG>("Anonymous");
+                await grain.SetViewSetting(MasterPanelVisibleKey, _masterPanelVisible ? "true" : "false");
+            }
+        }
+        catch { /* Best effort */ }
+    }
+
+    private void ShowMasterPanelAndDeselect()
+    {
+        _masterPanelTemporarilyShown = true;
+        _selectedPlan = null;
+        _currentExecutionState = null;
+        Navigation.NavigateTo("/optimization/plans");
+    }
+
     private static string NormalizeBotName(string botName)
     {
         if (string.IsNullOrEmpty(botName)) return botName;

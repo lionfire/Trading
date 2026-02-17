@@ -427,6 +427,18 @@ public partial class ParameterOptimizationOptions<TValue>
 
     #endregion
 
+    #region Overrides
+
+    public void ApplyNumericOverrides(double? minValue, double? maxValue, double? step, double? exponent)
+    {
+        if (minValue.HasValue) MinValue = TValue.CreateChecked(minValue.Value);
+        if (maxValue.HasValue) MaxValue = TValue.CreateChecked(maxValue.Value);
+        if (step.HasValue) Step = TValue.CreateChecked(step.Value);
+        if (exponent.HasValue) Exponent = exponent.Value;
+    }
+
+    #endregion
+
     #region Misc
 
     public IParameterOptimizationOptions Clone() => (IParameterOptimizationOptions)MemberwiseClone();

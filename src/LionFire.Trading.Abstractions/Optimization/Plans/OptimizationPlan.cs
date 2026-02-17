@@ -77,6 +77,12 @@ public record OptimizationPlan
     public OptimizationPlanPrioritization? Prioritization { get; init; }
 
     /// <summary>
+    /// Per-parameter overrides for optimization ranges, steps, and enable/disable.
+    /// Only non-null values in each override replace the bot's attribute defaults.
+    /// </summary>
+    public IReadOnlyList<PlanParameterOverride>? ParameterOverrides { get; init; }
+
+    /// <summary>
     /// Tags for categorization and filtering.
     /// </summary>
     public IReadOnlyList<string> Tags { get; init; } = [];

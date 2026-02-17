@@ -1,8 +1,9 @@
-﻿@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using LionFire.Trading.Automation.Optimization
 @rendermode InteractiveServer
 
-@* <MudExpansionPanel Text="Parameter Selection" @bind-Expanded=ShowParameterSelection>
-</MudExpansionPanel> *@
-    <ParameterSelection ViewModel="ViewModel" />
+    <ParameterSelection POptimization="POptimization" />
 
-
+@code {
+    [Parameter]
+    public POptimization POptimization { get; set; } = default!;
+}

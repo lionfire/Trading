@@ -64,6 +64,12 @@ public record OptimizationJob
     public OptimizationResolution Resolution { get; init; } = new();
 
     /// <summary>
+    /// Level of Detail for this job's grid search. 0 = comprehensive, negative = coarser.
+    /// Computed from MaxBacktests and the bot's parameter space.
+    /// </summary>
+    public int LevelOfDetail { get; init; } = 0;
+
+    /// <summary>
     /// Execution priority from the matrix state (1 = highest, 9 = lowest).
     /// </summary>
     public int Priority { get; init; } = 5;
@@ -112,6 +118,12 @@ public record OptimizationJob
     /// Number of backtests that were aborted (e.g., due to insufficient trades or data issues).
     /// </summary>
     public int? AbortedBacktests { get; init; }
+
+    /// <summary>
+    /// Per-parameter overrides from the plan (min/max/step/exponent/enabled).
+    /// Applied to POptimization before running the optimization.
+    /// </summary>
+    public IReadOnlyList<PlanParameterOverride>? ParameterOverrides { get; init; }
 
     /// <summary>
     /// Error message if the job failed.

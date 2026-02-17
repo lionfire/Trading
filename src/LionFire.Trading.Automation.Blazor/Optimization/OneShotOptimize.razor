@@ -165,7 +165,7 @@
                              MinimumTabWidth="160px" Class="vertical-subtabs" PanelClass="pa-4"
                              Border="true" Style="height: 100%;">
                         <MudTabPanel Text="Parameters" Icon="@Icons.Material.Filled.Settings">
-                            <OptimizeParameters ViewModel="ViewModel" />
+                            <OptimizeParameters POptimization="ViewModel.POptimization" />
                         </MudTabPanel>
                         <MudTabPanel Text="Level of Detail" Icon="@Icons.Material.Filled.Layers">
                             <OptimizationStatus ViewModel="ViewModel" />

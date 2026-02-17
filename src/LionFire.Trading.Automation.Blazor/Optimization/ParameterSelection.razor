@@ -1,15 +1,21 @@
 @using DynamicData
-@inherits ReactiveComponentBase<OneShotOptimizeVM>
+@using LionFire.Trading.Automation.Optimization
 
 <MudCard>
     <MudGrid id="ParameterPreselection" Class="gap-x-3 gap-y-3">
         <MudItem sm="4">
             <div class="lf-field row align-center">
                 <label style="order:-10;">Minimum Priority</label>
-                <MudTextField style="width: 4ch;" @bind-Value="ViewModel!.POptimization.MinParameterPriority" data-Label="Min Parameter Priority" Dense="@true" />
-                <MudIconButton Class=@("mr-4 " + (ViewModel.POptimization.InverseMinParameterPriority == -(ViewModel!.MaxParameterPriority) ? "invisible" : "")) Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> ViewModel.POptimization.InverseMinParameterPriority = -(ViewModel!.MaxParameterPriority))" />
-                <MudSlider T="int" @bind-Value="ViewModel.POptimization.InverseMinParameterPriority"
-                           Min=@(-(ViewModel!.MaxParameterPriority + 1)) Max=@(-(ViewModel!.MinParameterPriority - 1))
+                <MudIconButton Icon="@Icons.Material.Filled.RemoveCircleOutline" Size="Size.Small"
+                               Disabled="@(!HasPrevPriority)"
+                               OnClick="GoToPrevPriority" Title="Include more parameters" />
+                <MudTextField style="width: 4ch;" @bind-Value="POptimization.MinParameterPriority" data-Label="Min Parameter Priority" Dense="@true" />
+                <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline" Size="Size.Small"
+                               Disabled="@(!HasNextPriority)"
+                               OnClick="GoToNextPriority" Title="Include fewer parameters" />
+                <MudIconButton Class=@("mr-4 " + (POptimization.InverseMinParameterPriority == -(MaxPriority) ? "invisible" : "")) Icon="@Icons.Material.Outlined.Close" Size="Size.Small" OnClick="(_=> POptimization.InverseMinParameterPriority = -(MaxPriority))" />
+                <MudSlider T="int" @bind-Value="POptimization.InverseMinParameterPriority"
+                           Min=@(-(MaxPriority + 1)) Max=@(-(MinPriority - 1))
                            Label="Min Parameter Priority" Dense="@true" />
             </div>
         </MudItem>
@@ -24,8 +30,6 @@
             @foreach (var p in AllParameters.KeyValues.Values.Where(ShouldShow).OrderByDescending(p => p.Info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.Info.Path))
             {
                 <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.ValueType)" Parameters="@GetParameters(p)" />
-
-                @* <ParameterToOptimize TValue=@p.options.TValue ViewModel="ViewModel" Parameter="p" /> *@
             }
         </MudGrid>
     </div>
@@ -36,33 +40,57 @@
             @foreach (var p in AllParameters.KeyValues.Values.Where(p => !ShouldShow(p)).OrderByDescending(p => p.Info.ParameterAttribute.OptimizePriorityInt).ThenBy(p => p.Info.Path))
             {
                 <DynamicComponent Type="typeof(ParameterToOptimize<>).MakeGenericType(p.ValueType)" Parameters="@GetParameters(p, fixedValue: true)" />
-                @* <ParameterToOptimize FixedValue="true" ViewModel="ViewModel" Parameter="p" /> *@
             }
         </MudGrid>
     </div>
-
-    @* <InspectorView Object="ViewModel!.POptimization" /> *@
 </MudCard>
 
 @code {
 
-    IObservableCache<IParameterOptimizationOptions, string> AllParameters => ViewModel!.POptimization.Parameters;
+    [Parameter]
+    public POptimization POptimization { get; set; } = default!;
+
+    IObservableCache<IParameterOptimizationOptions, string> AllParameters => POptimization.Parameters;
+
+    int MinPriority => POptimization.Parameters.Count == 0 ? 0 : POptimization.Parameters.KeyValues.Values.Min(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
+    int MaxPriority => POptimization.Parameters.Count == 0 ? 0 : POptimization.Parameters.KeyValues.Values.Max(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0);
+
+    /// <summary>Distinct priority values sorted ascending.</summary>
+    IReadOnlyList<int> DistinctPriorities => POptimization.Parameters.Count == 0 ? [] :
+        POptimization.Parameters.KeyValues.Values
+            .Select(v => v.Info.ParameterAttribute?.OptimizePriorityInt ?? 0)
+            .Distinct()
+            .Order()
+            .ToList();
+
+    bool HasPrevPriority => DistinctPriorities.Any(p => p < POptimization.MinParameterPriority);
+    bool HasNextPriority => DistinctPriorities.Any(p => p > POptimization.MinParameterPriority);
+
+    void GoToPrevPriority()
+    {
+        var prev = DistinctPriorities.Where(p => p < POptimization.MinParameterPriority).LastOrDefault();
+        if (prev != POptimization.MinParameterPriority || DistinctPriorities.Count > 0)
+        {
+            POptimization.MinParameterPriority = DistinctPriorities.Where(p => p < POptimization.MinParameterPriority).DefaultIfEmpty(POptimization.MinParameterPriority).Last();
+        }
+    }
+
+    void GoToNextPriority()
+    {
+        POptimization.MinParameterPriority = DistinctPriorities.Where(p => p > POptimization.MinParameterPriority).DefaultIfEmpty(POptimization.MinParameterPriority).First();
+    }
 
     public bool ShouldShow(IParameterOptimizationOptions options)
     {
-        return options.EnableOptimization.HasValue ? options.EnableOptimization.Value : options.Info.ParameterAttribute.OptimizePriorityInt >= ViewModel!.POptimization.MinParameterPriority || options?.EnableOptimization == true;
+        return options.EnableOptimization.HasValue ? options.EnableOptimization.Value : options.Info.ParameterAttribute.OptimizePriorityInt >= POptimization.MinParameterPriority || options?.EnableOptimization == true;
     }
 
     private Dictionary<string, object> GetParameters(IParameterOptimizationOptions options, bool fixedValue = false)
     {
-
         var x = EventCallback.Factory.Create<bool>(this, v => { options.EnableOptimization = v; OnSetEnabled(); });
-
-        // var x = (EventCallback<bool>)(Action<bool>)(v => { options.EnableOptimization = v; OnSetEnabled(); });
 
         return new Dictionary<string, object>
         {
-            { "ViewModel", ViewModel! },
             { "Parameter", options },
             { "FixedValue", fixedValue },
             { "ItemSize", fixedValue ? 2 : 5 },

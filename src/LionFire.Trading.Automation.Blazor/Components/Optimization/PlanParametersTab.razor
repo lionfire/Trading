@@ -1,0 +1,296 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.Automation.Optimization
+@using LionFire.Trading.Automation.Optimization.Strategies.GridSpaces
+@using LionFire.Trading.Automation
+@using LionFire.Trading.Automation.Blazor.Optimization
+@using LionFire.TypeRegistration
+@using DynamicData
+@using ReactiveUI
+@implements IAsyncDisposable
+
+@inject IOptimizationPlanRepository PlanRepository
+@inject ISnackbar Snackbar
+
+@if (_error != null)
+{
+    <MudAlert Severity="Severity.Error" Class="mb-4">@_error</MudAlert>
+}
+else if (_pOptimization == null)
+{
+    <MudProgressLinear Indeterminate="true" />
+}
+else
+{
+    <div class="plan-parameters-tab">
+        @* LoD + MaxBacktests bar *@
+        <MudPaper Class="pa-3 mb-4" Outlined="true">
+            <div class="d-flex flex-row align-center gap-4">
+                @* Max Backtests slider *@
+                <div class="d-flex flex-row align-center gap-2" style="flex: 1; min-width: 0;">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="white-space: nowrap;">Max Backtests</MudText>
+                    <MudTextField T="long" Value="_pOptimization.MaxBacktests" ValueChanged="OnMaxBacktestsChanged"
+                                  Style="width: 7ch;" Dense="true" Margin="Margin.Dense" />
+                    <MudSlider T="double" Value="MaxBacktestsExponential" ValueChanged="OnMaxBacktestsSliderChanged"
+                               Min="4" Max="34" Style="flex: 1;" />
+                </div>
+
+                @* Save / Reset buttons *@
+                @if (_isDirty)
+                {
+                    <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveOverrides"
+                               StartIcon="@Icons.Material.Filled.Save" Size="Size.Small">
+                        Save
+                    </MudButton>
+                    <MudButton Color="Color.Default" Variant="Variant.Outlined" OnClick="ResetOverrides"
+                               StartIcon="@Icons.Material.Filled.Undo" Size="Size.Small">
+                        Reset
+                    </MudButton>
+                }
+                else
+                {
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Variant="Variant.Text">
+                        @(_hasOverrides ? $"{Plan.ParameterOverrides!.Count} overrides" : "Defaults")
+                    </MudChip>
+                }
+            </div>
+
+            @* Level quick-select buttons *@
+            @if (_pOptimization.LevelsOfDetail != null)
+            {
+                var lod = _pOptimization.LevelsOfDetail;
+                var minLevel = lod.MinLevel;
+                // Walk downward from L0, skipping levels too large to display,
+                // collecting those within the displayable limit.
+                // Stop when test count stops decreasing (minimum granularity reached).
+                var levelsList = new List<GridLevelOfDetail>();
+                double prevCount = double.MaxValue;
+                for (int l = 0; ; l--)
+                {
+                    var level = lod.GetLevel(l);
+                    if (level.TestPermutationCount >= prevCount) break; // minimum granularity
+                    if (level.TestPermutationCount <= POptimization.MaxDisplayableBacktests)
+                        levelsList.Add(level);
+                    prevCount = level.TestPermutationCount;
+                }
+                levelsList.Reverse();
+                var levels = levelsList;
+                <div class="d-flex flex-row flex-wrap align-center gap-2 mt-2">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary" Style="white-space: nowrap;">
+                        @_pOptimization.OptimizableParameters.Count params
+                    </MudText>
+                    <MudDivider Vertical="true" FlexItem="true" />
+                    @foreach (var level in levels)
+                    {
+                        var isActive = level.Level == minLevel;
+                        var isBelowActive = level.Level < minLevel;
+                        var testCount = level.TestPermutationCount;
+                        <MudButton Size="Size.Small" Dense="true"
+                                   Variant="@(isActive ? Variant.Filled : Variant.Outlined)"
+                                   Color="@(isActive ? Color.Primary : Color.Default)"
+                                   Style="@(isBelowActive ? "color: hsl(240 9% 52%); border-color: hsl(240 9% 52%);" : "")"
+                                   OnClick="@(() => OnLevelClicked(testCount))">
+                            L@(level.Level) @FormatTestCount(testCount)
+                        </MudButton>
+                    }
+                    <MudDivider Vertical="true" FlexItem="true" />
+                    <MudText Typo="Typo.body2" Style="white-space: nowrap;">
+                        @((lod.ComprehensiveScanPerUn).ToString("P0"))
+                    </MudText>
+                    <MudProgressLinear Value="lod.ComprehensiveScanPerUn" Min="0" Max="1"
+                                       Color="ComprehensivenessColor" Style="flex: 1; max-width: 120px;" />
+                </div>
+            }
+        </MudPaper>
+
+        @* Parameter Editor *@
+        <ParameterSelection POptimization="_pOptimization" />
+    </div>
+}
+
+@code {
+    [Parameter]
+    public OptimizationPlan Plan { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback<OptimizationPlan> OnSave { get; set; }
+
+    [Parameter]
+    public BotTypeRegistry? BotTypeRegistry { get; set; }
+
+    private PMultiSim? _pMultiSim;
+    private POptimization? _pOptimization;
+    private string? _error;
+    private bool _isDirty;
+    private bool _hasOverrides => Plan.ParameterOverrides is { Count: > 0 };
+    private string? _lastBotName;
+    private IDisposable? _lodSubscription;
+
+    private double MaxBacktestsExponential => _pOptimization != null ? Math.Log2(_pOptimization.MaxBacktests) : 10;
+
+    private MudBlazor.Color ComprehensivenessColor => _pOptimization?.LevelsOfDetail?.ComprehensiveScanPerUn switch
+    {
+        >= 1 => MudBlazor.Color.Success,
+        <= 0.1 => MudBlazor.Color.Error,
+        _ => MudBlazor.Color.Warning,
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (Plan?.Bot != _lastBotName)
+        {
+            _lastBotName = Plan?.Bot;
+            InitializeParameters();
+        }
+    }
+
+    private void InitializeParameters()
+    {
+        _error = null;
+        _pOptimization = null;
+        _isDirty = false;
+        _lodSubscription?.Dispose();
+
+        if (Plan == null || string.IsNullOrEmpty(Plan.Bot))
+        {
+            _error = "No bot type configured for this plan.";
+            return;
+        }
+
+        if (BotTypeRegistry == null)
+        {
+            _error = "Bot type registry not available.";
+            return;
+        }
+
+        var pBotType = BotTypeRegistry.GetPBotType(Plan.Bot)
+                    ?? BotTypeRegistry.GetPBotType("P" + Plan.Bot);
+
+        if (pBotType == null)
+        {
+            _error = $"Bot type '{Plan.Bot}' not found in registry.";
+            return;
+        }
+
+        // Close generic if needed
+        if (pBotType.IsGenericTypeDefinition)
+        {
+            var typeArgs = pBotType.GetGenericArguments();
+            var closedArgs = typeArgs.Select(_ => typeof(double)).ToArray();
+            pBotType = pBotType.MakeGenericType(closedArgs);
+        }
+
+        _pMultiSim = new PMultiSim { PBotType = pBotType };
+        _pOptimization = new POptimization(_pMultiSim)
+        {
+            MaxBacktests = Plan.Resolution.MaxBacktests,
+        };
+
+        // Apply existing plan overrides
+        if (Plan.ParameterOverrides is { Count: > 0 })
+        {
+            _pOptimization.ApplyOverrides(Plan.ParameterOverrides);
+        }
+
+        // Track changes for dirty indicator
+        _pOptimization.ParametersChanged.Subscribe(_ =>
+        {
+            _isDirty = true;
+            InvokeAsync(StateHasChanged);
+        });
+
+        // Re-render when LoD recomputes
+        _lodSubscription = _pOptimization.WhenAnyValue(x => x.LevelsOfDetail).Subscribe(_ =>
+        {
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void OnMaxBacktestsChanged(long value)
+    {
+        if (_pOptimization == null) return;
+        _pOptimization.MaxBacktests = Math.Max(1, value);
+        _isDirty = true;
+    }
+
+    private void OnMaxBacktestsSliderChanged(double value)
+    {
+        if (_pOptimization == null) return;
+        _pOptimization.MaxBacktests = (long)Math.Pow(2.0, value);
+        _isDirty = true;
+    }
+
+    private void OnLevelClicked(double testCount)
+    {
+        if (_pOptimization == null) return;
+        _pOptimization.MaxBacktests = (long)testCount;
+        _isDirty = true;
+    }
+
+    private async Task SaveOverrides()
+    {
+        if (_pOptimization == null) return;
+
+        var overrides = new List<PlanParameterOverride>();
+
+        foreach (var param in _pOptimization.Parameters.KeyValues.Values)
+        {
+            var hasOverride = param.EnableOptimization.HasValue
+                           || param.MinValueObj != null
+                           || param.MaxValueObj != null
+                           || param.HasStep
+                           || param.Exponent.HasValue;
+
+            if (hasOverride)
+            {
+                overrides.Add(new PlanParameterOverride
+                {
+                    ParameterPath = param.Path,
+                    MinValue = param.MinValueObj != null ? Convert.ToDouble(param.MinValueObj) : null,
+                    MaxValue = param.MaxValueObj != null ? Convert.ToDouble(param.MaxValueObj) : null,
+                    Step = param.StepObj != null ? Convert.ToDouble(param.StepObj) : null,
+                    Exponent = param.Exponent,
+                    EnableOptimization = param.EnableOptimization,
+                });
+            }
+        }
+
+        var updatedPlan = Plan with
+        {
+            ParameterOverrides = overrides.Count > 0 ? overrides : null,
+            Resolution = Plan.Resolution with { MaxBacktests = (int)_pOptimization.MaxBacktests },
+            Modified = DateTimeOffset.UtcNow,
+        };
+
+        await PlanRepository.SaveAsync(updatedPlan);
+        _isDirty = false;
+
+        if (OnSave.HasDelegate)
+        {
+            await OnSave.InvokeAsync(updatedPlan);
+        }
+
+        Snackbar.Add($"Saved {overrides.Count} parameter overrides, MaxBacktests={_pOptimization.MaxBacktests:N0}", Severity.Success);
+    }
+
+    private void ResetOverrides()
+    {
+        InitializeParameters();
+        StateHasChanged();
+    }
+
+    private static string FormatTestCount(double count) => count switch
+    {
+        >= 1_000_000_000_000 => $"{count / 1_000_000_000_000:N1}T",
+        >= 1_000_000_000 => $"{count / 1_000_000_000:N1}B",
+        >= 1_000_000 => $"{count / 1_000_000:N1}M",
+        >= 1_000 => $"{count / 1_000:N1}K",
+        _ => count.ToString("N0"),
+    };
+
+    public ValueTask DisposeAsync()
+    {
+        _lodSubscription?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

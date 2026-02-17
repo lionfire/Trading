@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using DynamicData;
 using LionFire.Trading.Automation.Optimization.Scoring;
+using LionFire.Trading.Automation.Optimization.Strategies;
 using LionFire.Trading.Journal;
 using LionFire.Trading.Optimization;
 using LionFire.Trading.Optimization.Execution;
@@ -119,6 +120,13 @@ public class LocalJobRunner : IJobRunner
                     KeepTradeJournalsForTopNResults = 0,
                 },
             };
+
+            // Apply plan-level parameter overrides (min/max/step/exponent/enabled)
+            if (job.ParameterOverrides is { Count: > 0 })
+            {
+                pMultiSim.POptimization.ApplyOverrides(job.ParameterOverrides);
+                _logger.LogInformation("Job {JobId}: Applied {Count} parameter overrides", job.Id, job.ParameterOverrides.Count);
+            }
 
             // Create and run optimization
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -246,6 +254,10 @@ public class LocalJobRunner : IJobRunner
                 _logger.LogDebug(ex, "Error disposing journal for job {JobId} (may already be disposed)", job.Id);
             }
 
+            // Extract the LoD level that was actually used by the grid search strategy
+            var lodLevel = (optimizationTask.OptimizationStrategy as GridSearchStrategy)
+                ?.State?.CurrentLevelIndex ?? 0;
+
             var completedJob = runningJob with
             {
                 Status = JobStatus.Completed,
@@ -255,7 +267,8 @@ public class LocalJobRunner : IJobRunner
                 BestAD = bestAD,
                 GoodBacktestCount = goodBacktestCount,
                 TotalBacktests = totalBacktests,
-                AbortedBacktests = abortedBacktests
+                AbortedBacktests = abortedBacktests,
+                LevelOfDetail = lodLevel,
             };
 
             _logger.LogInformation(
