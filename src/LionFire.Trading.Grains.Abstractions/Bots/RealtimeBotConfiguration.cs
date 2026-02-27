@@ -93,6 +93,13 @@ public class RealtimeBotConfiguration
     public LiveAccountOptions? AccountOptions { get; set; }
 
     /// <summary>
+    /// Optimization/backtest metadata for signal enrichment.
+    /// Populated when deploying a bot with optimized parameters.
+    /// </summary>
+    [Id(7)]
+    public BotDeploymentMetadata? DeploymentMetadata { get; set; }
+
+    /// <summary>
     /// Gets or sets the fully-typed bot parameters as a JSON string with type information.
     /// </summary>
     /// <remarks>

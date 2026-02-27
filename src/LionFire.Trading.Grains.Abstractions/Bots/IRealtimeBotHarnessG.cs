@@ -130,6 +130,22 @@ public interface IRealtimeBotHarnessG : IGrainWithStringKey, IIndicatorSubscribe
     /// <param name="observer">The observer to remove</param>
     ValueTask UnsubscribeFromLogs(IBotLogObserver observer);
 
+    #endregion
+
+    #region Signal Observation
+
+    /// <summary>
+    /// Subscribes an observer for real-time signal updates (position open/close/flip).
+    /// </summary>
+    /// <param name="observer">The observer to receive signal events</param>
+    ValueTask SubscribeToSignals(IBotSignalObserver observer);
+
+    /// <summary>
+    /// Unsubscribes an observer from signal updates.
+    /// </summary>
+    /// <param name="observer">The observer to remove</param>
+    ValueTask UnsubscribeFromSignals(IBotSignalObserver observer);
+
     /// <summary>
     /// Updates the configured log level for this harness.
     /// </summary>
