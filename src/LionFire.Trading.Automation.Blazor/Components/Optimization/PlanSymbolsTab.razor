@@ -1,0 +1,644 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Plans
+@using LionFire.Trading.HistoricalData
+@using Microsoft.JSInterop
+@implements IDisposable
+
+<div class="plan-symbols-tab">
+    @if (_exchangeSymbolsService != null)
+    {
+        @* Exchange/Area Selection *@
+        <MudGrid Class="mb-3">
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" Label="Exchange" Value="_symExchange"
+                           ValueChanged="OnSymExchangeChanged"
+                           Variant="Variant.Outlined" Dense="true">
+                    @foreach (var ex in _symExchanges)
+                    {
+                        <MudSelectItem Value="ex">@ex</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudSelect T="string" Label="Area" Value="_symArea"
+                           ValueChanged="OnSymAreaChanged"
+                           Variant="Variant.Outlined" Dense="true"
+                           Disabled="@(string.IsNullOrEmpty(_symExchange))">
+                    @foreach (var a in _symAreas)
+                    {
+                        <MudSelectItem Value="a">@a</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="4" Class="d-flex align-end gap-2">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                    @_editSymbols.Count of @_symAllSymbols.Count symbols selected
+                </MudText>
+                @if (_saveStatus != SaveStatus.Clean)
+                {
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text"
+                             Color="@(_saveStatus == SaveStatus.Error ? Color.Error : _saveStatus == SaveStatus.Saved ? Color.Success : Color.Default)"
+                             Class="save-status-chip">
+                        @switch (_saveStatus)
+                        {
+                            case SaveStatus.Pending:
+                                <MudIcon Icon="@Icons.Material.Filled.PendingActions" Size="Size.Small" Class="mr-1" />
+                                @:Unsaved
+                                break;
+                            case SaveStatus.Saving:
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-1" Style="width:14px;height:14px;" />
+                                @:Saving
+                                break;
+                            case SaveStatus.Saved:
+                                <MudIcon Icon="@Icons.Material.Filled.Check" Size="Size.Small" Class="mr-1" />
+                                @:Saved
+                                break;
+                            case SaveStatus.Error:
+                                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Class="mr-1" />
+                                @:Save failed
+                                break;
+                        }
+                    </MudChip>
+                }
+            </MudItem>
+        </MudGrid>
+
+        @* Quick Filters *@
+        <MudPaper Class="pa-2 mb-3" Outlined="true">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
+                               OnClick="@(() => _bulkAddDialogVisible = true)"
+                               UserAttributes="@(new Dictionary<string,object>{{"title","Bulk add symbols"}})" />
+                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small"
+                               OnClick="CopySelectedSymbols"
+                               UserAttributes="@(new Dictionary<string,object>{{"title","Copy selected symbols to clipboard"}})" />
+
+                <MudText Typo="Typo.body2" Class="mr-2">Quote:</MudText>
+                @foreach (var filter in _quoteFilters)
+                {
+                    if (!_symAvailableQuoteFilters.Contains(filter)) { continue; }
+                    var f = filter;
+                    var isSelected = _symActiveQuoteFilters.Contains(f);
+                    <MudChip T="string" Color="@(isSelected ? Color.Primary : Color.Default)"
+                             OnClick="@(() => ToggleSymQuoteFilter(f))" Size="Size.Small">@f</MudChip>
+                }
+
+                <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+
+                <MudText Typo="Typo.body2" Class="mr-2">Sort:</MudText>
+                <MudToggleGroup T="string" Value="_symSortMode" ValueChanged="OnSymSortChanged"
+                                Color="Color.Primary" Size="Size.Small"
+                                SelectionMode="SelectionMode.SingleSelection"
+                                Outlined="true" Dense="true">
+                    <MudToggleItem T="string" Value="@("az")" Text="A-Z" />
+                    <MudToggleItem T="string" Value="@("vol")" Text="24h Vol" />
+                    <MudToggleItem T="string" Value="@("mcap")" Text="Mkt Cap" />
+                </MudToggleGroup>
+                @if (_symLoadingVolume)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="ml-1" Style="width:16px;height:16px;" />
+                }
+
+                <MudSpacer />
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="SymSelectAllVisible">Select All Visible</MudButton>
+                <MudButton Size="Size.Small" Variant="Variant.Text" OnClick="SymDeselectAllVisible">Deselect All Visible</MudButton>
+            </MudStack>
+        </MudPaper>
+
+        @if (_symSortMode != "az")
+        {
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-2">Shift+click = select this &amp; all above &bull; Shift+Alt+click = select all below</MudText>
+        }
+
+        @* Symbol Grid *@
+        <div class="symbol-grid">
+            @{
+                char currentLetter = '\0';
+                int idx = 0;
+            }
+            @foreach (var symbol in _symFilteredSymbols)
+            {
+                var s = symbol;
+                var i = idx;
+                if (_symSortMode == "az")
+                {
+                    var firstChar = char.ToUpper(s[0]);
+                    if (char.IsLetter(firstChar) && firstChar != currentLetter)
+                    {
+                        currentLetter = firstChar;
+                        <div class="symbol-alpha">@firstChar</div>
+                    }
+                }
+                var isSelected = _editSymbols.Contains(s);
+                var volText = _symSortMode == "vol" && _symVolumeData.TryGetValue(s, out var vol) ? FormatVolume(vol)
+                    : _symSortMode == "mcap" && _symMarketCapData.TryGetValue(s, out var mcap) ? FormatVolume(mcap)
+                    : null;
+                <MudButton Variant="@(isSelected ? Variant.Filled : Variant.Outlined)"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="@((MouseEventArgs e) => OnSymbolGridToggle(s, !isSelected, i, e))"
+                           Class="toggle-btn symbol-btn"
+                           Title="@volText">@GetSymDisplayName(s)@if (volText != null) { <span class="vol-label">@volText</span> }</MudButton>
+                idx++;
+            }
+        </div>
+    }
+    else
+    {
+        @* Fallback: manual symbol entry when IExchangeSymbolsService is not available *@
+        <MudAlert Severity="Severity.Info" Class="mb-3">
+            Symbol listing service not available.
+        </MudAlert>
+    }
+</div>
+
+<MudDialog @bind-Visible="_bulkAddDialogVisible" Options="_bulkAddDialogOptions">
+    <TitleContent>Bulk Add Symbols</TitleContent>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="_bulkAddText" Lines="10" Variant="Variant.Outlined"
+                      Placeholder="Paste symbols separated by spaces, commas, or newlines"
+                      Immediate="true" FullWidth="true" />
+        @{ var parsed = ParseBulkSymbols(); }
+        <MudText Typo="Typo.caption" Class="mt-1 mud-text-secondary">@parsed.Count symbol(s) detected</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _bulkAddDialogVisible = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="ApplyBulkAdd">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .plan-symbols-tab .gap-2 {
+        gap: 8px;
+    }
+
+    .save-status-chip {
+        font-size: 0.75rem !important;
+        height: 24px !important;
+    }
+
+    .save-status-chip .mud-chip-content {
+        display: flex;
+        align-items: center;
+    }
+
+    .symbol-grid {
+        columns: 180px;
+        column-gap: 6px;
+    }
+    .symbol-grid > .toggle-btn {
+        display: block;
+        width: 100%;
+        margin-bottom: 4px;
+        break-inside: avoid;
+    }
+    .toggle-btn {
+        min-width: unset !important;
+        padding: 4px 12px !important;
+        text-transform: none !important;
+        font-size: 0.8rem !important;
+    }
+    .symbol-btn {
+        justify-content: flex-start !important;
+        text-align: left !important;
+        border-width: 2px !important;
+        border-style: solid !important;
+        border-color: transparent !important;
+    }
+    .symbol-btn.mud-button-outlined {
+        border-color: var(--mud-palette-primary) !important;
+    }
+    .symbol-alpha {
+        display: block;
+        width: 100%;
+        margin-bottom: 4px;
+        break-inside: avoid;
+        padding: 4px 12px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.45);
+    }
+    .vol-label {
+        margin-left: 6px;
+        font-size: 0.65rem;
+        opacity: 0.6;
+    }
+</style>
+
+@code {
+    [Parameter] public OptimizationPlan Plan { get; set; } = default!;
+    [Parameter] public EventCallback<OptimizationPlan> OnSave { get; set; }
+
+    [Inject] private IExchangeSymbolsService? _exchangeSymbolsService { get; set; }
+    [Inject] private IOptimizationPlanRepository PlanRepository { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private IJSRuntime JS { get; set; } = default!;
+
+    private List<string> _editSymbols = new();
+    private List<string> _lastSavedSymbols = new();
+
+    private bool _bulkAddDialogVisible;
+    private string _bulkAddText = "";
+    private static readonly DialogOptions _bulkAddDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    // Autosave state
+    private enum SaveStatus { Clean, Pending, Saving, Saved, Error }
+    private SaveStatus _saveStatus = SaveStatus.Clean;
+    private Timer? _debounceTimer;
+    private Timer? _savedClearTimer;
+    private bool _disposed;
+    private const int DebounceMs = 1500;
+
+    // Symbol grid state
+    private string _symExchange = "";
+    private string _symArea = "";
+    private List<string> _symExchanges = new();
+    private List<string> _symAreas = new();
+    private List<string> _symAllSymbols = new();
+    private List<string> _symFilteredSymbols = new();
+    private string _symSortMode = "az";
+    private Dictionary<string, decimal> _symVolumeData = new();
+    private Dictionary<string, decimal> _symMarketCapData = new();
+    private bool _symLoadingVolume;
+    private HashSet<string> _symActiveQuoteFilters = new();
+    private HashSet<string> _symAvailableQuoteFilters = new();
+
+    private static readonly string[] _quoteFilters = ["USDT", "USDC", "USD", "BTC", "ETH", "Fiat"];
+
+    private bool IsDirty => !_editSymbols.Order().SequenceEqual(_lastSavedSymbols.Order());
+
+    protected override void OnInitialized()
+    {
+        LoadFromPlan();
+        InitializeSymbolService();
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (!ReferenceEquals(Plan, null) && !_editSymbols.SequenceEqual(Plan.Symbols.Snapshot))
+        {
+            // Plan changed externally - reload only if not dirty
+            if (!IsDirty)
+            {
+                LoadFromPlan();
+            }
+        }
+    }
+
+    private void LoadFromPlan()
+    {
+        _editSymbols = Plan.Symbols.Snapshot.ToList();
+        _lastSavedSymbols = Plan.Symbols.Snapshot.ToList();
+        _saveStatus = SaveStatus.Clean;
+    }
+
+    private void InitializeSymbolService()
+    {
+        if (_exchangeSymbolsService == null) return;
+
+        _symExchanges = _exchangeSymbolsService.ListExchanges().ToList();
+        var defaultExchange = _symExchanges.Contains("Binance") ? "Binance"
+            : _symExchanges.FirstOrDefault() ?? "";
+        if (!string.IsNullOrEmpty(defaultExchange))
+        {
+            _symExchange = defaultExchange;
+            _symAreas = _exchangeSymbolsService.ListExchangeAreas(defaultExchange).ToList();
+            var defaultArea = _symAreas.Contains("futures") ? "futures"
+                : _symAreas.FirstOrDefault() ?? "";
+            if (!string.IsNullOrEmpty(defaultArea))
+            {
+                _symArea = defaultArea;
+                LoadSymbolsForExchangeArea();
+                _ = LoadSymbolVolumeAsync();
+            }
+        }
+    }
+
+    private void ScheduleAutosave()
+    {
+        if (!IsDirty)
+        {
+            _saveStatus = SaveStatus.Clean;
+            return;
+        }
+
+        _saveStatus = SaveStatus.Pending;
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(_ =>
+        {
+            // Fire-and-forget: save on threadpool so it works even if the component is disposed mid-timer
+            _ = SaveNowAsync();
+        }, null, DebounceMs, Timeout.Infinite);
+    }
+
+    private async Task SaveNowAsync()
+    {
+        // Snapshot what we're saving
+        List<string> symbolsToSave;
+        lock (_editSymbols)
+        {
+            symbolsToSave = _editSymbols.ToList();
+        }
+
+        // Check if actually dirty against last saved
+        if (symbolsToSave.Order().SequenceEqual(_lastSavedSymbols.Order()))
+            return;
+
+        try
+        {
+            if (!_disposed)
+            {
+                _saveStatus = SaveStatus.Saving;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (ObjectDisposedException) { }
+
+        try
+        {
+            var updatedPlan = Plan with
+            {
+                Symbols = Plan.Symbols with { Snapshot = symbolsToSave }
+            };
+            var saved = await PlanRepository.SaveAsync(updatedPlan);
+            _lastSavedSymbols = symbolsToSave;
+
+            if (!_disposed)
+            {
+                // Notify parent so it updates its local state
+                await InvokeAsync(async () =>
+                {
+                    await OnSave.InvokeAsync(saved);
+                    _saveStatus = SaveStatus.Saved;
+                    StateHasChanged();
+
+                    // Clear "Saved" indicator after 3s
+                    _savedClearTimer?.Dispose();
+                    _savedClearTimer = new Timer(_ =>
+                    {
+                        if (_disposed) return;
+                        try
+                        {
+                            InvokeAsync(() =>
+                            {
+                                if (_saveStatus == SaveStatus.Saved)
+                                    _saveStatus = SaveStatus.Clean;
+                                StateHasChanged();
+                            });
+                        }
+                        catch (ObjectDisposedException) { }
+                    }, null, 3000, Timeout.Infinite);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            if (!_disposed)
+            {
+                try
+                {
+                    await InvokeAsync(() =>
+                    {
+                        _saveStatus = SaveStatus.Error;
+                        Snackbar.Add($"Failed to save symbols: {ex.Message}", Severity.Error);
+                        StateHasChanged();
+                    });
+                }
+                catch (ObjectDisposedException) { }
+            }
+        }
+    }
+
+    // Symbol grid methods
+    private void OnSymExchangeChanged(string exchange)
+    {
+        _symExchange = exchange;
+        _symArea = "";
+        _symAreas = _exchangeSymbolsService != null
+            ? _exchangeSymbolsService.ListExchangeAreas(exchange).ToList()
+            : new();
+        var area = _symAreas.Contains("futures") ? "futures"
+            : _symAreas.FirstOrDefault() ?? "";
+        if (!string.IsNullOrEmpty(area))
+        {
+            OnSymAreaChanged(area);
+        }
+    }
+
+    private void OnSymAreaChanged(string area)
+    {
+        _symArea = area;
+        LoadSymbolsForExchangeArea();
+        _ = LoadSymbolVolumeAsync();
+    }
+
+    private void LoadSymbolsForExchangeArea()
+    {
+        if (_exchangeSymbolsService == null || string.IsNullOrEmpty(_symExchange) || string.IsNullOrEmpty(_symArea))
+        {
+            _symAllSymbols = new();
+            _symFilteredSymbols = new();
+            return;
+        }
+
+        _symAllSymbols = _exchangeSymbolsService.ListSymbols(_symExchange, _symArea).ToList();
+        ApplySymFilters();
+    }
+
+    private async Task LoadSymbolVolumeAsync()
+    {
+        if (_exchangeSymbolsService == null) return;
+        _symLoadingVolume = true;
+        StateHasChanged();
+        try
+        {
+            _symVolumeData = await _exchangeSymbolsService.GetVolumeDataAsync(_symExchange, _symArea);
+            _symMarketCapData = await _exchangeSymbolsService.GetMarketCapDataAsync(_symExchange, _symArea);
+            if (_symSortMode != "az") ApplySymFilters();
+        }
+        catch { }
+        finally
+        {
+            _symLoadingVolume = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleSymQuoteFilter(string filter)
+    {
+        if (!_symActiveQuoteFilters.Remove(filter))
+            _symActiveQuoteFilters.Add(filter);
+        ApplySymFilters();
+    }
+
+    private void OnSymSortChanged(string mode)
+    {
+        _symSortMode = mode;
+        ApplySymFilters();
+    }
+
+    private void ApplySymFilters()
+    {
+        IEnumerable<string> symbols = _symAllSymbols
+            .Where(s => !s.EndsWith("UP") && !s.EndsWith("DOWN") && !s.EndsWith("BULL") && !s.EndsWith("BEAR"));
+
+        var afterBase = symbols.ToList();
+
+        _symAvailableQuoteFilters = new();
+        foreach (var filter in _quoteFilters)
+        {
+            if (afterBase.Any(s => MatchesQuoteFilter(s, filter)))
+                _symAvailableQuoteFilters.Add(filter);
+        }
+
+        if (_symActiveQuoteFilters.Count > 0)
+        {
+            _symFilteredSymbols = afterBase.Where(s =>
+                _symActiveQuoteFilters.Any(f => MatchesQuoteFilter(s, f))).ToList();
+        }
+        else
+        {
+            _symFilteredSymbols = afterBase;
+        }
+
+        _symFilteredSymbols = _symSortMode switch
+        {
+            "vol" => _symFilteredSymbols
+                .OrderByDescending(s => _symVolumeData.GetValueOrDefault(s))
+                .ToList(),
+            "mcap" => _symFilteredSymbols
+                .OrderByDescending(s => _symMarketCapData.GetValueOrDefault(s))
+                .ToList(),
+            _ => _symFilteredSymbols.OrderBy(s => s, StringComparer.OrdinalIgnoreCase).ToList()
+        };
+    }
+
+    private void OnSymbolGridToggle(string symbol, bool select, int index, MouseEventArgs e)
+    {
+        if (e.ShiftKey && !e.AltKey)
+        {
+            for (int i = 0; i <= index && i < _symFilteredSymbols.Count; i++)
+            {
+                var s = _symFilteredSymbols[i];
+                if (select && !_editSymbols.Contains(s)) _editSymbols.Add(s);
+                else if (!select) _editSymbols.Remove(s);
+            }
+        }
+        else if (e.ShiftKey && e.AltKey)
+        {
+            for (int i = index + 1; i < _symFilteredSymbols.Count; i++)
+            {
+                var s = _symFilteredSymbols[i];
+                if (select && !_editSymbols.Contains(s)) _editSymbols.Add(s);
+                else if (!select) _editSymbols.Remove(s);
+            }
+        }
+        else
+        {
+            if (select && !_editSymbols.Contains(symbol)) _editSymbols.Add(symbol);
+            else if (!select) _editSymbols.Remove(symbol);
+        }
+
+        ScheduleAutosave();
+    }
+
+    private void SymSelectAllVisible()
+    {
+        foreach (var s in _symFilteredSymbols)
+        {
+            if (!_editSymbols.Contains(s)) _editSymbols.Add(s);
+        }
+        ScheduleAutosave();
+    }
+
+    private void SymDeselectAllVisible()
+    {
+        foreach (var s in _symFilteredSymbols)
+        {
+            _editSymbols.Remove(s);
+        }
+        ScheduleAutosave();
+    }
+
+    private async Task CopySelectedSymbols()
+    {
+        var text = string.Join(Environment.NewLine, _editSymbols.Order());
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        Snackbar.Add($"Copied {_editSymbols.Count} symbols", Severity.Info);
+    }
+
+    private List<string> ParseBulkSymbols()
+        => _bulkAddText.Split(new[] { '\n', '\r', ' ', '\t', ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(s => s.ToUpperInvariant())
+            .Distinct()
+            .ToList();
+
+    private void ApplyBulkAdd()
+    {
+        var symbols = ParseBulkSymbols();
+        var added = 0;
+        foreach (var s in symbols)
+        {
+            if (!_editSymbols.Contains(s))
+            {
+                _editSymbols.Add(s);
+                added++;
+            }
+        }
+        _bulkAddDialogVisible = false;
+        _bulkAddText = "";
+        if (added > 0)
+        {
+            ScheduleAutosave();
+            Snackbar.Add($"Added {added} symbol(s)", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("All symbols already selected", Severity.Info);
+        }
+    }
+
+    private string GetSymDisplayName(string symbol)
+    {
+        if (_symActiveQuoteFilters.Count == 1)
+        {
+            var filter = _symActiveQuoteFilters.First();
+            if (filter != "Fiat" && symbol.EndsWith(filter))
+                return symbol[..^filter.Length];
+        }
+        return symbol;
+    }
+
+    private static bool MatchesQuoteFilter(string symbol, string filter)
+    {
+        if (filter == "Fiat")
+            return symbol.EndsWith("EUR") || symbol.EndsWith("GBP") || symbol.EndsWith("AUD") ||
+                   symbol.EndsWith("JPY") || symbol.EndsWith("BRL") || symbol.EndsWith("TRY");
+        return symbol.EndsWith(filter);
+    }
+
+    private static string FormatVolume(decimal vol)
+    {
+        return vol switch
+        {
+            >= 1_000_000_000 => $"{vol / 1_000_000_000:F1}B",
+            >= 1_000_000 => $"{vol / 1_000_000:F0}M",
+            >= 1_000 => $"{vol / 1_000:F0}K",
+            _ => vol.ToString("F0")
+        };
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        _debounceTimer?.Dispose();
+        _savedClearTimer?.Dispose();
+
+        // Flush any pending save synchronously on dispose (fire-and-forget the async save)
+        if (IsDirty)
+        {
+            _ = Task.Run(() => SaveNowAsync());
+        }
+    }
+}

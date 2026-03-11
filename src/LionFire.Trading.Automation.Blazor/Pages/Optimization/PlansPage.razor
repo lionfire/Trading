@@ -10,6 +10,7 @@
 @using LionFire.Trading.Grains.User
 @using LionFire.Trading.Optimization.Matrix
 @using Orleans
+@using System.Text.RegularExpressions
 
 <PageTitle>@_pageTitle</PageTitle>
 
@@ -150,7 +151,7 @@
             <MudAlert Severity="Severity.Info" Class="mt-4">
                 @if (_plans.Count == 0)
                 {
-                    <span>No optimization plans yet. <MudLink Href="@NewPlanHref">Create your first plan</MudLink>.</span>
+                    <span>No optimization plans yet. <MudLink OnClick="OpenNewPlanDialog" Style="cursor: pointer;">Create your first plan</MudLink>.</span>
                 }
                 else
                 {
@@ -182,7 +183,8 @@
                                 RegisteredBots="_registeredBots"
                                 PlanBots="_planBots"
                                 PlanCounts="_planCounts"
-                                OnBotChanged="OnBotFilterChanged" />
+                                OnBotChanged="OnBotFilterChanged"
+                                OnNewPlan="OpenNewPlanDialog" />
                 </MudPaper>
 
                 @if (!string.IsNullOrEmpty(_selectedBot))
@@ -207,14 +209,13 @@
                                  ApplyEffectsToContainer="true" PanelClass="pa-4">
                             <MudTabPanel Text="Overview" Icon="@Icons.Material.Filled.Info">
                                 <PlanOverviewTab Plan="_selectedPlan"
-                                                 ExecutionState="_currentExecutionState"
-                                                 OnStartExecution="StartExecution"
-                                                 OnStopExecution="StopExecution"
-                                                 OnPauseExecution="PauseExecution"
-                                                 OnResumeExecution="ResumeExecution"
                                                  OnDuplicate="@(() => DuplicatePlan(_selectedPlan))"
                                                  OnDelete="@(() => ConfirmDeletePlan(_selectedPlan))"
                                                  OnPlanChanged="OnPlanChanged" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Symbols" Icon="@Icons.Material.Filled.Checklist">
+                                <PlanSymbolsTab Plan="_selectedPlan" OnSave="SavePlanSettings" />
                             </MudTabPanel>
 
                             <MudTabPanel Text="Date Ranges" Icon="@Icons.Material.Filled.DateRange">
@@ -230,7 +231,18 @@
                                                              OnRunCell="RunCell"
                                                              OnCellDrillDown="HandleMatrixCellDrillDown"
                                                              OnOpenCellInOneShot="OpenCellInOneShot"
+                                                             OnNavigateToSymbolsTab="GoToSymbolsTab"
                                                              OnPlanChanged="OnPlanChanged" />
+                            </MudTabPanel>
+
+                            <MudTabPanel Text="Performance" Icon="@Icons.Material.Filled.Speed">
+                                <PlanPerformanceTab Plan="_selectedPlan"
+                                                    ExecutionState="_currentExecutionState"
+                                                    OnStartExecution="StartExecution"
+                                                    OnStopExecution="StopExecution"
+                                                    OnPauseExecution="PauseExecution"
+                                                    OnResumeExecution="ResumeExecution"
+                                                    OnPlanChanged="OnPlanChanged" />
                             </MudTabPanel>
 
                             <MudTabPanel Text="Jobs" Icon="@Icons.Material.Filled.List">
@@ -240,11 +252,6 @@
 
                             <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Assessment">
                                 <PlanResultsTab ExecutionState="_currentExecutionState" />
-                            </MudTabPanel>
-
-                            <MudTabPanel Text="Settings" Icon="@Icons.Material.Filled.Settings">
-                                <PlanSettingsTab Plan="_selectedPlan" OnSave="SavePlanSettings"
-                                                 EditRawHref="@($"/optimization/plans/{_selectedPlan.Id}/edit")" />
                             </MudTabPanel>
                         </MudTabs>
                     </MudPaper>
@@ -259,7 +266,7 @@
                         </MudText>
                         <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
                             Choose a plan from the list on the left, or
-                            <MudLink Href="@NewPlanHref">create a new plan</MudLink>.
+                            <MudLink OnClick="OpenNewPlanDialog" Style="cursor: pointer;">create a new plan</MudLink>.
                         </MudText>
                     </MudPaper>
                 }
@@ -279,6 +286,40 @@
     <DialogActions>
         <MudButton OnClick="@(() => _deleteDialogVisible = false)">Cancel</MudButton>
         <MudButton Color="Color.Error" OnClick="DeletePlan">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+<MudDialog @bind-Visible="_newPlanDialogVisible" Options="_newPlanDialogOptions">
+    <TitleContent>@(_duplicateSourcePlan != null ? "Duplicate Plan" : "New Optimization Plan")</TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="2">
+            <MudItem xs="12">
+                <MudSelect T="string" Value="_newPlanBot" ValueChanged="OnNewPlanBotChanged"
+                           Label="Bot Type" Variant="Variant.Outlined"
+                           HelperText="Select the bot to optimize">
+                    @foreach (var bot in _registeredBots)
+                    {
+                        <MudSelectItem Value="@bot">@bot</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_newPlanName" Label="Name"
+                              Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField T="string" Value="_newPlanId" ValueChanged="OnNewPlanIdManualEdit"
+                              Label="Plan ID" Variant="Variant.Outlined"
+                              HelperText="@(_newPlanUserEditedId ? "Custom ID" : "Auto-generated from bot type")" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _newPlanDialogVisible = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CreateNewPlan"
+                   Disabled="@(!IsNewPlanFormValid())">
+            @(_duplicateSourcePlan != null ? "Duplicate" : "Create")
+        </MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -396,6 +437,15 @@
     private string _sortBy = "modified";
     private bool _deleteDialogVisible;
     private OptimizationPlan? _planToDelete;
+
+    // New plan dialog state
+    private bool _newPlanDialogVisible;
+    private string _newPlanBot = "";
+    private string _newPlanName = "";
+    private string _newPlanId = "";
+    private bool _newPlanUserEditedId;
+    private OptimizationPlan? _duplicateSourcePlan;
+    private static readonly DialogOptions _newPlanDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
     private bool _isGridView = false; // Default to master-detail
     private int _activeDetailTab = 0;
     private bool _masterPanelVisible = true;
@@ -422,12 +472,21 @@
     [Inject] private IMatrixResultsProvider ResultsProvider { get; set; } = default!;
 
     private const string MasterPanelVisibleKey = "plans-page:master-panel-visible";
+    private const string LastDetailTabKey = "plans-page:last-detail-tab";
+    private const string LastPlanIdKey = "plans-page:last-plan-id";
 
-    private bool _isMasterPanelEffectivelyVisible => _masterPanelVisible || _masterPanelTemporarilyShown;
+    private bool _isMasterPanelEffectivelyVisible => _masterPanelVisible || _masterPanelTemporarilyShown || (_selectedPlan == null && !_isGridView);
 
-    private string NewPlanHref => !string.IsNullOrEmpty(_selectedBot)
-        ? $"/optimization/plans/new?bot={Uri.EscapeDataString(_selectedBot)}"
-        : "/optimization/plans/new";
+    private void OpenNewPlanDialog()
+    {
+        _duplicateSourcePlan = null;
+        _newPlanBot = !string.IsNullOrEmpty(_selectedBot) ? _selectedBot
+            : _registeredBots.FirstOrDefault() ?? "";
+        _newPlanName = !string.IsNullOrEmpty(_newPlanBot) ? $"{_newPlanBot} Optimization" : "";
+        _newPlanUserEditedId = false;
+        AutoGenerateNewPlanId();
+        _newPlanDialogVisible = true;
+    }
 
     private string _pageTitle => _selectedPlan != null
         ? _selectedPlan.Name
@@ -435,8 +494,12 @@
             ? $"Optimization Plans for {_selectedBot}"
             : "Optimization Plans";
 
-    private int _unfinishedCellCount => _currentExecutionState?.Jobs
-        .Count(j => j.Status is not JobStatus.Completed) ?? 0;
+    private int _totalCellCount => _selectedPlan == null ? 0
+        : _selectedPlan.Symbols.EffectiveSymbols.Count()
+          * _selectedPlan.Timeframes.Count
+          * Math.Max(1, _selectedPlan.DateRanges.Count);
+
+    private int _unfinishedCellCount => _totalCellCount - _progressCompletedCells;
 
     private Dictionary<string, MatrixCellProgress> _cellProgress = new();
     private int _progressCompletedCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Complete);
@@ -494,14 +557,19 @@
             _activeDetailTab = DetailView.ToLowerInvariant() switch
             {
                 "overview" => 0,
-                "date-ranges" => 1,
-                "parameters" => 2,
-                "matrix" => 3,
-                "jobs" => 4,
-                "results" => 5,
-                "settings" => 6,
+                "symbols" => 1,
+                "date-ranges" => 2,
+                "parameters" => 3,
+                "matrix" => 4,
+                "performance" => 5,
+                "jobs" => 6,
+                "results" => 7,
                 _ => _activeDetailTab
             };
+        }
+        else if (_selectedPlan != null)
+        {
+            await RestoreLastDetailTab();
         }
 
         StateHasChanged();
@@ -576,7 +644,12 @@
 
     private void EditPlan(OptimizationPlan plan)
     {
-        Navigation.NavigateTo($"/optimization/plans/{plan.Id}/edit");
+        // Select the plan and navigate to its settings tab
+        _selectedPlan = plan;
+        _selectedBot = NormalizeBotName(plan.Bot);
+        _activeDetailTab = 0; // Overview tab
+        _masterPanelTemporarilyShown = false;
+        Navigation.NavigateTo($"/optimization/plans/{plan.Id}");
     }
 
     private void OnPlanChanged(OptimizationPlan updatedPlan)
@@ -616,7 +689,12 @@
 
     private void DuplicatePlan(OptimizationPlan plan)
     {
-        Navigation.NavigateTo($"/optimization/plans/new?from={plan.Id}");
+        _duplicateSourcePlan = plan;
+        _newPlanBot = NormalizeBotName(plan.Bot);
+        _newPlanName = $"{plan.Name} (copy)";
+        _newPlanUserEditedId = false;
+        AutoGenerateNewPlanId();
+        _newPlanDialogVisible = true;
     }
 
     private void ConfirmDeletePlan(OptimizationPlan plan)
@@ -891,7 +969,7 @@
     /// Normalize bot name by stripping the "P" prefix used in parameter types.
     /// E.g., "PAtrBot" -> "AtrBot"
     /// </summary>
-    private static readonly string[] TabNames = ["overview", "date-ranges", "parameters", "matrix", "jobs", "results", "settings"];
+    private static readonly string[] TabNames = ["overview", "symbols", "date-ranges", "parameters", "matrix", "performance", "jobs", "results"];
 
     private void OnActiveTabChanged(int index)
     {
@@ -906,6 +984,26 @@
                 : $"/optimization/plans/{_selectedPlan.Id}/{tabName}";
             Navigation.NavigateTo(url, replace: true);
         }
+
+        _ = SaveLastDetailTab(index);
+    }
+
+    private async Task SaveLastDetailTab(int index)
+    {
+        try
+        {
+            if (ClusterClient != null && index >= 0 && index < TabNames.Length)
+            {
+                var grain = ClusterClient.GetGrain<IUserPreferencesG>("Anonymous");
+                await grain.SetViewSetting(LastDetailTabKey, TabNames[index]);
+            }
+        }
+        catch { /* Best effort */ }
+    }
+
+    private void GoToSymbolsTab()
+    {
+        OnActiveTabChanged(1); // "symbols" is tab index 1
     }
 
     private async Task LoadMasterPanelPreference()
@@ -919,6 +1017,24 @@
                 if (value != null)
                 {
                     _masterPanelVisible = value != "false";
+                }
+            }
+        }
+        catch { /* Use default */ }
+    }
+
+    private async Task RestoreLastDetailTab()
+    {
+        try
+        {
+            if (ClusterClient != null)
+            {
+                var grain = ClusterClient.GetGrain<IUserPreferencesG>("Anonymous");
+                var savedTab = await grain.GetViewSetting(LastDetailTabKey);
+                if (savedTab != null)
+                {
+                    var index = Array.IndexOf(TabNames, savedTab);
+                    if (index >= 0) _activeDetailTab = index;
                 }
             }
         }
@@ -946,6 +1062,140 @@
         _selectedPlan = null;
         _currentExecutionState = null;
         Navigation.NavigateTo("/optimization/plans");
+    }
+
+    // New plan dialog methods
+
+    private void OnNewPlanBotChanged(string newBot)
+    {
+        _newPlanBot = newBot;
+        if (_duplicateSourcePlan == null)
+        {
+            _newPlanName = $"{newBot} Optimization";
+        }
+        _newPlanUserEditedId = false;
+        AutoGenerateNewPlanId();
+    }
+
+    private void OnNewPlanIdManualEdit(string newId)
+    {
+        _newPlanId = newId;
+        _newPlanUserEditedId = true;
+    }
+
+    private void AutoGenerateNewPlanId()
+    {
+        if (_newPlanUserEditedId) return;
+
+        var prefix = _newPlanBot.ToLowerInvariant();
+        if (string.IsNullOrEmpty(prefix)) prefix = "plan";
+
+        var pattern = new Regex($@"^{Regex.Escape(prefix)}-(\d+)$");
+        int maxN = 0;
+        foreach (var plan in _plans)
+        {
+            var match = pattern.Match(plan.Id);
+            if (match.Success && int.TryParse(match.Groups[1].Value, out var n))
+            {
+                maxN = Math.Max(maxN, n);
+            }
+        }
+
+        _newPlanId = $"{prefix}-{maxN + 1}";
+    }
+
+    private bool IsNewPlanFormValid()
+    {
+        return !string.IsNullOrWhiteSpace(_newPlanBot)
+            && !string.IsNullOrWhiteSpace(_newPlanName)
+            && !string.IsNullOrWhiteSpace(_newPlanId);
+    }
+
+    private async Task CreateNewPlan()
+    {
+        if (!IsNewPlanFormValid()) return;
+
+        // Check if ID already exists
+        if (_plans.Any(p => p.Id == _newPlanId))
+        {
+            Snackbar.Add($"Plan '{_newPlanId}' already exists", Severity.Error);
+            return;
+        }
+
+        OptimizationPlan newPlan;
+        if (_duplicateSourcePlan != null)
+        {
+            // Duplicate from source
+            newPlan = _duplicateSourcePlan with
+            {
+                Id = _newPlanId,
+                Name = _newPlanName,
+                Bot = _newPlanBot,
+                Version = 1,
+                Created = DateTime.UtcNow
+            };
+        }
+        else
+        {
+            // Brand new plan with defaults
+            newPlan = new OptimizationPlan
+            {
+                Id = _newPlanId,
+                Name = _newPlanName,
+                Bot = _newPlanBot,
+                Symbols = new OptimizationPlanSymbols
+                {
+                    Type = "static",
+                    Snapshot = ["BTCUSDT", "ETHUSDT"]
+                },
+                Timeframes = ["m5", "m15", "h1"],
+                DateRanges =
+                [
+                    new OptimizationDateRange { Name = "1mo", Start = "-1M", End = "now" },
+                    new OptimizationDateRange { Name = "3mo", Start = "-3M", End = "now" }
+                ],
+                Resolution = new OptimizationResolution
+                {
+                    MaxBacktests = 1000,
+                    MinParameterPriority = 0
+                },
+                Tags = [],
+                Version = 1,
+                Created = DateTime.UtcNow
+            };
+        }
+
+        try
+        {
+            var savedPlan = await Repository.SaveAsync(newPlan);
+            _plans.Add(savedPlan);
+
+            // Update bot counts
+            var bot = NormalizeBotName(savedPlan.Bot);
+            if (!_planBots.Contains(bot)) _planBots.Add(bot);
+            _planCounts[bot] = _plans.Count(p => NormalizeBotName(p.Bot) == bot);
+
+            _newPlanDialogVisible = false;
+            Snackbar.Add($"Created plan '{savedPlan.Name}'", Severity.Success);
+
+            // Select and navigate to the new plan
+            _selectedPlan = savedPlan;
+            _selectedBot = bot;
+            _activeDetailTab = 0;
+            await LoadCurrentExecutionState();
+            Navigation.NavigateTo($"/optimization/plans/{savedPlan.Id}");
+        }
+        catch (PlanValidationException ex)
+        {
+            foreach (var error in ex.Errors)
+            {
+                Snackbar.Add(error, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to create: {ex.Message}", Severity.Error);
+        }
     }
 
     private static string NormalizeBotName(string botName)
