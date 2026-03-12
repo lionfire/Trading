@@ -60,13 +60,24 @@ public class GridSearchStrategy : OptimizationStrategyBase, IOptimizationStrateg
         {
             foreach (var level in State.LevelsOfDetail)
             {
+                // Serialize a summary DTO instead of the GridLevelOfDetail directly,
+                // which implements IEnumerable<int[]> and would cause the serializer
+                // to enumerate all parameter combinations (potentially millions).
+                var summary = new
+                {
+                    level.Level,
+                    level.TestPermutationCount,
+                    Parameters = level.Parameters.Select(p => new
+                    {
+                        p.Key,
+                        p.TestCount,
+                    }).ToArray()
+                };
                 var json = JsonSerializer.Serialize(
-                    level,
-                    //level.PMultiSim.OfType<object>(),
+                    summary,
                     new JsonSerializerOptions
                     {
                         WriteIndented = false,
-
                         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault
                     });
                 var hjsonValue = Hjson.JsonValue.Parse(json);

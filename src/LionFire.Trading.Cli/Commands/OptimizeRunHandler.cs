@@ -20,6 +20,7 @@ using LionFire.Trading.Automation.Optimization.Scoring;
 using LionFire.Trading.Optimization;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Journal;
+using LionFire.Trading.Bots.LorentzianDynamic;
 
 namespace LionFire.Trading.Cli.Commands;
 
@@ -88,11 +89,23 @@ public static class OptimizeRunHandler
         cmd.AddOption(journalsOption);
 
         cmd.AddOption(new Option<int?>("--keep-journals", "Number of top results to keep trade journals for (default: 5)"));
+
+        var threadsOption = new Option<int>("--threads", () => 0,
+            "Intra-batch parallelism (0=auto uses ProcessorCount, 1=sequential, N=N threads)");
+        threadsOption.AddAlias("-n");
+        cmd.AddOption(threadsOption);
+
+        cmd.AddOption(new Option<int>("--min-priority", () => 0,
+            "Minimum parameter priority to include (lower values include more parameters, e.g. -1, -5, -10)"));
     }
 
     public static Action<HostingBuilderBuilderContext, HostApplicationBuilder> Run =>
         (context, builder) =>
         {
+            // Parse args early to configure parallelism before service provider is built
+            var earlyArgs = ParseArguments(Environment.GetCommandLineArgs().Skip(1).ToArray());
+            int effectiveThreads = earlyArgs.Threads == 0 ? Environment.ProcessorCount : earlyArgs.Threads;
+
             // Configure services needed for optimization
             builder.Services
                 .AutomationModel(builder.Configuration) // Add BotTypeRegistry and related services
@@ -100,11 +113,17 @@ public static class OptimizeRunHandler
                 .AddHistoricalBars(builder.Configuration)
 
                 // Register bot types (needed for BotTypeRegistry)
-                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>))
-                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>))
+                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>), typeof(PLorentzianDynamicBot<>))
+                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>), typeof(LorentzianDynamicBot<>))
 
                 // Register Binance client for historical data retrieval
                 .AddSingleton<IBinanceRestClient>(sp => new BinanceRestClient());
+
+            // Configure intra-batch parallelism
+            builder.Services.Configure<BacktestExecutionOptions>(opts =>
+            {
+                opts.Threads = effectiveThreads;
+            });
 
             builder.Services.AddRunTaskAndShutdown(async (serviceProvider) =>
             {
@@ -192,6 +211,7 @@ public static class OptimizeRunHandler
                     {
                         MaxBacktests = options.MaxBacktests,
                         MaxBatchSize = options.BatchSize,
+                        MinParameterPriority = options.MinParameterPriority,
                         TradeJournalOptions = new TradeJournalOptions
                         {
                             Enabled = options.Journals ?? false,
@@ -209,6 +229,7 @@ public static class OptimizeRunHandler
                         TimeFrame = options.Timeframe,
                         StartDate = options.From.ToString("yyyy-MM-dd"),
                         EndDate = options.To.ToString("yyyy-MM-dd"),
+                        Threads = effectiveThreads,
                     });
 
                     // Setup cancellation
@@ -560,6 +581,31 @@ public static class OptimizeRunHandler
                         i++;
                     }
                     break;
+
+                case "--threads":
+                case "-n":
+                    if (nextArg != null && !nextArg.StartsWith("-"))
+                    {
+                        if (int.TryParse(nextArg, out var threads))
+                        {
+                            options.Threads = threads;
+                            options.ExplicitlySetProperties.Add("Threads");
+                        }
+                        i++;
+                    }
+                    break;
+
+                case "--min-priority":
+                    if (nextArg != null)
+                    {
+                        if (int.TryParse(nextArg, out var minPriority))
+                        {
+                            options.MinParameterPriority = minPriority;
+                            options.ExplicitlySetProperties.Add("MinParameterPriority");
+                        }
+                        i++;
+                    }
+                    break;
             }
         }
 
@@ -596,6 +642,8 @@ public static class OptimizeRunHandler
                 case "starting":
                     AnsiConsole.MarkupLine($"[blue][[{timestamp}]][/] Starting optimization: [cyan]{progress.Bot}[/] on [yellow]{progress.Symbol}[/] {progress.TimeFrame}");
                     AnsiConsole.MarkupLine($"         Date range: {progress.StartDate} to {progress.EndDate}");
+                    if (progress.Threads > 0)
+                        AnsiConsole.MarkupLine($"         Threads: [cyan]{progress.Threads}[/]");
                     break;
 
                 case "running":
@@ -609,6 +657,29 @@ public static class OptimizeRunHandler
 
                 case "completed":
                     AnsiConsole.MarkupLine($"[green][[{timestamp}]][/] [bold green]Completed![/] {progress.Completed} backtests in {progress.Elapsed}");
+
+                    // Print profiling report if available (LorentzianDynamicBot)
+                    try
+                    {
+                        var botType = AppDomain.CurrentDomain.GetAssemblies()
+                            .SelectMany(a => { try { return a.GetTypes(); } catch { return []; } })
+                            .FirstOrDefault(t => t.Name == "LorentzianDynamicBot`1");
+                        if (botType != null)
+                        {
+                            var concreteType = botType.MakeGenericType(typeof(double));
+                            var reportMethod = concreteType.GetMethod("GetProfilingReport", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                            if (reportMethod != null)
+                            {
+                                var report = (string?)reportMethod.Invoke(null, null);
+                                if (!string.IsNullOrEmpty(report))
+                                {
+                                    foreach (var line in report.Split('\n'))
+                                    Console.WriteLine($"         {line}");
+                                }
+                            }
+                        }
+                    }
+                    catch { /* profiling is optional */ }
                     if (!string.IsNullOrEmpty(progress.OutputDirectory))
                     {
                         AnsiConsole.MarkupLine($"         Results: [link]{progress.OutputDirectory}[/]");
@@ -691,6 +762,7 @@ public static class OptimizeRunHandler
         public string? TimeFrame { get; set; }
         public string? StartDate { get; set; }
         public string? EndDate { get; set; }
+        public int? Threads { get; set; }
         public double? Percent { get; set; }
         public long? Completed { get; set; }
         public long? Total { get; set; }

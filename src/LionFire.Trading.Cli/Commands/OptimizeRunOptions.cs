@@ -28,6 +28,16 @@ public class OptimizeRunOptions
     public bool? Journals { get; set; }
     public int? KeepJournals { get; set; }
 
+    // Parameter priority
+    public int MinParameterPriority { get; set; } = 0;
+
+    // Parallelism
+    /// <summary>
+    /// Intra-batch parallelism: number of backtests processed in parallel per bar.
+    /// 0 = auto (uses ProcessorCount). 1 = sequential.
+    /// </summary>
+    public int Threads { get; set; } = 0;
+
     /// <summary>
     /// Tracks which properties were explicitly set via command line
     /// (as opposed to having default values)

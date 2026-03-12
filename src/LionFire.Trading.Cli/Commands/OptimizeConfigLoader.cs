@@ -160,6 +160,8 @@ public static class OptimizeConfigLoader
                 options.BatchSize = config.Optimization.MaxBatchSize.Value;
             if (config.Optimization.BatchSize.HasValue)
                 options.BatchSize = config.Optimization.BatchSize.Value;
+            if (config.Optimization.MinParameterPriority.HasValue)
+                options.MinParameterPriority = config.Optimization.MinParameterPriority.Value;
         }
     }
 
@@ -195,6 +197,14 @@ public static class OptimizeConfigLoader
             target.MaxBacktests = commandLine.MaxBacktests;
         if (explicitlySet.Contains("BatchSize"))
             target.BatchSize = commandLine.BatchSize;
+        if (explicitlySet.Contains("MinParameterPriority"))
+            target.MinParameterPriority = commandLine.MinParameterPriority;
+        if (explicitlySet.Contains("Threads"))
+            target.Threads = commandLine.Threads;
+        if (explicitlySet.Contains("Journals"))
+            target.Journals = commandLine.Journals;
+        if (explicitlySet.Contains("KeepJournals"))
+            target.KeepJournals = commandLine.KeepJournals;
 
         // Always copy config/preset paths
         target.Config = commandLine.Config;
