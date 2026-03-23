@@ -27,13 +27,23 @@
                 <MudText Typo="Typo.caption">Completed</MudText>
             </MudPaper>
             <MudPaper Class="summary-card" Elevation="0" Outlined="true">
-                <MudText Typo="Typo.h4" Color="Color.Warning">@(ExecutionState.TotalJobs - ExecutionState.CompletedJobs - ExecutionState.FailedJobs)</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Warning">@ExecutionState.PendingJobs</MudText>
                 <MudText Typo="Typo.caption">Pending</MudText>
             </MudPaper>
-            <MudPaper Class="summary-card" Elevation="0" Outlined="true">
-                <MudText Typo="Typo.h4" Color="Color.Error">@ExecutionState.FailedJobs</MudText>
-                <MudText Typo="Typo.caption">Failed</MudText>
-            </MudPaper>
+            @if (ExecutionState.FailedJobs > 0)
+            {
+                <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h4" Color="Color.Error">@ExecutionState.FailedJobs</MudText>
+                    <MudText Typo="Typo.caption">Failed</MudText>
+                </MudPaper>
+            }
+            @if (ExecutionState.NoHistoryJobs > 0)
+            {
+                <MudPaper Class="summary-card" Elevation="0" Outlined="true">
+                    <MudText Typo="Typo.h4" Style="color: #9E9E9E;">@ExecutionState.NoHistoryJobs</MudText>
+                    <MudText Typo="Typo.caption">No History</MudText>
+                </MudPaper>
+            }
             @if (ExecutionState.UsePrioritization)
             {
                 <MudPaper Class="summary-card" Elevation="0" Outlined="true">
@@ -160,6 +170,48 @@
                     {
                         <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
                             Showing 20 of @ExecutionState.FailedJobs failed jobs
+                        </MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+
+        @* No History Jobs Section *@
+        @if (GetNoHistoryJobs().ToList() is { Count: > 0 } noHistoryJobs)
+        {
+            <MudCard Class="mb-4" Elevation="0" Outlined="true">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6" Style="color: #9E9E9E;">
+                            <MudIcon Icon="@Icons.Material.Filled.EventBusy" Class="mr-1" Style="color: #9E9E9E;" />
+                            Insufficient History (@noHistoryJobs.Count)
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudSimpleTable Dense="true" Hover="true">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Timeframe</th>
+                                <th>Date Range</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var job in noHistoryJobs.Take(50))
+                            {
+                                <tr>
+                                    <td>@job.Symbol</td>
+                                    <td>@job.Timeframe</td>
+                                    <td>@job.StartDate.ToString("yyyy-MM-dd") - @job.EndDate.ToString("yyyy-MM-dd")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </MudSimpleTable>
+                    @if (noHistoryJobs.Count > 50)
+                    {
+                        <MudText Typo="Typo.caption" Class="mt-2 mud-text-secondary">
+                            Showing 50 of @noHistoryJobs.Count jobs with insufficient history
                         </MudText>
                     }
                 </MudCardContent>
@@ -361,6 +413,10 @@
 
     private IEnumerable<OptimizationJob> GetFailedJobs() =>
         ExecutionState?.Jobs.Where(j => j.Status == JobStatus.Failed)
+            ?? Enumerable.Empty<OptimizationJob>();
+
+    private IEnumerable<OptimizationJob> GetNoHistoryJobs() =>
+        ExecutionState?.Jobs.Where(j => j.Status == JobStatus.NoHistory)
             ?? Enumerable.Empty<OptimizationJob>();
 
     private double? GetJobProgress(OptimizationJob job)

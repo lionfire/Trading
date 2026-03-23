@@ -56,4 +56,13 @@ public partial class OptimizationStatus(ILogger<OptimizeParameters> Logger)
     {
         ViewModel!.POptimization.MaxBacktests = (long)testCount;
     }
+
+    private static string FormatTestCount(double count) => count switch
+    {
+        >= 1_000_000_000_000 => $"{count / 1_000_000_000_000:N1}T",
+        >= 1_000_000_000 => $"{count / 1_000_000_000:N1}B",
+        >= 1_000_000 => $"{count / 1_000_000:N1}M",
+        >= 1_000 => $"{count / 1_000:N1}K",
+        _ => count.ToString("N0"),
+    };
 }

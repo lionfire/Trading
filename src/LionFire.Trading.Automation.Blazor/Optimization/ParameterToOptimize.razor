@@ -1,4 +1,5 @@
 @using System.Numerics
+@using LionFire.Trading.Automation.Optimization.Sensitivity
 @typeparam TValue where TValue : struct, INumber<TValue>
 
 <MudItem sm="@ItemSize" Class="@((!FixedValue ? "Enabled border-solid mud-border-primary" : "Disabled border-solid mud-border-dark") + "  border-2 pr-6 pb-3")">
@@ -47,6 +48,37 @@
                 <NumericValueSelector Text="Step" TValue="TValue" Parameter="Parameter" @bind-Value="Options.Step" @bind-EffectiveValue="Options.EffectiveStep" HasValue="Options.HasStep" Min="Options.EffectiveMinStep" Max="Options.EffectiveMaxStep" Size="Size.Small" />
                 <NumericValueSelector Text="Exponent" TValue="double" Parameter="Parameter" @bind-Value="Options.Exponent" @bind-EffectiveValue="Options.EffectiveExponent" HasValue="Options.HasExponent" Min="Options.EffectiveMinExponent" Max="Options.EffectiveMaxExponent" Step="Options.ExponentSliderStep" Size="Size.Small" />
             </div>
+            @if (Recommendation != null)
+            {
+                var rec = Recommendation;
+                var levelColor = rec.Sensitivity.Level switch
+                {
+                    SensitivityLevel.High => Color.Error,
+                    SensitivityLevel.Medium => Color.Warning,
+                    _ => Color.Success,
+                };
+                var confColor = rec.Confidence >= 0.7 ? Color.Success : rec.Confidence >= 0.4 ? Color.Warning : Color.Error;
+                <div class="d-flex flex-row align-center gap-2 mt-1">
+                    <MudTooltip Text="@($"Sensitivity: {rec.Sensitivity.Level}, Gradient: {rec.Sensitivity.MeanGradientMagnitude:G3}, Samples: {rec.Sensitivity.SampleCount}")">
+                        <MudChip T="string" Color="@levelColor" Size="Size.Small" Variant="Variant.Outlined">
+                            Rec: Step=@rec.RecommendedStep.ToString("G4")
+                            @if (Math.Abs(rec.RecommendedStepExponent - 1.0) > 0.01)
+                            {
+                                <text>, Exp=@rec.RecommendedStepExponent.ToString("F1")</text>
+                            }
+                        </MudChip>
+                    </MudTooltip>
+                    <MudTooltip Text="@($"Confidence: {rec.Confidence:P0}")">
+                        <MudChip T="string" Color="@confColor" Size="Size.Small" Variant="Variant.Text">
+                            @rec.Confidence.ToString("P0")
+                        </MudChip>
+                    </MudTooltip>
+                    <MudTooltip Text="Apply recommended step and exponent">
+                        <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Primary"
+                                       OnClick="ApplyRecommendation" />
+                    </MudTooltip>
+                </div>
+            }
         </div>
         @* <div class="d-flex flex-row gap-2 align-center">
             <MudSlider T="TValue" @bind-Value="Options.EffectiveMinValue" Color="Options.HasMinValue ? Color.Primary : Color.Dark" />
@@ -89,6 +121,12 @@
 
     [Parameter]
     public EventCallback<bool> SetEnabled { get; set; }
+
+    /// <summary>
+    /// Optional step recommendation from sensitivity analysis.
+    /// </summary>
+    [Parameter]
+    public StepRecommendation? Recommendation { get; set; }
 
     #region Derived
 
@@ -153,6 +191,16 @@
     {
         Options.EnableOptimization = !Enabled;
         if (SetEnabled.HasDelegate) SetEnabled.InvokeAsync(Options.EnableOptimization.Value);
+    }
+
+    void ApplyRecommendation()
+    {
+        if (Recommendation == null) return;
+        Options.Step = TValue.CreateChecked(Recommendation.RecommendedStep);
+        if (Math.Abs(Recommendation.RecommendedStepExponent - 1.0) > 0.01)
+        {
+            Options.Exponent = Recommendation.RecommendedStepExponent;
+        }
     }
 
     #endregion

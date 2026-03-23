@@ -44,6 +44,11 @@ public class SavedResultsVM : ReactiveObject, IOptimizationResultsVM, IDisposabl
             entries = BacktestResultsReader.ReadFromDirectory(resultPath);
             runInfo = LoadRunInfo(resultPath);
         }
+        else if (resultPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && File.Exists(resultPath))
+        {
+            entries = BacktestResultsReader.ReadFromZip(resultPath);
+            runInfo = LoadRunInfoFromZip(resultPath);
+        }
         else if (File.Exists(resultPath + ".zip"))
         {
             var zipPath = resultPath + ".zip";

@@ -35,7 +35,7 @@
                           Style="@($"width: 140px; cursor: pointer; {(isLowestVisible ? "border: 2px solid var(--mud-palette-primary);" : "")}")"
                           @onclick="@(() => OnLevelClicked(testCount))">
                     <MudText Typo="Typo.h6">Level @level.Level</MudText>
-                    <div>@testCount.ToString("N0") tests</div>
+                    <div>@FormatTestCount(testCount) tests</div>
                 </MudPaper>
             }
         </div>

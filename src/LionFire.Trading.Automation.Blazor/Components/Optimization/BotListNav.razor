@@ -9,7 +9,7 @@
                            OnClick="ClearSelection" Title="Back to bot list" />
             <MudText Typo="Typo.subtitle2" Class="selected-bot-name">@SelectedBot</MudText>
             <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small"
-                           Href="/optimization/plans/new" Title="New plan" />
+                           OnClick="@(() => OnNewPlan.InvokeAsync())" Title="New plan" />
         }
         else
         {
@@ -150,6 +150,7 @@
     /// Number of plans per bot type
     /// </summary>
     [Parameter] public IReadOnlyDictionary<string, int> PlanCounts { get; set; } = new Dictionary<string, int>();
+    [Parameter] public EventCallback OnNewPlan { get; set; }
 
     private record BotInfo(string Name, bool IsAvailable);
 

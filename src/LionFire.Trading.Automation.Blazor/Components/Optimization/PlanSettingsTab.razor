@@ -25,14 +25,6 @@
                 }
                 else
                 {
-                    @if (!string.IsNullOrEmpty(EditRawHref))
-                    {
-                        <MudButton Variant="Variant.Text" Color="Color.Default"
-                                   StartIcon="@Icons.Material.Filled.Code"
-                                   Href="@EditRawHref" Class="mr-2">
-                            Edit raw
-                        </MudButton>
-                    }
                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                    OnClick="StartEdit"
                                    Title="Edit settings" />
@@ -163,75 +155,15 @@
             }
 
             <MudText Typo="Typo.body2" Class="mb-1"><strong>Date Ranges:</strong></MudText>
-            @if (_isEditing)
-            {
-                <MudSimpleTable Dense="true" Hover="true" Class="mb-2">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Start</th>
-                            <th>End</th>
-                            <th style="width: 50px;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (int i = 0; i < _editDateRanges.Count; i++)
-                        {
-                            var index = i;
-                            var range = _editDateRanges[i];
-                            <tr>
-                                <td>
-                                    <MudTextField T="string" Value="@range.Name"
-                                                  ValueChanged="@(v => UpdateDateRangeName(index, v))"
-                                                  Variant="Variant.Text" Margin="Margin.Dense" />
-                                </td>
-                                <td>
-                                    <MudTextField T="string" Value="@range.Start"
-                                                  ValueChanged="@(v => UpdateDateRangeStart(index, v))"
-                                                  Variant="Variant.Text" Margin="Margin.Dense" />
-                                </td>
-                                <td>
-                                    <MudTextField T="string" Value="@range.End"
-                                                  ValueChanged="@(v => UpdateDateRangeEnd(index, v))"
-                                                  Variant="Variant.Text" Margin="Margin.Dense" />
-                                </td>
-                                <td>
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                   Size="Size.Small" Color="Color.Error"
-                                                   OnClick="@(() => RemoveDateRange(index))" />
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-                <MudButton Variant="Variant.Text" Color="Color.Primary"
-                           StartIcon="@Icons.Material.Filled.Add"
-                           OnClick="AddDateRange" Size="Size.Small">
-                    Add Date Range
-                </MudButton>
-            }
-            else
-            {
-                <MudSimpleTable Dense="true" Hover="true" Class="mb-3">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Start</th>
-                            <th>End</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var range in Plan.DateRanges)
-                        {
-                            <tr>
-                                <td>@range.Name</td>
-                                <td>@range.Start</td>
-                                <td>@range.End</td>
-                            </tr>
-                        }
-                    </tbody>
-                </MudSimpleTable>
-            }
+            <MudChipSet T="string" Class="mb-2">
+                @foreach (var range in Plan.DateRanges)
+                {
+                    <MudChip T="string" Size="Size.Small">@range.Name</MudChip>
+                }
+            </MudChipSet>
+            <MudText Typo="Typo.caption" Class="mud-text-secondary mb-3">
+                Edit date ranges in the Date Ranges tab.
+            </MudText>
 
             @* Resolution Settings *@
             <MudDivider Class="my-4" />
@@ -317,7 +249,6 @@
 @code {
     [Parameter] public OptimizationPlan Plan { get; set; } = default!;
     [Parameter] public EventCallback<OptimizationPlan> OnSave { get; set; }
-    [Parameter] public string? EditRawHref { get; set; }
 
     private bool _isEditing;
     private bool _isSaving;
@@ -327,7 +258,6 @@
     private string? _editDescription;
     private List<string> _editSymbols = new();
     private List<string> _editTimeframes = new();
-    private List<EditableDateRange> _editDateRanges = new();
     private int _editMaxBacktests;
     private int _editMinParameterPriority;
     private List<string> _editTags = new();
@@ -342,12 +272,7 @@
         "m1", "m5", "m15", "m30", "h1", "h4", "d1", "w1", "M1"
     };
 
-    private class EditableDateRange
-    {
-        public string Name { get; set; } = "";
-        public string Start { get; set; } = "";
-        public string End { get; set; } = "now";
-    }
+
 
     private void StartEdit()
     {
@@ -355,12 +280,6 @@
         _editDescription = Plan.Description;
         _editSymbols = Plan.Symbols.Snapshot.ToList();
         _editTimeframes = Plan.Timeframes.ToList();
-        _editDateRanges = Plan.DateRanges.Select(r => new EditableDateRange
-        {
-            Name = r.Name,
-            Start = r.Start,
-            End = r.End
-        }).ToList();
         _editMaxBacktests = Plan.Resolution.MaxBacktests;
         _editMinParameterPriority = Plan.Resolution.MinParameterPriority;
         _editTags = Plan.Tags.ToList();
@@ -389,12 +308,7 @@
                     Snapshot = _editSymbols.ToList()
                 },
                 Timeframes = _editTimeframes.ToList(),
-                DateRanges = _editDateRanges.Select(r => new OptimizationDateRange
-                {
-                    Name = r.Name,
-                    Start = r.Start,
-                    End = r.End
-                }).ToList(),
+                DateRanges = Plan.DateRanges,
                 Resolution = new OptimizationResolution
                 {
                     MaxBacktests = _editMaxBacktests,
@@ -453,49 +367,6 @@
     private void RemoveTimeframe(string tf)
     {
         _editTimeframes.Remove(tf);
-    }
-
-    // Date range management
-    private void AddDateRange()
-    {
-        _editDateRanges.Add(new EditableDateRange
-        {
-            Name = $"{_editDateRanges.Count + 1}mo",
-            Start = $"-{_editDateRanges.Count + 1}M",
-            End = "now"
-        });
-    }
-
-    private void RemoveDateRange(int index)
-    {
-        if (index >= 0 && index < _editDateRanges.Count)
-        {
-            _editDateRanges.RemoveAt(index);
-        }
-    }
-
-    private void UpdateDateRangeName(int index, string value)
-    {
-        if (index >= 0 && index < _editDateRanges.Count)
-        {
-            _editDateRanges[index].Name = value;
-        }
-    }
-
-    private void UpdateDateRangeStart(int index, string value)
-    {
-        if (index >= 0 && index < _editDateRanges.Count)
-        {
-            _editDateRanges[index].Start = value;
-        }
-    }
-
-    private void UpdateDateRangeEnd(int index, string value)
-    {
-        if (index >= 0 && index < _editDateRanges.Count)
-        {
-            _editDateRanges[index].End = value;
-        }
     }
 
     // Tag management

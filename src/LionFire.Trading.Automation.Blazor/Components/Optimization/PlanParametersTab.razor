@@ -9,8 +9,12 @@
 @using ReactiveUI
 @implements IAsyncDisposable
 
+@using LionFire.Trading.Automation.Optimization.Sensitivity
+
 @inject IOptimizationPlanRepository PlanRepository
 @inject ISnackbar Snackbar
+@inject StepRecommendationPersistence RecommendationPersistence
+@inject HessianPersistence HessianPersistence
 
 @if (_error != null)
 {
@@ -104,7 +108,13 @@ else
         </MudPaper>
 
         @* Parameter Editor *@
-        <ParameterSelection POptimization="_pOptimization" />
+        <ParameterSelection POptimization="_pOptimization" Recommendations="_recommendations" />
+
+        @* Parameter Interactions *@
+        @if (_hessianResult != null)
+        {
+            <ParameterInteractionHeatmap HessianResult="_hessianResult" />
+        }
     </div>
 }
 
@@ -125,6 +135,8 @@ else
     private bool _hasOverrides => Plan.ParameterOverrides is { Count: > 0 };
     private string? _lastBotName;
     private IDisposable? _lodSubscription;
+    private Dictionary<string, StepRecommendation>? _recommendations;
+    private HessianAnalysisResult? _hessianResult;
 
     private double MaxBacktestsExponential => _pOptimization != null ? Math.Log2(_pOptimization.MaxBacktests) : 10;
 
@@ -148,6 +160,8 @@ else
     {
         _error = null;
         _pOptimization = null;
+        _recommendations = null;
+        _hessianResult = null;
         _isDirty = false;
         _lodSubscription?.Dispose();
 
@@ -204,6 +218,44 @@ else
         {
             InvokeAsync(StateHasChanged);
         });
+
+        // Load step recommendations and hessian analysis if available
+        _ = LoadRecommendationsAsync();
+        _ = LoadHessianAnalysisAsync();
+    }
+
+    private async Task LoadRecommendationsAsync()
+    {
+        try
+        {
+            var recSet = await RecommendationPersistence.LoadLatestAsync(Plan.Id);
+            if (recSet?.Recommendations is { Count: > 0 })
+            {
+                _recommendations = recSet.Recommendations.ToDictionary(r => r.ParameterName, r => r);
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Recommendations are optional — silently ignore load failures
+        }
+    }
+
+    private async Task LoadHessianAnalysisAsync()
+    {
+        try
+        {
+            var hessian = await HessianPersistence.LoadLatestAsync(Plan.Id);
+            if (hessian?.Interactions is { Count: > 0 })
+            {
+                _hessianResult = hessian;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // Hessian analysis is optional — silently ignore load failures
+        }
     }
 
     private void OnMaxBacktestsChanged(long value)

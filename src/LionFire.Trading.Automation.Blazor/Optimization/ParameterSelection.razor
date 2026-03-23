@@ -1,5 +1,6 @@
 @using DynamicData
 @using LionFire.Trading.Automation.Optimization
+@using LionFire.Trading.Automation.Optimization.Sensitivity
 
 <MudCard>
     <MudGrid id="ParameterPreselection" Class="gap-x-3 gap-y-3">
@@ -21,8 +22,18 @@
         </MudItem>
     </MudGrid>
 
-    <div>
+    <div class="d-flex flex-row align-center gap-2">
         <MudText Typo="Typo.h5">To Optimize</MudText>
+        @if (Recommendations is { Count: > 0 })
+        {
+            <MudTooltip Text="Apply all step recommendations to optimizable parameters">
+                <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.AutoFixHigh"
+                           OnClick="ApplyAllRecommendations">
+                    Apply All Recommendations
+                </MudButton>
+            </MudTooltip>
+        }
     </div>
 
     <div class="mt-4 ml-4">
@@ -49,6 +60,9 @@
 
     [Parameter]
     public POptimization POptimization { get; set; } = default!;
+
+    [Parameter]
+    public Dictionary<string, StepRecommendation>? Recommendations { get; set; }
 
     IObservableCache<IParameterOptimizationOptions, string> AllParameters => POptimization.Parameters;
 
@@ -89,13 +103,34 @@
     {
         var x = EventCallback.Factory.Create<bool>(this, v => { options.EnableOptimization = v; OnSetEnabled(); });
 
-        return new Dictionary<string, object>
+        var dict = new Dictionary<string, object>
         {
             { "Parameter", options },
             { "FixedValue", fixedValue },
             { "ItemSize", fixedValue ? 2 : 5 },
             { "SetEnabled", x }
         };
+
+        if (Recommendations != null && Recommendations.TryGetValue(options.Info.Path, out var rec))
+        {
+            dict["Recommendation"] = rec;
+        }
+
+        return dict;
+    }
+
+    void ApplyAllRecommendations()
+    {
+        if (Recommendations == null) return;
+
+        foreach (var param in AllParameters.KeyValues.Values.Where(ShouldShow))
+        {
+            if (Recommendations.TryGetValue(param.Info.Path, out var rec))
+            {
+                var exponent = Math.Abs(rec.RecommendedStepExponent - 1.0) > 0.01 ? rec.RecommendedStepExponent : (double?)null;
+                param.ApplyNumericOverrides(null, null, rec.RecommendedStep, exponent);
+            }
+        }
     }
 
     void OnSetEnabled()
