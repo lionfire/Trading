@@ -29,6 +29,23 @@ public static partial class DateRangeParser
         if (expr == "yesterday")
             return refDate.Date.AddDays(-1);
 
+        // Start of month: som, som-1, som-3, som+1
+        var somMatch = SomPattern().Match(expr);
+        if (somMatch.Success)
+        {
+            var offset = somMatch.Groups[1].Success ? int.Parse(somMatch.Groups[1].Value) : 0;
+            var firstOfCurrentMonth = new DateTime(refDate.Year, refDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            return firstOfCurrentMonth.AddMonths(offset);
+        }
+
+        // Start of year: soy, soy-1
+        var soyMatch = SoyPattern().Match(expr);
+        if (soyMatch.Success)
+        {
+            var offset = soyMatch.Groups[1].Success ? int.Parse(soyMatch.Groups[1].Value) : 0;
+            return new DateTime(refDate.Year + offset, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        }
+
         // Relative expression: -1M, -3M, -1Y, -30D, etc.
         var relativeMatch = RelativePattern().Match(expr);
         if (relativeMatch.Success)
@@ -93,14 +110,61 @@ public static partial class DateRangeParser
     /// </summary>
     public static IReadOnlyList<OptimizationDateRange> CommonRanges { get; } =
     [
+        // Completed months (snapped to month boundaries)
+        new() { Name = "Prev 1mo", Start = "som-1", End = "som" },
+        new() { Name = "Prev 3mo", Start = "som-3", End = "som" },
+        new() { Name = "Prev 6mo", Start = "som-6", End = "som" },
+        new() { Name = "Prev 1yr", Start = "som-12", End = "som" },
+        new() { Name = "Prev 2yr", Start = "som-24", End = "som" },
+        // Rolling (relative to now)
         new() { Name = "1 Week", Start = "-1W", End = "now" },
         new() { Name = "1 Month", Start = "-1M", End = "now" },
         new() { Name = "3 Months", Start = "-3M", End = "now" },
         new() { Name = "6 Months", Start = "-6M", End = "now" },
         new() { Name = "1 Year", Start = "-1Y", End = "now" },
         new() { Name = "2 Years", Start = "-2Y", End = "now" },
+        // Calendar
+        new() { Name = "YTD", Start = "soy", End = "now" },
+        new() { Name = "Prev Year", Start = "soy-1", End = "soy" },
     ];
+
+    /// <summary>
+    /// Date range presets organized by category for UI chip-toggle panels.
+    /// </summary>
+    public static IReadOnlyDictionary<string, IReadOnlyList<OptimizationDateRange>> CategorizedRanges { get; } =
+        new Dictionary<string, IReadOnlyList<OptimizationDateRange>>
+        {
+            ["Completed Months"] =
+            [
+                new() { Name = "Prev 1mo", Start = "som-1", End = "som" },
+                new() { Name = "Prev 2mo", Start = "som-2", End = "som" },
+                new() { Name = "Prev 3mo", Start = "som-3", End = "som" },
+                new() { Name = "Prev 6mo", Start = "som-6", End = "som" },
+                new() { Name = "Prev 1yr", Start = "som-12", End = "som" },
+                new() { Name = "Prev 2yr", Start = "som-24", End = "som" },
+            ],
+            ["Rolling"] =
+            [
+                new() { Name = "1 Week", Start = "-1W", End = "now" },
+                new() { Name = "1 Month", Start = "-1M", End = "now" },
+                new() { Name = "3 Months", Start = "-3M", End = "now" },
+                new() { Name = "6 Months", Start = "-6M", End = "now" },
+                new() { Name = "1 Year", Start = "-1Y", End = "now" },
+                new() { Name = "2 Years", Start = "-2Y", End = "now" },
+            ],
+            ["Calendar"] =
+            [
+                new() { Name = "YTD", Start = "soy", End = "now" },
+                new() { Name = "Prev Year", Start = "soy-1", End = "soy" },
+            ],
+        };
 
     [GeneratedRegex(@"^([+-]?)(\d+)([DWMY])$", RegexOptions.IgnoreCase)]
     private static partial Regex RelativePattern();
+
+    [GeneratedRegex(@"^som([+-]\d+)?$", RegexOptions.IgnoreCase)]
+    private static partial Regex SomPattern();
+
+    [GeneratedRegex(@"^soy([+-]\d+)?$", RegexOptions.IgnoreCase)]
+    private static partial Regex SoyPattern();
 }

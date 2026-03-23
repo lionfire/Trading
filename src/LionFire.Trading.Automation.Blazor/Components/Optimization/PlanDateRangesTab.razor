@@ -1,0 +1,446 @@
+@namespace LionFire.Trading.Automation.Blazor.Components.Optimization
+@using LionFire.Trading.Optimization.Plans
+@inject IOptimizationPlanRepository PlanRepository
+@inject ISnackbar Snackbar
+
+<div class="dr-tab">
+    @* Section 1: Quick-Toggle Chip Panel *@
+    <MudText Typo="Typo.subtitle2" Class="mb-2">Presets</MudText>
+
+    @foreach (var category in DateRangeParser.CategorizedRanges)
+    {
+        <div class="dr-category-row">
+            <span class="dr-category-label">@category.Key</span>
+            <div class="dr-chip-row">
+                @foreach (var preset in category.Value)
+                {
+                    var isActive = IsPresetActive(preset);
+                    <MudChip T="string"
+                             Size="Size.Small"
+                             Color="@(isActive ? Color.Primary : Color.Default)"
+                             Variant="@(isActive ? Variant.Filled : Variant.Outlined)"
+                             OnClick="@(() => TogglePreset(preset))"
+                             Class="dr-toggle-chip">
+                        @preset.Name
+                    </MudChip>
+                }
+            </div>
+        </div>
+    }
+
+    @* Section 2: Mini Timeline Visualization *@
+    @if (_resolvedRanges.Count > 0)
+    {
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.subtitle2" Class="mb-2">Coverage</MudText>
+
+        <div class="dr-timeline">
+            <div class="dr-timeline-bar">
+                @for (var i = 0; i < _resolvedRanges.Count; i++)
+                {
+                    var range = _resolvedRanges[i];
+                    var colorClass = $"dr-seg-{(i % 6) + 1}";
+                    <div class="dr-timeline-segment @colorClass"
+                         style="left: @range.LeftPct; width: @range.WidthPct;"
+                         title="@range.Name: @range.StartDate.ToString("MMM d, yyyy") – @range.EndDate.ToString("MMM d, yyyy")">
+                    </div>
+                }
+            </div>
+            <div class="dr-timeline-labels">
+                @foreach (var label in _timelineLabels)
+                {
+                    <span class="dr-timeline-label" style="left: @label.Pct;">@label.Text</span>
+                }
+            </div>
+        </div>
+
+        @* Section 3: Active Ranges Detail List *@
+        <MudSimpleTable Dense="true" Hover="true" Class="dr-active-table mt-3">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Expression</th>
+                    <th>Resolved</th>
+                    <th>Duration</th>
+                    <th style="width: 40px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < _resolvedRanges.Count; i++)
+                {
+                    var range = _resolvedRanges[i];
+                    var colorClass = $"dr-dot-{(i % 6) + 1}";
+                    <tr>
+                        <td><span class="dr-color-dot @colorClass"></span></td>
+                        <td><strong>@range.Name</strong></td>
+                        <td class="mud-text-secondary" style="font-family: monospace; font-size: 0.8rem;">@range.StartExpr → @range.EndExpr</td>
+                        <td>@range.StartDate.ToString("MMM d, yyyy") – @range.EndDate.ToString("MMM d, yyyy")</td>
+                        <td>@FormatDuration(range.EndDate - range.StartDate)</td>
+                        <td>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                           Size="Size.Small"
+                                           OnClick="@(() => RemoveRange(range.Index))" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+    else
+    {
+        <MudDivider Class="my-3" />
+        <MudText Typo="Typo.body2" Class="mud-text-secondary pa-4">
+            No date ranges configured. Click presets above to add ranges.
+        </MudText>
+    }
+
+    @* Section 4: Custom Range Input *@
+    <MudDivider Class="my-3" />
+    <MudExpansionPanels Elevation="0">
+        <MudExpansionPanel Text="Add Custom Range" MaxHeight="300" IsInitiallyExpanded="false"
+                           Dense="true" Class="dr-custom-panel">
+            <div class="d-flex gap-2 align-center flex-wrap">
+                <MudTextField @bind-Value="_customName" Label="Name"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="max-width: 150px;" />
+                <MudTextField @bind-Value="_customStart" Label="Start"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="max-width: 150px;"
+                              HelperText="e.g. som-6, -3M, 2025-01-01" />
+                <MudTextField @bind-Value="_customEnd" Label="End"
+                              Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Style="max-width: 150px;"
+                              HelperText="e.g. som, now" />
+                <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                           OnClick="AddCustomRange" Size="Size.Small"
+                           Disabled="@(!IsCustomRangeValid)">
+                    Add
+                </MudButton>
+            </div>
+            @if (!string.IsNullOrEmpty(_customValidationError))
+            {
+                <MudText Typo="Typo.caption" Color="Color.Error" Class="mt-1">@_customValidationError</MudText>
+            }
+        </MudExpansionPanel>
+    </MudExpansionPanels>
+</div>
+
+<style>
+    .dr-tab {
+        max-width: 900px;
+    }
+
+    .dr-category-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .dr-category-label {
+        min-width: 130px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--mud-palette-text-secondary);
+    }
+
+    .dr-chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .dr-toggle-chip {
+        cursor: pointer !important;
+        transition: all 120ms ease-in-out;
+    }
+
+    /* Timeline */
+    .dr-timeline {
+        position: relative;
+        margin: 8px 0;
+    }
+
+    .dr-timeline-bar {
+        position: relative;
+        height: 28px;
+        background-color: var(--mud-palette-background-grey);
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .dr-timeline-segment {
+        position: absolute;
+        top: 2px;
+        height: 24px;
+        border-radius: 3px;
+        opacity: 0.65;
+        transition: opacity 120ms;
+    }
+
+    .dr-timeline-segment:hover {
+        opacity: 1;
+    }
+
+    .dr-seg-1 { background-color: var(--mud-palette-primary); }
+    .dr-seg-2 { background-color: var(--mud-palette-secondary); }
+    .dr-seg-3 { background-color: var(--mud-palette-tertiary); }
+    .dr-seg-4 { background-color: var(--mud-palette-info); }
+    .dr-seg-5 { background-color: var(--mud-palette-success); }
+    .dr-seg-6 { background-color: var(--mud-palette-warning); }
+
+    .dr-timeline-labels {
+        position: relative;
+        height: 16px;
+        margin-top: 2px;
+    }
+
+    .dr-timeline-label {
+        position: absolute;
+        transform: translateX(-50%);
+        font-size: 0.6rem;
+        color: var(--mud-palette-text-secondary);
+        white-space: nowrap;
+    }
+
+    /* Color dots in table */
+    .dr-color-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+
+    .dr-dot-1 { background-color: var(--mud-palette-primary); }
+    .dr-dot-2 { background-color: var(--mud-palette-secondary); }
+    .dr-dot-3 { background-color: var(--mud-palette-tertiary); }
+    .dr-dot-4 { background-color: var(--mud-palette-info); }
+    .dr-dot-5 { background-color: var(--mud-palette-success); }
+    .dr-dot-6 { background-color: var(--mud-palette-warning); }
+
+    .dr-active-table {
+        font-size: 0.85rem;
+    }
+
+    .dr-custom-panel {
+        border: 1px solid var(--mud-palette-lines-default);
+        border-radius: 4px;
+    }
+
+    .dr-tab .gap-2 {
+        gap: 8px;
+    }
+</style>
+
+@code {
+    [Parameter] public OptimizationPlan Plan { get; set; } = default!;
+    [Parameter] public EventCallback<OptimizationPlan> OnSave { get; set; }
+
+    private List<OptimizationDateRange> _activeRanges = new();
+    private List<ResolvedRange> _resolvedRanges = new();
+    private List<TimelineLabel> _timelineLabels = new();
+
+    // Custom range input
+    private string _customName = "";
+    private string _customStart = "";
+    private string _customEnd = "som";
+    private string? _customValidationError;
+
+    protected override void OnParametersSet()
+    {
+        _activeRanges = Plan.DateRanges.ToList();
+        ResolveAndComputeTimeline();
+    }
+
+    private bool IsPresetActive(OptimizationDateRange preset) =>
+        _activeRanges.Any(r =>
+            string.Equals(r.Start, preset.Start, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.End, preset.End, StringComparison.OrdinalIgnoreCase));
+
+    private async Task TogglePreset(OptimizationDateRange preset)
+    {
+        var existingIdx = _activeRanges.FindIndex(r =>
+            string.Equals(r.Start, preset.Start, StringComparison.OrdinalIgnoreCase) &&
+            string.Equals(r.End, preset.End, StringComparison.OrdinalIgnoreCase));
+
+        if (existingIdx >= 0)
+            _activeRanges.RemoveAt(existingIdx);
+        else
+            _activeRanges.Add(preset);
+
+        await SaveDateRanges();
+    }
+
+    private async Task RemoveRange(int index)
+    {
+        if (index >= 0 && index < _activeRanges.Count)
+        {
+            _activeRanges.RemoveAt(index);
+            await SaveDateRanges();
+        }
+    }
+
+    private async Task SaveDateRanges()
+    {
+        var updatedPlan = Plan with { DateRanges = _activeRanges.ToList() };
+        try
+        {
+            await OnSave.InvokeAsync(updatedPlan);
+            ResolveAndComputeTimeline();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to save: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool IsCustomRangeValid
+    {
+        get
+        {
+            _customValidationError = null;
+            if (string.IsNullOrWhiteSpace(_customName) || string.IsNullOrWhiteSpace(_customStart))
+                return false;
+
+            if (!DateRangeParser.TryValidate(_customStart, out var startError))
+            {
+                _customValidationError = $"Start: {startError}";
+                return false;
+            }
+
+            var end = string.IsNullOrWhiteSpace(_customEnd) ? "now" : _customEnd;
+            if (!DateRangeParser.TryValidate(end, out var endError))
+            {
+                _customValidationError = $"End: {endError}";
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    private async Task AddCustomRange()
+    {
+        if (!IsCustomRangeValid) return;
+
+        var end = string.IsNullOrWhiteSpace(_customEnd) ? "now" : _customEnd;
+        _activeRanges.Add(new OptimizationDateRange
+        {
+            Name = _customName.Trim(),
+            Start = _customStart.Trim(),
+            End = end.Trim()
+        });
+
+        _customName = "";
+        _customStart = "";
+        _customEnd = "som";
+
+        await SaveDateRanges();
+        Snackbar.Add("Custom range added", Severity.Success);
+    }
+
+    private void ResolveAndComputeTimeline()
+    {
+        var now = DateTime.UtcNow;
+        _resolvedRanges = new();
+
+        for (int i = 0; i < _activeRanges.Count; i++)
+        {
+            var r = _activeRanges[i];
+            try
+            {
+                var (start, end) = DateRangeParser.Resolve(r, now);
+                _resolvedRanges.Add(new ResolvedRange(i, r.Name, r.Start, r.End, start, end));
+            }
+            catch
+            {
+                // Skip ranges that fail to resolve
+            }
+        }
+
+        _resolvedRanges = _resolvedRanges.OrderBy(r => r.StartDate).ToList();
+
+        // Compute timeline percentages
+        if (_resolvedRanges.Count > 0)
+        {
+            var earliest = _resolvedRanges.Min(r => r.StartDate);
+            var latest = _resolvedRanges.Max(r => r.EndDate);
+            // Extend to "now" if no range reaches it, for context
+            if (latest < now) latest = now;
+            var totalDays = (latest - earliest).TotalDays;
+
+            foreach (var r in _resolvedRanges)
+            {
+                r.LeftPct = totalDays > 0
+                    ? $"{(r.StartDate - earliest).TotalDays / totalDays * 100:F2}%"
+                    : "0%";
+                r.WidthPct = totalDays > 0
+                    ? $"{Math.Max(1, (r.EndDate - r.StartDate).TotalDays / totalDays * 100):F2}%"
+                    : "100%";
+            }
+
+            _timelineLabels = GenerateMonthLabels(earliest, latest, totalDays);
+        }
+        else
+        {
+            _timelineLabels = new();
+        }
+    }
+
+    private static List<TimelineLabel> GenerateMonthLabels(DateTime earliest, DateTime latest, double totalDays)
+    {
+        var labels = new List<TimelineLabel>();
+        if (totalDays <= 0) return labels;
+
+        // Determine label interval based on span
+        int monthStep = totalDays switch
+        {
+            <= 90 => 1,     // Monthly for 3mo or less
+            <= 365 => 2,    // Every 2 months for up to 1yr
+            <= 730 => 3,    // Every 3 months for up to 2yr
+            _ => 6          // Every 6 months for longer
+        };
+
+        // Start from the first day of the month at or after earliest
+        var cursor = new DateTime(earliest.Year, earliest.Month, 1);
+        if (cursor < earliest) cursor = cursor.AddMonths(1);
+
+        while (cursor <= latest)
+        {
+            var pct = (cursor - earliest).TotalDays / totalDays * 100;
+            if (pct >= 0 && pct <= 100)
+            {
+                var text = cursor.Month == 1
+                    ? cursor.ToString("yyyy")
+                    : cursor.ToString("MMM");
+                labels.Add(new TimelineLabel(text, $"{pct:F1}%"));
+            }
+            cursor = cursor.AddMonths(monthStep);
+        }
+
+        return labels;
+    }
+
+    private static string FormatDuration(TimeSpan span)
+    {
+        var days = (int)span.TotalDays;
+        if (days >= 365) return $"{days / 365}yr {(days % 365) / 30}mo";
+        if (days >= 30) return $"{days / 30}mo {days % 30}d";
+        return $"{days}d";
+    }
+
+    private class ResolvedRange(int index, string name, string startExpr, string endExpr, DateTime startDate, DateTime endDate)
+    {
+        public int Index { get; } = index;
+        public string Name { get; } = name;
+        public string StartExpr { get; } = startExpr;
+        public string EndExpr { get; } = endExpr;
+        public DateTime StartDate { get; } = startDate;
+        public DateTime EndDate { get; } = endDate;
+        public string LeftPct { get; set; } = "0%";
+        public string WidthPct { get; set; } = "100%";
+    }
+
+    private record TimelineLabel(string Text, string Pct);
+}
