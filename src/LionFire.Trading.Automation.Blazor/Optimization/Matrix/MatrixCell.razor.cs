@@ -55,7 +55,7 @@ public partial class MatrixCell : ComponentBase
     public MatrixCellProgress? Progress { get; set; }
 
     /// <summary>
-    /// Fired when the user clicks the cell or the drill-down icon to view details.
+    /// Fired when the user clicks the cell to view details.
     /// </summary>
     [Parameter]
     public EventCallback<MatrixCellEventArgs> OnCellDrillDown { get; set; }
@@ -104,23 +104,33 @@ public partial class MatrixCell : ComponentBase
     public bool IsAutoUpdated { get; set; }
 
     /// <summary>
-    /// When true, cells with results show the results view (score, AD, backtests).
-    /// When false, cells always show the parameters view (priority).
-    /// </summary>
-    [Parameter]
-    public bool ShowResults { get; set; } = true;
-
-    /// <summary>
     /// Fired when the user Ctrl+clicks or otherwise toggles selection on this cell.
     /// </summary>
     [Parameter]
     public EventCallback<MatrixCellSelectEventArgs> OnSelect { get; set; }
 
+    /// <summary>
+    /// LoD progression state for this cell (achieved level, queued level).
+    /// </summary>
+    [Parameter]
+    public CellLodState? LodState { get; set; }
+
+    /// <summary>
+    /// Fired when the user clicks the [+N] button to queue the next LoD level.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MatrixCellEventArgs> OnQueueNextLod { get; set; }
+
+    /// <summary>
+    /// Fired when the user clicks the stop button to cancel a queued/running LoD job.
+    /// </summary>
+    [Parameter]
+    public EventCallback<MatrixCellEventArgs> OnCancelLod { get; set; }
+
     [Inject]
     private IPlanMatrixService MatrixService { get; set; } = default!;
 
     private bool _contextMenuOpen;
-    private bool _moreMenuOpen;
 
     private string StateCssClass => CellColorEngine.GetCellCssClass(VisualState, Result?.Grade, IsEnabled);
 
@@ -170,13 +180,6 @@ public partial class MatrixCell : ComponentBase
         <= 3 => "color: var(--mud-palette-success); border-color: var(--mud-palette-success);",
         <= 6 => "",
         _ => "color: var(--mud-palette-text-secondary); border-color: var(--mud-palette-text-secondary); opacity: 0.6;"
-    };
-
-    private string PriorityColorClass => EffectivePriority switch
-    {
-        <= 3 => "matrix-cell-priority-high",
-        <= 6 => "matrix-cell-priority-medium",
-        _ => "matrix-cell-priority-low"
     };
 
     private string TooltipText
@@ -243,13 +246,16 @@ public partial class MatrixCell : ComponentBase
         ? OptimizationGradeComputer.GradeToString(Result.Grade)
         : "";
 
-    private string GradeColor => Result is not null
-        ? OptimizationGradeComputer.GradeToColor(Result.Grade)
-        : "";
-
     private string GradeDescription => Result is not null
         ? OptimizationGradeComputer.GradeDescription(Result.Grade)
         : "";
+
+    /// <summary>
+    /// Font size for the score label, scaled from 1.25rem (A+) down to 0.75rem (F).
+    /// </summary>
+    private string ScoreFontSize => Result is not null
+        ? ((1.25 - (int)Result.Grade * (0.50 / 10.0)).ToString("F2", System.Globalization.CultureInfo.InvariantCulture))
+        : "0.75";
 
     private MatrixCellEventArgs CreateEventArgs() => new(Symbol, Timeframe);
 
@@ -272,7 +278,7 @@ public partial class MatrixCell : ComponentBase
         await MatrixService.SetCellEnabledAsync(PlanId, Symbol, Timeframe, !IsEnabled);
     }
 
-    // --- Cell click and drill-down ---
+    // --- Cell click ---
 
     private async Task OnCellClick(MouseEventArgs e)
     {
@@ -290,11 +296,13 @@ public partial class MatrixCell : ComponentBase
         }
     }
 
-    private async Task DrillDown()
+    // --- Grab handle click (always toggles selection) ---
+
+    private async Task OnGrabClick(MouseEventArgs e)
     {
-        if (OnCellDrillDown.HasDelegate)
+        if (OnSelect.HasDelegate)
         {
-            await OnCellDrillDown.InvokeAsync(CreateEventArgs());
+            await OnSelect.InvokeAsync(new MatrixCellSelectEventArgs(Symbol, Timeframe, e.ShiftKey));
         }
     }
 
@@ -328,14 +336,6 @@ public partial class MatrixCell : ComponentBase
         }
     }
 
-    private async Task RunCell()
-    {
-        if (OnRun.HasDelegate)
-        {
-            await OnRun.InvokeAsync(CreateEventArgs());
-        }
-    }
-
     private async Task ResetPriority()
     {
         _contextMenuOpen = false;
@@ -351,25 +351,33 @@ public partial class MatrixCell : ComponentBase
         }
     }
 
-    // --- More menu ---
+    // --- Context menu wrappers (close menu before action) ---
 
-    private void ToggleMoreMenu()
+    private async Task ContextOpenInOneShot()
     {
-        _moreMenuOpen = !_moreMenuOpen;
-    }
-
-    private void CloseMoreMenu()
-    {
-        _moreMenuOpen = false;
-    }
-
-    private async Task OpenInOneShot()
-    {
-        _moreMenuOpen = false;
+        _contextMenuOpen = false;
         if (OnOpenInOneShot.HasDelegate)
         {
             await OnOpenInOneShot.InvokeAsync(CreateEventArgs());
         }
+    }
+
+    private async Task ContextToggleEnabled()
+    {
+        _contextMenuOpen = false;
+        await ToggleEnabled();
+    }
+
+    private async Task ContextIncreasePriority()
+    {
+        _contextMenuOpen = false;
+        await IncreasePriority();
+    }
+
+    private async Task ContextDecreasePriority()
+    {
+        _contextMenuOpen = false;
+        await DecreasePriority();
     }
 
     // --- Reset to autopilot (for M indicator click) ---
@@ -378,6 +386,87 @@ public partial class MatrixCell : ComponentBase
     {
         await MatrixService.ResetCellToAutopilotAsync(PlanId, Symbol, Timeframe);
     }
+
+    // --- Progress bar ---
+
+    private double ProgressPercent => Progress is { TotalJobs: > 0 }
+        ? (double)Progress.CompletedJobs / Progress.TotalJobs * 100
+        : 0;
+
+    private string ProgressBarTooltip => Progress is { TotalJobs: > 0 }
+        ? $"{Progress.CompletedJobs:N0} / {Progress.TotalJobs:N0} jobs ({ProgressPercent:F1}%)"
+        : "";
+
+    // --- LoD indicator ---
+
+    private enum LodAction { None, Idle, Queued, Running }
+
+    private LodAction CurrentLodAction
+    {
+        get
+        {
+            if (LodState?.QueuedLevel != null)
+                return VisualState == CellVisualState.Running ? LodAction.Running : LodAction.Queued;
+            if (Result?.NextLevelOfDetail != null)
+                return LodAction.Idle;
+            return LodAction.None;
+        }
+    }
+
+    private string? NextLevelCountText
+    {
+        get
+        {
+            if (Result?.NextLevelBacktestCount is > 0 and var count)
+                return FormatSI(count);
+            return "?";
+        }
+    }
+
+    private string LodTooltip
+    {
+        get
+        {
+            if (Result?.AchievedLevelOfDetail is int level)
+            {
+                var count = Result.BacktestsAtLevel ?? 0;
+                var tip = $"Level {level}: {count:N0} backtests completed";
+                if (Result.NextLevelOfDetail is int next)
+                    tip += $". Next level ({next}): +{NextLevelCountText} backtests";
+                return tip;
+            }
+            return "";
+        }
+    }
+
+    private string LodActionTooltip => CurrentLodAction switch
+    {
+        LodAction.Idle => $"Queue next level ({Result?.NextLevelOfDetail}): +{NextLevelCountText} backtests",
+        LodAction.Queued => "Next level is queued, waiting to run",
+        LodAction.Running => "Click to cancel running job",
+        _ => ""
+    };
+
+    private async Task QueueNextLodLevel()
+    {
+        if (OnQueueNextLod.HasDelegate)
+            await OnQueueNextLod.InvokeAsync(CreateEventArgs());
+    }
+
+    private async Task CancelLodJob()
+    {
+        if (OnCancelLod.HasDelegate)
+            await OnCancelLod.InvokeAsync(CreateEventArgs());
+    }
+
+    internal static string FormatSI(long count) => count switch
+    {
+        < 1_000 => count.ToString(),
+        < 10_000 => $"{count / 1_000.0:F1}K",
+        < 1_000_000 => $"{count / 1_000}K",
+        < 10_000_000 => $"{count / 1_000_000.0:F1}M",
+        _ => $"{count / 1_000_000}M"
+    };
 }
 
 /// <summary>

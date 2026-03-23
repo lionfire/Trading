@@ -32,11 +32,17 @@ public record MatrixCellProgress
     public int PendingJobs { get; init; }
 
     /// <summary>
+    /// Number of jobs that failed due to insufficient historical data.
+    /// </summary>
+    public int NoHistoryJobs { get; init; }
+
+    /// <summary>
     /// Determines the visual state based on job status counts.
-    /// Priority: Running > Failed (with no completions) > Complete > Queued > NeverRun.
+    /// Priority: Running > Failed (with no completions) > NoHistory (all jobs) > Complete > Queued > NeverRun.
     /// </summary>
     public CellVisualState VisualState => RunningJobs > 0 ? CellVisualState.Running
         : FailedJobs > 0 && CompletedJobs == 0 ? CellVisualState.Failed
+        : NoHistoryJobs > 0 && CompletedJobs == 0 && FailedJobs == 0 ? CellVisualState.NoHistory
         : CompletedJobs > 0 ? CellVisualState.Complete
         : PendingJobs > 0 ? CellVisualState.Queued
         : CellVisualState.NeverRun;

@@ -26,6 +26,11 @@ public record PlanMatrixState
     public Dictionary<string, MatrixCellPriority> CellStates { get; init; } = new();
 
     /// <summary>
+    /// Per-cell Level of Detail (LoD) progression state, keyed by "symbol|timeframe".
+    /// </summary>
+    public Dictionary<string, CellLodState> CellLodStates { get; init; } = new();
+
+    /// <summary>
     /// Creates a dictionary key for a cell from its symbol and timeframe.
     /// </summary>
     public static string CellKey(string symbol, string timeframe) => $"{symbol}|{timeframe}";

@@ -16,5 +16,7 @@ public enum CellVisualState
     /// <summary>Cell has completed execution with results.</summary>
     Complete,
     /// <summary>Cell execution failed.</summary>
-    Failed
+    Failed,
+    /// <summary>Cell failed due to insufficient historical data.</summary>
+    NoHistory
 }

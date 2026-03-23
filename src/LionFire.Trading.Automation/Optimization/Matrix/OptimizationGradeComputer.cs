@@ -69,16 +69,16 @@ public static class OptimizationGradeComputer
 
     /// <summary>
     /// Returns a hex color string for the given grade, suitable for use in UI badges.
-    /// Green tones for A grades, blue for B, amber/orange for C, red for D/F.
+    /// Purple for A+, blue for A grades, green for B, amber/orange for C, red for D/F.
     /// </summary>
     public static string GradeToColor(OptimizationGrade grade) => grade switch
     {
-        OptimizationGrade.APlus => "#2E7D32",   // Dark green
-        OptimizationGrade.A => "#388E3C",        // Green
-        OptimizationGrade.AMinus => "#43A047",   // Medium green
-        OptimizationGrade.BPlus => "#1565C0",    // Dark blue
-        OptimizationGrade.B => "#1976D2",        // Blue
-        OptimizationGrade.BMinus => "#1E88E5",   // Light blue
+        OptimizationGrade.APlus => "#7B1FA2",   // Purple
+        OptimizationGrade.A => "#1565C0",        // Dark blue
+        OptimizationGrade.AMinus => "#1976D2",   // Blue
+        OptimizationGrade.BPlus => "#2E7D32",    // Dark green
+        OptimizationGrade.B => "#388E3C",        // Green
+        OptimizationGrade.BMinus => "#43A047",   // Medium green
         OptimizationGrade.CPlus => "#F57F17",    // Dark amber
         OptimizationGrade.C => "#FF8F00",        // Amber
         OptimizationGrade.CMinus => "#FFA000",   // Light amber

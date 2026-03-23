@@ -15,12 +15,18 @@ public static class CellColorEngine
     public static string GetCellCssClass(CellVisualState state, OptimizationGrade? grade, bool isEnabled)
     {
         if (!isEnabled)
+        {
+            // Disabled cells with a valid grade use a combined class for dimmed grade display
+            if (grade.HasValue && grade != OptimizationGrade.Error)
+                return "matrix-cell-state-disabled-with-results";
             return "matrix-cell-state-disabled";
+        }
 
         return state switch
         {
             CellVisualState.Running => "matrix-cell-state-running",
             CellVisualState.Failed => "matrix-cell-state-failed",
+            CellVisualState.NoHistory => "matrix-cell-state-no-history",
             CellVisualState.Complete => "matrix-cell-state-complete",
             CellVisualState.Queued => "matrix-cell-state-queued",
             CellVisualState.NeverRun => "matrix-cell-state-never-run",
@@ -68,7 +74,16 @@ public static class CellColorEngine
     public static string GetCellInlineStyle(CellVisualState state, OptimizationGrade? grade, bool isEnabled)
     {
         if (!isEnabled)
+        {
+            // Disabled cells with a grade still get a dimmed grade background
+            if (grade.HasValue && grade != OptimizationGrade.Error)
+            {
+                var hex = OptimizationGradeComputer.GradeToColor(grade.Value);
+                var (r, g, b) = HexToRgb(hex);
+                return $"background-color: rgba({r},{g},{b},0.15);";
+            }
             return "";
+        }
 
         var bgStyle = GetCellBackgroundStyle(state, grade);
         var textColor = GetTextColor(state, grade);
