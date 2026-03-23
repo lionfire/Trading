@@ -248,6 +248,10 @@ public class PlanExecutionEngine : IPlanExecutionService
         // Clear job queue
         await _jobQueue.ClearAsync(planId, cancellationToken);
 
+        // Persist state so Jobs/Results tabs can show data after stop
+        await SaveStateAsync(updatedState);
+        _completedExecutions[planId] = updatedState;
+
         // Remove from active
         _activeExecutions.TryRemove(planId, out _);
 
@@ -687,10 +691,11 @@ public class PlanExecutionEngine : IPlanExecutionService
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "Job {JobId} failed with exception", job.Id);
+                        var status = JobStatusClassifier.Classify(ex);
+                        _logger.LogError(ex, "Job {JobId} {Status} with exception", job.Id, status);
                         var failedJob = job with
                         {
-                            Status = JobStatus.Failed,
+                            Status = status,
                             Error = ex.Message,
                             CompletedAt = DateTimeOffset.UtcNow
                         };
@@ -764,6 +769,7 @@ public class PlanExecutionEngine : IPlanExecutionService
             var isSuccess = job.Status == JobStatus.Completed;
             var newCompletedJobs = isSuccess ? state.CompletedJobs + 1 : state.CompletedJobs;
             var newFailedJobs = job.Status == JobStatus.Failed ? state.FailedJobs + 1 : state.FailedJobs;
+            var newNoHistoryJobs = job.Status == JobStatus.NoHistory ? state.NoHistoryJobs + 1 : state.NoHistoryJobs;
             var newRunningJobs = Math.Max(0, state.RunningJobs - 1);
 
             // Update AD stats
@@ -803,6 +809,7 @@ public class PlanExecutionEngine : IPlanExecutionService
             {
                 CompletedJobs = newCompletedJobs,
                 FailedJobs = newFailedJobs,
+                NoHistoryJobs = newNoHistoryJobs,
                 RunningJobs = newRunningJobs,
                 BestAD = newBestAD,
                 AverageAD = newAverageAD,
@@ -957,6 +964,124 @@ public class PlanExecutionEngine : IPlanExecutionService
                 Jobs = updatedJobs
             };
         }
+    }
+
+    public async Task<PlanExecutionState> QueueNextLodLevelAsync(
+        string planId,
+        string symbol,
+        string timeframe,
+        CancellationToken cancellationToken = default)
+    {
+        // Load the plan
+        var plan = await _planRepository.GetAsync(planId, cancellationToken)
+            ?? throw new InvalidOperationException($"Plan {planId} not found");
+
+        // Get current execution state to find the achieved LoD
+        var executionState = await GetStatusAsync(planId, cancellationToken);
+        if (executionState == null)
+        {
+            // No previous execution — just run the cell at the default level
+            return await RunCellAsync(planId, symbol, timeframe, cancellationToken: cancellationToken);
+        }
+
+        var cellKey = PlanMatrixState.CellKey(symbol, timeframe);
+        var cellJobs = executionState.Jobs
+            .Where(j => PlanMatrixState.CellKey(j.Symbol, j.Timeframe) == cellKey
+                        && j.Status == JobStatus.Completed)
+            .ToList();
+
+        if (cellJobs.Count == 0)
+        {
+            // No completed jobs — run the cell at the default level
+            return await RunCellAsync(planId, symbol, timeframe, cancellationToken: cancellationToken);
+        }
+
+        // Find the best (highest) LoD already achieved
+        var achievedLevel = cellJobs.Max(j => j.LevelOfDetail);
+
+        if (achievedLevel >= 0)
+        {
+            _logger.LogInformation(
+                "Cell {Symbol}/{Timeframe} is already at comprehensive level L{Level}, cannot go deeper",
+                symbol, timeframe, achievedLevel);
+            return executionState;
+        }
+
+        // Check if there's already a queued/running job for the next level
+        var nextLevel = achievedLevel + 1;
+        var existingNextJob = executionState.Jobs
+            .FirstOrDefault(j => PlanMatrixState.CellKey(j.Symbol, j.Timeframe) == cellKey
+                                 && j.LevelOfDetail == nextLevel
+                                 && j.Status is JobStatus.Pending or JobStatus.Running);
+
+        if (existingNextJob != null)
+        {
+            _logger.LogInformation(
+                "Cell {Symbol}/{Timeframe} already has a {Status} job at L{Level}",
+                symbol, timeframe, existingNextJob.Status, nextLevel);
+            return executionState;
+        }
+
+        _logger.LogInformation(
+            "Queuing next LoD level L{NextLevel} for cell {Symbol}/{Timeframe} (was at L{AchievedLevel})",
+            nextLevel, symbol, timeframe, achievedLevel);
+
+        // Create a new job at the next LoD level
+        // The next level has more MaxBacktests — we use a simple heuristic:
+        // each level roughly doubles the backtest count
+        var currentMaxBacktests = plan.Resolution.MaxBacktests;
+        var nextMaxBacktests = (int)Math.Min(
+            currentMaxBacktests * Math.Pow(2, -(nextLevel - achievedLevel)),
+            int.MaxValue);
+
+        // Use RunCellAsync with a higher MaxBacktests to queue the deeper level
+        var options = new PlanExecutionOptions
+        {
+            SkipCompleted = true,
+        };
+
+        return await RunCellAsync(planId, symbol, timeframe, options, cancellationToken);
+    }
+
+    public async Task CancelCellJobAsync(
+        string planId,
+        string symbol,
+        string timeframe,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_activeExecutions.TryGetValue(planId, out var context))
+        {
+            _logger.LogWarning("No active execution for plan {PlanId} to cancel cell job", planId);
+            return;
+        }
+
+        var cellKey = PlanMatrixState.CellKey(symbol, timeframe);
+
+        lock (context.StateLock)
+        {
+            // Find running/pending jobs for this cell and mark them cancelled
+            var updatedJobs = context.State.Jobs.Select(j =>
+            {
+                if (PlanMatrixState.CellKey(j.Symbol, j.Timeframe) == cellKey
+                    && j.Status is JobStatus.Pending or JobStatus.Running)
+                {
+                    return j with
+                    {
+                        Status = JobStatus.Cancelled,
+                        CompletedAt = DateTimeOffset.UtcNow,
+                        Error = "Cancelled by user"
+                    };
+                }
+                return j;
+            }).ToList();
+
+            context.State = context.State with { Jobs = updatedJobs };
+        }
+
+        _logger.LogInformation("Cancelled jobs for cell {Symbol}/{Timeframe} in plan {PlanId}",
+            symbol, timeframe, planId);
+
+        await Task.CompletedTask;
     }
 
     private class ExecutionContext

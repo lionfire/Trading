@@ -18,5 +18,8 @@ public enum JobStatus
     Failed = 3,
 
     /// <summary>Job was cancelled before completion.</summary>
-    Cancelled = 4
+    Cancelled = 4,
+
+    /// <summary>Job failed because historical data was not available for the requested range.</summary>
+    NoHistory = 5
 }

@@ -315,19 +315,21 @@ public class LocalJobRunner : IJobRunner
             stopwatch.Stop();
             _activeTasks.TryRemove(job.Id, out _);
 
+            var status = JobStatusClassifier.Classify(ex);
+
             var failedJob = job with
             {
-                Status = JobStatus.Failed,
+                Status = status,
                 CompletedAt = DateTimeOffset.UtcNow,
                 Error = ex.Message
             };
 
-            _logger.LogError(ex, "Job {JobId} failed after {Duration}ms: {Error}", job.Id, stopwatch.ElapsedMilliseconds, ex.Message);
+            _logger.LogError(ex, "Job {JobId} {Status} after {Duration}ms: {Error}", job.Id, status, stopwatch.ElapsedMilliseconds, ex.Message);
 
             progress?.Report(new JobProgress
             {
                 JobId = job.Id,
-                Status = JobStatus.Failed,
+                Status = status,
                 Message = $"Failed: {ex.Message}"
             });
 

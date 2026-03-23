@@ -36,6 +36,11 @@ public record PlanExecutionState
     public int FailedJobs { get; init; }
 
     /// <summary>
+    /// Number of jobs that failed due to insufficient historical data.
+    /// </summary>
+    public int NoHistoryJobs { get; init; }
+
+    /// <summary>
     /// Number of jobs currently running.
     /// </summary>
     public int RunningJobs { get; init; }
@@ -94,13 +99,13 @@ public record PlanExecutionState
     /// Completion percentage (0-100).
     /// </summary>
     public double ProgressPercent => TotalJobs > 0
-        ? Math.Round((CompletedJobs + FailedJobs) * 100.0 / TotalJobs, 1)
+        ? Math.Round((CompletedJobs + FailedJobs + NoHistoryJobs) * 100.0 / TotalJobs, 1)
         : 0;
 
     /// <summary>
     /// Number of pending jobs.
     /// </summary>
-    public int PendingJobs => TotalJobs - CompletedJobs - FailedJobs - RunningJobs;
+    public int PendingJobs => TotalJobs - CompletedJobs - FailedJobs - NoHistoryJobs - RunningJobs;
 
     /// <summary>
     /// Estimated time to completion based on average job duration.
