@@ -2,6 +2,7 @@ using LionFire.Trading.Indicators.Base;
 using LionFire.Trading.Indicators.Parameters;
 using LionFire.Trading;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace LionFire.Trading.Indicators.Native;
 
@@ -85,8 +86,17 @@ public class LorentzianClassification_FP<TPrice, TOutput>
     private TOutput currentSignal = TOutput.Zero;
     private TOutput currentConfidence = TOutput.Zero;
     private readonly TOutput[] currentFeatures;
-    
-    // Future price tracking for labeling  
+
+    // Pre-allocated buffers for k-NN optimization
+    private readonly TOutput[] _normalizedFeatures;
+    private readonly double[] _kDistances; // K-nearest distances (ascending order)
+    private readonly double[] _kLabels;    // K-nearest labels
+
+    // Incremental statistics for double-specialized path
+    private readonly double[] _featureSums;    // Running sum per feature
+    private readonly double[] _featureSumSqs;  // Running sum of squares per feature
+
+    // Future price tracking for labeling
     private readonly TPrice[] futurePrices;
     private int futurePriceIndex = 0;
     private int futurePriceCount = 0;
@@ -156,7 +166,16 @@ public class LorentzianClassification_FP<TPrice, TOutput>
         
         // Initialize current features
         currentFeatures = new TOutput[FEATURE_COUNT];
-        
+
+        // Initialize pre-allocated k-NN buffers
+        _normalizedFeatures = new TOutput[FEATURE_COUNT];
+        _kDistances = new double[NeighborsCount];
+        _kLabels = new double[NeighborsCount];
+
+        // Initialize incremental statistics
+        _featureSums = new double[FEATURE_COUNT];
+        _featureSumSqs = new double[FEATURE_COUNT];
+
         // Initialize future price tracking
         futurePrices = new TPrice[LabelLookahead + 5]; // Extra buffer
         
@@ -194,21 +213,35 @@ public class LorentzianClassification_FP<TPrice, TOutput>
                 
                 // Normalize features using rolling statistics
                 UpdateFeatureStatistics();
-                var normalizedFeatures = (TOutput[])currentFeatures.Clone();
-                NormalizeFeatures(normalizedFeatures, featureMeans, featureStdDevs);
-                
+                Array.Copy(currentFeatures, 0, _normalizedFeatures, 0, FEATURE_COUNT);
+                NormalizeFeatures(_normalizedFeatures, featureMeans, featureStdDevs);
+
                 // Create and store historical pattern if we have enough history
                 if (CanCreatePattern())
                 {
                     var label = CalculateLabelFromHistory();
-                    var pattern = new HistoricalPattern<TOutput>(normalizedFeatures, label);
+
+                    // Reuse features array from the pattern being overwritten (zero-alloc in steady state)
+                    TOutput[] patternFeatures;
+                    var existingFeatures = historicalPatterns[historicalIndex].Features;
+                    if (existingFeatures != null && existingFeatures.Length == FEATURE_COUNT)
+                    {
+                        patternFeatures = existingFeatures;
+                        Array.Copy(_normalizedFeatures, 0, patternFeatures, 0, FEATURE_COUNT);
+                    }
+                    else
+                    {
+                        patternFeatures = (TOutput[])_normalizedFeatures.Clone();
+                    }
+
+                    var pattern = new HistoricalPattern<TOutput>(patternFeatures, label);
                     StorePattern(pattern);
                 }
-                
+
                 // Perform classification if we have enough patterns
                 if (IsReady)
                 {
-                    var (signal, confidence) = ClassifyCurrentPattern(normalizedFeatures);
+                    var (signal, confidence) = ClassifyCurrentPattern(_normalizedFeatures);
                     currentSignal = signal;
                     currentConfidence = confidence;
                 }
@@ -462,22 +495,83 @@ public class LorentzianClassification_FP<TPrice, TOutput>
     #region Feature Normalization
 
     /// <summary>
-    /// Update rolling statistics for feature normalization
+    /// Update rolling statistics for feature normalization.
+    /// Dispatches to double-specialized incremental path when TOutput is double.
     /// </summary>
     private void UpdateFeatureStatistics()
     {
+        if (typeof(TOutput) == typeof(double))
+        {
+            UpdateFeatureStatisticsDouble();
+            return;
+        }
+
         for (int f = 0; f < FEATURE_COUNT; f++)
         {
-            // Add current feature to rolling buffer
             featureBuffers[f][featureBufferIndices[f]] = currentFeatures[f];
             featureBufferIndices[f] = (featureBufferIndices[f] + 1) % NormalizationWindow;
-            
+
             if (featureBufferCounts[f] < NormalizationWindow)
                 featureBufferCounts[f]++;
-            
-            // Calculate rolling mean and std deviation
+
             featureMeans[f] = CalculateMean(featureBuffers[f], featureBufferCounts[f]);
             featureStdDevs[f] = CalculateStandardDeviation(featureBuffers[f], featureBufferCounts[f], featureMeans[f]);
+        }
+    }
+
+    /// <summary>
+    /// Double-specialized incremental statistics using running sum/sumSq.
+    /// O(1) per feature per bar instead of O(NormalizationWindow).
+    /// </summary>
+    private void UpdateFeatureStatisticsDouble()
+    {
+        for (int f = 0; f < FEATURE_COUNT; f++)
+        {
+            int idx = featureBufferIndices[f];
+            int count = featureBufferCounts[f];
+            double newVal = Unsafe.As<TOutput, double>(ref currentFeatures[f]);
+
+            // Evict old value from running sums if buffer is full
+            if (count >= NormalizationWindow)
+            {
+                double oldVal = Unsafe.As<TOutput, double>(ref featureBuffers[f][idx]);
+                _featureSums[f] -= oldVal;
+                _featureSumSqs[f] -= oldVal * oldVal;
+            }
+
+            // Store new value in circular buffer
+            featureBuffers[f][idx] = currentFeatures[f];
+            featureBufferIndices[f] = (idx + 1) % NormalizationWindow;
+
+            // Add new value to running sums
+            _featureSums[f] += newVal;
+            _featureSumSqs[f] += newVal * newVal;
+
+            if (count < NormalizationWindow)
+            {
+                count++;
+                featureBufferCounts[f] = count;
+            }
+
+            // Compute mean and stddev from running sums
+            double mean = _featureSums[f] / count;
+            double stddev;
+            if (count <= 1)
+            {
+                stddev = 1.0;
+            }
+            else
+            {
+                // Var = (ΣX² - (ΣX)²/N) / (N-1)
+                double variance = (_featureSumSqs[f] - _featureSums[f] * _featureSums[f] / count) / (count - 1);
+                if (variance < 0.0) variance = 0.0; // Guard floating-point negative
+                stddev = Math.Sqrt(variance);
+            }
+
+            var meanOut = mean;
+            var stdOut = stddev;
+            featureMeans[f] = Unsafe.As<double, TOutput>(ref meanOut);
+            featureStdDevs[f] = Unsafe.As<double, TOutput>(ref stdOut);
         }
     }
 
@@ -527,16 +621,28 @@ public class LorentzianClassification_FP<TPrice, TOutput>
     #region Classification
 
     /// <summary>
-    /// Classify the current pattern using k-NN with Lorentzian distance
+    /// Classify the current pattern using k-NN with Lorentzian distance.
+    /// Dispatches to double-specialized path when TOutput is double.
     /// </summary>
     private (TOutput signal, TOutput confidence) ClassifyCurrentPattern(TOutput[] features)
     {
         if (historicalCount < NeighborsCount)
             return (TOutput.Zero, TOutput.Zero);
 
-        // Calculate distances to all historical patterns
+        // JIT eliminates this branch: always true for double, always false otherwise
+        if (typeof(TOutput) == typeof(double))
+            return ClassifyCurrentPatternDouble(features);
+
+        return ClassifyCurrentPatternGeneric(features);
+    }
+
+    /// <summary>
+    /// Generic fallback classification (original implementation).
+    /// </summary>
+    private (TOutput signal, TOutput confidence) ClassifyCurrentPatternGeneric(TOutput[] features)
+    {
         var distances = new (TOutput distance, TOutput label, int index)[historicalCount];
-        
+
         for (int i = 0; i < historicalCount; i++)
         {
             var pattern = historicalPatterns[i];
@@ -544,52 +650,112 @@ public class LorentzianClassification_FP<TPrice, TOutput>
             distances[i] = (distance, pattern.Label, i);
         }
 
-        // Sort by distance and take K nearest neighbors
         Array.Sort(distances, (a, b) => a.distance.CompareTo(b.distance));
-        
-        // Vote among K nearest neighbors
+
         TOutput bullishVotes = TOutput.Zero;
         TOutput bearishVotes = TOutput.Zero;
         TOutput neutralVotes = TOutput.Zero;
-        
         int actualNeighbors = Math.Min(NeighborsCount, historicalCount);
-        
+
         for (int i = 0; i < actualNeighbors; i++)
         {
             var label = distances[i].label;
-            if (label > TOutput.Zero)
-                bullishVotes += TOutput.One;
-            else if (label < TOutput.Zero)
-                bearishVotes += TOutput.One;
-            else
-                neutralVotes += TOutput.One;
+            if (label > TOutput.Zero) bullishVotes += TOutput.One;
+            else if (label < TOutput.Zero) bearishVotes += TOutput.One;
+            else neutralVotes += TOutput.One;
         }
 
-        // Determine signal based on majority vote
         TOutput signal = TOutput.Zero;
         TOutput maxVotes = neutralVotes;
-        
-        if (bullishVotes > maxVotes)
-        {
-            signal = TOutput.One;
-            maxVotes = bullishVotes;
-        }
-        if (bearishVotes > maxVotes)
-        {
-            signal = -TOutput.One;
-            maxVotes = bearishVotes;
-        }
+        if (bullishVotes > maxVotes) { signal = TOutput.One; maxVotes = bullishVotes; }
+        if (bearishVotes > maxVotes) { signal = -TOutput.One; maxVotes = bearishVotes; }
 
-        // Calculate confidence as percentage of neighbors agreeing
         TOutput confidence = maxVotes / TOutput.CreateChecked(actualNeighbors);
-        
-        // Apply minimum confidence threshold
-        if (Convert.ToDouble(confidence) < MinConfidence)
+        if (Convert.ToDouble(confidence) < MinConfidence) { signal = TOutput.Zero; confidence = TOutput.Zero; }
+
+        return (signal, confidence);
+    }
+
+    /// <summary>
+    /// Double-specialized k-NN classification.
+    /// Eliminates: generic math overhead (Convert.ToDouble/CreateChecked),
+    /// full Array.Sort (uses K-size insertion buffer), per-bar heap allocations.
+    /// </summary>
+    private (TOutput signal, TOutput confidence) ClassifyCurrentPatternDouble(TOutput[] features)
+    {
+        int k = NeighborsCount;
+        int featureCount = features.Length;
+        int kCount = 0;
+
+        for (int i = 0; i < historicalCount; i++)
         {
-            signal = TOutput.Zero; // Not confident enough
-            confidence = TOutput.Zero;
+            var pattern = historicalPatterns[i];
+            var patternFeatures = pattern.Features;
+
+            // Lorentzian distance with direct double math (no generic overhead)
+            double distance = 0.0;
+            for (int f = 0; f < featureCount; f++)
+            {
+                double a = Unsafe.As<TOutput, double>(ref features[f]);
+                double b = Unsafe.As<TOutput, double>(ref patternFeatures[f]);
+                double diff = a - b;
+                if (diff < 0.0) diff = -diff;
+                distance += Math.Log(1.0 + diff);
+            }
+
+            var labelVal = pattern.Label;
+            double label = Unsafe.As<TOutput, double>(ref labelVal);
+
+            // Partial sort: maintain K-nearest in ascending order via insertion
+            if (kCount < k)
+            {
+                int pos = kCount;
+                while (pos > 0 && _kDistances[pos - 1] > distance)
+                {
+                    _kDistances[pos] = _kDistances[pos - 1];
+                    _kLabels[pos] = _kLabels[pos - 1];
+                    pos--;
+                }
+                _kDistances[pos] = distance;
+                _kLabels[pos] = label;
+                kCount++;
+            }
+            else if (distance < _kDistances[k - 1])
+            {
+                int pos = k - 1;
+                while (pos > 0 && _kDistances[pos - 1] > distance)
+                {
+                    _kDistances[pos] = _kDistances[pos - 1];
+                    _kLabels[pos] = _kLabels[pos - 1];
+                    pos--;
+                }
+                _kDistances[pos] = distance;
+                _kLabels[pos] = label;
+            }
         }
 
+        // Vote among K nearest neighbors
+        int actualNeighbors = Math.Min(k, kCount);
+        double bullishVotes = 0, bearishVotes = 0, neutralVotes = 0;
+
+        for (int i = 0; i < actualNeighbors; i++)
+        {
+            double lbl = _kLabels[i];
+            if (lbl > 0.0) bullishVotes++;
+            else if (lbl < 0.0) bearishVotes++;
+            else neutralVotes++;
+        }
+
+        double signalD = 0.0;
+        double maxVotes = neutralVotes;
+        if (bullishVotes > maxVotes) { signalD = 1.0; maxVotes = bullishVotes; }
+        if (bearishVotes > maxVotes) { signalD = -1.0; maxVotes = bearishVotes; }
+
+        double confidenceD = maxVotes / actualNeighbors;
+        if (confidenceD < MinConfidence) { signalD = 0.0; confidenceD = 0.0; }
+
+        TOutput signal = Unsafe.As<double, TOutput>(ref signalD);
+        TOutput confidence = Unsafe.As<double, TOutput>(ref confidenceD);
         return (signal, confidence);
     }
 
@@ -657,7 +823,10 @@ public class LorentzianClassification_FP<TPrice, TOutput>
         currentSignal = TOutput.Zero;
         currentConfidence = TOutput.Zero;
         Array.Clear(currentFeatures, 0, currentFeatures.Length);
-        
+        Array.Clear(_normalizedFeatures, 0, _normalizedFeatures.Length);
+        Array.Clear(_featureSums, 0, _featureSums.Length);
+        Array.Clear(_featureSumSqs, 0, _featureSumSqs.Length);
+
         // Reset future price tracking
         futurePriceIndex = 0;
         futurePriceCount = 0;
