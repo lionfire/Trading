@@ -63,6 +63,17 @@
                            OnClick="ExcludeSelectedAsync">
                     Exclude All
                 </MudButton>
+                @if (OnDeleteOptimizationData.HasDelegate)
+                {
+                    <MudButton Size="Size.Small"
+                               Variant="Variant.Outlined"
+                               Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.DeleteForever"
+                               OnClick="DeleteSelectedDataAsync"
+                               Disabled="@(!SelectedSymbols.Any(s => s.State == SymbolState.Excluded || s.State == SymbolState.Delisted || s.State == SymbolState.Hidden))">
+                        Delete Data
+                    </MudButton>
+                }
                 <MudButton Size="Size.Small"
                            Variant="Variant.Text"
                            OnClick="ClearSelection">
@@ -186,6 +197,14 @@
                                        OnClick="@(() => HideSymbolAsync(context.Item))"
                                        Title="Hide from view" />
                     }
+                    @if (OnDeleteOptimizationData.HasDelegate && (context.Item.State == SymbolState.Excluded || context.Item.State == SymbolState.Delisted || context.Item.State == SymbolState.Hidden))
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.DeleteForever"
+                                       Size="Size.Small"
+                                       Color="Color.Error"
+                                       OnClick="@(() => OnDeleteOptimizationData.InvokeAsync(context.Item.Symbol))"
+                                       Title="Delete optimization data" />
+                    }
                 </CellTemplate>
             </TemplateColumn>
         </Columns>
@@ -200,6 +219,8 @@
 @code {
     [Parameter] public SymbolCollectionSnapshot? Snapshot { get; set; }
     [Parameter] public EventCallback<(string Symbol, SymbolState NewState, string? Reason)> OnSymbolStateChanged { get; set; }
+    [Parameter] public EventCallback<string> OnDeleteOptimizationData { get; set; }
+    [Parameter] public EventCallback<List<string>> OnBulkDeleteOptimizationData { get; set; }
 
     private string CurrentFilter { get; set; } = "all";
     private bool HideExcluded { get; set; }
@@ -281,6 +302,18 @@
     {
         var toExclude = SelectedSymbols.ToList();
         await ProcessBulkOperationAsync(toExclude, SymbolState.Excluded);
+    }
+
+    private async Task DeleteSelectedDataAsync()
+    {
+        var symbols = SelectedSymbols
+            .Where(s => s.State == SymbolState.Excluded || s.State == SymbolState.Delisted || s.State == SymbolState.Hidden)
+            .Select(s => s.Symbol)
+            .ToList();
+        if (symbols.Count > 0)
+        {
+            await OnBulkDeleteOptimizationData.InvokeAsync(symbols);
+        }
     }
 
     private async Task ProcessBulkOperationAsync(List<SymbolEntry> entries, SymbolState newState)

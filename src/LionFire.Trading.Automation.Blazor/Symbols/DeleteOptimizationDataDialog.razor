@@ -1,0 +1,57 @@
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        <MudStack Row AlignItems="AlignItems.Center">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Class="mr-2" />
+            <MudText Typo="Typo.h6">Delete Optimization Data</MudText>
+        </MudStack>
+    </TitleContent>
+    <DialogContent>
+        @if (Symbols.Count == 1)
+        {
+            <MudText Class="mb-2">
+                Delete all optimization data for <strong>@Symbols[0]</strong>?
+            </MudText>
+        }
+        else
+        {
+            <MudText Class="mb-2">
+                Delete optimization data for <strong>@Symbols.Count symbols</strong>?
+            </MudText>
+            <MudList T="string" Dense="true" Class="mb-2" Style="max-height: 200px; overflow-y: auto;">
+                @foreach (var symbol in Symbols)
+                {
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small" IconColor="Color.Warning">
+                        @symbol
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+            Estimated size: <strong>@FormatSize(EstimatedBytes)</strong> — this action cannot be undone.
+        </MudAlert>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Confirm">Delete</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public List<string> Symbols { get; set; } = new();
+    [Parameter] public long EstimatedBytes { get; set; }
+
+    private void Cancel() => MudDialog.Cancel();
+    private void Confirm() => MudDialog.Close(DialogResult.Ok(true));
+
+    private static string FormatSize(long bytes) => bytes switch
+    {
+        >= 1_073_741_824 => $"{bytes / 1_073_741_824.0:N1} GB",
+        >= 1_048_576 => $"{bytes / 1_048_576.0:N1} MB",
+        >= 1_024 => $"{bytes / 1_024.0:N1} KB",
+        _ => $"{bytes} B"
+    };
+}
