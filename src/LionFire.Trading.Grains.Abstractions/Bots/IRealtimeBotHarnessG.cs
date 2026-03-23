@@ -1,6 +1,7 @@
 using LionFire.Trading.Indicators.Grains;
 using Microsoft.Extensions.Logging;
 using Orleans;
+using Orleans.Concurrency;
 
 namespace LionFire.Trading.Grains.Bots;
 
@@ -138,12 +139,19 @@ public interface IRealtimeBotHarnessG : IGrainWithStringKey, IIndicatorSubscribe
     /// Subscribes an observer for real-time signal updates (position open/close/flip).
     /// </summary>
     /// <param name="observer">The observer to receive signal events</param>
+    /// <remarks>
+    /// Marked <see cref="AlwaysInterleaveAttribute"/> because this is a trivial list-add
+    /// that must be callable while other methods (e.g., grain timer callbacks) are executing,
+    /// avoiding deadlocks when <see cref="ISignalCollectorG.RegisterBotHarness"/> calls back.
+    /// </remarks>
+    [AlwaysInterleave]
     ValueTask SubscribeToSignals(IBotSignalObserver observer);
 
     /// <summary>
     /// Unsubscribes an observer from signal updates.
     /// </summary>
     /// <param name="observer">The observer to remove</param>
+    [AlwaysInterleave]
     ValueTask UnsubscribeFromSignals(IBotSignalObserver observer);
 
     /// <summary>

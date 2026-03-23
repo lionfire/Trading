@@ -83,4 +83,25 @@ public interface IUserPreferencesG : IGrainWithStringKey
     ValueTask ClearBotOptimizationPreferences(string botTypeKey);
 
     #endregion
+
+    #region Favorite TimeFrames
+
+    ValueTask<List<string>> GetFavoriteTimeFrames();
+    ValueTask SetFavoriteTimeFrames(List<string> timeFrames);
+
+    #endregion
+
+    #region View Settings
+
+    /// <summary>
+    /// Gets a named view setting (e.g., "plans-page:master-panel-visible").
+    /// </summary>
+    ValueTask<string?> GetViewSetting(string key);
+
+    /// <summary>
+    /// Sets a named view setting. Pass null to remove.
+    /// </summary>
+    ValueTask SetViewSetting(string key, string? value);
+
+    #endregion
 }

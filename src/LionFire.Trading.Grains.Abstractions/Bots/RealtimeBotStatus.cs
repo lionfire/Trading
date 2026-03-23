@@ -35,6 +35,41 @@ public class RealtimeBotStatus
     /// </summary>
     [Id(3)]
     public int BarsCaughtUp { get; set; }
+
+    /// <summary>
+    /// Health status for each market subscription, keyed by channel key
+    /// (e.g., "binance.futures:BTCUSD m1").
+    /// Null when the bot has no active market subscriptions.
+    /// </summary>
+    [Id(4)]
+    public Dictionary<string, SubscriptionHealthInfo>? MarketHealth { get; set; }
+}
+
+/// <summary>
+/// Health information for a single market subscription.
+/// </summary>
+[GenerateSerializer]
+[Alias("subscription-health-info")]
+public class SubscriptionHealthInfo
+{
+    /// <summary>
+    /// Current health status of the subscription.
+    /// </summary>
+    [Id(0)]
+    public SubscriptionHealth Status { get; set; }
+
+    /// <summary>
+    /// Timestamp of the last bar received on this subscription.
+    /// Null if no bars have been received yet.
+    /// </summary>
+    [Id(1)]
+    public DateTime? LastBarReceived { get; set; }
+
+    /// <summary>
+    /// Average rate of bar delivery since tracking began.
+    /// </summary>
+    [Id(2)]
+    public double BarsPerSecond { get; set; }
 }
 
 /// <summary>
@@ -72,4 +107,26 @@ public enum RealtimeBotState
     /// ErrorMessage contains details. Requires Stop() and restart to recover.
     /// </summary>
     Faulted = 4
+}
+
+/// <summary>
+/// Health status of a market data subscription.
+/// </summary>
+public enum SubscriptionHealth
+{
+    /// <summary>
+    /// Subscription is receiving bars within the expected interval.
+    /// </summary>
+    Healthy = 0,
+
+    /// <summary>
+    /// Subscription has not received bars within the expected interval
+    /// but has received bars at some point in the past.
+    /// </summary>
+    Stale = 1,
+
+    /// <summary>
+    /// Subscription has never received any bar data.
+    /// </summary>
+    NoData = 2
 }
