@@ -1,0 +1,125 @@
+@namespace LionFire.Trading.Automation.Blazor.Optimization
+@using LionFire.Trading.Automation.Optimization.Sensitivity
+
+<MudCard Class="mt-4">
+    <MudCardHeader>
+        <MudText Typo="Typo.h6">Parameter Interactions</MudText>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (HessianResult == null)
+        {
+            <MudText Typo="Typo.body2" Class="mud-text-secondary">
+                No interaction data available. Run Hessian analysis to detect parameter interactions.
+            </MudText>
+        }
+        else if (!HessianResult.Interactions.Any())
+        {
+            <MudText Typo="Typo.body2">No parameter interactions detected.</MudText>
+        }
+        else
+        {
+            <div style="overflow-x: auto;">
+                <table class="interaction-heatmap">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            @foreach (var param in HessianResult.AnalyzedParameters)
+                            {
+                                <th title="@param">@GetShortName(param)</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var paramA in HessianResult.AnalyzedParameters)
+                        {
+                            <tr>
+                                <td class="param-name" title="@paramA">@GetShortName(paramA)</td>
+                                @foreach (var paramB in HessianResult.AnalyzedParameters)
+                                {
+                                    @if (paramA == paramB)
+                                    {
+                                        <td class="diagonal">—</td>
+                                    }
+                                    else
+                                    {
+                                        var interaction = GetInteraction(paramA, paramB);
+                                        if (interaction != null)
+                                        {
+                                            <MudTooltip Text="@GetTooltip(interaction)" Placement="Placement.Top">
+                                                <td class="@GetCellClass(interaction)">
+                                                    @interaction.InteractionScore.ToString("F2")
+                                                </td>
+                                            </MudTooltip>
+                                        }
+                                        else
+                                        {
+                                            <td class="no-data">-</td>
+                                        }
+                                    }
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="d-flex flex-row gap-4 mt-3 flex-wrap">
+                <div class="d-flex align-center gap-2">
+                    <div class="legend-box cell-strong"></div>
+                    <MudText Typo="Typo.body2">Strong</MudText>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <div class="legend-box cell-weak"></div>
+                    <MudText Typo="Typo.body2">Weak</MudText>
+                </div>
+                <div class="d-flex align-center gap-2">
+                    <div class="legend-box cell-independent"></div>
+                    <MudText Typo="Typo.body2">Independent</MudText>
+                </div>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter]
+    public HessianAnalysisResult? HessianResult { get; set; }
+
+    private ParameterInteraction? GetInteraction(string a, string b)
+    {
+        if (HessianResult?.Interactions == null) return null;
+
+        return HessianResult.Interactions.FirstOrDefault(i =>
+            (string.Equals(i.ParameterA, a, StringComparison.OrdinalIgnoreCase) &&
+             string.Equals(i.ParameterB, b, StringComparison.OrdinalIgnoreCase)) ||
+            (string.Equals(i.ParameterA, b, StringComparison.OrdinalIgnoreCase) &&
+             string.Equals(i.ParameterB, a, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private string GetShortName(string path)
+    {
+        // Remove "P." prefix if present, otherwise use last segment after the last dot
+        if (path.StartsWith("P.", StringComparison.OrdinalIgnoreCase))
+        {
+            return path[2..];
+        }
+
+        var lastDotIndex = path.LastIndexOf('.');
+        return lastDotIndex >= 0 ? path[(lastDotIndex + 1)..] : path;
+    }
+
+    private string GetCellClass(ParameterInteraction interaction) => interaction.Strength switch
+    {
+        InteractionStrength.Strong => "cell-strong",
+        InteractionStrength.Weak => "cell-weak",
+        _ => "cell-independent"
+    };
+
+    private string GetTooltip(ParameterInteraction interaction) =>
+        $"{interaction.ParameterA} × {interaction.ParameterB}\n" +
+        $"Score: {interaction.InteractionScore:F3}\n" +
+        $"Magnitude: {interaction.InteractionMagnitude:G3}\n" +
+        $"Direction: {interaction.Direction}\n" +
+        $"Confidence: {interaction.Confidence:P0}\n" +
+        $"Samples: {interaction.SampleCount}";
+}
