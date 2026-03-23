@@ -73,20 +73,26 @@ public static class BacktestResultsReader
         {
             try
             {
+                var ad = csv.GetField<double>("AD");
+                var isAborted = csv.TryGetField<bool>("IsAborted", out var abortedField)
+                    ? abortedField
+                    : double.IsNaN(ad); // Infer from AD=NaN for old CSVs without IsAborted column
+
                 var entry = new BacktestBatchJournalEntry
                 {
                     BatchId = csv.GetField<int>("BatchId"),
                     Id = csv.GetField<long>("Id"),
                     Fitness = csv.GetField<double>("Fitness"),
-                    AD = csv.GetField<double>("AD"),
+                    AD = ad,
                     AMWT = csv.GetField<double>("AMWT"),
                     Wins = csv.GetField<int>("Wins"),
                     Losses = csv.GetField<int>("Losses"),
                     Breakevens = csv.GetField<int>("Breakevens"),
                     MaxBalanceDrawdown = csv.GetField<double>("MaxBalanceDrawdown"),
                     MaxBalanceDrawdownPerunum = csv.GetField<double>("MaxBalanceDrawdownPerunum"),
-                    MaxEquityDrawdown = csv.GetField<double>("MaxEquityDrawdown"),
-                    MaxEquityDrawdownPerunum = csv.GetField<double>("MaxEquityDrawdownPerunum"),
+                    MaxEquityDrawdown = csv.TryGetField<double>("MaxEquityDrawdown", out var med) ? med : 0,
+                    MaxEquityDrawdownPerunum = csv.TryGetField<double>("MaxEquityDrawdownPerunum", out var medp) ? medp : 0,
+                    IsAborted = isAborted,
                 };
 
                 results.Add(entry);

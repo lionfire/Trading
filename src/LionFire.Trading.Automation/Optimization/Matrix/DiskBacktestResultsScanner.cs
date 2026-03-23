@@ -1,3 +1,4 @@
+using System.Text.Json;
 using LionFire.Trading.Automation.Optimization.Scoring;
 using LionFire.Trading.Optimization.Matrix;
 using LionFire.Trading.Optimization.Plans;
@@ -88,7 +89,7 @@ public class DiskBacktestResultsScanner
         var cellDir = Path.Combine(baseDir, botName, symbol, timeframe);
         if (!Directory.Exists(cellDir)) return null;
 
-        var allEntries = new List<BacktestBatchJournalEntry>();
+        var runSummaries = new List<RunSummary>();
         var dateRangeDirs = Directory.GetDirectories(cellDir);
 
         foreach (var dateRangeDir in dateRangeDirs)
@@ -96,40 +97,128 @@ public class DiskBacktestResultsScanner
             var exchangeAreaDirs = Directory.GetDirectories(dateRangeDir);
             foreach (var exchangeAreaDir in exchangeAreaDirs)
             {
-                var entries = ReadLatestRun(exchangeAreaDir);
-                if (entries.Count > 0)
+                var summary = GetRunSummary(exchangeAreaDir);
+                if (summary != null)
                 {
-                    allEntries.AddRange(entries);
+                    runSummaries.Add(summary);
                 }
             }
         }
 
-        if (allEntries.Count == 0) return null;
+        if (runSummaries.Count == 0) return null;
 
-        return AggregateEntries(allEntries);
+        return AggregateSummaries(runSummaries);
     }
 
-    private List<BacktestBatchJournalEntry> ReadLatestRun(string exchangeAreaDir)
+    private RunSummary? GetRunSummary(string exchangeAreaDir)
     {
-        // Find the highest-numbered run directory or zip file
         var latestRunPath = FindLatestRun(exchangeAreaDir);
-        if (latestRunPath == null) return [];
+        if (latestRunPath == null) return null;
 
+        var summaryPath = GetSummaryPath(latestRunPath);
+
+        // Try to read cached summary
         try
         {
-            if (latestRunPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            if (File.Exists(summaryPath))
             {
-                return BacktestResultsReader.ReadFromZip(latestRunPath);
-            }
-            else
-            {
-                return BacktestResultsReader.ReadFromDirectory(latestRunPath);
+                var sourceLastWrite = latestRunPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                    ? File.GetLastWriteTimeUtc(latestRunPath)
+                    : Directory.GetLastWriteTimeUtc(latestRunPath);
+
+                if (File.GetLastWriteTimeUtc(summaryPath) >= sourceLastWrite)
+                {
+                    var json = File.ReadAllText(summaryPath);
+                    var cached = JsonSerializer.Deserialize<RunSummary>(json);
+                    if (cached is { Version: 3 })
+                    {
+                        return cached;
+                    }
+                }
             }
         }
         catch (Exception ex)
         {
+            _logger.LogDebug(ex, "Failed to read cached summary from {Path}, will regenerate", summaryPath);
+        }
+
+        // Cache miss — read from source and write summary
+        try
+        {
+            List<BacktestBatchJournalEntry> entries;
+            if (latestRunPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+            {
+                entries = BacktestResultsReader.ReadFromZip(latestRunPath);
+            }
+            else
+            {
+                entries = BacktestResultsReader.ReadFromDirectory(latestRunPath);
+            }
+
+            if (entries.Count == 0) return null;
+
+            var summary = ComputeRunSummary(entries);
+            WriteSummary(summaryPath, summary);
+            return summary;
+        }
+        catch (Exception ex)
+        {
             _logger.LogDebug(ex, "Failed to read backtest results from {Path}", latestRunPath);
-            return [];
+            return null;
+        }
+    }
+
+    private static string GetSummaryPath(string runPath)
+    {
+        // For "0001.zip" -> "0001.summary.json", for directory "0001" -> "0001.summary.json"
+        var basePath = runPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+            ? runPath[..^4]
+            : runPath;
+        return basePath + ".summary.json";
+    }
+
+    private static RunSummary ComputeRunSummary(List<BacktestBatchJournalEntry> entries)
+    {
+        var nonAborted = entries.Where(e => !e.IsAborted).ToList();
+        var abortedCount = entries.Count(e => e.IsAborted);
+
+        if (nonAborted.Count == 0)
+        {
+            return new RunSummary
+            {
+                BestAd = 0,
+                AverageAd = 0,
+                AdSum = 0,
+                TotalBacktests = 0,
+                AbortedBacktests = abortedCount,
+                PassingCount = 0,
+            };
+        }
+
+        var adValues = nonAborted.Select(e => e.AD).ToList();
+        var adSum = adValues.Sum();
+
+        return new RunSummary
+        {
+            BestAd = adValues.Max(),
+            AverageAd = adSum / adValues.Count,
+            AdSum = adSum,
+            TotalBacktests = nonAborted.Count,
+            AbortedBacktests = abortedCount,
+            PassingCount = adValues.Count(ad => ad >= DefaultPassingThreshold),
+        };
+    }
+
+    private void WriteSummary(string summaryPath, RunSummary summary)
+    {
+        try
+        {
+            var json = JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(summaryPath, json);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Failed to write summary cache to {Path}", summaryPath);
         }
     }
 
@@ -162,40 +251,122 @@ public class DiskBacktestResultsScanner
         return candidates.OrderByDescending(c => c.number).First().path;
     }
 
-    private static MatrixCellResult AggregateEntries(List<BacktestBatchJournalEntry> entries)
+    private static MatrixCellResult AggregateSummaries(List<RunSummary> summaries)
     {
-        var nonAborted = entries.Where(e => !e.IsAborted).ToList();
-        var abortedCount = entries.Count(e => e.IsAborted);
+        var totalBacktests = summaries.Sum(s => s.TotalBacktests);
+        var abortedBacktests = summaries.Sum(s => s.AbortedBacktests);
 
-        if (nonAborted.Count == 0)
+        if (totalBacktests == 0)
         {
             return new MatrixCellResult
             {
                 BestAd = 0,
                 AverageAd = 0,
                 TotalBacktests = 0,
-                AbortedBacktests = abortedCount,
+                AbortedBacktests = abortedBacktests,
                 PassingCount = 0,
                 Grade = OptimizationGrade.Error,
+                AchievedLevelOfDetail = 0,
+                BacktestsAtLevel = 0,
             };
         }
 
-        var adValues = nonAborted.Select(e => e.AD).ToList();
-        var bestAd = adValues.Max();
-        var averageAd = adValues.Average();
-        var passingCount = adValues.Count(ad => ad >= DefaultPassingThreshold);
+        var bestAd = summaries.Max(s => s.BestAd);
+        var adSum = summaries.Sum(s => s.AdSum);
+        var averageAd = adSum / totalBacktests;
+        var passingCount = summaries.Sum(s => s.PassingCount);
         var grade = OptimizationGradeComputer.ComputeGrade(bestAd);
 
         return new MatrixCellResult
         {
             BestAd = bestAd,
             AverageAd = averageAd,
-            TotalBacktests = nonAborted.Count,
-            AbortedBacktests = abortedCount,
+            TotalBacktests = totalBacktests,
+            AbortedBacktests = abortedBacktests,
             PassingCount = passingCount,
             Score = passingCount,
             Grade = grade,
+            AchievedLevelOfDetail = 0, // Disk-scanned results predate LoD system; treat as comprehensive (L0)
+            BacktestsAtLevel = totalBacktests,
         };
+    }
+
+    /// <summary>
+    /// Scans the disk for per-date-range results for a specific cell (symbol × timeframe) within a plan.
+    /// Used as fallback when execution state is unavailable (e.g., after Silo restart).
+    /// </summary>
+    public async Task<List<DiskCellJobInfo>> ScanCellDetailAsync(string planId, string symbol, string timeframe)
+    {
+        var results = new List<DiskCellJobInfo>();
+
+        var plan = await _planRepository.GetAsync(planId);
+        if (plan == null)
+        {
+            _logger.LogWarning("Plan '{PlanId}' not found, cannot scan cell detail", planId);
+            return results;
+        }
+
+        var baseDir = _backtestOptions.CurrentValue.Dir;
+        if (string.IsNullOrEmpty(baseDir))
+        {
+            _logger.LogWarning("BacktestOptions.Dir not configured, cannot scan cell detail");
+            return results;
+        }
+
+        var diskBotName = NormalizeBotName(plan.Bot);
+        var cellDir = Path.Combine(baseDir, diskBotName, symbol, timeframe);
+
+        if (!Directory.Exists(cellDir)) return results;
+
+        await Task.Run(() =>
+        {
+            foreach (var dateRangeDir in Directory.GetDirectories(cellDir))
+            {
+                var dateRangeName = Path.GetFileName(dateRangeDir);
+                var exchangeAreaDirs = Directory.GetDirectories(dateRangeDir);
+
+                foreach (var exchangeAreaDir in exchangeAreaDirs)
+                {
+                    try
+                    {
+                        var latestRunPath = FindLatestRun(exchangeAreaDir);
+                        if (latestRunPath == null) continue;
+
+                        var summary = GetRunSummary(exchangeAreaDir);
+                        if (summary == null) continue;
+
+                        var lastModified = latestRunPath.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)
+                            ? File.GetLastWriteTimeUtc(latestRunPath)
+                            : Directory.GetLastWriteTimeUtc(latestRunPath);
+
+                        var exchangeArea = Path.GetFileName(exchangeAreaDir);
+
+                        // Store path relative to baseDir to avoid absolute paths in URLs
+                        var relativePath = Path.GetRelativePath(baseDir, latestRunPath);
+
+                        results.Add(new DiskCellJobInfo
+                        {
+                            DateRangeName = dateRangeName,
+                            ExchangeArea = exchangeArea,
+                            BestAd = summary.BestAd,
+                            AverageAd = summary.AverageAd,
+                            TotalBacktests = summary.TotalBacktests,
+                            AbortedBacktests = summary.AbortedBacktests,
+                            PassingCount = summary.PassingCount,
+                            ResultPath = relativePath,
+                            LastModified = lastModified,
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Error scanning cell detail for {DateRangeDir}/{ExchangeAreaDir}",
+                            dateRangeName, Path.GetFileName(exchangeAreaDir));
+                    }
+                }
+            }
+        });
+
+        return results;
     }
 
     /// <summary>
@@ -210,4 +381,20 @@ public class DiskBacktestResultsScanner
         }
         return planBotName;
     }
+}
+
+/// <summary>
+/// Per-date-range result info discovered from disk scanning.
+/// </summary>
+public record DiskCellJobInfo
+{
+    public string DateRangeName { get; init; } = "";
+    public string ExchangeArea { get; init; } = "";
+    public double BestAd { get; init; }
+    public double AverageAd { get; init; }
+    public int TotalBacktests { get; init; }
+    public int AbortedBacktests { get; init; }
+    public int PassingCount { get; init; }
+    public string ResultPath { get; init; } = "";
+    public DateTime LastModified { get; init; }
 }

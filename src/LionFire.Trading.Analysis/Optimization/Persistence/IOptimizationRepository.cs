@@ -19,4 +19,11 @@ public interface IOptimizationRepository
 
     #endregion
 
+    #region Data Management
+
+    Task<long> GetDataSizeForSymbolAsync(string symbol, CancellationToken ct = default);
+    Task<(int runsDeleted, long bytesFreed)> DeleteBySymbolAsync(string symbol, IProgress<(int current, int total)>? progress = null, CancellationToken ct = default);
+
+    #endregion
+
 }

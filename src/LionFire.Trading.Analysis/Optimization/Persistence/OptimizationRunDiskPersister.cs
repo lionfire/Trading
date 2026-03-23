@@ -431,6 +431,92 @@ public class OptimizationRunDiskPersister : IOptimizationRepository
 
     #endregion
 
+    #region Data Management
+
+    public Task<long> GetDataSizeForSymbolAsync(string symbol, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            long totalSize = 0;
+            var baseDir = BacktestOptionsMonitor.CurrentValue.Dir;
+            if (!Directory.Exists(baseDir)) return 0L;
+
+            foreach (var botDir in Directory.GetDirectories(baseDir))
+            {
+                ct.ThrowIfCancellationRequested();
+                var symbolDir = Path.Combine(botDir, symbol);
+                if (Directory.Exists(symbolDir))
+                {
+                    totalSize += GetDirectorySize(symbolDir);
+                }
+            }
+            return totalSize;
+        }, ct);
+    }
+
+    public Task<(int runsDeleted, long bytesFreed)> DeleteBySymbolAsync(string symbol, IProgress<(int current, int total)>? progress = null, CancellationToken ct = default)
+    {
+        return Task.Run(() =>
+        {
+            var baseDir = BacktestOptionsMonitor.CurrentValue.Dir;
+            if (!Directory.Exists(baseDir)) return (0, 0L);
+
+            var botDirs = Directory.GetDirectories(baseDir);
+            var symbolDirs = new List<string>();
+
+            foreach (var botDir in botDirs)
+            {
+                var symbolDir = Path.Combine(botDir, symbol);
+                if (Directory.Exists(symbolDir))
+                {
+                    symbolDirs.Add(symbolDir);
+                }
+            }
+
+            int total = symbolDirs.Count;
+            int deleted = 0;
+            long bytesFreed = 0;
+
+            for (int i = 0; i < symbolDirs.Count; i++)
+            {
+                ct.ThrowIfCancellationRequested();
+                progress?.Report((i, total));
+
+                var dirSize = GetDirectorySize(symbolDirs[i]);
+                Directory.Delete(symbolDirs[i], recursive: true);
+                bytesFreed += dirSize;
+                deleted++;
+
+                Logger.LogInformation("Deleted optimization data for {Symbol} in {Dir} ({Size} bytes)", symbol, symbolDirs[i], dirSize);
+            }
+
+            // Invalidate cache entries for this symbol
+            var keysToRemove = cache.Keys.Where(k => k.Symbol == symbol).ToList();
+            foreach (var key in keysToRemove)
+            {
+                cache.TryRemove(key, out _);
+            }
+
+            progress?.Report((total, total));
+            Logger.LogInformation("Deleted {Deleted} optimization run directories for {Symbol}, freed {BytesFreed} bytes", deleted, symbol, bytesFreed);
+
+            return (deleted, bytesFreed);
+        }, ct);
+    }
+
+    private static long GetDirectorySize(string path)
+    {
+        long size = 0;
+        foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
+            try { size += new FileInfo(file).Length; }
+            catch { /* skip inaccessible files */ }
+        }
+        return size;
+    }
+
+    #endregion
+
     public Task<IEnumerable<string>> GetSymbols()
     {
         //foreach (var machineDir in Directory.GetDirectories(ResultsDir))

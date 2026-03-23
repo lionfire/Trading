@@ -161,6 +161,7 @@ public class MatrixResultsProvider : IMatrixResultsProvider
                 RunningJobs = jobs.Count(j => j.Status == JobStatus.Running),
                 FailedJobs = jobs.Count(j => j.Status == JobStatus.Failed),
                 PendingJobs = jobs.Count(j => j.Status == JobStatus.Pending),
+                NoHistoryJobs = jobs.Count(j => j.Status == JobStatus.NoHistory),
             };
         }
 
