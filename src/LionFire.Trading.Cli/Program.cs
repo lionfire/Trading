@@ -80,6 +80,12 @@ return await new HostApplicationBuilderProgram()
     .Command<CryptoVolOptions>("crypto vol", CryptoHandlers.Vol,
         builderBuilder: CryptoHandlers.ConfigureVolCommand)
 
+    // Sensitivity analysis commands
+    .Command<RecommendStepsOptions>("optimize recommend-steps", SensitivityHandlers.RecommendSteps,
+        builderBuilder: SensitivityHandlers.ConfigureRecommendStepsCommand)
+    .Command<AnalyzeSensitivityOptions>("optimize analyze-sensitivity", SensitivityHandlers.AnalyzeSensitivity,
+        builderBuilder: SensitivityHandlers.ConfigureAnalyzeSensitivityCommand)
+
     // Worker commands
     .Command<WorkerStartOptions>("worker start", WorkerHandlers.Start,
         builderBuilder: WorkerHandlers.ConfigureCommand)
