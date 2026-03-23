@@ -609,6 +609,8 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
 
             do
             {
+                var previousNextStartTime = nextStartTime;
+                lastKline = null; // Reset so empty API responses break the loop
                 Logger.LogInformation($"{Input.Symbol} {nextStartTime} - {requestTo}");
                 Debug.WriteLine($"Downloading {Input.Symbol} {nextStartTime} - {requestTo}");
                 DownloadProgressTracker.OnProgress(Input.ExchangeFlag);
@@ -698,6 +700,13 @@ public class RetrieveHistoricalDataJob : JasperFxAsyncCommand<RetrieveHistorical
                 //{
                 if (Input.TimeFrame.TimeSpan <= TimeSpan.Zero) throw new NotImplementedException();
                 nextStartTime = lastKline.OpenTime + Input.TimeFrame.TimeSpan;
+
+                // Safety: if nextStartTime didn't advance, the symbol may be delisted or data ended
+                if (nextStartTime <= previousNextStartTime)
+                {
+                    Logger.LogWarning("{Symbol} download stuck at {NextStartTime} - no progress (symbol may be delisted or data ended). Breaking.", Input.Symbol, nextStartTime);
+                    break;
+                }
                 //}
             } while (lastKline != null && nextStartTime < info.EndExclusive && (nextStartTime + Input.TimeFrame.TimeSpan < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar);
             bool ForwardCondition() => lastKline != null && (nextStartTime + Input.TimeFrame.TimeSpan < DateTime.UtcNow) && lastKline.OpenTime != expectedLastBar;
