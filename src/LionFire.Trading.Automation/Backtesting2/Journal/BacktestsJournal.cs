@@ -117,6 +117,7 @@ public class BacktestsJournal : IAsyncDisposable
             Map(m => m.MaxBalanceDrawdownPerunum);
             //Map(m => m.MaxEquityDrawdown);
             //Map(m => m.MaxEquityDrawdownPerunum);
+            Map(m => m.IsAborted);
             InitBase();
 
             //Map(m => m.PMultiSim).Convert(row =>

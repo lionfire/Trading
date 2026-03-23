@@ -80,7 +80,7 @@ public sealed partial class BatchHarness<TPrecision>
 
     #region Parameters
 
-    public BacktestExecutionOptions ExecutionOptions { get; } // MOVE to IBatchContext
+    public BacktestExecutionOptions ExecutionOptions => Context.ExecutionOptions;
 
     public PSimAccount<TPrecision> PBacktestAccountPrototype { get; set; }
         = PSimAccount<TPrecision>.DefaultForBacktesting;
@@ -619,49 +619,52 @@ public sealed partial class BatchHarness<TPrecision>
                 }
                 await AdvanceInputsByOneBar().ConfigureAwait(false);
 
-#if truex
-                Parallel.ForEach(backtests, b =>
+                int intraBatchThreads = ExecutionOptions?.Threads ?? 0;
+                if (intraBatchThreads <= 0) intraBatchThreads = 1; // 0 = sequential by default for safety
+
+                if (intraBatchThreads == 1)
                 {
-                    var account = b.Controller.Account;
-                    if (account != null) account.OnBar();
-                    else
+                    foreach (var b in backtests)
                     {
-                        foreach (var account2 in b.Controller.Accounts) { account2.OnBar(); }
-                    }
-                    b.Bot.OnBar();
-                });
-#elif truex
-                await Task.WhenAll(backtests.Select(b => Task.Run(() =>
-                {
-                    //Task.Yield();
-                    var account = b.Controller.Account;
-                    if (account != null) account.OnBar();
-                    else
-                    {
-                        foreach (var account2 in b.Controller.Accounts) { account2.OnBar(); }
-                    }
-                    b.Bot.OnBar();
-                })));
-#elif true
-                foreach (var b in backtests)
-                {
-                    var account = b.BotContext.DefaultSimAccount;
-                    if (account != null)
-                    {
-                        if (account.IsAborted) continue;
-                        account.OnBar();
-                    }
-                    else
-                    {
-                        foreach (var account2 in b.BotContext.SimulatedAccounts.Select(kvp => kvp.Value).Where(a => !a.IsAborted))
+                        var account = b.BotContext.DefaultSimAccount;
+                        if (account != null)
                         {
-                            account2.OnBar();
+                            if (account.IsAborted) continue;
+                            account.OnBar();
                         }
+                        else
+                        {
+                            foreach (var account2 in b.BotContext.SimulatedAccounts.Select(kvp => kvp.Value).Where(a => !a.IsAborted))
+                            {
+                                account2.OnBar();
+                            }
+                        }
+                        b.Bot.OnBar();
                     }
-                    b.Bot.OnBar();
                 }
-#else
-#endif
+                else
+                {
+                    Parallel.ForEach(
+                        backtests,
+                        new ParallelOptions { MaxDegreeOfParallelism = intraBatchThreads },
+                        b =>
+                        {
+                            var account = b.BotContext.DefaultSimAccount;
+                            if (account != null)
+                            {
+                                if (account.IsAborted) return;
+                                account.OnBar();
+                            }
+                            else
+                            {
+                                foreach (var account2 in b.BotContext.SimulatedAccounts.Select(kvp => kvp.Value).Where(a => !a.IsAborted))
+                                {
+                                    account2.OnBar();
+                                }
+                            }
+                            b.Bot.OnBar();
+                        });
+                }
                 this.Context.SimulatedCurrentDate += timeSpan;
             }
             Debug.WriteLine($"{counter} bars for {backtests.Count} backtests in {sw.Elapsed.TotalSeconds}s ({(backtests.Count * counter / sw.Elapsed.TotalSeconds).ToString("N0")}/s)");

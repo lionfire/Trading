@@ -55,7 +55,7 @@ public partial class BacktestQueue : IHostedService
 
         // Limit concurrent job execution to prevent memory exhaustion
         // Each job can consume significant memory loading historical data
-        int maxConcurrent = Math.Max(1, Math.Min(Parameters.MaxConcurrentJobs, Environment.ProcessorCount / 2));
+        int maxConcurrent = Math.Max(1, Parameters.MaxConcurrentJobs);
         jobConcurrencySemaphore = new SemaphoreSlim(maxConcurrent, maxConcurrent);
 
         Logger.LogInformation("BacktestQueue configured with MaxConcurrentJobs={MaxConcurrent}", maxConcurrent);
