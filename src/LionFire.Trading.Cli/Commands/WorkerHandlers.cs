@@ -11,6 +11,8 @@ using LionFire.Trading.Automation.Orleans.Optimization;
 using LionFire.Trading.Binance_;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Indicators;
+using LionFire.Trading.Bots.LorentzianDynamic;
+using LionFire.Trading.Bots.SignalAggregator;
 
 namespace LionFire.Trading.Cli.Commands;
 
@@ -49,8 +51,8 @@ public static class WorkerHandlers
                 .AddSingleton<IndicatorProvider>()
                 .AddIndicators()
                 .AddSingleton<BinanceClientProvider>()
-                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>))
-                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>));
+                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>), typeof(PLorentzianDynamicBot<>), typeof(PSignalAggregatorTradingBot<>))
+                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>), typeof(LorentzianDynamicBot<>), typeof(SignalAggregatorTradingBot<>));
 
             // Register the queue processor as a hosted background service
             builder.Services.AddOptimizationQueue();

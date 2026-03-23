@@ -14,6 +14,7 @@ using LionFire.Hosting.CommandLine;
 using LionFire.Trading.Automation;
 using LionFire.Trading.Automation.Bots;
 using LionFire.Trading.Bots.LorentzianDynamic;
+using LionFire.Trading.Bots.SignalAggregator;
 using LionFire.Trading.Automation.Optimization;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Journal;
@@ -78,8 +79,8 @@ public static class BacktestRunHandler
                 .AutomationModel(builder.Configuration)
                 .Automation(builder.Configuration)
                 .AddHistoricalBars(builder.Configuration)
-                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>), typeof(PLorentzianDynamicBot<>))
-                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>), typeof(LorentzianDynamicBot<>))
+                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>), typeof(PLorentzianDynamicBot<>), typeof(PSignalAggregatorTradingBot<>))
+                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>), typeof(LorentzianDynamicBot<>), typeof(SignalAggregatorTradingBot<>))
                 .AddSingleton<IBinanceRestClient>(sp => new BinanceRestClient());
 
             builder.Services.AddRunTaskAndShutdown(async (serviceProvider) =>

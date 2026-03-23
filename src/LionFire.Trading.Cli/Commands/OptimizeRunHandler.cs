@@ -21,6 +21,7 @@ using LionFire.Trading.Optimization;
 using LionFire.Trading.HistoricalData;
 using LionFire.Trading.Journal;
 using LionFire.Trading.Bots.LorentzianDynamic;
+using LionFire.Trading.Bots.SignalAggregator;
 
 namespace LionFire.Trading.Cli.Commands;
 
@@ -113,8 +114,8 @@ public static class OptimizeRunHandler
                 .AddHistoricalBars(builder.Configuration)
 
                 // Register bot types (needed for BotTypeRegistry)
-                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>), typeof(PLorentzianDynamicBot<>))
-                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>), typeof(LorentzianDynamicBot<>))
+                .RegisterTypesFromAssemblies<IPBot2>(typeof(PAtrBot<>), typeof(PLorentzianDynamicBot<>), typeof(PSignalAggregatorTradingBot<>))
+                .RegisterTypesFromAssemblies<IBot2>(typeof(AtrBot<>), typeof(LorentzianDynamicBot<>), typeof(SignalAggregatorTradingBot<>))
 
                 // Register Binance client for historical data retrieval
                 .AddSingleton<IBinanceRestClient>(sp => new BinanceRestClient());
