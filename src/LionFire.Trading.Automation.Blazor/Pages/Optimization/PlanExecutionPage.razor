@@ -14,7 +14,7 @@
         <MudSpacer />
         <MudButton Variant="Variant.Outlined" Color="Color.Primary"
                    StartIcon="@Icons.Material.Filled.Add"
-                   Href="/optimization/plans/new">
+                   Href="/optimization/plans">
             New Plan
         </MudButton>
     </div>
@@ -27,7 +27,8 @@
                             RegisteredBots="_registeredBots"
                             PlanBots="_planBots"
                             PlanCounts="_planCounts"
-                            OnBotChanged="OnBotChanged" />
+                            OnBotChanged="OnBotChanged"
+                            OnNewPlan="@(() => Navigation.NavigateTo("/optimization/plans"))" />
             </MudPaper>
 
             <MudPaper Class="plan-list-container" Elevation="1">
@@ -61,7 +62,7 @@
                     </MudText>
                     <MudText Typo="Typo.body2" Class="mud-text-secondary mt-2">
                         Choose a plan from the list on the left, or
-                        <MudLink Href="/optimization/plans/new">create a new plan</MudLink>.
+                        <MudLink Href="/optimization/plans">create a new plan</MudLink>.
                     </MudText>
                 </MudPaper>
             }
@@ -284,8 +285,7 @@
         try
         {
             await ExecutionService.StopAsync(_selectedPlanId);
-            _executionStates.Remove(_selectedPlanId);
-            _currentExecutionState = null;
+            await LoadCurrentExecutionState();
             Snackbar.Add("Execution stopped", Severity.Warning);
         }
         catch (Exception ex)

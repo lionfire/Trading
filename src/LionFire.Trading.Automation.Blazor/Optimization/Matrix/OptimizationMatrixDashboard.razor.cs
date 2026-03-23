@@ -56,6 +56,12 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
     public EventCallback<(string Symbol, string Timeframe)> OnCancelLod { get; set; }
 
     /// <summary>
+    /// Fired when the user wants to navigate to the Symbols tab to add symbols.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnNavigateToSymbolsTab { get; set; }
+
+    /// <summary>
     /// Fired when the plan is modified (e.g., timeframe added/removed) so the parent can update its state.
     /// </summary>
     [Parameter]
@@ -628,6 +634,19 @@ public partial class OptimizationMatrixDashboard : ComponentBase, IDisposable
     private bool _addSymbolsDialogVisible;
     private string _addSymbolsText = "";
     private static readonly DialogOptions _addSymbolsDialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true };
+
+    private async Task NavigateToSymbolsTab()
+    {
+        if (OnNavigateToSymbolsTab.HasDelegate)
+        {
+            await OnNavigateToSymbolsTab.InvokeAsync();
+        }
+        else
+        {
+            // Fallback: open the dialog
+            OpenAddSymbolsDialog();
+        }
+    }
 
     private void OpenAddSymbolsDialog()
     {

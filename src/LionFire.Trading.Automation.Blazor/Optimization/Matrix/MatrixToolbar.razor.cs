@@ -56,6 +56,9 @@ public partial class MatrixToolbar : ComponentBase
     private bool _showPriorityDialog;
     private int _dialogPriority = 5;
 
+    private IEnumerable<int> _dateRangeIndices =>
+        new[] { -1 }.Concat(Enumerable.Range(0, DateRanges.Count));
+
     private void ShowSetPriorityDialog()
     {
         _dialogPriority = 5;

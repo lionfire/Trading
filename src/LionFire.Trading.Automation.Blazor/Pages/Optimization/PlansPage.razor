@@ -93,6 +93,13 @@
                             ✗ @_progressFailedCells
                         </MudChip>
                     }
+                    @if (_progressNoHistoryCells > 0)
+                    {
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                                 Style="background-color: #616161; color: white;">
+                            @_progressNoHistoryCells no data
+                        </MudChip>
+                    }
                 </div>
             }
         }
@@ -499,10 +506,11 @@
           * _selectedPlan.Timeframes.Count
           * Math.Max(1, _selectedPlan.DateRanges.Count);
 
-    private int _unfinishedCellCount => _totalCellCount - _progressCompletedCells;
+    private int _unfinishedCellCount => _totalCellCount - _progressCompletedCells - _progressNoHistoryCells;
 
     private Dictionary<string, MatrixCellProgress> _cellProgress = new();
     private int _progressCompletedCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Complete);
+    private int _progressNoHistoryCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.NoHistory);
     private int _progressRunningCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Running);
     private int _progressQueuedCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Queued);
     private int _progressFailedCells => _cellProgress.Values.Count(p => p.VisualState == CellVisualState.Failed);
@@ -535,6 +543,11 @@
             _selectedPlan = _plans.FirstOrDefault(p => p.Id == PlanId);
             _selectedBot = _selectedPlan?.Bot is string bot ? NormalizeBotName(bot) : null;
             await LoadCurrentExecutionState();
+        }
+        else
+        {
+            // Restore last visited plan when arriving at /optimization/plans with no plan specified
+            await RestoreLastPlan();
         }
 
         StartPolling();
@@ -570,6 +583,12 @@
         else if (_selectedPlan != null)
         {
             await RestoreLastDetailTab();
+        }
+
+        // Save current plan as the last-visited plan
+        if (_selectedPlan != null)
+        {
+            _ = SaveLastPlanId(_selectedPlan.Id);
         }
 
         StateHasChanged();
@@ -1035,6 +1054,49 @@
                 {
                     var index = Array.IndexOf(TabNames, savedTab);
                     if (index >= 0) _activeDetailTab = index;
+                }
+            }
+        }
+        catch { /* Use default */ }
+    }
+
+    private async Task SaveLastPlanId(string planId)
+    {
+        try
+        {
+            if (ClusterClient != null)
+            {
+                var grain = ClusterClient.GetGrain<IUserPreferencesG>("Anonymous");
+                await grain.SetViewSetting(LastPlanIdKey, planId);
+            }
+        }
+        catch { /* Best effort */ }
+    }
+
+    private async Task RestoreLastPlan()
+    {
+        try
+        {
+            if (ClusterClient != null)
+            {
+                var grain = ClusterClient.GetGrain<IUserPreferencesG>("Anonymous");
+                var savedPlanId = await grain.GetViewSetting(LastPlanIdKey);
+                if (savedPlanId != null)
+                {
+                    _selectedPlan = _plans.FirstOrDefault(p => p.Id == savedPlanId);
+                    if (_selectedPlan != null)
+                    {
+                        _selectedBot = _selectedPlan.Bot is string bot ? NormalizeBotName(bot) : null;
+                        await LoadCurrentExecutionState();
+                        await RestoreLastDetailTab();
+
+                        // Update URL to reflect the restored state
+                        var tabName = _activeDetailTab >= 0 && _activeDetailTab < TabNames.Length ? TabNames[_activeDetailTab] : null;
+                        var url = tabName is "overview" or null
+                            ? $"/optimization/plans/{_selectedPlan.Id}"
+                            : $"/optimization/plans/{_selectedPlan.Id}/{tabName}";
+                        Navigation.NavigateTo(url, replace: true);
+                    }
                 }
             }
         }

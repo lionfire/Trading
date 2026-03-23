@@ -2,11 +2,13 @@
 @namespace LionFire.Trading.Automation.Blazor.Pages.Optimization
 @rendermode @(new InteractiveServerRenderMode(prerender: false))
 
+@using LionFire.Trading.Automation.Optimization.Matrix
 @using LionFire.Trading.Optimization.Execution
 @using LionFire.Trading.Optimization.Plans
 
 @inject IPlanExecutionService ExecutionService
 @inject IOptimizationPlanRepository PlanRepository
+@inject DiskBacktestResultsScanner DiskScanner
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
@@ -26,30 +28,27 @@
         </div>
 
         @* Summary stats *@
-        @if (_jobs.Count > 0)
+        @if (_displayItems.Count > 0)
         {
             <div class="d-flex flex-row gap-6 flex-wrap">
                 <div class="lf-field">
                     <div class="label">Total Jobs</div>
-                    <div class="value">@_jobs.Count</div>
+                    <div class="value">@_displayItems.Count</div>
                 </div>
                 <div class="lf-field">
                     <div class="label">Completed</div>
                     <div class="value">@_completedCount</div>
                 </div>
-                @if (_bestScore.HasValue)
-                {
-                    <div class="lf-field">
-                        <div class="label">Best Score</div>
-                        <div class="value">@_bestScore.Value.ToString("F2")</div>
-                    </div>
-                }
                 @if (_bestAD.HasValue)
                 {
                     <div class="lf-field">
                         <div class="label">Best AD</div>
                         <div class="value">@_bestAD.Value.ToString("F2")</div>
                     </div>
+                }
+                @if (_fromDisk)
+                {
+                    <MudChip T="string" Color="Color.Default" Size="Size.Small" Class="ml-2">From disk</MudChip>
                 }
             </div>
         }
@@ -60,60 +59,32 @@
     {
         <MudProgressLinear Indeterminate="true" />
     }
-    else if (_jobs.Count == 0)
+    else if (_displayItems.Count == 0)
     {
         <MudAlert Severity="Severity.Info" Class="mt-2">
-            No jobs found for @Symbol / @Timeframe in this plan.
+            No results found for @Symbol / @Timeframe in this plan.
         </MudAlert>
     }
     else
     {
         <MudPaper>
-            <MudTable Items="@_jobs" Dense="true" Hover="true" Striped="true"
-                      OnRowClick="@OnRowClick" T="OptimizationJob" RowClass="cursor-pointer">
+            <MudTable Items="@_displayItems" Dense="true" Hover="true" Striped="true"
+                      OnRowClick="@OnRowClick" T="CellJobDisplayItem" RowClass="cursor-pointer">
                 <HeaderContent>
                     <MudTh>Date Range</MudTh>
                     <MudTh>Status</MudTh>
-                    <MudTh>Score</MudTh>
                     <MudTh>Best AD</MudTh>
                     <MudTh>Backtests</MudTh>
-                    <MudTh>Duration</MudTh>
+                    <MudTh>Passing</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd DataLabel="Date Range">
-                        @if (!string.IsNullOrEmpty(context.DateRange.Name))
-                        {
-                            @context.DateRange.Name
-                        }
-                        else
-                        {
-                            @($"{context.StartDate:yyyy-MM-dd} - {context.EndDate:yyyy-MM-dd}")
-                        }
-                    </MudTd>
+                    <MudTd DataLabel="Date Range">@context.DateRangeName</MudTd>
                     <MudTd DataLabel="Status">
-                        @switch (context.Status)
-                        {
-                            case JobStatus.Completed:
-                                <MudChip T="string" Color="Color.Success" Size="Size.Small">Completed</MudChip>
-                                break;
-                            case JobStatus.Running:
-                                <MudChip T="string" Color="Color.Info" Size="Size.Small">Running</MudChip>
-                                break;
-                            case JobStatus.Failed:
-                                <MudChip T="string" Color="Color.Error" Size="Size.Small">Failed</MudChip>
-                                break;
-                            case JobStatus.Pending:
-                                <MudChip T="string" Color="Color.Default" Size="Size.Small">Pending</MudChip>
-                                break;
-                            default:
-                                <MudChip T="string" Color="Color.Default" Size="Size.Small">@context.Status</MudChip>
-                                break;
-                        }
+                        <MudChip T="string" Color="@context.StatusColor" Size="Size.Small">@context.StatusText</MudChip>
                     </MudTd>
-                    <MudTd DataLabel="Score">@(context.Score?.ToString("F2") ?? "-")</MudTd>
-                    <MudTd DataLabel="Best AD">@(context.BestAD?.ToString("F2") ?? "-")</MudTd>
-                    <MudTd DataLabel="Backtests">@(context.TotalBacktests?.ToString("N0") ?? "-")</MudTd>
-                    <MudTd DataLabel="Duration">@(context.Duration?.ToString(@"mm\:ss") ?? "-")</MudTd>
+                    <MudTd DataLabel="Best AD">@context.BestAD.ToString("F2")</MudTd>
+                    <MudTd DataLabel="Backtests">@context.TotalBacktests.ToString("N0")</MudTd>
+                    <MudTd DataLabel="Passing">@(context.PassingCount?.ToString("N0") ?? "-")</MudTd>
                 </RowTemplate>
             </MudTable>
         </MudPaper>
@@ -125,11 +96,11 @@
     [Parameter] public string Symbol { get; set; } = "";
     [Parameter] public string Timeframe { get; set; } = "";
 
-    private List<OptimizationJob> _jobs = [];
+    private List<CellJobDisplayItem> _displayItems = [];
     private bool _loading = true;
+    private bool _fromDisk;
     private string? _planName;
     private int _completedCount;
-    private double? _bestScore;
     private double? _bestAD;
 
     protected override async Task OnInitializedAsync()
@@ -142,36 +113,90 @@
         }
         catch { /* ignore */ }
 
-        // Load jobs for this cell
+        // Try execution state first
         var state = await ExecutionService.GetStatusAsync(PlanId);
-        _jobs = state?.Jobs
+        var jobs = state?.Jobs
             .Where(j => j.Symbol == Symbol && j.Timeframe == Timeframe)
             .OrderBy(j => j.StartDate)
             .ToList() ?? [];
 
-        _completedCount = _jobs.Count(j => j.Status == JobStatus.Completed);
-        _bestScore = _jobs.Where(j => j.Score.HasValue).Select(j => j.Score!.Value).DefaultIfEmpty().Max();
-        _bestAD = _jobs.Where(j => j.BestAD.HasValue).Select(j => j.BestAD!.Value).DefaultIfEmpty().Max();
-        if (_bestScore == 0) _bestScore = null;
-        if (_bestAD == 0) _bestAD = null;
+        if (jobs.Count > 0)
+        {
+            _displayItems = jobs.Select(j => new CellJobDisplayItem
+            {
+                DateRangeName = !string.IsNullOrEmpty(j.DateRange.Name)
+                    ? j.DateRange.Name
+                    : $"{j.StartDate:yyyy-MM-dd} - {j.EndDate:yyyy-MM-dd}",
+                StatusText = j.Status.ToString(),
+                StatusColor = j.Status switch
+                {
+                    JobStatus.Completed => Color.Success,
+                    JobStatus.Running => Color.Info,
+                    JobStatus.Failed => Color.Error,
+                    _ => Color.Default,
+                },
+                BestAD = j.BestAD ?? 0,
+                TotalBacktests = j.TotalBacktests ?? 0,
+                PassingCount = j.GoodBacktestCount,
+                JobId = j.Id,
+            }).ToList();
+        }
+        else
+        {
+            // Fallback: scan disk for results
+            var diskResults = await DiskScanner.ScanCellDetailAsync(PlanId, Symbol, Timeframe);
+            if (diskResults.Count > 0)
+            {
+                _fromDisk = true;
+                _displayItems = diskResults
+                    .OrderBy(d => d.DateRangeName)
+                    .Select(d => new CellJobDisplayItem
+                    {
+                        DateRangeName = d.DateRangeName,
+                        StatusText = "Completed",
+                        StatusColor = Color.Success,
+                        BestAD = d.BestAd,
+                        TotalBacktests = d.TotalBacktests,
+                        PassingCount = d.PassingCount,
+                        ResultPath = d.ResultPath,
+                    }).ToList();
+            }
+        }
+
+        _completedCount = _displayItems.Count(d => d.StatusText == "Completed");
+        var bestAd = _displayItems.Where(d => d.BestAD > 0).Select(d => d.BestAD).DefaultIfEmpty().Max();
+        _bestAD = bestAd > 0 ? bestAd : null;
 
         _loading = false;
     }
 
-    private void OnRowClick(TableRowClickEventArgs<OptimizationJob> args)
+    private void OnRowClick(TableRowClickEventArgs<CellJobDisplayItem> args)
     {
-        if (args.Item.Status == JobStatus.Completed)
+        var item = args.Item;
+        if (item.JobId != null)
         {
-            Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(PlanId)}/job/{Uri.EscapeDataString(args.Item.Id)}");
+            Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(PlanId)}/job/{Uri.EscapeDataString(item.JobId)}");
         }
-        else if (args.Item.Status == JobStatus.Failed && args.Item.Error != null)
+        else if (item.ResultPath != null)
         {
-            Snackbar.Add($"Job failed: {args.Item.Error}", Severity.Error);
+            Navigation.NavigateTo($"/optimization/plan/{Uri.EscapeDataString(PlanId)}/job/disk?resultPath={Uri.EscapeDataString(item.ResultPath)}");
         }
     }
 
     private void NavigateBack()
     {
-        Navigation.NavigateTo($"/optimization/plans/{Uri.EscapeDataString(PlanId)}");
+        Navigation.NavigateTo($"/optimization/plans/{Uri.EscapeDataString(PlanId)}/matrix");
+    }
+
+    private record CellJobDisplayItem
+    {
+        public string DateRangeName { get; init; } = "";
+        public string StatusText { get; init; } = "";
+        public Color StatusColor { get; init; } = Color.Default;
+        public double BestAD { get; init; }
+        public int TotalBacktests { get; init; }
+        public int? PassingCount { get; init; }
+        public string? JobId { get; init; }
+        public string? ResultPath { get; init; }
     }
 }

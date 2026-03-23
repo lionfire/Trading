@@ -6,12 +6,15 @@
 @using LionFire.Trading.Automation.Blazor.Optimization.Components
 @using LionFire.Trading.Automation.Blazor.Optimization.Dashboard
 @using LionFire.Trading.Automation.Optimization
+@using LionFire.Trading.Automation
 @using LionFire.Trading.Optimization.Execution
 @using LionFire.Trading.Optimization.Plans
+@using Microsoft.Extensions.Options
 @using System.Reactive.Linq
 
 @inject IJobRunner JobRunner
 @inject IPlanExecutionService ExecutionService
+@inject IOptionsMonitor<BacktestOptions> BacktestOptionsMonitor
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -61,7 +64,7 @@
                 </div>
                 <div class="lf-field">
                     <div class="label">Date Range</div>
-                    <div class="value">@_job.StartDate.ToString("yyyy-MM-dd") - @_job.EndDate.ToString("yyyy-MM-dd")</div>
+                    <div class="value">@((_job.StartDate != default && _job.EndDate != default) ? $"{_job.StartDate:yyyy-MM-dd} - {_job.EndDate:yyyy-MM-dd}" : _job.DateRange.Name)</div>
                 </div>
                 <div class="lf-field">
                     <div class="label">Max Backtests</div>
@@ -176,6 +179,7 @@
 @code {
     [Parameter] public string PlanId { get; set; } = "";
     [Parameter] public string JobId { get; set; } = "";
+    [SupplyParameterFromQuery] public string? ResultPath { get; set; }
 
     private OptimizationTask? _task;
     private IOptimizationResultsVM? _vm;
@@ -186,6 +190,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+
         // Try to get the active task (still running in memory)
         _task = JobRunner.GetActiveTask(JobId) as OptimizationTask;
 
@@ -219,12 +224,24 @@
             var executionState = await ExecutionService.GetStatusAsync(PlanId);
             _job = executionState?.Jobs.FirstOrDefault(j => j.Id == JobId);
 
-            // Try to load saved results from disk
-            if (_job?.ResultPath != null)
+            // Determine result path: from job state, or from query parameter (relative to backtest dir)
+            var effectiveResultPath = _job?.ResultPath ?? ResultPath;
+
+            // Resolve relative paths against the backtest base directory
+            if (effectiveResultPath != null && !Path.IsPathRooted(effectiveResultPath))
+            {
+                var baseDir = BacktestOptionsMonitor.CurrentValue.Dir;
+                if (!string.IsNullOrEmpty(baseDir))
+                {
+                    effectiveResultPath = Path.Combine(baseDir, effectiveResultPath);
+                }
+            }
+
+            if (effectiveResultPath != null)
             {
                 try
                 {
-                    var savedVm = SavedResultsVM.LoadFromDirectory(_job.ResultPath);
+                    var savedVm = SavedResultsVM.LoadFromDirectory(effectiveResultPath);
                     if (savedVm != null)
                     {
                         _vm = savedVm;
@@ -234,8 +251,48 @@
                 {
                     _loadError = ex.Message;
                 }
+
+                // Create a synthetic job if we loaded from disk but had no execution state
+                if (_job == null && ResultPath != null)
+                {
+                    _job = CreateJobFromResultPath(ResultPath);
+                }
             }
         }
+    }
+
+    private OptimizationJob CreateJobFromResultPath(string resultPath)
+    {
+        // Parse info from path structure: .../BotName/Symbol/Timeframe/DateRange/ExchangeArea/RunNumber
+        var parts = resultPath.Replace('\\', '/').Split('/');
+        var symbol = "";
+        var timeframe = "";
+        var dateRange = "";
+
+        // Walk backwards from the run file/dir to extract path segments
+        // Expected: .../{BotName}/{Symbol}/{Timeframe}/{DateRange}/{ExchangeArea}/{RunNumber}
+        if (parts.Length >= 5)
+        {
+            // parts[^1] = run number (e.g., "0000.zip" or "0000")
+            // parts[^2] = exchange area (e.g., "Binance.futures")
+            // parts[^3] = date range (e.g., "2025.08.01-2026.02.01")
+            // parts[^4] = timeframe (e.g., "h1")
+            // parts[^5] = symbol (e.g., "BTCUSDT")
+            dateRange = parts[^3];
+            timeframe = parts[^4];
+            symbol = parts[^5];
+        }
+
+        return new OptimizationJob
+        {
+            Id = "disk",
+            PlanId = PlanId,
+            Symbol = symbol,
+            Timeframe = timeframe,
+            DateRange = new OptimizationDateRange { Name = dateRange },
+            Status = JobStatus.Completed,
+            ResultPath = resultPath,
+        };
     }
 
     private void NavigateBack()

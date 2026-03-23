@@ -1,5 +1,6 @@
 @using MudBlazor
 @using LionFire.Trading.Optimization.Matrix
+@using LionFire.Blazor.Components.MudBlazor_
 @namespace LionFire.Trading.Automation.Blazor.Optimization.Matrix
 
 <MudToolBar Dense="true" Class="matrix-toolbar-bar">
@@ -21,7 +22,20 @@
     }
 
     @* Date range selector *@
-    @if (DateRanges.Count > 0)
+    @if (DateRanges.Count > 0 && DateRanges.Count <= 8)
+    {
+        <InlineSelector TItem="int"
+                        Items="@_dateRangeIndices"
+                        SelectedItem="@SelectedDateRangeIndex"
+                        SelectedItemChanged="@OnDateRangeIndexChanged"
+                        Size="InlineSelectorSize.Small"
+                        ContainerStyle="margin-right: 8px;">
+            <ItemTemplate>
+                @(context == -1 ? "All" : DateRanges[context].Name)
+            </ItemTemplate>
+        </InlineSelector>
+    }
+    else if (DateRanges.Count > 8)
     {
         <MudSelect T="int" Label="Date Range" Dense="true" Variant="Variant.Outlined"
                    Value="@SelectedDateRangeIndex" ValueChanged="@OnDateRangeIndexChanged"

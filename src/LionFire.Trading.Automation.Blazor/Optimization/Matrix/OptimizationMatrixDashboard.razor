@@ -46,12 +46,13 @@
                 <div class="matrix-grid" style="--col-count: @(FilteredTimeframes.Count + 1);">
                     @* Corner cell *@
                     <div class="matrix-corner matrix-sticky-corner">
-                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Symbol / TF</MudText>
-                        <MudIconButton Icon="@(_showResults ? Icons.Material.Filled.Assessment : Icons.Material.Filled.Tune)"
+                        <MudIconButton Icon="@Icons.Material.Filled.Add"
                                        Size="Size.Small"
-                                       Class="matrix-view-toggle"
-                                       OnClick="@ToggleShowResults"
-                                       Title="@(_showResults ? "Switch to parameters view" : "Switch to results view")" />
+                                       Class="matrix-add-symbol-btn"
+                                       OnClick="@NavigateToSymbolsTab"
+                                       Title="Add symbols" />
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Symbol / TF</MudText>
+                        @* View toggle removed — cells now use unified view *@
                     </div>
 
                     @* Column headers (timeframes) *@
@@ -158,7 +159,7 @@
                                         Result="@GetCellResult(symbol, tf)"
                                         Progress="@GetCellProgress(symbol, tf)"
                                         VisualState="@GetCellVisualState(symbol, tf, isEnabled)"
-                                        ShowResults="@_showResults"
+                                        LodState="@GetCellLodState(symbol, tf)"
                                         IsSelected="@IsCellSelected(symbol, tf)"
                                         IsFocused="@IsCellFocused(symbol, tf)"
                                         IsAutoUpdated="@IsCellAutoUpdated(symbol, tf)"
@@ -167,7 +168,9 @@
                                         OnRun="@HandleCellRun"
                                         OnReRun="@HandleCellReRun"
                                         OnViewHistory="@HandleCellViewHistory"
-                                        OnOpenInOneShot="@HandleCellOpenInOneShot" />
+                                        OnOpenInOneShot="@HandleCellOpenInOneShot"
+                                        OnQueueNextLod="@HandleCellQueueNextLod"
+                                        OnCancelLod="@HandleCellCancelLod" />
                         }
 
                         @* Spacer cell for add-timeframe column *@
@@ -236,6 +239,41 @@
     }
 </div>
 
+<MudDialog @bind-Visible="_addSymbolsDialogVisible" Options="_addSymbolsDialogOptions">
+    <TitleContent>Add Symbols</TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-2 mud-text-secondary">
+            Enter symbols, one per line or comma-separated (e.g. BTCUSDT, ETHUSDT).
+        </MudText>
+        <MudTextField @bind-Value="_addSymbolsText"
+                      Variant="Variant.Outlined"
+                      Lines="6"
+                      Placeholder="BTCUSDT&#10;ETHUSDT&#10;SOLUSDT"
+                      Immediate="true"
+                      Class="mb-2" />
+        @{
+            var parsed = ParseSymbolInput(_addSymbolsText);
+            var newSymbols = parsed.Where(s => !_symbols.Contains(s, StringComparer.OrdinalIgnoreCase)).ToList();
+            var existingSymbols = parsed.Where(s => _symbols.Contains(s, StringComparer.OrdinalIgnoreCase)).ToList();
+        }
+        @if (parsed.Count > 0)
+        {
+            <MudText Typo="Typo.body2">
+                @newSymbols.Count new symbol(s) to add
+                @if (existingSymbols.Count > 0)
+                {
+                    <span class="mud-text-secondary"> (@existingSymbols.Count already in plan)</span>
+                }
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _addSymbolsDialogVisible = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled"
+                   Disabled="@(ParseSymbolInput(_addSymbolsText).Count(s => !_symbols.Contains(s, StringComparer.OrdinalIgnoreCase)) == 0)"
+                   OnClick="AddSymbolsFromDialog">Add</MudButton>
+    </DialogActions>
+</MudDialog>
 
 @code {
     /// <summary>
@@ -261,7 +299,7 @@
 
     .matrix-grid {
         display: grid;
-        grid-template-columns: 120px repeat(calc(var(--col-count) - 1), minmax(70px, 1fr)) 40px;
+        grid-template-columns: 160px repeat(calc(var(--col-count) - 1), minmax(70px, 160px)) 40px;
         gap: 1px;
         background-color: var(--mud-palette-lines-default);
         width: fit-content;
@@ -275,6 +313,19 @@
         align-items: center;
         justify-content: center;
         gap: 4px;
+    }
+
+    .matrix-add-symbol-btn {
+        opacity: 0;
+        transition: opacity 150ms ease-in-out;
+    }
+
+    .matrix-corner:hover .matrix-add-symbol-btn {
+        opacity: 0.5;
+    }
+
+    .matrix-add-symbol-btn:hover {
+        opacity: 1 !important;
     }
 
     .matrix-view-toggle {
@@ -381,7 +432,7 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 90px;
+        max-width: 130px;
     }
 
     .matrix-priority-badge {
