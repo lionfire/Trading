@@ -81,6 +81,34 @@ public interface IPlanExecutionService
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Queue the next Level of Detail for a specific matrix cell.
+    /// Creates a job at (current achieved level + 1) and adds it to the execution.
+    /// </summary>
+    /// <param name="planId">ID of the plan.</param>
+    /// <param name="symbol">The symbol.</param>
+    /// <param name="timeframe">The timeframe.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The execution state after queuing.</returns>
+    Task<PlanExecutionState> QueueNextLodLevelAsync(
+        string planId,
+        string symbol,
+        string timeframe,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Cancel a queued or running LoD job for a specific cell.
+    /// </summary>
+    /// <param name="planId">ID of the plan.</param>
+    /// <param name="symbol">The symbol.</param>
+    /// <param name="timeframe">The timeframe.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    Task CancelCellJobAsync(
+        string planId,
+        string symbol,
+        string timeframe,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Event fired when execution state changes.
     /// </summary>
     event EventHandler<PlanExecutionStateChangedEventArgs>? StateChanged;

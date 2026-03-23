@@ -26,7 +26,7 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
     #region (Derived)
 
     public POptimization POptimization { get; }
-    public IEnumerable<IParameterOptimizationOptions> Optimizable { get; }
+    public IReadOnlyList<IParameterOptimizationOptions> Optimizable { get; }
 
     /// <summary>
     /// Everything up to and including level 0
@@ -50,7 +50,7 @@ public partial class OptimizerLevelsOfDetail : ReactiveObject, IDisposable
     public OptimizerLevelsOfDetail(POptimization pOptimization, IEnumerable<IParameterOptimizationOptions> optimizable)
     {
         POptimization = pOptimization;
-        Optimizable = optimizable;
+        Optimizable = optimizable as IReadOnlyList<IParameterOptimizationOptions> ?? optimizable.ToList();
         currentLevel = MinLevel;
         //Init();
     }
